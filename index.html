@@ -28,13 +28,30 @@
     .hidden {
       display: none;
     }
-    /* Police blue flash effect for the winning screen */
+    /* Police blue flash effect for winning screen */
     @keyframes policeFlash {
       0%, 100% { background-color: #1e3a8a; }
       50% { background-color: #3b82f6; }
     }
     .animate-police {
       animation: policeFlash 1s infinite;
+    }
+    /* Game Mode Card Styles */
+    .game-mode-card {
+      background-color: #1d4ed8; /* a strong blue */
+      border: 2px solid #2563eb;
+      border-radius: 0.75rem;
+      padding: 1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .game-mode-card:hover {
+      transform: scale(1.05);
+      box-shadow: 0 8px 16px rgba(37, 99, 235, 0.4);
+    }
+    .game-mode-card.selected {
+      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.75);
     }
   </style>
 </head>
@@ -45,51 +62,47 @@
     class="flex-1 w-full max-w-4xl mx-auto p-4 sm:p-6 bg-gray-900/95 rounded-md blue-glow flex flex-col space-y-4 overflow-y-auto"
     style="min-height: 100vh;"
   >
-    <!-- SETUP SCREEN -->
-    <div id="setup-screen" class="flex flex-col flex-1 space-y-3">
-      <!-- Title / App Bar -->
-      <div class="text-center">
-        <h1 class="text-2xl sm:text-3xl font-extrabold text-blue-400 uppercase">
-          Blue Line Darts
-        </h1>
-        <p class="text-xs sm:text-sm text-gray-400">Wähle einen Spielmodus & füge Spieler hinzu</p>
+    <!-- START SCREEN (Game Mode Selection & Player Setup) -->
+    <div id="setup-screen" class="flex flex-col flex-1 space-y-6">
+      <!-- Header -->
+      <div class="text-center space-y-2">
+        <h1 class="text-3xl font-extrabold text-blue-400 uppercase">Blue Line Darts</h1>
+        <p class="text-sm text-gray-400">
+          Wähle einen Spielmodus, füge Spieler hinzu und starte das Spiel.
+        </p>
       </div>
-      <!-- Game Mode Selection -->
-      <div>
-        <label for="game-mode" class="block text-sm font-semibold mb-1">Spielmodus</label>
-        <select
-          id="game-mode"
-          class="w-full p-2 sm:p-3 rounded bg-gray-800 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-        >
-          <option value="301">301</option>
-          <option value="501" selected>501</option>
-          <option value="701">701</option>
-        </select>
+      <!-- Game Mode Selection as Cards -->
+      <div id="gamemode-cards" class="grid grid-cols-2 gap-4">
+        <div data-mode="301" class="game-mode-card" onclick="selectGameMode('301', this)">
+          <h2 class="text-2xl font-bold text-white">301</h2>
+          <p class="text-xs text-gray-300">Short game</p>
+        </div>
+        <div data-mode="501" class="game-mode-card" onclick="selectGameMode('501', this)">
+          <h2 class="text-2xl font-bold text-white">501</h2>
+          <p class="text-xs text-gray-300">Klassisch</p>
+        </div>
+        <div data-mode="701" class="game-mode-card" onclick="selectGameMode('701', this)">
+          <h2 class="text-2xl font-bold text-white">701</h2>
+          <p class="text-xs text-gray-300">Long game</p>
+        </div>
+        <div data-mode="clock" class="game-mode-card" onclick="selectGameMode('clock', this)">
+          <h2 class="text-2xl font-bold text-white">Around the Clock</h2>
+          <p class="text-xs text-gray-300">Numerisch 1-20</p>
+        </div>
       </div>
       <!-- Add Players -->
       <div class="space-y-2">
         <label class="block text-sm font-semibold">Spieler hinzufügen</label>
         <div class="flex space-x-2">
-          <input
-            id="player-name-input"
-            type="text"
-            placeholder="Spielername"
-            class="flex-1 p-2 sm:p-3 rounded bg-gray-800 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-          />
-          <button
-            id="add-player-btn"
-            class="px-3 py-2 sm:px-4 sm:py-3 bg-blue-600 text-white rounded hover:bg-blue-500 transition font-semibold text-sm"
-          >
+          <input id="player-name-input" type="text" placeholder="Spielername" class="flex-1 p-2 sm:p-3 rounded bg-gray-800 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+          <button id="add-player-btn" class="px-3 py-2 sm:px-4 sm:py-3 bg-blue-600 text-white rounded hover:bg-blue-500 transition font-semibold text-sm">
             + Hinzufügen
           </button>
         </div>
         <ul id="player-list" class="list-disc list-inside text-sm space-y-1 mt-1 text-gray-200"></ul>
       </div>
       <!-- Start Game Button -->
-      <button
-        id="start-game-btn"
-        class="mt-auto w-full bg-blue-700 hover:bg-blue-600 text-white font-bold py-2 rounded transition text-sm"
-      >
+      <button id="start-game-btn" class="w-full bg-blue-700 hover:bg-blue-600 text-white font-bold py-2 rounded transition text-sm">
         Spiel starten
       </button>
     </div>
@@ -98,13 +111,12 @@
     <div id="playing-screen" class="hidden flex flex-col flex-1 space-y-2">
       <!-- Top Bar -->
       <div class="text-center">
-        <h2 class="text-2xl sm:text-3xl font-extrabold text-blue-400 uppercase">Blue Line Darts</h2>
-        <p class="text-xs sm:text-sm text-gray-400" id="mode-info">Modus: 501</p>
+        <h2 class="text-3xl font-extrabold text-blue-400 uppercase">Blue Line Darts</h2>
+        <p id="mode-info" class="text-sm text-gray-400">Modus: 501</p>
       </div>
       <!-- Scoreboard & Checkout Display -->
       <div class="flex-1 overflow-auto space-y-2">
         <h3 class="text-blue-300 font-semibold text-sm">Punktestände & Checkout</h3>
-        <!-- Player Cards Grid (compact cards in 2 columns) -->
         <div id="scoreboard" class="grid grid-cols-2 gap-2"></div>
       </div>
       <!-- Current Player & Error Message -->
@@ -143,7 +155,7 @@
       <h1 class="text-3xl sm:text-4xl font-extrabold text-white uppercase animate-pulse">
         Herzlichen Glückwunsch!
       </h1>
-      <p class="text-2xl sm:text-3xl text-blue-200 font-bold" id="winner-display">Gewinner</p>
+      <p id="winner-display" class="text-2xl sm:text-3xl text-blue-200 font-bold">Gewinner</p>
       <!-- Game Summary Section -->
       <div class="w-full max-w-md bg-gray-900/75 rounded-lg p-4 text-center">
         <h2 class="text-lg sm:text-xl font-bold text-white mb-2">Spiel Zusammenfassung</h2>
@@ -165,7 +177,6 @@
   <script>
     /**********************************
      * Dynamic Checkout Calculation
-     * (A simple dynamic algorithm using allowed dart combinations.)
      **********************************/
     function getDynamicCheckout(score, dartsAvailable) {
       const nonFinalThrows = [];
@@ -175,20 +186,16 @@
         nonFinalThrows.push({ label: `T${i}`, value: 3 * i });
       }
       nonFinalThrows.push({ label: "B", value: 25 });
-      
       const finalThrows = [];
       for (let i = 1; i <= 20; i++) {
         finalThrows.push({ label: `D${i}`, value: 2 * i });
       }
       finalThrows.push({ label: "DB", value: 50 });
-      
-      // 1-dart checkout
       if (dartsAvailable >= 1) {
         for (const fin of finalThrows) {
           if (fin.value === score) return fin.label;
         }
       }
-      // 2-dart checkout
       if (dartsAvailable >= 2) {
         for (const first of nonFinalThrows) {
           for (const fin of finalThrows) {
@@ -196,7 +203,6 @@
           }
         }
       }
-      // 3-dart checkout
       if (dartsAvailable >= 3) {
         for (const first of nonFinalThrows) {
           for (const second of nonFinalThrows) {
@@ -213,9 +219,9 @@
      * Global State
      **********************************/
     let gameState = "setup";
-    let players = [];  // Each: { name: string, score: number }
+    let players = [];  // Each: { name: string, score: number } or { name, target } for Clock mode
     let currentPlayerIndex = 0;
-    let selectedGameMode = 501;
+    let selectedGameMode = "501"; // "301", "501", "701", "clock"
     let throwsThisTurn = 0;
     let turnStartScore = 0;
     let selectedNumber = null;
@@ -229,35 +235,43 @@
     const setupScreen   = document.getElementById("setup-screen");
     const playingScreen = document.getElementById("playing-screen");
     const finishedScreen= document.getElementById("finished-screen");
-
-    const gameModeSelect   = document.getElementById("game-mode");
+    const gamemodeCards  = document.querySelectorAll("#gamemode-cards .game-mode-card");
     const playerNameInput  = document.getElementById("player-name-input");
     const addPlayerBtn     = document.getElementById("add-player-btn");
     const playerList       = document.getElementById("player-list");
     const startGameBtn     = document.getElementById("start-game-btn");
-
     const modeInfo         = document.getElementById("mode-info");
     const scoreboard       = document.getElementById("scoreboard");
     const currentPlayerDisplay = document.getElementById("current-player-display");
-
     const throwDisplay     = document.getElementById("throw-display");
     const errorMessage     = document.getElementById("error-message");
-
     const numbersContainer = document.getElementById("numbers-container");
     const doubleBtn        = document.getElementById("double-btn");
     const tripleBtn        = document.getElementById("triple-btn");
     const bullBtn          = document.getElementById("bull-btn");
     const doubleBullBtn    = document.getElementById("double-bull-btn");
-
     const clearBtn         = document.getElementById("clear-btn");
     const enterBtn         = document.getElementById("enter-btn");
     const missBtn          = document.getElementById("miss-btn");
     const undoBtn          = document.getElementById("undo-btn");
     const finishBtn        = document.getElementById("finish-btn");
-
     const winnerDisplay    = document.getElementById("winner-display");
     const restartSameBtn   = document.getElementById("restart-same-btn");
     const restartNewBtn    = document.getElementById("restart-new-btn");
+
+    /**********************************
+     * Game Mode Selection
+     **********************************/
+    // Default selection for game mode cards is "501".
+    selectedGameMode = "501";
+    gamemodeCards.forEach(card => {
+      card.addEventListener("click", function() {
+        gamemodeCards.forEach(c => c.classList.remove("selected"));
+        this.classList.add("selected");
+        selectedGameMode = this.getAttribute("data-mode");
+      });
+    });
+    document.querySelector('[data-mode="501"]').classList.add("selected");
 
     /**********************************
      * State & UI Management
@@ -290,7 +304,7 @@
         playerList.appendChild(li);
       });
     }
-    // Render each player as a compact card.
+    // Render player cards compactly.
     function renderScoreboard() {
       scoreboard.innerHTML = "";
       players.forEach((p, idx) => {
@@ -299,18 +313,30 @@
         if (idx === currentPlayerIndex) {
           card.classList.add("ring-2", "ring-blue-500", "scale-105");
         }
-        const checkout = getDynamicCheckout(p.score, 3);
-        const checkoutText = checkout ? checkout : "Kein Checkout";
-        card.innerHTML = `
-          <div class="font-semibold">${p.name}</div>
-          <div class="text-sm font-bold">${p.score}</div>
-          <div class="italic text-blue-300">${checkoutText}</div>
-        `;
+        if (selectedGameMode === "clock") {
+          card.innerHTML = `
+            <div class="font-semibold">${p.name}</div>
+            <div class="text-sm font-bold">Nächste: ${p.target}</div>
+          `;
+        } else {
+          const checkout = getDynamicCheckout(p.score, 3);
+          const checkoutText = checkout ? checkout : "Kein Checkout";
+          card.innerHTML = `
+            <div class="font-semibold">${p.name}</div>
+            <div class="text-sm font-bold">${p.score}</div>
+            <div class="italic text-blue-300">${checkoutText}</div>
+          `;
+        }
         scoreboard.appendChild(card);
       });
     }
     function renderCurrentPlayer() {
-      currentPlayerDisplay.textContent = `Am Zug: ${players[currentPlayerIndex].name} (Wurf ${throwsThisTurn+1} von 3)`;
+      const activePlayer = players[currentPlayerIndex];
+      if (selectedGameMode === "clock") {
+        currentPlayerDisplay.textContent = `Am Zug: ${activePlayer.name} (Wurf ${throwsThisTurn+1} von 3) – Ziel: ${activePlayer.target}`;
+      } else {
+        currentPlayerDisplay.textContent = `Am Zug: ${activePlayer.name} (Wurf ${throwsThisTurn+1} von 3)`;
+      }
     }
     function clearError() {
       errorMessage.textContent = "";
@@ -328,7 +354,11 @@
     function handleAddPlayer() {
       const name = playerNameInput.value.trim();
       if (!name) return;
-      players.push({ name, score: 0 });
+      if (selectedGameMode === "clock") {
+        players.push({ name, target: 1 });
+      } else {
+        players.push({ name, score: Number(selectedGameMode) });
+      }
       playerNameInput.value = "";
       renderPlayerList();
     }
@@ -344,12 +374,17 @@
         alert("Bitte mindestens einen Spieler hinzufügen!");
         return;
       }
-      selectedGameMode = parseInt(gameModeSelect.value, 10);
-      players.forEach(p => { p.score = selectedGameMode; });
+      if (selectedGameMode !== "clock") {
+        players.forEach(p => { p.score = Number(selectedGameMode); });
+      } else {
+        players.forEach(p => { p.target = 1; });
+      }
       currentPlayerIndex = 0;
       throwsThisTurn = 0;
-      turnStartScore = players[0].score;
-      modeInfo.textContent = `Modus: ${selectedGameMode}`;
+      if (selectedGameMode !== "clock") {
+        turnStartScore = players[0].score;
+      }
+      modeInfo.textContent = `Modus: ${selectedGameMode === "clock" ? "Clock 1-20" : selectedGameMode}`;
       history = [];
       totalThrows = 0;
       clearThrow();
@@ -357,10 +392,10 @@
       updateUI();
     }
     function handleFinishGame(aborted = false) {
-      // Update game summary stats
+      // Update summary stats (for subtractive modes)
       document.getElementById("total-darts").textContent = totalThrows;
       let winnerThrows = history.filter(item => item.playerIndex === currentPlayerIndex).length;
-      let avg = winnerThrows > 0 ? (selectedGameMode / winnerThrows).toFixed(1) : 0;
+      let avg = winnerThrows > 0 ? (Number(selectedGameMode) / winnerThrows).toFixed(1) : 0;
       document.getElementById("avg-score").textContent = avg;
       document.getElementById("checkouts-count").textContent = "N/A";
       setState("finished");
@@ -374,7 +409,9 @@
     function nextPlayer() {
       currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
       throwsThisTurn = 0;
-      turnStartScore = players[currentPlayerIndex].score;
+      if (selectedGameMode !== "clock") {
+        turnStartScore = players[currentPlayerIndex].score;
+      }
     }
     function updateThrowDisplay() {
       if (selectedNumber === null) {
@@ -407,53 +444,73 @@
       throwDisplay.textContent = "---";
     }
     function commitThrow() {
-      if (selectedNumber === null) {
-        showError("Keine Eingabe gewählt!");
-        return;
-      }
       totalThrows++;
-      const throwValue = selectedNumber * selectedMultiplier;
-      const activePlayer = players[currentPlayerIndex];
-      const oldScore = activePlayer.score;
-      const newScore = oldScore - throwValue;
-      if (newScore < 0) {
-        activePlayer.score = turnStartScore;
-        showError("BUST! Score zurückgesetzt.");
-        nextPlayer();
-      } else {
-        activePlayer.score = newScore;
-        history.push({
-          playerIndex: currentPlayerIndex,
-          oldScore: oldScore,
-          newScore: newScore,
-          throwsThisTurnBefore: throwsThisTurn
-        });
-        if (newScore === 0) {
-          handleFinishGame(false);
-          return;
+      if (selectedGameMode === "clock") {
+        // Clock mode: check if throw exactly equals target
+        const activePlayer = players[currentPlayerIndex];
+        const throwValue = selectedNumber * selectedMultiplier;
+        if (throwValue === activePlayer.target) {
+          activePlayer.target++;
+          if (activePlayer.target > 20) {
+            handleFinishGame(false);
+            return;
+          }
         }
         throwsThisTurn++;
         if (throwsThisTurn >= 3) {
           nextPlayer();
         }
+      } else {
+        // Standard subtractive mode.
+        const throwValue = selectedNumber * selectedMultiplier;
+        const activePlayer = players[currentPlayerIndex];
+        const oldScore = activePlayer.score;
+        const newScore = oldScore - throwValue;
+        if (newScore < 0) {
+          activePlayer.score = turnStartScore;
+          showError("BUST! Score zurückgesetzt.");
+          nextPlayer();
+        } else {
+          activePlayer.score = newScore;
+          history.push({
+            playerIndex: currentPlayerIndex,
+            oldScore: oldScore,
+            newScore: newScore,
+            throwsThisTurnBefore: throwsThisTurn
+          });
+          if (newScore === 0) {
+            handleFinishGame(false);
+            return;
+          }
+          throwsThisTurn++;
+          if (throwsThisTurn >= 3) {
+            nextPlayer();
+          }
+        }
       }
       clearThrow();
       updateUI();
     }
-    // New function: commitMiss registers a 0-point throw.
     function commitMiss() {
       totalThrows++;
-      const activePlayer = players[currentPlayerIndex];
-      const oldScore = activePlayer.score;
-      history.push({
-        playerIndex: currentPlayerIndex,
-        oldScore: oldScore,
-        newScore: oldScore,
-        throwsThisTurnBefore: throwsThisTurn
-      });
-      throwsThisTurn++;
-      if (throwsThisTurn >= 3) {
-        nextPlayer();
+      if (selectedGameMode === "clock") {
+        throwsThisTurn++;
+        if (throwsThisTurn >= 3) {
+          nextPlayer();
+        }
+      } else {
+        const activePlayer = players[currentPlayerIndex];
+        const oldScore = activePlayer.score;
+        history.push({
+          playerIndex: currentPlayerIndex,
+          oldScore: oldScore,
+          newScore: oldScore,
+          throwsThisTurnBefore: throwsThisTurn
+        });
+        throwsThisTurn++;
+        if (throwsThisTurn >= 3) {
+          nextPlayer();
+        }
       }
       clearThrow();
       updateUI();
@@ -496,10 +553,16 @@
     enterBtn.addEventListener("click", commitThrow);
     missBtn.addEventListener("click", commitMiss);
     restartSameBtn.addEventListener("click", () => {
-      players.forEach(p => { p.score = selectedGameMode; });
+      if (selectedGameMode === "clock") {
+        players.forEach(p => { p.target = 1; });
+      } else {
+        players.forEach(p => { p.score = Number(selectedGameMode); });
+      }
       currentPlayerIndex = 0;
       throwsThisTurn = 0;
-      turnStartScore = players[currentPlayerIndex]?.score ?? 0;
+      if (selectedGameMode !== "clock") {
+        turnStartScore = players[currentPlayerIndex].score;
+      }
       history = [];
       totalThrows = 0;
       clearThrow();
