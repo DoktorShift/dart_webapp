@@ -16,8 +16,7 @@
     body {
       background: linear-gradient(to bottom right, #0f0f0f, #1a1a1a 70%);
       color: #ccc;
-      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-        "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       overscroll-behavior: none;
     }
     .blue-glow {
@@ -33,24 +32,22 @@
 </head>
 <body class="flex flex-col h-full">
 
+  <!-- Main App Container -->
   <div 
     id="app" 
-    class="flex-1 w-full max-w-4xl mx-auto my-0 p-4 sm:p-6 bg-gray-900/95 rounded-md blue-glow flex flex-col space-y-4 overflow-y-auto"
+    class="flex-1 w-full max-w-4xl mx-auto p-4 sm:p-6 bg-gray-900/95 rounded-md blue-glow flex flex-col space-y-4 overflow-y-auto"
     style="min-height: 100vh;"
   >
     <!-- SETUP SCREEN -->
     <div id="setup-screen" class="flex flex-col flex-1 space-y-3">
-      <!-- TITLE / APP BAR -->
+      <!-- Title / App Bar -->
       <div class="text-center">
         <h1 class="text-2xl sm:text-3xl font-extrabold text-blue-400 uppercase">
           Blue Line Darts
         </h1>
-        <p class="text-xs sm:text-sm text-gray-400">
-          Wähle Spielmodus & füge Spieler hinzu
-        </p>
+        <p class="text-xs sm:text-sm text-gray-400">Wähle Spielmodus & füge Spieler hinzu</p>
       </div>
-
-      <!-- GAME MODE SELECTION -->
+      <!-- Game Mode Selection -->
       <div>
         <label for="game-mode" class="block text-sm font-semibold mb-1">Spielmodus</label>
         <select
@@ -62,8 +59,7 @@
           <option value="701">701</option>
         </select>
       </div>
-
-      <!-- ADD PLAYERS -->
+      <!-- Add Players -->
       <div class="space-y-2">
         <label class="block text-sm font-semibold">Spieler hinzufügen</label>
         <div class="flex space-x-2">
@@ -80,13 +76,9 @@
             + Hinzufügen
           </button>
         </div>
-        <ul
-          id="player-list"
-          class="list-disc list-inside text-sm space-y-1 mt-1 text-gray-200"
-        ></ul>
+        <ul id="player-list" class="list-disc list-inside text-sm space-y-1 mt-1 text-gray-200"></ul>
       </div>
-
-      <!-- START GAME BUTTON -->
+      <!-- Start Game Button -->
       <button
         id="start-game-btn"
         class="mt-auto w-full bg-blue-700 hover:bg-blue-600 text-white font-bold py-2 rounded transition text-sm"
@@ -97,167 +89,117 @@
 
     <!-- PLAYING SCREEN -->
     <div id="playing-screen" class="hidden flex flex-col flex-1 space-y-2">
-      <!-- TOP BAR -->
+      <!-- Top Bar -->
       <div class="text-center">
-        <h2 class="text-2xl sm:text-3xl font-extrabold text-blue-400 uppercase">
-          Blue Line Darts
-        </h2>
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-blue-400 uppercase">Blue Line Darts</h2>
         <p class="text-xs sm:text-sm text-gray-400" id="mode-info">Modus: 501</p>
       </div>
 
-      <!-- SCOREBOARD + CHECKOUTS -->
+      <!-- Scoreboard & Checkout Display -->
       <div class="flex-1 overflow-auto space-y-2">
-        <h3 class="text-blue-300 font-semibold text-sm">Punktestände & Checkouts</h3>
-        <div id="scoreboard" class="grid grid-cols-1 gap-2"></div>
+        <h3 class="text-blue-300 font-semibold text-sm">Punktestände & Checkout</h3>
+        <!-- Player cards arranged in a grid (compact cards) -->
+        <div id="scoreboard" class="grid grid-cols-2 gap-2"></div>
       </div>
 
-      <!-- CURRENT PLAYER + ERROR MESSAGE -->
+      <!-- Current Player & Error Message -->
       <div class="text-center">
         <div id="current-player-display" class="text-base font-bold text-blue-300"></div>
         <div id="error-message" class="fade hidden text-xs text-red-500 font-semibold mt-1"></div>
       </div>
 
-      <!-- SELECTED THROW DISPLAY -->
-      <div id="throw-display" class="text-center text-lg font-extrabold text-gray-100">
-        ---
-      </div>
+      <!-- Selected Throw Display -->
+      <div id="throw-display" class="text-center text-lg font-extrabold text-gray-100">---</div>
 
-      <!-- NUMBER GRID (1-20) -->
+      <!-- Number Grid (1-20) -->
       <div class="grid grid-cols-5 gap-2">
         <div id="numbers-container" class="col-span-5 grid grid-cols-5 gap-2"></div>
       </div>
 
-      <!-- MULTIPLIERS + BULLS -->
+      <!-- Multipliers & Bulls -->
       <div class="grid grid-cols-4 gap-2">
-        <button
-          id="double-btn"
-          class="multiplier-btn bg-gray-800 p-2 sm:p-3 rounded text-gray-200 font-bold hover:bg-gray-700 text-xs"
-          data-mult="2"
-        >
-          Double
-        </button>
-        <button
-          id="triple-btn"
-          class="multiplier-btn bg-gray-800 p-2 sm:p-3 rounded text-gray-200 font-bold hover:bg-gray-700 text-xs"
-          data-mult="3"
-        >
-          Triple
-        </button>
-        <button
-          id="bull-btn"
-          class="bull-btn bg-gray-800 p-2 sm:p-3 rounded text-gray-200 font-bold hover:bg-gray-700 text-xs"
-          data-value="25"
-        >
-          Bull
-        </button>
-        <button
-          id="double-bull-btn"
-          class="bull-btn bg-gray-800 p-2 sm:p-3 rounded text-gray-200 font-bold hover:bg-gray-700 text-xs"
-          data-value="50"
-        >
-          D-Bull
-        </button>
+        <button id="double-btn" class="multiplier-btn bg-gray-800 p-2 sm:p-3 rounded text-gray-200 font-bold hover:bg-gray-700 text-xs" data-mult="2">Double</button>
+        <button id="triple-btn" class="multiplier-btn bg-gray-800 p-2 sm:p-3 rounded text-gray-200 font-bold hover:bg-gray-700 text-xs" data-mult="3">Triple</button>
+        <button id="bull-btn" class="bull-btn bg-gray-800 p-2 sm:p-3 rounded text-gray-200 font-bold hover:bg-gray-700 text-xs" data-value="25">Bull</button>
+        <button id="double-bull-btn" class="bull-btn bg-gray-800 p-2 sm:p-3 rounded text-gray-200 font-bold hover:bg-gray-700 text-xs" data-value="50">D-Bull</button>
       </div>
 
-      <!-- ACTION BUTTONS: Clear, Miss, Enter -->
+      <!-- Action Buttons: Clear, Miss, Enter -->
       <div class="flex justify-between items-center space-x-2">
-        <button
-          id="clear-btn"
-          class="bg-gray-600 hover:bg-gray-500 text-white py-2 px-3 rounded font-semibold text-xs w-1/3"
-        >
-          Clear
-        </button>
-        <button
-          id="miss-btn"
-          class="bg-yellow-600 hover:bg-yellow-500 text-white py-2 px-3 rounded font-bold text-xs w-1/3"
-        >
-          Miss
-        </button>
-        <button
-          id="enter-btn"
-          class="bg-blue-600 hover:bg-blue-500 text-white py-2 px-3 rounded font-bold text-xs w-1/3"
-        >
-          Enter
-        </button>
+        <button id="clear-btn" class="bg-gray-600 hover:bg-gray-500 text-white py-2 px-3 rounded font-semibold text-xs w-1/3">Clear</button>
+        <button id="miss-btn" class="bg-yellow-600 hover:bg-yellow-500 text-white py-2 px-3 rounded font-bold text-xs w-1/3">Miss</button>
+        <button id="enter-btn" class="bg-blue-600 hover:bg-blue-500 text-white py-2 px-3 rounded font-bold text-xs w-1/3">Enter</button>
       </div>
 
-      <!-- UNDO + FINISH -->
+      <!-- Undo & Finish -->
       <div class="flex justify-between items-center">
-        <button
-          id="undo-btn"
-          class="bg-gray-700 px-2 py-2 rounded hover:bg-gray-600 transition font-semibold text-xs text-gray-100"
-        >
-          Rückgängig
-        </button>
-        <button
-          id="finish-btn"
-          class="bg-red-600 text-white px-2 py-2 rounded font-semibold hover:bg-red-500 transition text-xs"
-        >
-          Spiel beenden
-        </button>
+        <button id="undo-btn" class="bg-gray-700 px-2 py-2 rounded hover:bg-gray-600 transition font-semibold text-xs text-gray-100">Rückgängig</button>
+        <button id="finish-btn" class="bg-red-600 text-white px-2 py-2 rounded font-semibold hover:bg-red-500 transition text-xs">Spiel beenden</button>
       </div>
     </div>
 
     <!-- FINISHED SCREEN -->
     <div id="finished-screen" class="hidden flex flex-col flex-1 items-center justify-center space-y-2">
-      <h1 class="text-2xl sm:text-3xl font-extrabold text-blue-400 uppercase">
-        Blue Line Darts
-      </h1>
+      <h1 class="text-2xl sm:text-3xl font-extrabold text-blue-400 uppercase">Blue Line Darts</h1>
       <p class="text-xs sm:text-sm text-gray-400">Spiel beendet</p>
       <p id="winner-display" class="text-sm sm:text-base font-bold text-blue-200"></p>
       <div class="w-full max-w-sm space-y-2">
-        <button
-          id="restart-same-btn"
-          class="bg-blue-600 w-full py-2 rounded font-bold hover:bg-blue-500 transition text-white text-sm"
-        >
-          Neues Spiel (gleiche Spieler)
-        </button>
-        <button
-          id="restart-new-btn"
-          class="bg-gray-700 w-full py-2 rounded font-bold hover:bg-gray-600 transition text-white text-sm"
-        >
-          Neues Spiel (neue Spieler)
-        </button>
+        <button id="restart-same-btn" class="bg-blue-600 w-full py-2 rounded font-bold hover:bg-blue-500 transition text-white text-sm">Neues Spiel (gleiche Spieler)</button>
+        <button id="restart-new-btn" class="bg-gray-700 w-full py-2 rounded font-bold hover:bg-gray-600 transition text-white text-sm">Neues Spiel (neue Spieler)</button>
       </div>
     </div>
   </div>
 
   <script>
-    /****************************************
-     * CHECKOUTS (Basic Dictionary)
-     ****************************************/
-    const CHECKOUTS = {
-      170: "T20, T20, Bull",
-      167: "T20, T19, Bull",
-      164: "T20, T18, Bull",
-      161: "T20, T17, Bull",
-      160: "T20, T20, D20",
-      158: "T20, T20, D19",
-      157: "T20, T19, D20",
-      156: "T20, T20, D18",
-      155: "T20, T19, D18",
-      154: "T20, T18, D20",
-      153: "T20, T19, D18",
-      152: "T20, T20, D16",
-      150: "T20, T18, D18",
-      148: "T20, T16, D20",
-      147: "T20, T17, D18",
-      145: "T20, T15, D20",
-      144: "T20, T20, D12",
-      141: "T20, T19, D12",
-      138: "T20, T18, D12",
-      136: "T20, T20, D8",
-      133: "T20, T19, D8",
-      130: "T20, T20, D5",
-    };
-    function getCheckoutSuggestion(score) {
-      if (score > 170 || score < 2) return "";
-      return CHECKOUTS[score] || "";
+    /**********************************
+     * Dynamic Checkout Calculation
+     * (A simple dynamic algorithm using allowed dart combinations.)
+     **********************************/
+    function getDynamicCheckout(score, dartsAvailable) {
+      const nonFinalThrows = [];
+      for (let i = 1; i <= 20; i++) {
+        nonFinalThrows.push({ label: `S${i}`, value: i });
+        nonFinalThrows.push({ label: `D${i}`, value: 2 * i });
+        nonFinalThrows.push({ label: `T${i}`, value: 3 * i });
+      }
+      nonFinalThrows.push({ label: "B", value: 25 });
+      
+      const finalThrows = [];
+      for (let i = 1; i <= 20; i++) {
+        finalThrows.push({ label: `D${i}`, value: 2 * i });
+      }
+      finalThrows.push({ label: "DB", value: 50 });
+      
+      // 1-dart checkout
+      if (dartsAvailable >= 1) {
+        for (const fin of finalThrows) {
+          if (fin.value === score) return fin.label;
+        }
+      }
+      // 2-dart checkout
+      if (dartsAvailable >= 2) {
+        for (const first of nonFinalThrows) {
+          for (const fin of finalThrows) {
+            if (first.value + fin.value === score) return `${first.label}, ${fin.label}`;
+          }
+        }
+      }
+      // 3-dart checkout
+      if (dartsAvailable >= 3) {
+        for (const first of nonFinalThrows) {
+          for (const second of nonFinalThrows) {
+            for (const fin of finalThrows) {
+              if (first.value + second.value + fin.value === score) return `${first.label}, ${second.label}, ${fin.label}`;
+            }
+          }
+        }
+      }
+      return "";
     }
 
-    /****************************************
+    /**********************************
      * Global State
-     ****************************************/
+     **********************************/
     let gameState = "setup";
     let players = [];  // Each: { name: string, score: number }
     let currentPlayerIndex = 0;
@@ -268,39 +210,45 @@
     let selectedMultiplier = 1;
     let history = [];
 
-    /****************************************
+    /**********************************
      * DOM References
-     ****************************************/
+     **********************************/
     const setupScreen   = document.getElementById("setup-screen");
     const playingScreen = document.getElementById("playing-screen");
     const finishedScreen= document.getElementById("finished-screen");
+
     const gameModeSelect   = document.getElementById("game-mode");
     const playerNameInput  = document.getElementById("player-name-input");
     const addPlayerBtn     = document.getElementById("add-player-btn");
     const playerList       = document.getElementById("player-list");
     const startGameBtn     = document.getElementById("start-game-btn");
+
     const modeInfo         = document.getElementById("mode-info");
     const scoreboard       = document.getElementById("scoreboard");
     const currentPlayerDisplay = document.getElementById("current-player-display");
+
     const throwDisplay     = document.getElementById("throw-display");
     const errorMessage     = document.getElementById("error-message");
+
     const numbersContainer = document.getElementById("numbers-container");
     const doubleBtn        = document.getElementById("double-btn");
     const tripleBtn        = document.getElementById("triple-btn");
     const bullBtn          = document.getElementById("bull-btn");
     const doubleBullBtn    = document.getElementById("double-bull-btn");
+
     const clearBtn         = document.getElementById("clear-btn");
     const enterBtn         = document.getElementById("enter-btn");
     const missBtn          = document.getElementById("miss-btn");
     const undoBtn          = document.getElementById("undo-btn");
     const finishBtn        = document.getElementById("finish-btn");
+
     const winnerDisplay    = document.getElementById("winner-display");
     const restartSameBtn   = document.getElementById("restart-same-btn");
     const restartNewBtn    = document.getElementById("restart-new-btn");
 
-    /****************************************
+    /**********************************
      * State & UI Management
-     ****************************************/
+     **********************************/
     function setState(s) {
       gameState = s;
       setupScreen.classList.toggle("hidden", s !== "setup");
@@ -319,32 +267,33 @@
       playerList.innerHTML = "";
       players.forEach((p, idx) => {
         const li = document.createElement("li");
-        li.classList.add("flex", "justify-between");
+        li.classList.add("flex", "justify-between", "text-xs");
         li.innerHTML = `
           <span>${p.name}</span>
-          <button class="bg-red-600 text-white text-xs px-2 py-1 rounded hover:bg-red-500 transition" data-idx="${idx}">
+          <button class="bg-red-600 text-white px-2 py-1 rounded hover:bg-red-500 transition" data-idx="${idx}">
             Entfernen
           </button>
         `;
         playerList.appendChild(li);
       });
     }
+    // Render each player as a compact card.
     function renderScoreboard() {
       scoreboard.innerHTML = "";
       players.forEach((p, idx) => {
-        const row = document.createElement("div");
-        row.classList.add("p-2", "rounded", "bg-gray-800/50", "flex", "flex-col", "space-y-1", "transform");
+        const card = document.createElement("div");
+        card.classList.add("bg-gray-800", "rounded-lg", "p-2", "flex", "flex-col", "items-center", "justify-center", "space-y-1", "text-xs");
         if (idx === currentPlayerIndex) {
-          row.classList.add("ring-2", "ring-blue-500", "scale-105");
+          card.classList.add("ring-2", "ring-blue-500", "scale-105");
         }
-        const checkout = getCheckoutSuggestion(p.score);
-        const nameEl  = `<div class="text-xs font-semibold">${p.name}</div>`;
-        const scoreEl = `<div class="text-base font-bold">${p.score}</div>`;
-        const coEl    = checkout 
-          ? `<div class="text-xs text-blue-300">Checkout: ${checkout}</div>`
-          : `<div class="text-xs text-gray-400 italic">No known checkout</div>`;
-        row.innerHTML = `${nameEl}${scoreEl}${coEl}`;
-        scoreboard.appendChild(row);
+        const checkout = getDynamicCheckout(p.score, 3);
+        const checkoutText = checkout ? checkout : "Kein Checkout";
+        card.innerHTML = `
+          <div class="font-semibold">${p.name}</div>
+          <div class="text-sm font-bold">${p.score}</div>
+          <div class="italic text-blue-300">${checkoutText}</div>
+        `;
+        scoreboard.appendChild(card);
       });
     }
     function renderCurrentPlayer() {
@@ -360,9 +309,9 @@
       setTimeout(() => clearError(), 2000);
     }
 
-    /****************************************
+    /**********************************
      * Logic: Setup & Start
-     ****************************************/
+     **********************************/
     function handleAddPlayer() {
       const name = playerNameInput.value.trim();
       if (!name) return;
@@ -399,9 +348,9 @@
       winnerDisplay.textContent = aborted ? `${pn} hat abgebrochen.` : `${pn} hat gewonnen!`;
     }
 
-    /****************************************
+    /**********************************
      * Logic: 3-Throws Per Turn
-     ****************************************/
+     **********************************/
     function nextPlayer() {
       currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
       throwsThisTurn = 0;
@@ -470,11 +419,10 @@
       clearThrow();
       updateUI();
     }
-    // New function: commitMiss registers a throw of 0 points.
+    // New function: commitMiss registers a 0-point throw.
     function commitMiss() {
       const activePlayer = players[currentPlayerIndex];
       const oldScore = activePlayer.score;
-      // No change in score (0 points)
       history.push({
         playerIndex: currentPlayerIndex,
         oldScore: oldScore,
@@ -501,15 +449,15 @@
       updateUI();
     }
 
-    /****************************************
+    /**********************************
      * Event Listeners
-     ****************************************/
+     **********************************/
     addPlayerBtn.addEventListener("click", handleAddPlayer);
     playerList.addEventListener("click", handleRemovePlayer);
     startGameBtn.addEventListener("click", handleStartGame);
     finishBtn.addEventListener("click", () => handleFinishGame(true));
     undoBtn.addEventListener("click", undoLastAction);
-    // Create numeric buttons 1..20
+    // Generate numeric buttons 1..20
     for (let i = 1; i <= 20; i++) {
       const btn = document.createElement("button");
       btn.className = "key bg-gray-700 p-2 sm:p-3 rounded text-xs font-bold hover:bg-gray-600 transition";
@@ -545,6 +493,8 @@
       setState("setup");
       updateUI();
     });
+
+    // INIT
     setState("setup");
     updateUI();
   </script>
