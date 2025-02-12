@@ -28,10 +28,17 @@
     .hidden {
       display: none;
     }
+    /* Police blue flash effect for the winning screen */
+    @keyframes policeFlash {
+      0%, 100% { background-color: #1e3a8a; }
+      50% { background-color: #3b82f6; }
+    }
+    .animate-police {
+      animation: policeFlash 1s infinite;
+    }
   </style>
 </head>
 <body class="flex flex-col h-full">
-
   <!-- Main App Container -->
   <div 
     id="app" 
@@ -45,7 +52,7 @@
         <h1 class="text-2xl sm:text-3xl font-extrabold text-blue-400 uppercase">
           Blue Line Darts
         </h1>
-        <p class="text-xs sm:text-sm text-gray-400">Wähle Spielmodus & füge Spieler hinzu</p>
+        <p class="text-xs sm:text-sm text-gray-400">Wähle einen Spielmodus & füge Spieler hinzu</p>
       </div>
       <!-- Game Mode Selection -->
       <div>
@@ -94,28 +101,23 @@
         <h2 class="text-2xl sm:text-3xl font-extrabold text-blue-400 uppercase">Blue Line Darts</h2>
         <p class="text-xs sm:text-sm text-gray-400" id="mode-info">Modus: 501</p>
       </div>
-
       <!-- Scoreboard & Checkout Display -->
       <div class="flex-1 overflow-auto space-y-2">
         <h3 class="text-blue-300 font-semibold text-sm">Punktestände & Checkout</h3>
-        <!-- Player cards arranged in a grid (compact cards) -->
+        <!-- Player Cards Grid (compact cards in 2 columns) -->
         <div id="scoreboard" class="grid grid-cols-2 gap-2"></div>
       </div>
-
       <!-- Current Player & Error Message -->
       <div class="text-center">
         <div id="current-player-display" class="text-base font-bold text-blue-300"></div>
         <div id="error-message" class="fade hidden text-xs text-red-500 font-semibold mt-1"></div>
       </div>
-
       <!-- Selected Throw Display -->
       <div id="throw-display" class="text-center text-lg font-extrabold text-gray-100">---</div>
-
       <!-- Number Grid (1-20) -->
       <div class="grid grid-cols-5 gap-2">
         <div id="numbers-container" class="col-span-5 grid grid-cols-5 gap-2"></div>
       </div>
-
       <!-- Multipliers & Bulls -->
       <div class="grid grid-cols-4 gap-2">
         <button id="double-btn" class="multiplier-btn bg-gray-800 p-2 sm:p-3 rounded text-gray-200 font-bold hover:bg-gray-700 text-xs" data-mult="2">Double</button>
@@ -123,14 +125,12 @@
         <button id="bull-btn" class="bull-btn bg-gray-800 p-2 sm:p-3 rounded text-gray-200 font-bold hover:bg-gray-700 text-xs" data-value="25">Bull</button>
         <button id="double-bull-btn" class="bull-btn bg-gray-800 p-2 sm:p-3 rounded text-gray-200 font-bold hover:bg-gray-700 text-xs" data-value="50">D-Bull</button>
       </div>
-
       <!-- Action Buttons: Clear, Miss, Enter -->
       <div class="flex justify-between items-center space-x-2">
         <button id="clear-btn" class="bg-gray-600 hover:bg-gray-500 text-white py-2 px-3 rounded font-semibold text-xs w-1/3">Clear</button>
         <button id="miss-btn" class="bg-yellow-600 hover:bg-yellow-500 text-white py-2 px-3 rounded font-bold text-xs w-1/3">Miss</button>
         <button id="enter-btn" class="bg-blue-600 hover:bg-blue-500 text-white py-2 px-3 rounded font-bold text-xs w-1/3">Enter</button>
       </div>
-
       <!-- Undo & Finish -->
       <div class="flex justify-between items-center">
         <button id="undo-btn" class="bg-gray-700 px-2 py-2 rounded hover:bg-gray-600 transition font-semibold text-xs text-gray-100">Rückgängig</button>
@@ -138,14 +138,26 @@
       </div>
     </div>
 
-    <!-- FINISHED SCREEN -->
-    <div id="finished-screen" class="hidden flex flex-col flex-1 items-center justify-center space-y-2">
-      <h1 class="text-2xl sm:text-3xl font-extrabold text-blue-400 uppercase">Blue Line Darts</h1>
-      <p class="text-xs sm:text-sm text-gray-400">Spiel beendet</p>
-      <p id="winner-display" class="text-sm sm:text-base font-bold text-blue-200"></p>
-      <div class="w-full max-w-sm space-y-2">
-        <button id="restart-same-btn" class="bg-blue-600 w-full py-2 rounded font-bold hover:bg-blue-500 transition text-white text-sm">Neues Spiel (gleiche Spieler)</button>
-        <button id="restart-new-btn" class="bg-gray-700 w-full py-2 rounded font-bold hover:bg-gray-600 transition text-white text-sm">Neues Spiel (neue Spieler)</button>
+    <!-- FINISHED SCREEN with Police Blue Light Effect -->
+    <div id="finished-screen" class="hidden flex flex-col items-center justify-center space-y-6 p-8 bg-gradient-to-br from-blue-800 to-purple-800 rounded-lg animate-police" style="min-height: 80vh;">
+      <h1 class="text-3xl sm:text-4xl font-extrabold text-white uppercase animate-pulse">
+        Herzlichen Glückwunsch!
+      </h1>
+      <p class="text-2xl sm:text-3xl text-blue-200 font-bold" id="winner-display">Gewinner</p>
+      <!-- Game Summary Section -->
+      <div class="w-full max-w-md bg-gray-900/75 rounded-lg p-4 text-center">
+        <h2 class="text-lg sm:text-xl font-bold text-white mb-2">Spiel Zusammenfassung</h2>
+        <p class="text-xs sm:text-sm text-gray-300">Gesamtdarts: <span id="total-darts">0</span></p>
+        <p class="text-xs sm:text-sm text-gray-300">Durchschnitt pro Wurf: <span id="avg-score">0</span></p>
+        <p class="text-xs sm:text-sm text-gray-300">Checkouts erreicht: <span id="checkouts-count">N/A</span></p>
+      </div>
+      <div class="w-full max-w-xs space-y-3">
+        <button id="restart-same-btn" class="w-full bg-white text-blue-600 py-3 rounded-lg font-bold hover:bg-gray-200 transition">
+          Neues Spiel (gleiche Spieler)
+        </button>
+        <button id="restart-new-btn" class="w-full bg-white text-blue-600 py-3 rounded-lg font-bold hover:bg-gray-200 transition">
+          Neues Spiel (neue Spieler)
+        </button>
       </div>
     </div>
   </div>
@@ -209,6 +221,7 @@
     let selectedNumber = null;
     let selectedMultiplier = 1;
     let history = [];
+    let totalThrows = 0; // Track total darts thrown
 
     /**********************************
      * DOM References
@@ -338,11 +351,18 @@
       turnStartScore = players[0].score;
       modeInfo.textContent = `Modus: ${selectedGameMode}`;
       history = [];
+      totalThrows = 0;
       clearThrow();
       setState("playing");
       updateUI();
     }
     function handleFinishGame(aborted = false) {
+      // Update game summary stats
+      document.getElementById("total-darts").textContent = totalThrows;
+      let winnerThrows = history.filter(item => item.playerIndex === currentPlayerIndex).length;
+      let avg = winnerThrows > 0 ? (selectedGameMode / winnerThrows).toFixed(1) : 0;
+      document.getElementById("avg-score").textContent = avg;
+      document.getElementById("checkouts-count").textContent = "N/A";
       setState("finished");
       const pn = players[currentPlayerIndex].name;
       winnerDisplay.textContent = aborted ? `${pn} hat abgebrochen.` : `${pn} hat gewonnen!`;
@@ -391,6 +411,7 @@
         showError("Keine Eingabe gewählt!");
         return;
       }
+      totalThrows++;
       const throwValue = selectedNumber * selectedMultiplier;
       const activePlayer = players[currentPlayerIndex];
       const oldScore = activePlayer.score;
@@ -421,6 +442,7 @@
     }
     // New function: commitMiss registers a 0-point throw.
     function commitMiss() {
+      totalThrows++;
       const activePlayer = players[currentPlayerIndex];
       const oldScore = activePlayer.score;
       history.push({
@@ -479,6 +501,7 @@
       throwsThisTurn = 0;
       turnStartScore = players[currentPlayerIndex]?.score ?? 0;
       history = [];
+      totalThrows = 0;
       clearThrow();
       setState("playing");
       updateUI();
@@ -489,6 +512,7 @@
       throwsThisTurn = 0;
       turnStartScore = 0;
       history = [];
+      totalThrows = 0;
       clearThrow();
       setState("setup");
       updateUI();
