@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Blue Line Darts – 3-Dart & Checkout Tips</title>
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+    }
+    body {
+      background: linear-gradient(to bottom right, #0f0f0f, #1a1a1a 70%);
+      color: #ccc;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+    }
+    .fade {
+      transition: opacity 0.5s ease;
+    }
+    .hidden {
+      display: none;
+    }
+    .blue-glow {
+      box-shadow: 0 0 10px rgba(0, 102, 255, 0.6), 0 0 20px rgba(0, 102, 255, 0.3);
+    }
+  </style>
+</head>
+<body class="h-full w-full flex items-center justify-center">
+
+<div
+  id="app"
+  class="relative w-full max-w-4xl bg-gray-900 rounded-lg p-4 sm:p-6 
+         blue-glow flex flex-col space-y-4 min-h-[90vh]"
+>
+  <!-- SETUP SCREEN -->
+  <div id="setup-screen" class="flex flex-col flex-1 space-y-4">
+    <!-- TITLE / APP BAR -->
+    <div class="text-center space-y-1">
+      <h1 class="text-3xl font-extrabold text-blue-400 uppercase">Blue Line Darts</h1>
+      <p class="text-sm text-gray-400">Select a game mode & add players</p>
+    </div>
+
+    <!-- GAME MODE SELECTION -->
+    <div>
+      <label for="game-mode" class="block font-semibold mb-1">Spielmodus</label>
+      <select
+        id="game-mode"
+        class="w-full p-2 rounded bg-gray-800 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        <option value="301">301</option>
+        <option value="501" selected>501</option>
+        <option value="701">701</option>
+      </select>
+    </div>
+
+    <!-- ADD PLAYERS -->
+    <div class="space-y-2">
+      <label class="block font-semibold">Spieler hinzufügen</label>
+      <div class="flex space-x-2">
+        <input
+          id="player-name-input"
+          type="text"
+          placeholder="Spielername"
+          class="flex-1 p-2 rounded bg-gray-800 text-gray-200 
+                 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <button
+          id="add-player-btn"
+          class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 
+                 transition font-semibold"
+        >
+          + Hinzufügen
+        </button>
+      </div>
+      <ul
+        id="player-list"
+        class="list-disc list-inside text-sm space-y-1 mt-1 text-gray-200"
+      ></ul>
+    </div>
+
+    <!-- START GAME BUTTON -->
+    <button
+      id="start-game-btn"
+      class="mt-auto bg-blue-700 hover:bg-blue-600 text-white font-bold py-2 
+             rounded transition"
+    >
+      Spiel starten
+    </button>
+  </div>
+
+
+  <!-- PLAYING SCREEN -->
+  <div id="playing-screen" class="hidden flex flex-col flex-1 space-y-4">
+    <!-- TOP BAR -->
+    <div class="text-center space-y-1">
+      <h2 class="text-3xl font-extrabold text-blue-400 uppercase">
+        Blue Line Darts
+      </h2>
+      <p class="text-sm text-gray-400" id="mode-info">Modus: 501</p>
+    </div>
+
+    <!-- SCOREBOARD + Checkouts -->
+    <div class="flex-1 overflow-auto space-y-2">
+      <h3 class="text-blue-300 font-semibold">Punktestände & Checkouts</h3>
+      <!-- We'll display each player in a "card"-like layout to show: 
+           Name, Score, Potential Checkout 
+      -->
+      <div id="scoreboard" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+    </div>
+
+    <!-- CURRENT PLAYER + ERROR MESSAGE -->
+    <div class="text-center">
+      <div
+        id="current-player-display"
+        class="text-xl font-bold text-blue-300"
+      ></div>
+      <div
+        id="error-message"
+        class="fade hidden text-sm text-red-500 font-semibold mt-1"
+      ></div>
+    </div>
+
+    <!-- SELECTED THROW DISPLAY -->
+    <div
+      id="throw-display"
+      class="text-center text-2xl font-extrabold text-gray-100"
+    >
+      ---
+    </div>
+
+    <!-- NUMBER GRID (1-20) -->
+    <div class="grid grid-cols-5 gap-2">
+      <div id="numbers-container" class="col-span-5 grid grid-cols-5 gap-2"></div>
+    </div>
+
+    <!-- MULTIPLIERS + BULLS -->
+    <div class="grid grid-cols-4 gap-2">
+      <button
+        id="double-btn"
+        class="multiplier-btn bg-gray-800 p-2 rounded text-gray-200 font-bold hover:bg-gray-700"
+        data-mult="2"
+      >
+        Double
+      </button>
+      <button
+        id="triple-btn"
+        class="multiplier-btn bg-gray-800 p-2 rounded text-gray-200 font-bold hover:bg-gray-700"
+        data-mult="3"
+      >
+        Triple
+      </button>
+      <button
+        id="bull-btn"
+        class="bull-btn bg-gray-800 p-2 rounded text-gray-200 font-bold hover:bg-gray-700"
+        data-value="25"
+      >
+        Bull (25)
+      </button>
+      <button
+        id="double-bull-btn"
+        class="bull-btn bg-gray-800 p-2 rounded text-gray-200 font-bold hover:bg-gray-700"
+        data-value="50"
+      >
+        D-Bull (50)
+      </button>
+    </div>
+
+    <!-- ACTION BUTTONS (ENTER / CLEAR) -->
+    <div class="flex justify-between items-center space-x-2">
+      <button
+        id="clear-btn"
+        class="bg-gray-600 hover:bg-gray-500 text-white py-2 px-4 rounded font-semibold w-1/2"
+      >
+        Clear
+      </button>
+      <button
+        id="enter-btn"
+        class="bg-blue-600 hover:bg-blue-500 text-white py-2 px-4 rounded font-bold w-1/2"
+      >
+        Enter
+      </button>
+    </div>
+
+    <!-- UNDO + FINISH -->
+    <div class="flex justify-between items-center">
+      <button
+        id="undo-btn"
+        class="bg-gray-700 px-3 py-2 rounded hover:bg-gray-600 transition 
+               font-semibold text-sm text-gray-100"
+      >
+        Rückgängig
+      </button>
+      <button
+        id="finish-btn"
+        class="bg-red-600 text-white px-3 py-2 rounded font-semibold 
+               hover:bg-red-500 transition text-sm"
+      >
+        Spiel beenden
+      </button>
+    </div>
+  </div>
+
+  <!-- FINISHED SCREEN -->
+  <div
+    id="finished-screen"
+    class="hidden flex flex-col flex-1 items-center justify-center space-y-4"
+  >
+    <h1 class="text-3xl font-extrabold text-blue-400 uppercase">
+      Blue Line Darts
+    </h1>
+    <p class="text-sm text-gray-400">Spiel beendet</p>
+
+    <p id="winner-display" class="text-lg font-bold text-blue-200"></p>
+
+    <div class="w-full max-w-sm space-y-2">
+      <button
+        id="restart-same-btn"
+        class="bg-blue-600 w-full py-2 rounded font-bold hover:bg-blue-500 
+               transition text-white"
+      >
+        Neues Spiel (gleiche Spieler)
+      </button>
+      <button
+        id="restart-new-btn"
+        class="bg-gray-700 w-full py-2 rounded font-bold hover:bg-gray-600 
+               transition text-white"
+      >
+        Neues Spiel (neue Spieler)
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<!-- SCRIPT (JS LOGIC) -->
+<script>
+  /****************************************
+   * CHECKOUTS: Basic dictionary for demonstration
+   * We'll show some standard out shots from 170 down to ~130
+   * (In real usage, you'd expand or compute them.)
+   ****************************************/
+  const CHECKOUTS = {
+    170: "T20, T20, Bull",
+    167: "T20, T19, Bull",
+    164: "T20, T18, Bull",
+    161: "T20, T17, Bull",
+    160: "T20, T20, D20",
+    158: "T20, T20, D19",
+    157: "T20, T19, D20",
+    156: "T20, T20, D18",
+    155: "T20, T19, D18",
+    154: "T20, T18, D20",
+    153: "T20, T19, D18",
+    152: "T20, T20, D16",
+    150: "T20, T18, D18", 
+    148: "T20, T16, D20",
+    147: "T20, T17, D18",
+    145: "T20, T15, D20",
+    144: "T20, T20, D12",
+    141: "T20, T19, D12",
+    138: "T20, T18, D12",
+    136: "T20, T20, D8",
+    133: "T20, T19, D8",
+    130: "T20, T20, D5",
+    // etc... can expand as needed
+  };
+
+  function getCheckoutSuggestion(score) {
+    if (score > 170) {
+      return "";
+    }
+    if (score < 2) {
+      return "";
+    }
+    return CHECKOUTS[score] || "";
+  }
+
+  /****************************************
+   * Global State
+   ****************************************/
+  let gameState = "setup";
+
+  // Player: { name: string, score: number }
+  let players = [];
+  let currentPlayerIndex = 0;
+  let selectedGameMode = 501;
+
+  // Up to 3 throws per turn
+  let throwsThisTurn = 0;
+  // Score at the start of the turn
+  let turnStartScore = 0;
+
+  // Current throw selection
+  let selectedNumber = null;
+  let selectedMultiplier = 1;
+
+  // History array for multi-step undo
+  // Each entry: { playerIndex, oldScore, newScore, throwsThisTurnBefore }
+  let history = [];
+
+  /****************************************
+   * DOM references
+   ****************************************/
+  const setupScreen   = document.getElementById("setup-screen");
+  const playingScreen = document.getElementById("playing-screen");
+  const finishedScreen= document.getElementById("finished-screen");
+
+  const gameModeSelect   = document.getElementById("game-mode");
+  const playerNameInput  = document.getElementById("player-name-input");
+  const addPlayerBtn     = document.getElementById("add-player-btn");
+  const playerList       = document.getElementById("player-list");
+  const startGameBtn     = document.getElementById("start-game-btn");
+
+  const modeInfo         = document.getElementById("mode-info");
+  const scoreboard       = document.getElementById("scoreboard");
+  const currentPlayerDisplay = document.getElementById("current-player-display");
+
+  const throwDisplay     = document.getElementById("throw-display");
+  const errorMessage     = document.getElementById("error-message");
+
+  const numbersContainer = document.getElementById("numbers-container");
+  const doubleBtn        = document.getElementById("double-btn");
+  const tripleBtn        = document.getElementById("triple-btn");
+  const bullBtn          = document.getElementById("bull-btn");
+  const doubleBullBtn    = document.getElementById("double-bull-btn");
+
+  const clearBtn         = document.getElementById("clear-btn");
+  const enterBtn         = document.getElementById("enter-btn");
+  const undoBtn          = document.getElementById("undo-btn");
+  const finishBtn        = document.getElementById("finish-btn");
+
+  const winnerDisplay    = document.getElementById("winner-display");
+  const restartSameBtn   = document.getElementById("restart-same-btn");
+  const restartNewBtn    = document.getElementById("restart-new-btn");
+
+  /****************************************
+   * STATE & UI
+   ****************************************/
+  function setState(state) {
+    gameState = state;
+    setupScreen.classList.toggle("hidden", state !== "setup");
+    playingScreen.classList.toggle("hidden", state !== "playing");
+    finishedScreen.classList.toggle("hidden", state !== "finished");
+  }
+
+  function updateUI() {
+    if (gameState === "setup") {
+      renderPlayerList();
+    } else if (gameState === "playing") {
+      renderScoreboard();
+      renderCurrentPlayer();
+    }
+  }
+
+  function renderPlayerList() {
+    playerList.innerHTML = "";
+    players.forEach((p, idx) => {
+      const li = document.createElement("li");
+      li.classList.add("flex", "justify-between");
+      li.innerHTML = `
+        <span>${p.name}</span>
+        <button 
+          class="bg-red-600 text-white text-xs px-2 py-1 rounded hover:bg-red-500 transition"
+          data-idx="${idx}"
+        >
+          Entfernen
+        </button>
+      `;
+      playerList.appendChild(li);
+    });
+  }
+
+  // Enhanced scoreboard: show name, score, recommended checkout
+  function renderScoreboard() {
+    scoreboard.innerHTML = "";
+    players.forEach((p, idx) => {
+      const row = document.createElement("div");
+      row.classList.add(
+        "p-2",
+        "rounded",
+        "bg-gray-800/50",
+        "transform",
+        "flex",
+        "flex-col",
+        "space-y-1"
+      );
+
+      // highlight active
+      if (idx === currentPlayerIndex) {
+        row.classList.add("ring-2", "ring-blue-500", "scale-105");
+      }
+
+      // Score & checkout suggestion
+      const checkout = getCheckoutSuggestion(p.score);
+      const nameEl = `<div class="text-sm font-semibold">${p.name}</div>`;
+      const scoreEl = `<div class="text-xl font-bold">${p.score}</div>`;
+      // If we have a known checkout, show it
+      const coEl = checkout 
+        ? `<div class="text-xs text-blue-300">Checkout: ${checkout}</div>`
+        : `<div class="text-xs text-gray-400 italic">No known checkout</div>`;
+
+      row.innerHTML = `${nameEl}${scoreEl}${coEl}`;
+      scoreboard.appendChild(row);
+    });
+  }
+
+  function renderCurrentPlayer() {
+    currentPlayerDisplay.textContent = `Am Zug: ${players[currentPlayerIndex].name} (Wurf ${throwsThisTurn + 1} von 3)`;
+  }
+
+  function clearError() {
+    errorMessage.textContent = "";
+    errorMessage.classList.add("hidden");
+  }
+  function showError(msg) {
+    errorMessage.textContent = msg;
+    errorMessage.classList.remove("hidden");
+    setTimeout(() => {
+      clearError();
+    }, 2000);
+  }
+
+  /****************************************
+   * LOGIC: Setup & Start
+   ****************************************/
+  function handleAddPlayer() {
+    const name = playerNameInput.value.trim();
+    if (!name) return;
+    players.push({ name, score: 0 });
+    playerNameInput.value = "";
+    renderPlayerList();
+  }
+  function handleRemovePlayer(e) {
+    if (e.target.matches("button")) {
+      const idx = parseInt(e.target.dataset.idx, 10);
+      players.splice(idx, 1);
+      renderPlayerList();
+    }
+  }
+
+  function handleStartGame() {
+    if (players.length === 0) {
+      alert("Bitte mindestens einen Spieler hinzufügen!");
+      return;
+    }
+    selectedGameMode = parseInt(gameModeSelect.value, 10);
+    players.forEach(p => {
+      p.score = selectedGameMode;
+    });
+    currentPlayerIndex = 0;
+    throwsThisTurn = 0;
+    turnStartScore = players[currentPlayerIndex].score;
+
+    modeInfo.textContent = `Modus: ${selectedGameMode}`;
+    history = [];
+    clearThrow();
+
+    setState("playing");
+    updateUI();
+  }
+
+  function handleFinishGame(aborted=false) {
+    const playerName = players[currentPlayerIndex].name;
+    setState("finished");
+    winnerDisplay.textContent = aborted
+      ? `${playerName} hat abgebrochen.`
+      : `${playerName} hat gewonnen!`;
+  }
+
+  /****************************************
+   * LOGIC: 3-Throws Per Turn
+   ****************************************/
+  function nextPlayer() {
+    currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+    throwsThisTurn = 0;
+    turnStartScore = players[currentPlayerIndex].score;
+  }
+
+  function updateThrowDisplay() {
+    if (selectedNumber === null) {
+      throwDisplay.textContent = `(${selectedMultiplier}×?)`;
+    } else {
+      const val = selectedNumber * selectedMultiplier;
+      throwDisplay.textContent = `${selectedMultiplier}×${selectedNumber} = ${val}`;
+    }
+  }
+
+  function setNumber(num) {
+    selectedNumber = num;
+    selectedMultiplier = 1;
+    updateThrowDisplay();
+  }
+  function setMultiplier(mult) {
+    if (selectedNumber === null) {
+      showError("Erst eine Zahl wählen!");
+      return;
+    }
+    selectedMultiplier = mult;
+    updateThrowDisplay();
+  }
+  function setBull(value) {
+    selectedNumber = value;
+    selectedMultiplier = 1;
+    throwDisplay.textContent = `${value}`;
+  }
+  function clearThrow() {
+    selectedNumber = null;
+    selectedMultiplier = 1;
+    throwDisplay.textContent = "---";
+  }
+
+  function commitThrow() {
+    if (selectedNumber === null) {
+      showError("Keine Eingabe gewählt!");
+      return;
+    }
+
+    const throwValue = selectedNumber * selectedMultiplier;
+    const activePlayer = players[currentPlayerIndex];
+    const oldScore = activePlayer.score;
+    const newScore = oldScore - throwValue;
+
+    // Check bust
+    if (newScore < 0) {
+      // BUST => revert to turnStartScore
+      activePlayer.score = turnStartScore;
+      showError("BUST! Score zurückgesetzt.");
+      nextPlayer();
+    } else {
+      // Apply the throw
+      activePlayer.score = newScore;
+      // store in history
+      history.push({
+        playerIndex: currentPlayerIndex,
+        oldScore: oldScore,
+        newScore: newScore,
+        throwsThisTurnBefore: throwsThisTurn
+      });
+
+      // Win check
+      if (newScore === 0) {
+        handleFinishGame(false);
+        return;
+      }
+
+      throwsThisTurn++;
+      if (throwsThisTurn >= 3) {
+        // end of turn
+        nextPlayer();
+      }
+    }
+    clearThrow();
+    updateUI();
+  }
+
+  function undoLastAction() {
+    if (history.length === 0) {
+      showError("Nichts zum Rückgängig machen!");
+      return;
+    }
+    const lastAction = history.pop();
+    players[lastAction.playerIndex].score = lastAction.oldScore;
+    currentPlayerIndex = lastAction.playerIndex;
+    throwsThisTurn = lastAction.throwsThisTurnBefore;
+
+    // If it was a bust scenario, we might need deeper logic, but this is
+    // the simplified approach for demonstration.
+
+    updateUI();
+    clearThrow();
+  }
+
+  /****************************************
+   * EVENT LISTENERS
+   ****************************************/
+  // Setup
+  addPlayerBtn.addEventListener("click", handleAddPlayer);
+  playerList.addEventListener("click", handleRemovePlayer);
+  startGameBtn.addEventListener("click", handleStartGame);
+
+  // Playing
+  finishBtn.addEventListener("click", () => {
+    handleFinishGame(true);
+  });
+  undoBtn.addEventListener("click", undoLastAction);
+
+  // Create numeric buttons 1..20
+  for (let i = 1; i <= 20; i++) {
+    const btn = document.createElement("button");
+    btn.className =
+      "key bg-gray-700 p-3 rounded text-base sm:text-lg font-bold hover:bg-gray-600 transition";
+    btn.textContent = i;
+    btn.dataset.num = i;
+    btn.addEventListener("click", () => setNumber(i));
+    numbersContainer.appendChild(btn);
+  }
+
+  // Multipliers
+  doubleBtn.addEventListener("click", () => setMultiplier(2));
+  tripleBtn.addEventListener("click", () => setMultiplier(3));
+
+  // Bulls
+  bullBtn.addEventListener("click", () => setBull(25));
+  doubleBullBtn.addEventListener("click", () => setBull(50));
+
+  // Clear & Enter
+  clearBtn.addEventListener("click", clearThrow);
+  enterBtn.addEventListener("click", commitThrow);
+
+  // Finished
+  restartSameBtn.addEventListener("click", () => {
+    players.forEach(p => {
+      p.score = selectedGameMode;
+    });
+    currentPlayerIndex = 0;
+    throwsThisTurn = 0;
+    turnStartScore = players[currentPlayerIndex]?.score ?? 0;
+    history = [];
+    clearThrow();
+    setState("playing");
+    updateUI();
+  });
+  restartNewBtn.addEventListener("click", () => {
+    players = [];
+    currentPlayerIndex = 0;
+    throwsThisTurn = 0;
+    turnStartScore = 0;
+    history = [];
+    clearThrow();
+    setState("setup");
+    updateUI();
+  });
+
+  // INIT
+  setState("setup");
+  updateUI();
+</script>
+</body>
+</html>
