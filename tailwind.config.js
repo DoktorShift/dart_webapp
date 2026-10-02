@@ -10,6 +10,19 @@ module.exports = {
   ],
   theme: {
     extend: {
+      screens: {
+        // Side-by-side game layout: any landscape screen wide enough (phones and tablets).
+        split: { raw: "(orientation: landscape) and (min-width: 560px)" },
+        // Tablet-sized in both directions: bigger type and keys.
+        tablet: { raw: "(min-width: 700px) and (min-height: 700px)" },
+        // Small phones in portrait (iPhone SE) and every phone in landscape: tighter spacing.
+        short: { raw: "(max-height: 740px)" },
+        // Phones in landscape.
+        xshort: { raw: "(max-height: 500px)" },
+      },
+      fontFamily: {
+        display: ["var(--font-display)", "system-ui", "sans-serif"],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -44,6 +57,14 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        success: "hsl(var(--success))",
+        warning: "hsl(var(--warning))",
+        danger: "hsl(var(--danger))",
+        key: {
+          DEFAULT: "hsl(var(--key))",
+          quiet: "hsl(var(--key-quiet))",
+          pressed: "hsl(var(--key-pressed))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -57,44 +78,8 @@ module.exports = {
         "glow-xl": "0 12px 36px -8px rgba(29, 78, 216, 0.4)",
         "inner-glow": "inset 0 2px 8px -2px rgba(29, 78, 216, 0.25)",
       },
-      animation: {
-        "gradient-x": "gradient-x 15s ease infinite",
-        "gradient-y": "gradient-y 15s ease infinite",
-        "gradient-xy": "gradient-xy 15s ease infinite",
-      },
-      keyframes: {
-        "gradient-y": {
-          "0%, 100%": {
-            "background-size": "400% 400%",
-            "background-position": "center top",
-          },
-          "50%": {
-            "background-size": "200% 200%",
-            "background-position": "center center",
-          },
-        },
-        "gradient-x": {
-          "0%, 100%": {
-            "background-size": "200% 200%",
-            "background-position": "left center",
-          },
-          "50%": {
-            "background-size": "200% 200%",
-            "background-position": "right center",
-          },
-        },
-        "gradient-xy": {
-          "0%, 100%": {
-            "background-size": "400% 400%",
-            "background-position": "left center",
-          },
-          "50%": {
-            "background-size": "200% 200%",
-            "background-position": "right center",
-          },
-        },
-      },
     },
   },
+  plugins: [require("tailwindcss-animate")],
 }
 

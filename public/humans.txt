@@ -1,0 +1,11 @@
+/* TEAM */
+Design and development: DrShift
+GitHub: https://github.com/DoktorShift
+Available for freelance work, from small private projects to bigger ones.
+
+/* SITE */
+Name: BlueLine Darts
+Language: English
+Standards: HTML, CSS, TypeScript, Web App Manifest, Service Worker
+Components: Next.js, React, Tailwind CSS, Framer Motion, Radix UI
+Source: https://github.com/DoktorShift/dart_webapp
