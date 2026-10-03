@@ -1,0 +1,23 @@
+{
+  "name": "blueline-promo",
+  "private": true,
+  "type": "module",
+  "description": "BlueLine Darts social video: app capture, 3D board shots, sound, edit and render.",
+  "scripts": {
+    "shoot": "node capture/shoot.mjs",
+    "board": "node board/render.mjs",
+    "board:preview": "node board/render.mjs --preview",
+    "voice": "node audio/vo.mjs af_heart && node audio/vo-words.mjs af_heart",
+    "audio": "node audio/render.mjs af_heart && node audio/render.mjs af_heart --no-voice",
+    "frames": "node compose/render.mjs",
+    "check": "node compose/render.mjs --at",
+    "encode": "node tools/encode.mjs af_heart",
+    "qa": "node audio/analyze.mjs && node audio/mix-check.mjs",
+    "all": "npm run shoot && npm run board && npm run voice && npm run audio && npm run frames && npm run encode"
+  },
+  "devDependencies": {
+    "kokoro-js": "^1.2.1",
+    "playwright": "^1.63.0",
+    "three": "^0.186.1"
+  }
+}

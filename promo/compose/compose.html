@@ -1,0 +1,18 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Compositor</title>
+    <style>
+      @font-face { font-family: "Barlow Condensed"; font-weight: 600; src: url("/board/fonts/BarlowCondensed-SemiBold.ttf"); }
+      @font-face { font-family: "Barlow Condensed"; font-weight: 500; src: url("/board/fonts/BarlowCondensed-Medium.ttf"); }
+      @font-face { font-family: "Inter"; font-weight: 100 900; src: url("/board/fonts/Inter.ttf"); }
+      html, body { margin: 0; background: #000; overflow: hidden; }
+      canvas { display: block; }
+    </style>
+  </head>
+  <body>
+    <canvas id="frame" width="1080" height="1920"></canvas>
+    <script type="module" src="./compose.js"></script>
+  </body>
+</html>
