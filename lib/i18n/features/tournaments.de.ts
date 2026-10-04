@@ -1,2 +1,121 @@
 // German texts for the tournaments area. The English file must have the same shape (see ../index.ts).
-export const tournamentsDe = {}
+// The rules texts say exactly what lib/tournaments/engine.ts does; change both together.
+export const tournamentsDe = {
+  // The four formats in everyday words, for choosing one.
+  formats: {
+    single: { name: "K.-o.-System", summary: "Wer ein Spiel verliert, scheidet aus. Die Gesetzten treffen erst spät aufeinander." },
+    double: {
+      name: "Doppel-K.-o.",
+      summary: "Erst die zweite Niederlage scheidet aus. Wer einmal verliert, spielt in der Verliererrunde weiter.",
+    },
+    roundRobin: { name: "Jeder gegen jeden", summary: "Alle spielen gegeneinander, die Tabelle entscheidet." },
+    groups: {
+      name: "Gruppen und K.-o.-Runde",
+      summary: "Erst spielt in jeder Gruppe jeder gegen jeden, dann geht es für die Besten jeder Gruppe im K.-o.-System weiter.",
+    },
+  },
+  grandFinalReset: "Entscheidungsspiel nach dem Finale",
+  grandFinalResetHint: "Gewinnt im Finale der Spieler aus der Verliererrunde, wird noch einmal gespielt: Erst dann haben beide einmal verloren.",
+  doubleRoundRobin: "Hin- und Rückrunde",
+  seeding: {
+    seeded: (count: number) => (count === 1 ? "1 Spieler gesetzt" : `${count} Spieler gesetzt`),
+    drawn: "Alle werden ausgelost",
+    byes: "Freilose bekommen die bestgesetzten Spieler. Sie starten direkt in der zweiten Runde.",
+    reproducible: "Die Auslosung ist nachprüfbar: Mit demselben Auslosungscode ergibt dasselbe Teilnehmerfeld immer dieselben Paarungen.",
+  },
+  // "So wird gewertet": the order the table applies.
+  scoring: {
+    title: "So wird gewertet",
+    points: "Ein Sieg bringt 2 Punkte. Unentschieden gibt es nicht.",
+    order: "Bei Punktgleichheit entscheidet der Reihe nach:",
+    walkover: "Ein kampflos gewonnenes Spiel zählt als Sieg ohne Legs.",
+    inactive: "Wer zurückzieht oder disqualifiziert wird, steht am Ende der Tabelle und kommt nicht weiter. Noch offene Spiele gewinnt der Gegner kampflos.",
+    inactiveAfterGroup: "War die eigene Gruppe schon fertig, bleibt der Tabellenplatz. Das nächste Spiel gewinnt dann der Gegner kampflos.",
+  },
+  // Final places.
+  placing: {
+    shared: "Wer in derselben Runde ausscheidet, teilt sich den Platz.",
+    disqualified: "Disqualifizierte bekommen keinen Platz, die anderen rücken auf.",
+  },
+  tiebreak: {
+    points: "Punkte",
+    sets: "Satzdifferenz",
+    legDifference: "Legdifferenz",
+    legsWon: "Gewonnene Legs",
+    headToHead: "Direkter Vergleich",
+    lot: "Los",
+  },
+  tiebreakHint: {
+    sets: "Gewonnene minus verlorene Sätze, nur wenn in Sätzen gespielt wird",
+    legDifference: "Gewonnene minus verlorene Legs",
+    legsWon: "Mehr gewonnene Legs",
+    headToHead: "Siege in den Spielen der Gleichstehenden untereinander",
+    lot: "Ein Los, das schon bei der Auslosung feststand",
+  },
+  state: {
+    pending: "Gegner steht noch nicht fest",
+    ready: "Bereit",
+    live: "Läuft",
+    finished: "Beendet",
+    walkover: "Kampflos",
+    void: "Entfällt",
+  },
+  walkover: {
+    noShow: "Nicht angetreten",
+    retired: "Aufgegeben",
+    withdrawn: "Zurückgezogen",
+    bye: "Freilos",
+  },
+  affected: "Betroffen von einer Korrektur",
+  affectedHint: "Ein früheres Ergebnis wurde geändert. Dieses Spiel bleibt, wie es eingetragen ist, bis die Turnierleitung entscheidet.",
+  consequence: {
+    result: "Neues Ergebnis",
+    players: "Neue Paarung",
+    affected: "Muss entschieden werden",
+    resolved: "Passt wieder",
+  },
+  status: {
+    active: "Im Turnier",
+    eliminated: "Ausgeschieden",
+    champion: "Turniersieger",
+    withdrawn: "Zurückgezogen",
+    disqualified: "Disqualifiziert",
+  },
+  rest: "Spielfrei",
+  round: {
+    final: "Finale",
+    semiFinal: "Halbfinale",
+    quarterFinal: "Viertelfinale",
+    lastSixteen: "Achtelfinale",
+    numbered: (round: number) => `Runde ${round}`,
+    winners: (round: number) => `Gewinnerrunde ${round}`,
+    winnersFinal: "Finale der Gewinnerrunde",
+    losers: (round: number) => `Verliererrunde ${round}`,
+    losersFinal: "Finale der Verliererrunde",
+    grandFinal: "Finale",
+    reset: "Entscheidungsspiel",
+    group: (group: string, round: number) => `Gruppe ${group}, Runde ${round}`,
+  },
+  matchNumber: (number: number) => `Spiel ${number}`,
+  place: (place: number, placeTo: number) => (place === placeTo ? `Platz ${place}` : `Platz ${place}–${placeTo}`),
+  // A change the engine refused, by error code.
+  errors: {
+    tooFewParticipants: "Für dieses Format fehlen noch Teilnehmer.",
+    tooManyParticipants: "So viele Teilnehmer passen nicht in dieses Format.",
+    duplicateParticipant: "Dieser Spieler ist schon dabei.",
+    invalidParticipant: "Jeder Teilnehmer braucht einen Namen.",
+    invalidSetup: "Diese Einstellungen passen nicht zusammen.",
+    unknownMatch: "Dieses Spiel gibt es in diesem Turnier nicht.",
+    unknownParticipant: "Dieser Spieler ist nicht im Turnier.",
+    notReady: "Für dieses Spiel geht das gerade nicht.",
+    notInMatch: "Dieser Spieler spielt nicht in diesem Spiel.",
+    playerBusy: "Ein Spieler steht gerade in einem anderen Spiel.",
+    invalidScore: "Mit diesem Ergebnis kann das Spiel nicht enden.",
+    boardBusy: "An diesem Board läuft schon ein Spiel.",
+    noRecord: "Für dieses Spiel ist noch nichts eingetragen.",
+    alreadyWithdrawn: "Das ist schon so eingetragen.",
+    notWithdrawn: "Dieser Spieler ist noch im Turnier.",
+    tournamentComplete: "Das Turnier ist schon beendet.",
+    unsupportedEngine: "Dieses Turnier stammt aus einer neueren Version von BlueLine. Aktualisiere die App, um es zu öffnen.",
+  },
+}
