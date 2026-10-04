@@ -237,20 +237,26 @@ export default function DartScorer() {
     if (hydrated) saveSettings(settings)
   }, [hydrated, settings])
 
-  // Profile, Settings and About load on first use. Fetch them once the app is idle on the tabs,
-  // so the service worker has them for offline use like the old Settings tab and About page;
-  // never during a game.
+  // Profile, Settings and About load on first use. Fetch them a few seconds after the app settles
+  // on the tabs, when the browser is idle, so the service worker has them for offline use like the
+  // old Settings tab and About page. Never during the first taps or a game: a game started first
+  // cancels it, and it runs on the next visit to the tabs.
   const warmed = useRef(false)
   useEffect(() => {
     if (!hydrated || screen !== "tabs" || warmed.current || !window.navigator.onLine) return
-    warmed.current = true
-    const warm = () => void warmOfflineScreens().catch(() => (warmed.current = false))
-    if (typeof window.requestIdleCallback === "function") {
-      const id = window.requestIdleCallback(warm, { timeout: 8000 })
-      return () => window.cancelIdleCallback(id)
+    let idle: number | undefined
+    const warm = () => {
+      warmed.current = true
+      void warmOfflineScreens().catch(() => (warmed.current = false))
     }
-    const id = setTimeout(warm, 3000)
-    return () => clearTimeout(id)
+    const timer = setTimeout(() => {
+      if (typeof window.requestIdleCallback === "function") idle = window.requestIdleCallback(warm, { timeout: 4000 })
+      else warm()
+    }, 4000)
+    return () => {
+      clearTimeout(timer)
+      if (idle !== undefined) window.cancelIdleCallback(idle)
+    }
   }, [hydrated, screen])
 
   const appSettings = useMemo(() => ({ settings, onSettingsChange: setSettings }), [settings])
