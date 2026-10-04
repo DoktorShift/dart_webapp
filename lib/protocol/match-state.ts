@@ -144,6 +144,8 @@ function sessionProblem(s: MatchStateP, r: AnyRecord, sv: number): Problem {
 
 function apply(s: MatchStateP, r: AnyRecord, authorities: string[], verdicts: BlueLineRecord<"match.confirm">[], finalSv: number): Problem {
   const isAuthority = r.pubkey === s.authority || authorities.includes(r.pubkey)
+  // A private match stays private: every record after the founding is encrypted to the link key.
+  if (s.agreement.visibility === "private" && r.encryption !== "link") return ["sealing_required", "a private match's records are encrypted"]
 
   switch (r.type) {
     case "match.session": {

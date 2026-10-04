@@ -593,7 +593,7 @@
     },
     {
       "name": "private-match",
-      "description": "A private match: founding and snapshots are encrypted to the match key from the link; the agreed stake is inside.",
+      "description": "A private match: founding and snapshots are encrypted to the match key from the link; the agreed stake is inside. A snapshot in the clear is refused.",
       "now": 1760100000,
       "root": "021a50394c9d7331888632a9d13b3ae241799490a34a5802ffc1d7cf60d04ed1",
       "linkKey": "matchkey",
@@ -629,6 +629,22 @@
           ],
           "content": "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",
           "sig": "d6c56cc7eb733735795d0f2ab00ed5504ece708412deeb36240bfd39f807565ed87f5b0e66fcc58f45c35e18b7b3df27205ad8a785f5dd362bbf0ff0030bbbfa"
+        },
+        {
+          "id": "1ae1390decf22d867120487d808eb59696b503316d1a99a2aee42a9d5ad75719",
+          "pubkey": "2e594645da039653d1a27edbb56c0e4a3693b68cf62345bc68f564fa5ed7c505",
+          "created_at": 1760000110,
+          "kind": 31180,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.live", "blueline"],
+            ["v", "1"],
+            ["d", "021a50394c9d7331888632a9d13b3ae241799490a34a5802ffc1d7cf60d04ed1"],
+            ["e", "021a50394c9d7331888632a9d13b3ae241799490a34a5802ffc1d7cf60d04ed1"],
+            ["alt", "BlueLine Darts match.live"]
+          ],
+          "content": "{\"sv\":1,\"n\":2,\"status\":\"playing\",\"throws\":\"1777.222\",\"from\":0,\"standing\":{\"leg\":0,\"current\":0,\"scores\":[321,444],\"legs\":[0,0],\"winner\":null},\"auth\":{\"id\":\"021a50394c9d7331888632a9d13b3ae241799490a34a5802ffc1d7cf60d04ed1\",\"pubkey\":\"d073231b225699c406b4ada691fdea20c121fe84545e8e8b71c3e2d91d352352\",\"created_at\":1760000000,\"kind\":1180,\"tags\":[[\"L\",\"blueline\"],[\"l\",\"match.session\",\"blueline\"],[\"v\",\"1\"],[\"alt\",\"BlueLine Darts match.session\"],[\"enc\",\"nip44\",\"3a908ceddf7b64be138028bb48aa105acbb9e22b83ed7d869ea5391c7b0e067d\"]],\"content\":\"AiF/6P/yRnAh4kW0Tz0WuH2ALMRTv5ehc+LqqVVfCQ2u40Jz6brleWayYYsvz5LIhiMtG4fvjtf/SUfs54/ZKHQduyy9/wpuP9uWyUaVXvJwpbYj3NO0DyGpIjuKLrVgdoUp9ToDyMfPCXn3y9HS5aAMsG5elov/7sA16XAGV8EsOvdH3+FbJ3DNpft5sZQwPQZzxKQWs+bwQXLUXWFfhQovwGQo6oIlEK+xkMYJ9hXbQwCFX4VAhoLwbYgbMNehcmLdyF/ExPHaHGIY/A/nMFoqNo0zBZ1B6Dyor5xyI8Vn4bEc2OjZPaVqqnfuNBTkG6ayR3Gs4xr0ngTF489OPsOJImgMB1BNrXqsu5ljXkdu6uCpiZsutDCL4v91pUPX8cC6Z6odBRjtms7Pu8OrNs7gA/nRXXWxpZn9JgIiBSV6cF8pl3wNTP5w6r5lVQr65ALhfSlYTpPbBNYLXFC8OAW9/74pd1lrIyQTxZVg8zCX/haAZx26VXbOiHxxU3xNbd6GqavhqhBjS7EvbD7EBtQLH+vWbg2rGEmlslQNj8v/v8BysYCcIR7+deDQNP1uuzrgn8RMzgWvhK9OTgj4osYEVCXfOVMHAfJcGYXFt2mDks4vMAurfxLu5Y8H9lWx+SbCmN7IOxgukiqMKrhIEHiPYx18ahJ8erQdhyVCKwhlSzXBJIBEUcCMHiwoTFUIuOl+0UniaLXfZIwg2KrfkCBrDtUg8RsCGuUl+TxUZwSN5DJKAJhDTe+Jx/IBVmdoM5nN6xibUOdqeGlS8/ns6okjlQ1SkcEgGPYkONY8OjsP2nikJgBTWXcZRx8tydrYz+PUjJOsGdx9W1rvlQOT7mBcJKVDRRHSKjiYhvzKDnhYapOKh3VKZGg0JI06+SlpGJpH/JlHrUQBMCjvZqy7bAIGzpCCgAxJeATv8J7h3Gv17e4=\",\"sig\":\"90cc2f323435069da07ecb34a0e1d9047bd0a518f178f4b8eabd8850aa10d0be8ede9554c855cfbf26eabefd5a4b71bca0d80d02cb5fd711b43327f0c700e9ce\"}}",
+          "sig": "cca0705dcb32084f2379e6b0defb2cb0761d788f5c6620ff1acd40671e0ae80703601bdde0a7316bfee070d43ae7895dc5d52ea3b54c93f63b6fc435a049433a"
         }
       ],
       "plaintexts": {
@@ -637,11 +653,18 @@
       },
       "labels": {
         "found": "021a50394c9d7331888632a9d13b3ae241799490a34a5802ffc1d7cf60d04ed1",
-        "live": "e9964b88d7533fad553e096f6093dafb04bad60a9980ca2d52bcd236aadfdeaf"
+        "live": "e9964b88d7533fad553e096f6093dafb04bad60a9980ca2d52bcd236aadfdeaf",
+        "live-in-clear": "1ae1390decf22d867120487d808eb59696b503316d1a99a2aee42a9d5ad75719"
       },
       "expect": {
         "applied": ["021a50394c9d7331888632a9d13b3ae241799490a34a5802ffc1d7cf60d04ed1", "e9964b88d7533fad553e096f6093dafb04bad60a9980ca2d52bcd236aadfdeaf"],
-        "rejected": [],
+        "rejected": [
+          {
+            "id": "1ae1390decf22d867120487d808eb59696b503316d1a99a2aee42a9d5ad75719",
+            "label": "live-in-clear",
+            "reason": "sealing_required"
+          }
+        ],
         "state": {
           "stake": 500000,
           "live": "live"

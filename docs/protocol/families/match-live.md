@@ -8,7 +8,7 @@ Zuschauer brauchen einen abrufbaren Spielstand mit Versionsnummer für den Wiede
 
 ## Kind und Tags
 
-Kind **31180**, `d` = Match-ID = `e`, Pflicht-Tags nach [kinds.md](../kinds.md). Relays behalten je Autor, Kind und `d` nur den neuesten Stand: genau das, was ein Zuschauer braucht. Private Spiele: Inhalt NIP-44 an den Spielschlüssel aus dem Link (`["enc","nip44",<pubkey>]`).
+Kind **31180**, `d` = Match-ID = `e`, Pflicht-Tags nach [kinds.md](../kinds.md). Relays behalten je Autor, Kind und `d` nur den neuesten Stand: genau das, was ein Zuschauer braucht. Private Spiele: Inhalt NIP-44 an den Spielschlüssel aus dem Link (`["enc","nip44",<pubkey>]`); ein Stand eines privaten Spiels im Klartext wird abgelehnt (`sealing_required`).
 
 ## Inhalt (`match.live`)
 

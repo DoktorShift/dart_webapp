@@ -167,6 +167,10 @@ export const openPreview = (envelope: SealedEnvelope, previewKey: Uint8Array): s
 
 // ---- Opening a set of events ----------------------------------------------------------------
 
+// Wraps with the reader's hint tried per event. Two real hints collide with a chance of about
+// one in a million per event; more matches mean someone is trying to make the signer work.
+export const MAX_WRAP_TRIES = 3
+
 export interface OpenOptions {
   // Pubkey of the person reading.
   reader: string
@@ -175,6 +179,10 @@ export interface OpenOptions {
   unwrap: (author: string, payload: string) => Promise<string | null>
   // Content keys known from earlier (local cache), by event id.
   known?: ReadonlyMap<string, string>
+  // Authors whose wraps are worth a signer call (e.g. people who ever acted in the club). A
+  // stranger can address sealed events to anyone; with a remote signer every try costs a round
+  // trip. Shared keys are tried regardless: that costs nothing.
+  trust?: (author: string) => boolean
 }
 
 export interface Opened {
@@ -223,7 +231,8 @@ export async function openSealedEvents(events: readonly unknown[], opts: OpenOpt
   for (const item of items) {
     const cached = opts.known?.get(item.event.id)
     if (cached && tryKey(item, cached)) continue
-    for (const payload of wrapsFor(item.envelope, opts.reader)) {
+    if (opts.trust && !opts.trust(item.event.pubkey)) continue
+    for (const payload of wrapsFor(item.envelope, opts.reader).slice(0, MAX_WRAP_TRIES)) {
       let keyHex: string | null = null
       try {
         keyHex = await opts.unwrap(item.event.pubkey, payload)

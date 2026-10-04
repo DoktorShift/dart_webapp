@@ -4,7 +4,7 @@ import { finalizeEvent, generateSecretKey, getPublicKey, nip44 } from "nostr-cor
 import { invitePreview, previewKey, readInvitePreview } from "../lib/protocol/invite.ts"
 import { buildRecord, parseRecord, sealRecord } from "../lib/protocol/records.ts"
 import { ProtocolError } from "../lib/protocol/reasons.ts"
-import { contentKeyText, MAX_SEAL_READERS, newContentKey, newSealNonce, openEnvelope, openSealedEvents, parseEnvelope, wrapHint, wrapsFor } from "../lib/protocol/seal.ts"
+import { contentKeyText, MAX_SEAL_READERS, MAX_WRAP_TRIES, newContentKey, newSealNonce, openEnvelope, openSealedEvents, parseEnvelope, wrapHint, wrapsFor } from "../lib/protocol/seal.ts"
 
 // Sealed records of closed clubs: one content key per record, wrapped with real NIP-44 (nostr-core)
 // for each reader, as lib/clubs will do it with a signer.
@@ -139,4 +139,24 @@ test("a hundred members fit into one sealed record", () => {
   const readers = Array.from({ length: MAX_SEAL_READERS }, () => person().pubkey)
   const big = sealedEvent(owner, "club.season.end", { season: "e".repeat(32) }, readers)
   assert.ok(JSON.stringify(big.event).length <= 32 * 1024, `${JSON.stringify(big.event).length} bytes`)
+})
+
+test("a stranger cannot make the reader's signer work hard", async () => {
+  // Mallory fills an event with twenty wraps that all carry Alice's hint.
+  const base = sealedEvent(mallory, "club.season.end", { season: "e".repeat(32) }, [alice.pubkey])
+  const envelope = JSON.parse(base.event.content)
+  const hint = wrapHint(parseEnvelope(base.event.content).nonce, alice.pubkey)
+  envelope.k = Array.from({ length: 20 }, (_, i) => [hint, `${String(i).padStart(4, "A")}${"B".repeat(172)}`])
+  const stuffed = finalizeEvent({ kind: base.event.kind, created_at: base.event.created_at, tags: base.event.tags, content: JSON.stringify(envelope) }, mallory.secret)
+  let calls = 0
+  const counting = async () => {
+    calls++
+    return null
+  }
+  await openSealedEvents([stuffed], { reader: alice.pubkey, unwrap: counting })
+  assert.equal(calls, MAX_WRAP_TRIES)
+  // With a trust filter, events of strangers cost no signer call at all.
+  calls = 0
+  await openSealedEvents([stuffed, base.event], { reader: alice.pubkey, unwrap: counting, trust: (author) => author === owner.pubkey })
+  assert.equal(calls, 0)
 })

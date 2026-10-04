@@ -63,6 +63,7 @@ p           nur bei club.invite: die Vorschau, verschlüsselt unter vorschauschl
 - Höchstens 100 Leser je Event (`MAX_SEAL_READERS`): Eine Verpackung kostet rund 190 Byte. Gemessen: ein versiegeltes Event mit 100 Lesern und kleinem Inhalt bleibt unter 32 KiB ([`tests/protocol-seal.test.ts`](../../tests/protocol-seal.test.ts)).
 - Ein falscher Schlüssel, ein unter anderes Label verschobener oder veränderter Inhalt öffnet nicht (authentifizierte Verschlüsselung).
 - NIP-44 läuft beim Signer (`lib/nostr`); `lib/protocol` legt Format und symmetrischen Teil fest und braucht keinen geheimen Schlüssel einer Person. Öffnen: `openSealedEvents` ([`seal.ts`](../../lib/protocol/seal.ts)) über die eigene Verpackung, dann über Schlüsselfreigaben (`club.keys`).
+- Jeder kann versiegelte Events an jeden adressieren. Damit ein Fremder den Signer nicht beschäftigt (bei NIP-46 ist jede Entschlüsselung eine Anfrage), probiert der Leser höchstens drei Verpackungen mit seinem Hinweis je Event (`MAX_WRAP_TRIES`) und kann Signer-Aufrufe auf vertraute Autoren beschränken (`trust`, etwa alle, die je im Club gehandelt haben); geteilte Schlüssel kosten nichts und werden immer probiert.
 - Unbekannte Umschlagversion (`v` ≠ 1): aufbewahrt, nicht ausgeführt.
 
 Das Verfahren ist eine eigene Zusammensetzung geprüfter Bausteine (NIP-44, XChaCha20-Poly1305 aus `@noble/ciphers`) und wird vor der Veröffentlichung extern geprüft (Entscheidung 0002 §6, Nutzerhandlung).

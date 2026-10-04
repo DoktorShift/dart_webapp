@@ -8,7 +8,7 @@ Abgeschlossene Ergebnisse sind nachvollziehbare, nicht ersetzte Ereignisse (PLAN
 
 ## Kind und Tags
 
-Kind 1180, `e` = Match-ID, Pflicht-Tags nach [kinds.md](../kinds.md). Private Spiele: NIP-44 an den Spielschlüssel aus dem Link.
+Kind 1180, `e` = Match-ID, Pflicht-Tags nach [kinds.md](../kinds.md). Private Spiele: NIP-44 an den Spielschlüssel aus dem Link, sonst `sealing_required`.
 
 ## Datensatztypen
 

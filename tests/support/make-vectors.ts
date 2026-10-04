@@ -1209,7 +1209,7 @@ function matchCases() {
     cases.push(c.done({ problem: "invalid" }))
   }
   {
-    const c = newCase("private-match", "A private match: founding and snapshots are encrypted to the match key from the link; the agreed stake is inside.", { link: "matchkey" })
+    const c = newCase("private-match", "A private match: founding and snapshots are encrypted to the match key from the link; the agreed stake is inside. A snapshot in the clear is refused.", { link: "matchkey" })
     const found = c.put("found", "host", "match.session", session(1, "session1", 0, undefined, { agreement: agreement({ visibility: "private", stake: { msat: 500000, note: "Verlierer zahlt" } }) }), {
       at: 0,
       link: "matchkey",
@@ -1217,7 +1217,9 @@ function matchCases() {
     c.setRoot("found")
     const live = snapshot("session1", found.id, found, 1, 1, 100, { link: "matchkey" })
     c.add("live", live.event, live.plaintext)
-    cases.push(c.done({ applied: ["found", "live"], rejected: [], state: { stake: 500000, live: "live" } }))
+    // A careless writer publishes the next snapshot in the clear: refused, it would leak the game.
+    c.add("live-in-clear", snapshot("session1", found.id, found, 1, 2, 110).event)
+    cases.push(c.done({ applied: ["found", "live"], rejected: [["live-in-clear", "sealing_required"]], state: { stake: 500000, live: "live" } }))
   }
   {
     const c = newCase("chunked-log", "A long throw log travels in hash-chained pieces; the result names the chain's head, piece count and size.")

@@ -51,9 +51,12 @@ export const matchRules = obj(
   { description: "Scoring rules (lib/game/types.ts MatchConfig without players and names)" },
 )
 
+// A guest's alias is a neutral one ("Gast 2") unless they agreed to be shown by name in a public
+// match (docs/protocol/privacy.md).
 export const seat = obj({
   alias: alias(),
   pubkey: opt(pubkey("Profile of the player in this seat, only when the player joined with it")),
+  named: opt(bool("A guest without profile agreed to be shown under this alias")),
 })
 
 // An agreed stake, in millisatoshis of whole sats. Informational: BlueLine never pays because

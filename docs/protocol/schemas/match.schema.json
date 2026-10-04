@@ -115,6 +115,10 @@
                     "maxLength": 64,
                     "pattern": "^[0-9a-f]{64}$",
                     "description": "Profile of the player in this seat, only when the player joined with it"
+                  },
+                  "named": {
+                    "type": "boolean",
+                    "description": "A guest without profile agreed to be shown under this alias"
                   }
                 },
                 "required": ["alias"],
