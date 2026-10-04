@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "BlueLine pairing messages (decrypted content of kind 21501)",
+  "title": "BlueLine pairing messages (decrypted content of kind 21180)",
   "$defs": {
     "announce": {
       "type": "object",

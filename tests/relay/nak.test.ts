@@ -3,10 +3,12 @@ import assert from "node:assert/strict"
 import { execFileSync, spawn, spawnSync } from "node:child_process"
 import type { ChildProcess } from "node:child_process"
 import { readFileSync } from "node:fs"
+import { KIND_EPHEMERAL, KIND_RECORD, KIND_STATE } from "../../lib/protocol/kinds.ts"
 
 // Interop checks against nak (github.com/fiatjaf/nak), an independent Go implementation:
-// signatures and ids of every vector event, NIP-44 decryption of sealed records, and a round
-// trip through nak's in-memory relay (only localhost, never a public relay).
+// signatures and ids of every vector event, NIP-44 decryption of the content-key wraps of a
+// sealed club record, and a round trip through nak's in-memory relay (only localhost, never a
+// public relay).
 //
 //   node --test tests/relay/nak.test.ts        (needs nak on PATH or in /opt/homebrew/bin)
 
@@ -34,8 +36,8 @@ function signedEvents(v: unknown, out: Event[] = []): Event[] {
 
 test("nak verifies id and signature of every vector event", { skip }, () => {
   const seen = new Map<string, Event>()
-  for (const name of ["club", "tournament", "match", "badges", "pairing", "board-join", "private-records"]) for (const e of signedEvents(load(name))) seen.set(e.id, e)
-  assert.ok(seen.size > 150)
+  for (const name of ["club", "tournament", "match", "badges", "pairing", "board-join", "private-records", "seal"]) for (const e of signedEvents(load(name))) seen.set(e.id, e)
+  assert.ok(seen.size > 250)
   // One nak run checks a whole batch (one event per line) and prints only failures.
   const lines = [...seen.values()].map((e) => JSON.stringify(e)).join("\n")
   assert.equal(nak(["verify"], `${lines}\n`).trim(), "")
@@ -46,17 +48,15 @@ test("nak verifies id and signature of every vector event", { skip }, () => {
   assert.match(run.stdout + run.stderr, /invalid/)
 })
 
-test("nak decrypts sealed club records with the club key to the documented plaintext", { skip }, () => {
-  const file = load("club")
-  const secret = file.keys.club.secret
-  let checked = 0
-  // nak starts slowly (seconds per run): the founding and the invite of the first case.
-  const c = file.cases[0]
-  for (const e of (c.events as Event[]).filter((x) => c.plaintexts[x.id]).slice(0, 2)) {
-    assert.equal(nak(["decrypt", "--sec", secret, "-p", e.pubkey, e.content]).trim(), c.plaintexts[e.id])
-    checked++
+test("nak unwraps each reader's content key of a sealed club record", { skip }, () => {
+  const v = load("seal")
+  const sealed = v.sealed
+  // nak starts slowly (seconds per run): two readers.
+  for (const reader of sealed.readers.slice(0, 2)) {
+    const wrap = (sealed.envelope.k as [string, string][]).find(([hint]) => hint === reader.hint)
+    assert.ok(wrap, `wrap for ${reader.name}`)
+    assert.equal(nak(["decrypt", "--sec", v.keys[reader.name].secret, "-p", sealed.event.pubkey, wrap[1]]).trim(), sealed.contentKey)
   }
-  assert.equal(checked, 2)
 })
 
 let relay: ChildProcess | null = null
@@ -123,16 +123,16 @@ test("a relay stores records, keeps the newest snapshot per writer and match, an
   try {
     const match = load("match").cases.find((c: Vector) => c.name === "session-handover")
     for (const e of match.events as Event[]) await publish(ws, e)
-    const records = await query(ws, { kinds: [1501], "#e": [match.root] })
-    assert.deepEqual(new Set(records.map((e) => e.id)), new Set((match.events as Event[]).filter((e) => e.kind === 1501 && e.id !== match.root).map((e) => e.id)))
+    const records = await query(ws, { kinds: [KIND_RECORD], "#e": [match.root] })
+    assert.deepEqual(new Set(records.map((e) => e.id)), new Set((match.events as Event[]).filter((e) => e.kind === KIND_RECORD && e.id !== match.root).map((e) => e.id)))
     // Session 1 published two snapshots (n 1 and 3): only the newer is kept; session 2's stays.
-    const snapshots = await query(ws, { kinds: [31501], "#d": [match.root] })
+    const snapshots = await query(ws, { kinds: [KIND_STATE], "#d": [match.root] })
     assert.deepEqual(new Set(snapshots.map((e) => e.id)), new Set([match.labels["live-2"], match.labels["live-old"]]))
 
     const club = load("club").cases[0]
     for (const e of club.events as Event[]) await publish(ws, e)
-    assert.equal((await query(ws, { kinds: [1501], "#e": [club.root], "#l": ["club.join"] })).length, 2)
-    assert.equal((await query(ws, { kinds: [1501], "#L": ["blueline"], ids: [club.root] })).length, 1)
+    assert.equal((await query(ws, { kinds: [KIND_RECORD], "#e": [club.root], "#l": ["club.join"] })).length, 2)
+    assert.equal((await query(ws, { kinds: [KIND_RECORD], "#L": ["blueline"], ids: [club.root] })).length, 1)
 
     // A handshake reaches only who listens at that moment; with nobody listening the relay
     // answers "mute:" (retry later), and nothing is stored either way (research DR-10).
@@ -142,7 +142,7 @@ test("a relay stores records, keeps the newest snapshot per writer and match, an
     assert.match(String((nobody.at(-1) as unknown[])[3]), /^mute:/)
     const listener = await connect()
     const device = hello.tags.find((t) => t[0] === "p")?.[1]
-    await exchange(listener, ["REQ", "pair", { kinds: [21501], "#p": [device] }], (r) => r[0] === "EOSE")
+    await exchange(listener, ["REQ", "pair", { kinds: [KIND_EPHEMERAL], "#p": [device] }], (r) => r[0] === "EOSE")
     const delivered = new Promise<Event>((resolve) => {
       listener.onmessage = (m) => {
         const r = JSON.parse(String(m.data))
@@ -152,7 +152,7 @@ test("a relay stores records, keeps the newest snapshot per writer and match, an
     await publish(ws, hello)
     assert.equal((await delivered).id, hello.id)
     listener.close()
-    assert.equal((await query(ws, { kinds: [21501] })).length, 0, "ephemeral handshakes are not stored")
+    assert.equal((await query(ws, { kinds: [KIND_EPHEMERAL] })).length, 0, "ephemeral handshakes are not stored")
 
     const priv = load("private-records")
     await publish(ws, priv.events.valid)

@@ -9,7 +9,7 @@ import { arr, bool, int, nullable, obj, oneOf, opt } from "./schema.ts"
 import type { SignedEvent } from "./tags.ts"
 import { encodeThrowsTail } from "./throws.ts"
 
-// The live match snapshot (docs/protocol/families/match-live.md): addressable kind 31501 with
+// The live match snapshot (docs/protocol/families/match-live.md): addressable kind 31180 with
 // "d" = match id, signed by the current writer session after every visit. Relays keep only the
 // newest per writer, which is all a spectator needs to (re)join: version counters, the
 // standing for a quick display and the compact throw log for an exact replay. A private match
@@ -43,7 +43,7 @@ const snapshot = obj({
 export type LiveSnapshot = Infer<typeof snapshot>
 
 export const LIVE_TYPES = {
-  "match.live": { kind: KIND_STATE, root: "required", d: true, sealed: "allowed", schema: snapshot, description: "Live state of a match" },
+  "match.live": { kind: KIND_STATE, root: "required", d: true, encryption: "link", schema: snapshot, description: "Live state of a match" },
 } satisfies Record<string, RecordSpec>
 
 export function standingFromState(s: MatchState): Standing {

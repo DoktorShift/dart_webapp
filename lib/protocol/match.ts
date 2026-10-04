@@ -78,19 +78,19 @@ const result = refine(
 )
 
 export const MATCH_TYPES = {
-  "match.session": { kind: KIND_RECORD, root: "session", sealed: "allowed", schema: session, description: "Founds a match (sv 1) or hands it to a new writer" },
-  "match.result": { kind: KIND_RECORD, root: "required", sealed: "allowed", schema: result, description: "Final result with throws or a reference to the log" },
+  "match.session": { kind: KIND_RECORD, root: "session", encryption: "link", schema: session, description: "Founds a match (sv 1) or hands it to a new writer" },
+  "match.result": { kind: KIND_RECORD, root: "required", encryption: "link", schema: result, description: "Final result with throws or a reference to the log" },
   "match.log": {
     kind: KIND_RECORD,
     root: "required",
-    sealed: "allowed",
+    encryption: "link",
     schema: obj({ set: hex(32), seq: int(0, 999), total: int(1, 1000), prev: hex(32), data: str({ min: 1, max: 20000 }) }),
     description: "One piece of a long throw log (chunks.ts)",
   },
   "match.confirm": {
     kind: KIND_RECORD,
     root: "required",
-    sealed: "allowed",
+    encryption: "link",
     schema: obj({ result: hex(32, "match.result event id"), verdict: oneOf(["confirm", "dispute"]), seat: int(0, 5), reason: opt(shortText()) }),
     description: "A player confirms or disputes one exact result",
   },

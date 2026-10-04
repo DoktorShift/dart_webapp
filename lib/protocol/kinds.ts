@@ -1,13 +1,13 @@
 // BlueLine event kinds and the limits every BlueLine event keeps (docs/protocol/kinds.md).
 // One kind per NIP-01 range; the record type is a NIP-32 label, so relays and filters only
-// ever deal with three numbers.
+// ever deal with three numbers. 180 is the highest score of one visit (docs/decisions/0002 §6).
 
 // Immutable records: foundings, changes, requests, results, confirmations.
-export const KIND_RECORD = 1501
+export const KIND_RECORD = 1180
 // Current state under a "d" tag: the live match snapshot.
-export const KIND_STATE = 31501
+export const KIND_STATE = 31180
 // Pairing and board handshake messages; never stored, never queued.
-export const KIND_EPHEMERAL = 21501
+export const KIND_EPHEMERAL = 21180
 // NIP-78 private records of a profile, encrypted, one opaque "d" per record.
 export const KIND_PRIVATE = 30078
 // NIP-59 gift wrap (payment requests between players) and its seal.

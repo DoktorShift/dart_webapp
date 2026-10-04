@@ -4,7 +4,8 @@
   "$defs": {
     "tournament.found": {
       "description": "Founds a tournament; its id is the tournament id",
-      "kind": 1501,
+      "kind": 1180,
+      "encryption": "seal",
       "type": "object",
       "properties": {
         "name": {
@@ -32,8 +33,14 @@
           "pattern": "^[0-9a-f]{64}$",
           "description": "Club id, when the club runs the tournament"
         },
+        "engine": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
+          "description": "Bracket and draw rules version (TOURNAMENT_ENGINE)"
+        },
         "format": {
-          "enum": ["single_ko", "double_ko", "round_robin", "groups_ko"]
+          "enum": ["single", "double", "roundRobin", "groups"]
         },
         "rules": {
           "type": "object",
@@ -138,11 +145,11 @@
         "capacity": {
           "type": "integer",
           "minimum": 2,
-          "maximum": 256
+          "maximum": 128
         },
         "admission": {
           "enum": ["auto", "manual"],
-          "description": "auto: registrations are admitted in order up to capacity"
+          "description": "auto: the organizer's device admits registrations as they arrive; either way only tournament.admit admits"
         },
         "waitlist": {
           "type": "boolean"
@@ -190,14 +197,15 @@
           "minLength": 64,
           "maxLength": 64,
           "pattern": "^[0-9a-f]{64}$",
-          "description": "sha256 commitment to the draw seed, see seedCommitment()"
+          "description": "seedCommitment(seed), published before the draw"
         },
-        "finalReset": {
+        "grandFinalReset": {
           "type": "boolean",
-          "description": "Double KO: a second final when the losers' bracket winner wins the first"
+          "description": "Double elimination: a second final when the losers' bracket winner wins the first"
         },
-        "thirdPlace": {
-          "type": "boolean"
+        "doubleRoundRobin": {
+          "type": "boolean",
+          "description": "Round robin and groups: everyone meets everyone twice"
         },
         "groups": {
           "type": "object",
@@ -215,32 +223,15 @@
           },
           "required": ["count", "advance"],
           "additionalProperties": true
-        },
-        "stake": {
-          "type": "object",
-          "properties": {
-            "msat": {
-              "type": "integer",
-              "minimum": 1000,
-              "maximum": 100000000000,
-              "description": "Whole sats, written as msat"
-            },
-            "note": {
-              "type": "string",
-              "maxLength": 140,
-              "description": "Plain text, never HTML"
-            }
-          },
-          "required": ["msat"],
-          "additionalProperties": true
         }
       },
-      "required": ["name", "format", "rules", "capacity", "admission", "waitlist", "checkIn", "approval"],
+      "required": ["name", "engine", "format", "rules", "capacity", "admission", "waitlist", "checkIn", "approval"],
       "additionalProperties": true
     },
     "tournament.update": {
       "description": "Changes details; rules only before the draw",
-      "kind": 1501,
+      "kind": 1180,
+      "encryption": "seal",
       "type": "object",
       "properties": {
         "prev": {
@@ -283,7 +274,8 @@
         "timezone": {
           "type": "string",
           "maxLength": 64,
-          "pattern": "^[A-Za-z_]+(\\/[A-Za-z0-9_+-]+)*$"
+          "pattern": "^[A-Za-z_]+(\\/[A-Za-z0-9_+-]+)*$",
+          "description": "IANA time zone"
         },
         "place": {
           "type": "string",
@@ -296,7 +288,7 @@
         "capacity": {
           "type": "integer",
           "minimum": 2,
-          "maximum": 256
+          "maximum": 128
         },
         "registrationCloses": {
           "anyOf": [
@@ -416,7 +408,8 @@
     },
     "tournament.phase": {
       "description": "Moves the tournament to another phase",
-      "kind": 1501,
+      "kind": 1180,
+      "encryption": "seal",
       "type": "object",
       "properties": {
         "phase": {
@@ -440,7 +433,8 @@
     },
     "tournament.seed": {
       "description": "Commits to the draw seed before the draw",
-      "kind": 1501,
+      "kind": 1180,
+      "encryption": "seal",
       "type": "object",
       "properties": {
         "commit": {
@@ -462,16 +456,17 @@
       "additionalProperties": true
     },
     "tournament.draw": {
-      "description": "Reveals the seed and fixes the order of the field",
-      "kind": 1501,
+      "description": "Reveals the seed and fixes field and order",
+      "kind": 1180,
+      "encryption": "seal",
       "type": "object",
       "properties": {
         "seed": {
           "type": "string",
-          "minLength": 64,
-          "maxLength": 64,
-          "pattern": "^[0-9a-f]{64}$",
-          "description": "Revealed seed"
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "Revealed seed (128 bits)"
         },
         "seeded": {
           "type": "array",
@@ -482,7 +477,7 @@
             "pattern": "^([0-9a-f]{64}|[0-9a-f]{32})$",
             "description": "Pubkey of a player, or guest id"
           },
-          "maxItems": 256,
+          "maxItems": 128,
           "uniqueItems": true,
           "description": "Seeded players, best first"
         },
@@ -496,7 +491,7 @@
             "description": "Pubkey of a player, or guest id"
           },
           "minItems": 2,
-          "maxItems": 256,
+          "maxItems": 128,
           "uniqueItems": true,
           "description": "The whole field in draw order"
         },
@@ -512,8 +507,9 @@
       "additionalProperties": true
     },
     "tournament.register": {
-      "description": "A player registers",
-      "kind": 1501,
+      "description": "A player asks for a place",
+      "kind": 1180,
+      "encryption": "seal",
       "type": "object",
       "properties": {
         "alias": {
@@ -529,7 +525,8 @@
     },
     "tournament.withdraw": {
       "description": "A player withdraws",
-      "kind": 1501,
+      "kind": 1180,
+      "encryption": "seal",
       "type": "object",
       "properties": {
         "reason": {
@@ -542,8 +539,9 @@
       "additionalProperties": true
     },
     "tournament.admit": {
-      "description": "Organizer admits a registration",
-      "kind": 1501,
+      "description": "The organizer admits a registration",
+      "kind": 1180,
+      "encryption": "seal",
       "type": "object",
       "properties": {
         "participant": {
@@ -565,8 +563,9 @@
       "additionalProperties": true
     },
     "tournament.waitlist": {
-      "description": "Organizer moves a participant to the waiting list",
-      "kind": 1501,
+      "description": "The organizer puts a registration on the waiting list",
+      "kind": 1180,
+      "encryption": "seal",
       "type": "object",
       "properties": {
         "participant": {
@@ -588,8 +587,9 @@
       "additionalProperties": true
     },
     "tournament.remove": {
-      "description": "Organizer takes a participant out",
-      "kind": 1501,
+      "description": "The organizer takes a participant out",
+      "kind": 1180,
+      "encryption": "seal",
       "type": "object",
       "properties": {
         "participant": {
@@ -610,15 +610,16 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 280,
-          "description": "Why: no-show, cancelled for a guest, disqualified"
+          "description": "Why: declined, no-show, disqualified"
         }
       },
       "required": ["participant", "prev", "reason"],
       "additionalProperties": true
     },
     "tournament.guest": {
-      "description": "Organizer adds a guest without a profile",
-      "kind": 1501,
+      "description": "The organizer adds a guest without a profile",
+      "kind": 1180,
+      "encryption": "seal",
       "type": "object",
       "properties": {
         "guest": {
@@ -634,6 +635,10 @@
           "maxLength": 40,
           "pattern": "^\\S(.*\\S)?$",
           "description": "Public display alias, trimmed"
+        },
+        "named": {
+          "type": "boolean",
+          "description": "true: the guest agreed to be shown under this name; otherwise it is a neutral alias"
         }
       },
       "required": ["guest", "alias"],
@@ -641,7 +646,8 @@
     },
     "tournament.claim": {
       "description": "A player claims a guest place as theirs",
-      "kind": 1501,
+      "kind": 1180,
+      "encryption": "seal",
       "type": "object",
       "properties": {
         "guest": {
@@ -656,8 +662,9 @@
       "additionalProperties": true
     },
     "tournament.link": {
-      "description": "Organizer links a guest place to the claiming player",
-      "kind": 1501,
+      "description": "The organizer links a guest place to the claiming player",
+      "kind": 1180,
+      "encryption": "seal",
       "type": "object",
       "properties": {
         "guest": {
@@ -687,7 +694,8 @@
     },
     "tournament.checkin": {
       "description": "A player checks in, or the organizer checks someone in",
-      "kind": 1501,
+      "kind": 1180,
+      "encryption": "seal",
       "type": "object",
       "properties": {
         "participant": {
@@ -709,8 +717,9 @@
       "additionalProperties": true
     },
     "tournament.board": {
-      "description": "Organizer authorizes a board device",
-      "kind": 1501,
+      "description": "The organizer authorizes a board device",
+      "kind": 1180,
+      "encryption": "seal",
       "type": "object",
       "properties": {
         "board": {
@@ -746,8 +755,9 @@
       "additionalProperties": true
     },
     "tournament.board.revoke": {
-      "description": "Organizer withdraws a board",
-      "kind": 1501,
+      "description": "The organizer withdraws a board",
+      "kind": 1180,
+      "encryption": "seal",
       "type": "object",
       "properties": {
         "board": {
@@ -769,8 +779,9 @@
       "additionalProperties": true
     },
     "tournament.assign": {
-      "description": "Organizer assigns a match slot to a board",
-      "kind": 1501,
+      "description": "The organizer assigns a match slot to a board",
+      "kind": 1180,
+      "encryption": "seal",
       "type": "object",
       "properties": {
         "slot": {
@@ -800,7 +811,8 @@
     },
     "tournament.result": {
       "description": "A board (or the organizer) submits a result",
-      "kind": 1501,
+      "kind": 1180,
+      "encryption": "seal",
       "type": "object",
       "properties": {
         "slot": {
@@ -835,6 +847,10 @@
           "maxItems": 2,
           "description": "Legs (or sets) won by the two sides"
         },
+        "walkover": {
+          "enum": ["noShow", "retired"],
+          "description": "Won without (finishing) the match"
+        },
         "match": {
           "type": "string",
           "minLength": 64,
@@ -854,8 +870,9 @@
       "additionalProperties": true
     },
     "tournament.approve": {
-      "description": "Organizer approves a submitted result",
-      "kind": 1501,
+      "description": "The organizer approves a submitted result",
+      "kind": 1180,
+      "encryption": "seal",
       "type": "object",
       "properties": {
         "slot": {
@@ -884,8 +901,9 @@
       "additionalProperties": true
     },
     "tournament.correct": {
-      "description": "Organizer corrects an approved result",
-      "kind": 1501,
+      "description": "The organizer corrects an approved result",
+      "kind": 1180,
+      "encryption": "seal",
       "type": "object",
       "properties": {
         "slot": {
@@ -937,8 +955,9 @@
       "additionalProperties": true
     },
     "tournament.handover.offer": {
-      "description": "Organizer offers the organization to someone",
-      "kind": 1501,
+      "description": "The organizer offers the organization to someone",
+      "kind": 1180,
+      "encryption": "seal",
       "type": "object",
       "properties": {
         "to": {
@@ -960,15 +979,17 @@
       "additionalProperties": true
     },
     "tournament.handover.cancel": {
-      "description": "Organizer withdraws the open offer",
-      "kind": 1501,
+      "description": "The organizer withdraws the open offer",
+      "kind": 1180,
+      "encryption": "seal",
       "type": "object",
       "properties": {
         "offer": {
           "type": "string",
           "minLength": 64,
           "maxLength": 64,
-          "pattern": "^[0-9a-f]{64}$"
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Event id"
         }
       },
       "required": ["offer"],
@@ -976,14 +997,16 @@
     },
     "tournament.handover.accept": {
       "description": "The offered person takes over the organization",
-      "kind": 1501,
+      "kind": 1180,
+      "encryption": "seal",
       "type": "object",
       "properties": {
         "offer": {
           "type": "string",
           "minLength": 64,
           "maxLength": 64,
-          "pattern": "^[0-9a-f]{64}$"
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Event id"
         }
       },
       "required": ["offer"],

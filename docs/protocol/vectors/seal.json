@@ -1,0 +1,98 @@
+{
+  "family": "seal",
+  "description": "A sealed record of a closed club and an invite with its preview, with every intermediate value (lib/protocol/seal.ts).",
+  "generator": "tests/support/make-vectors.ts",
+  "format": "Events are signed (BIP-340, zero aux randomness) with keys derived as sha256('blueline-vector:' + name). Content keys, nonces and NIP-44 nonces are fixed. Expected outcomes are written by hand from docs/protocol.",
+  "sealed": {
+    "type": "club.season.end",
+    "aad": "blueline-seal-v1:club.season.end",
+    "plaintext": "{\"season\":\"f01b1b31fce93d420a87e8ebc6e09769\"}",
+    "contentKey": "be007973c8d3b185d03802978a3928eb69943b2be0cf381d2a1bda7f2fba153d",
+    "nonce": "5d1e53cd3258367ddf780eb17104fd689a7032a9c02b94d9",
+    "readers": [
+      {
+        "name": "owner",
+        "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+        "hint": "2f744752"
+      },
+      {
+        "name": "alice",
+        "pubkey": "48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d",
+        "hint": "b1f545d8"
+      },
+      {
+        "name": "bob",
+        "pubkey": "b400d330df264198a54d0f21847e5c3de7d470529c9e8f99cd1acf0bb256433b",
+        "hint": "d58d2f3b"
+      }
+    ],
+    "envelope": {
+      "v": 1,
+      "n": "XR5TzTJYNn3feA6xcQT9aJpwMqnAK5TZ",
+      "c": "BvtXxtxU+rdAmcRjL/6grOKlTe6GbimLbuyXfDzRvdzfUnKs2U5vlbdToqbad0PlMvMG5D+OIP8QcLPuRg==",
+      "k": [
+        ["2f744752", "AmP9dK4ZgRiddtcpV57Rm9J5Ht6iUsiDPxNANt/1/5nLxgrxWWbdecd4riGdQiE4PR6Lh74O8Ln7Gnqn0q1uZeAVukMAZo+h5YrW2ognQpwxGTJzKM0lWYH0l2fxNhLoSRimWUJZhlyQYDH86bv+2/HaCnAMn7iJ8SHpA6PkY+ibpFk="],
+        ["b1f545d8", "Aha5JKs2brURQ1gdduN/PnWE0zDoUl4vBerA0Jh0h0eMU7oDiCj6cBww7bxlL2vCD3eg1xrGDvMZi/9kapvr3McsppvTv36lJMUsjSZRYMLmYb6VQ5fJ0Q2l65kZxkqJwSJ/NqhT2lLtDqb4ZCeNafcPHEVi6rWF9rtZMVfjdt3kni0="],
+        ["d58d2f3b", "Anyc7g1o+jEL5erhPrdjVtp6oSaV44fNvGX9iT1jpoeWvUSyYGqQU3Mcc1m06IkBaMcQq4AdXnCGXbxLOw9C6TgNIx2l6oDS45GZ4x91DrEeNI1V/tLfrqUPUsgNHPgiKfvgO84iG7BmWCAkvhpjF7B5gXnt+kV/x0gUHu0KtfrR3iM="]
+      ]
+    },
+    "event": {
+      "id": "6836b02d19e898a46a6af6dd3ddbbfbe1e2843f2207eeb8230ebd47f40c6df68",
+      "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+      "created_at": 1760000010,
+      "kind": 1180,
+      "tags": [
+        ["L", "blueline"],
+        ["l", "club.season.end", "blueline"],
+        ["v", "1"],
+        ["e", "bce22e81680bdc2c9b38aa52ea1158d085f452777571f8620a137ae1b477d3bf"],
+        ["alt", "BlueLine Darts club.season.end"],
+        ["enc", "seal"]
+      ],
+      "content": "{\"v\":1,\"n\":\"XR5TzTJYNn3feA6xcQT9aJpwMqnAK5TZ\",\"c\":\"BvtXxtxU+rdAmcRjL/6grOKlTe6GbimLbuyXfDzRvdzfUnKs2U5vlbdToqbad0PlMvMG5D+OIP8QcLPuRg==\",\"k\":[[\"2f744752\",\"AmP9dK4ZgRiddtcpV57Rm9J5Ht6iUsiDPxNANt/1/5nLxgrxWWbdecd4riGdQiE4PR6Lh74O8Ln7Gnqn0q1uZeAVukMAZo+h5YrW2ognQpwxGTJzKM0lWYH0l2fxNhLoSRimWUJZhlyQYDH86bv+2/HaCnAMn7iJ8SHpA6PkY+ibpFk=\"],[\"b1f545d8\",\"Aha5JKs2brURQ1gdduN/PnWE0zDoUl4vBerA0Jh0h0eMU7oDiCj6cBww7bxlL2vCD3eg1xrGDvMZi/9kapvr3McsppvTv36lJMUsjSZRYMLmYb6VQ5fJ0Q2l65kZxkqJwSJ/NqhT2lLtDqb4ZCeNafcPHEVi6rWF9rtZMVfjdt3kni0=\"],[\"d58d2f3b\",\"Anyc7g1o+jEL5erhPrdjVtp6oSaV44fNvGX9iT1jpoeWvUSyYGqQU3Mcc1m06IkBaMcQq4AdXnCGXbxLOw9C6TgNIx2l6oDS45GZ4x91DrEeNI1V/tLfrqUPUsgNHPgiKfvgO84iG7BmWCAkvhpjF7B5gXnt+kV/x0gUHu0KtfrR3iM=\"]]}",
+      "sig": "4285a6d486229d91bffd70f72d5cb8f22d0f51c22f8a3e0aefcca14993fe6fd8916b70072b8e8e768f3e52a3466660fd33f85c9a3cef64ad4ca9207dda5042ef"
+    }
+  },
+  "invite": {
+    "token": "1f7f9485c7c897e7959aab95e044464f",
+    "previewKey": "862473241a16d99218395a99597ca696469a684de033caff54d7481770d739ff",
+    "previewAad": "blueline-preview-v1",
+    "preview": {
+      "name": "Dartfreunde Nord",
+      "host": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+      "kind": "group",
+      "expires": 1760086400
+    },
+    "event": {
+      "id": "4907a331b6d81c91e0fa49c3b03680bf7067c8c563593a27480d73c0f8c70f9e",
+      "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+      "created_at": 1760000020,
+      "kind": 1180,
+      "tags": [
+        ["L", "blueline"],
+        ["l", "club.invite", "blueline"],
+        ["v", "1"],
+        ["e", "bce22e81680bdc2c9b38aa52ea1158d085f452777571f8620a137ae1b477d3bf"],
+        ["alt", "BlueLine Darts club.invite"],
+        ["enc", "seal"]
+      ],
+      "content": "{\"v\":1,\"n\":\"5+o3AN+GjFbkPYtVmA9Kwzwq8vD4STfx\",\"c\":\"RI489TnFLZ6+QZDgbdj5jcwNtz+3rtIK3shgfd7olvrRGOwkQYd8PCLqM/uSEuNOuKLi56xxASOFDYn5KYG6tj/6QtCVOuSJrXjAhaPaGYC9kXqjXIoYSfvQGSEYpszF\",\"k\":[[\"b42666b5\",\"Arie6C1y1TajQNdIwnDcmx6OJo2v/kUi0Bu4gw2orIKlVqJtF0kJlHHwW2lSiWlnyPPcaXXDo5kfrG2VHITyVqBenCRNftB1q2Sb4x2RT5fB7UMJpMgPbSybO7yvVume6/CKNl2vjfQyPHokJskv/gxxMVODojib3PoLLqFFcRBymww=\"]],\"p\":{\"n\":\"sI+Ucwok8dazJQkf4EwkE/F4Ucmuol2b\",\"c\":\"ZUYP6bNdP/eXDlTgRu8f8gAKDAJAPjlBThm3WVW8QXG1dybsgSZTfKY63Fy0gbok2e7BWgQSXCGEdcDwm3d7k0M4XHHzVWWZ017xijTkhrWOh3th/0XkySECbo4DnqABZSNR0Rfa+aydFC9/Ns/6GK7d8ldmodNDCfhmV0a4iqAIxVnnipz5+LwGQ2faeqTDd1FJnANyPjkq\"}}",
+      "sig": "f21aa0ff16c1934afd6f29143aa835f3eb5dd0fea1ca637fd4e295449d972b562410ececf813cace20a753be37c9815476c3ec5263590c8c7d79ae51a4d2ecc6"
+    },
+    "plaintext": "{\"kind\":\"group\",\"token\":\"1f7f9485c7c897e7959aab95e044464f\",\"expires\":1760086400}"
+  },
+  "keys": {
+    "alice": {
+      "secret": "ac04e577214a1ba612043d1b6cd926e95abc564ed740775fdce4045c45f14334",
+      "pubkey": "48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d"
+    },
+    "bob": {
+      "secret": "68e1dcdb8a89dbca9f33af4bd9db167d305e056cc5824ae4171bcd26c13ec42a",
+      "pubkey": "b400d330df264198a54d0f21847e5c3de7d470529c9e8f99cd1acf0bb256433b"
+    },
+    "owner": {
+      "secret": "34bf5f26a6087cd17ced618e07528939b60d3e97dff4f6de832edaf3e8eaac7d",
+      "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78"
+    }
+  }
+}

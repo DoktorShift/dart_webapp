@@ -2,7 +2,7 @@
   "family": "pairing",
   "description": "Device pairing: code, check code, links and the message sequence (lib/protocol/pairing.ts).",
   "generator": "tests/support/make-vectors.ts",
-  "format": "Events are signed (BIP-340, zero aux randomness) with keys derived as sha256('blueline-vector:' + name). Expected outcomes are written by hand from docs/protocol.",
+  "format": "Events are signed (BIP-340, zero aux randomness) with keys derived as sha256('blueline-vector:' + name). Content keys, nonces and NIP-44 nonces are fixed. Expected outcomes are written by hand from docs/protocol.",
   "now": 1760000500,
   "sid": "de42cde00117ef451e38995b8dd2a9fb",
   "code": {
@@ -21,15 +21,15 @@
     "pair": "P1.KgmSBSrAWdFm2JANm7hSJPuiUBPUcgD2F-J2d7K6Sgk.3kLN4AEX70UeOJlbjdKp-w.t3uxb4.nos.lol,relay.primal.net",
     "board": "B1.mX4tbI0H_YAmQaa_xV6Bdcjy6yWMhfv2hkeWv0GWEt4.3kLN4AEX70UeOJlbjdKp-w.t3uze4.nos.lol",
     "watch": "W1.ycPwdZrm-pq0hQMnwYBYgG1GbOC_AKUj68Lq152IsG4.w22SByKS8S54CwbABhkCAIBWjhsboB_ho18ClYpA2zo.nos.lol",
-    "club": "C1.HEw0sMufyHLrjyYfmi5-C1gbpaxch37z3yguhLO8ohQ.mBm9JQ9i1DyC8NDiAD9JTw.H3-UhcfIl-eVmquV4ERGTw.S7RNoZ7JvQ0xxlRUAtVX3Jfvs1RbGjWmVZ7dw8I6oI0.ws://localhost:10547"
+    "club": "C1.HEw0sMufyHLrjyYfmi5-C1gbpaxch37z3yguhLO8ohQ.Sx2mG3uhdvhkaeMo1g6u3qiIxeDsbp6S2GvGFTpPEbI.H3-UhcfIl-eVmquV4ERGTw.ws://localhost:10547"
   },
   "steps": {
     "announce": {
       "event": {
-        "id": "03307b36a3045466c611fee9640b3ed7e481c69ea1d835d0e09a7edca275815c",
+        "id": "1d397c7b521646d88eb8f4c44d9beb1e5eb8a92b42cf3f7f5a386cd3621ec026",
         "pubkey": "2a0992052ac059d166d8900d9bb85224fba25013d47200f617e27677b2ba4a09",
         "created_at": 1760000400,
-        "kind": 21501,
+        "kind": 21180,
         "tags": [
           ["L", "blueline"],
           ["l", "pair", "blueline"],
@@ -37,16 +37,16 @@
           ["x", "a1647f917d57ee2c381b93c18f9d2e4b"]
         ],
         "content": "{\"t\":\"announce\",\"sid\":\"de42cde00117ef451e38995b8dd2a9fb\",\"exp\":1760000800,\"mac\":\"a2a4fd3979e69bd5cdc127904dca56ecafe7d02796e40b6201fde95237ef861a\"}",
-        "sig": "aec9f42a09c10d1b6fe5a9e3aae5255ee6318be008144eef61ca7fe8f5fa0a0748bbcc3580c552fecb2d937c6516744bc8a6e92499660f67a2513830b1d3b066"
+        "sig": "bb5d6a96c9233acf74b0d3c3f62befc8fb1aada1937b85cf6c7ebad736fce5170d5a76e0f2b87242ed29a1a9ddf88e28000e80e1f8cb3ec2f23609fbd2d6ea67"
       },
       "plaintext": "{\"t\":\"announce\",\"sid\":\"de42cde00117ef451e38995b8dd2a9fb\",\"exp\":1760000800,\"mac\":\"a2a4fd3979e69bd5cdc127904dca56ecafe7d02796e40b6201fde95237ef861a\"}"
     },
     "hello": {
       "event": {
-        "id": "4201b3f2659a49b19d563ad03389eaee0277355cac025b9a71675190b03edb16",
+        "id": "9027c83aad3331bd185b78fab1d5e67e8a7d3a3c58d33cb2a561a92e865132e7",
         "pubkey": "cd53aa720d8a45a5c9898d624162a1ad230fddbe09532c78a81fc2b9b3bf6d8b",
         "created_at": 1760000410,
-        "kind": 21501,
+        "kind": 21180,
         "tags": [
           ["L", "blueline"],
           ["l", "pair", "blueline"],
@@ -54,16 +54,16 @@
           ["p", "2a0992052ac059d166d8900d9bb85224fba25013d47200f617e27677b2ba4a09"]
         ],
         "content": "AuzEfH89xiYeH0Ou9F7N9teTcyngJTDU5g9ESJBhg16e5qmfn/3z61LcqLoJPuoIlJYua3X9+7ur/lGFUxaterUlFwQI2y3iEisD0eSpgf7rbReRFUrUsEK3W/wTg2egCbcuS/pknM6xVBPMMWEDLEQzGDiqVl2HFbA6MYg3CxDDEZqKReIRVuSNoKRTlsiwcbtAxo24H0dQqc+PM6csjqgdQ9GFAgUrifKG+x9f250PQx1XEGlADZJ5Io/DU2a2NmOsY5yeVfIqSrnnnMnIzf/DuLpSAhqYQY65sBe1hofXAoY=",
-        "sig": "f1ee40fd2f922bbd8e0e8e316756576d9f2b0c53584605f0300d04519a6db21382e5df59c732f05ed74a1e8f7a39c6482718af1c7d1a940d1d4de5161896df2c"
+        "sig": "683a6aa6d36e5ea4ceb2d2c08e2f4b00a681d824703f9638edf7eb8c46d0e87ac98c33c0a35c6a7605198f937be4395b726ce135c2535ae35f70531dc27d8e43"
       },
       "plaintext": "{\"t\":\"hello\",\"sid\":\"de42cde00117ef451e38995b8dd2a9fb\",\"device\":\"iPhone von Mia\",\"mac\":\"6af49bb759b428d19f25854897fe2b18f404fc09be55ee2de0a7fb1bd06577f0\"}"
     },
     "helloAttacker": {
       "event": {
-        "id": "38f86b739ae5f7411c16fc408418b6ec38dad12b9dc26105e0024794ba806801",
+        "id": "873ff40713456676088ef733874300f1b796f51a259b87f3903fa979102a24f6",
         "pubkey": "11ca3d969772b40794e6c8a9405e86c9b7c3a46316ce05e8b7f849be0bcf92bb",
         "created_at": 1760000411,
-        "kind": 21501,
+        "kind": 21180,
         "tags": [
           ["L", "blueline"],
           ["l", "pair", "blueline"],
@@ -71,16 +71,16 @@
           ["p", "2a0992052ac059d166d8900d9bb85224fba25013d47200f617e27677b2ba4a09"]
         ],
         "content": "AuN3ehNsq6t2koHsGinAm4X6JfcfKRnghEoqad1f4TO1y10GKR3XEhrhe3piO6EFW8xVK8IQheeUStpOh5hx6meG5sHqcOu0Ve2x69r/YwTjgq22JSM60L5/462g0zajklN4EWxwvrhMtkYOmwkz5WecyToA9QhBe5UUJE2OmWjkcottPANhuuNSyEw6Kni0gEweG9YkjnzQbJWBqWW69YCKfA==",
-        "sig": "d7785fac594ab972865b3449b125c0a8b0f8a5be1df22eee99467fede7567b5fb8efd88d5d64404229fa1561607c6f929f84d7e8a13efa78edfdac3944281b03"
+        "sig": "da9a84dba21a8cc1c5ceda8bd2d64e43274b4b0071a4c1247b24c57329d703c5252927939f8b29e446515d8fa456bfb0e0a466a592b9907ef8c1c886492a4041"
       },
       "plaintext": "{\"t\":\"hello\",\"sid\":\"de42cde00117ef451e38995b8dd2a9fb\",\"device\":\"iPhone von Mia\"}"
     },
     "accept": {
       "event": {
-        "id": "fb19a9f3a4257eb96e45c5a7de1a2fc6467e6343d137421af99b9c97cd1319af",
+        "id": "0194e0c457e118abd888679c416c38136c2abcf9ba0801bb8ebd317da8585427",
         "pubkey": "2a0992052ac059d166d8900d9bb85224fba25013d47200f617e27677b2ba4a09",
         "created_at": 1760000420,
-        "kind": 21501,
+        "kind": 21180,
         "tags": [
           ["L", "blueline"],
           ["l", "pair", "blueline"],
@@ -88,16 +88,16 @@
           ["p", "cd53aa720d8a45a5c9898d624162a1ad230fddbe09532c78a81fc2b9b3bf6d8b"]
         ],
         "content": "Aj9np1obhFhBzb1xkYOehhtOzYI0VOJjM8v0rhglOfeGC9QCS8dh+NWsCGJWsNKAfgg0eXrMohKRIdkHSojCU+Kyyp9XX236Nnh4J0GNBXEz310Iivg4LKqkPGUQodkzYPwJqKlRo+wDyFJdQv6XyY3RaMlMD3fuUK9Dz8yYKl7m+8pYKsvH/aUDB92GsNLC2UNCSdyQz+4/r/zyZLdwy2wiHQ==",
-        "sig": "f2792993b0086a855d108c6472b1c3ae86dc72f4673026d7cfafa3c878a6a45a3cd0f551d909e3cdc3a13527fae2a03fb996022c9c4ed03e799ae0d9a37e4b6f"
+        "sig": "e55878df1779dc60828288788983694c8a837106d7dacbd000537254c3e676aa12d58630d2bbfca9982d6bd01d4cdedc7b47e221f73c731802ab9bcccce6af45"
       },
       "plaintext": "{\"t\":\"accept\",\"sid\":\"de42cde00117ef451e38995b8dd2a9fb\",\"device\":\"iPad Wohnzimmer\"}"
     },
     "package": {
       "event": {
-        "id": "c4685e3f1c10d8ed368c192dbe5e9ecb3843a8b5913125707835770a2cdf1764",
+        "id": "94fd3e60b3878060c30a9109eaf2e6f3a0006794dd89960904f04f06ac06e1d1",
         "pubkey": "cd53aa720d8a45a5c9898d624162a1ad230fddbe09532c78a81fc2b9b3bf6d8b",
         "created_at": 1760000430,
-        "kind": 21501,
+        "kind": 21180,
         "tags": [
           ["L", "blueline"],
           ["l", "pair", "blueline"],
@@ -105,16 +105,16 @@
           ["p", "2a0992052ac059d166d8900d9bb85224fba25013d47200f617e27677b2ba4a09"]
         ],
         "content": "AvwYeWWIgg4PLtMa6ruG+4HgXOF7bAPP2X042vctYPbwBkduhk2Tw+Vsa9JovCynr2CfvEXTYVWWDTKOvnPm9K/teO66x1r20nop401dRxfw9dIaAIAcPoRwsqes4bKOyXSAxDt4mL4XQnAIG0TmJ4EKWsLmR8hrmMEaZricOQP8DboqkB0vMkbxSzxGo2m73TeI5ZtGack5RryizXQLnGQsr4eSrelRFMvU9W0uWz7byyCNlmOXrMMWVu2M8vt2drAAtQ95xDl92OqU7+9L4wAf6v78cIJWZVzX1CAmaJ/x1YU=",
-        "sig": "c6f83049856870bffbc592e6625acc1c699e8bd1393c26ebdf38f4fb2de5867ddeb85ad73a46607596f5f0d4b7c2187c23e0aac029cd9152cad7e74dac39fadc"
+        "sig": "c48b932d1f6c4efe5f219fdd3bc37f513e241b7850dd31723c480579f7d562682b74c054b19a765882096366b2244504a941bf83dd935e624f2d32cee2955a68"
       },
       "plaintext": "{\"t\":\"package\",\"sid\":\"de42cde00117ef451e38995b8dd2a9fb\",\"data\":{\"v\":1,\"profile\":\"lib/devices defines this\",\"relays\":[\"wss://nos.lol\"]}}"
     },
     "ack": {
       "event": {
-        "id": "7240938dadd3fe792ba8ec0314143adcf06cc3edce89bf9ee859224810590dc1",
+        "id": "17e9593597df48b82b2defea398fbf12792109c823c315859a22bb0ca20727b7",
         "pubkey": "2a0992052ac059d166d8900d9bb85224fba25013d47200f617e27677b2ba4a09",
         "created_at": 1760000440,
-        "kind": 21501,
+        "kind": 21180,
         "tags": [
           ["L", "blueline"],
           ["l", "pair", "blueline"],
@@ -122,16 +122,16 @@
           ["p", "cd53aa720d8a45a5c9898d624162a1ad230fddbe09532c78a81fc2b9b3bf6d8b"]
         ],
         "content": "Arjr/PVzvKtrq7PmsDvo8Ue9Rq7PzPC4Lcfv1mJyCQ6DtqxIFS9udeu1wl04JaVHQ9W9ODi4a7+NDW5fSjJ6kjeiOlx2Vw7LevHkCIvzPs4y5SPN722IEARtjcDNk94yBYPcRj/o2h+QybqkXBbwoArKtuhUk/ZksE8dDjFtF1Og0wiL5Pr7sT8NI1e+p91SsalIBA0ly85FVYs5dSrEK3/bbQZ9p3WcY/w4vhWDlyMs7VW3vZEvg3XzBN6Q0A59lpK+",
-        "sig": "179b77aae640b15bc5014a44b667cfd88aa4b6c2d3c9b36e81f8f7974fbd1b246a1d818bf07c89b4c9e49d3be13b93041091150723ce560b49fa8d60e5ffbfbd"
+        "sig": "fe3664ff10a280206f8864fd9287b83af528517296428956747c1546ee0c472aa327bb22e9e72f086ccdd8dbfee599cca40d8eed6118b3f4913635b8b202d8d1"
       },
       "plaintext": "{\"t\":\"ack\",\"sid\":\"de42cde00117ef451e38995b8dd2a9fb\",\"hash\":\"8f7896e62fa95da423a4fd5577fa97e063ce11ac758319d21426a8894d1d69d9\"}"
     },
     "boardJoin": {
       "event": {
-        "id": "0a9a7fb98d1e686197479692d6e5a69703f1f2dca920960c33de0e87b1359fea",
+        "id": "5939173c23fdf25900ecb55f5092d2f236c02291e7980c9a179da78426960c5d",
         "pubkey": "2a0992052ac059d166d8900d9bb85224fba25013d47200f617e27677b2ba4a09",
         "created_at": 1760000450,
-        "kind": 21501,
+        "kind": 21180,
         "tags": [
           ["L", "blueline"],
           ["l", "board", "blueline"],
@@ -139,7 +139,7 @@
           ["p", "cd53aa720d8a45a5c9898d624162a1ad230fddbe09532c78a81fc2b9b3bf6d8b"]
         ],
         "content": "Ak/EJMVB1gMuGgCLfIgx5HQItNCEDY76kKbR3+UKRqjIQttCvlQH3fNKOsJrMtHk89T19IMD/Xm7kOiF7xVD0xTgN3D/oLOS2Yitv+hxRvgG3s4jnMsL60oNVvRyf/09maX4dWUcZip2k/WdMC8wmDdN/dfQn3bPYFbY4dTgjiH9UhLGW3oUlulOekL/3DNtaezO7ttAQbimJqo8dzAvb9Ig2g==",
-        "sig": "4bb66e59072efe31dfca07a9b21720bb1eee0aeed5d19a427bcad3c35ac6ca1c9d7fe80e9ab02a570151774092af4cd39b0128ce1819b1dde5724697659e73df"
+        "sig": "23ecaf067e637f6f4c74f0812028ec4eab20714fd3bf4031fbb5d9977b5c56ba96403fbdf545693a6a064630b43df68fca107120ae565fb29b098cf5c8bbf056"
       },
       "plaintext": "{\"t\":\"join\",\"sid\":\"de42cde00117ef451e38995b8dd2a9fb\",\"seat\":0,\"confirm\":true}"
     }
@@ -152,10 +152,6 @@
     "board1": {
       "secret": "a4230859fd70476858b95381afa37a69c93d5c95f0dc86b1f0b3780c44b52860",
       "pubkey": "997e2d6c8d07fd802641a6bfc55e8175c8f2eb258c85fbf6864796bf419612de"
-    },
-    "club": {
-      "secret": "4bb44da19ec9bd0d31c6545402d557dc97efb3545b1a35a6559eddc3c23aa08d",
-      "pubkey": "3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5"
     },
     "matchkey": {
       "secret": "c36d92072292f12e780b06c00619020080568e1b1ba01fe1a35f02958a40db3a",

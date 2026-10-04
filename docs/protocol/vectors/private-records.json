@@ -2,7 +2,7 @@
   "family": "private-records",
   "description": "Private record slots, data key slot and envelope (lib/protocol/private.ts).",
   "generator": "tests/support/make-vectors.ts",
-  "format": "Events are signed (BIP-340, zero aux randomness) with keys derived as sha256('blueline-vector:' + name). Expected outcomes are written by hand from docs/protocol.",
+  "format": "Events are signed (BIP-340, zero aux randomness) with keys derived as sha256('blueline-vector:' + name). Content keys, nonces and NIP-44 nonces are fixed. Expected outcomes are written by hand from docs/protocol.",
   "dataKey": "8e65cb303c5fc154a7f0d84cee22d0d88270259aeb700ca22dd7fb054a9f32cc",
   "records": [
     {

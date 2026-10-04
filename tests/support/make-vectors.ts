@@ -1,7 +1,8 @@
 // Writes the BlueLine protocol test vectors (docs/protocol/vectors/*.json) and the JSON Schemas
 // (docs/protocol/schemas/*.schema.json). Deterministic: fixed secret keys derived from names,
-// fixed created_at, fixed NIP-44 nonces and BIP-340 signatures with zero auxiliary randomness,
-// so a re-run produces byte-identical files (tests/protocol-vectors.test.ts checks that).
+// fixed created_at, fixed content keys and nonces, NIP-44 with fixed nonces and BIP-340
+// signatures with zero auxiliary randomness, so a re-run produces byte-identical files
+// (tests/protocol-vectors.test.ts checks that).
 //
 //   node tests/support/make-vectors.ts
 //
@@ -9,28 +10,30 @@
 // by the reducers they test. Where a case needs a value the rules define (draw order, invite
 // proof, tie-break by id), it is computed here with a separate few lines, not with lib/protocol.
 
-import { writeFileSync, mkdirSync } from "node:fs"
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { schnorr } from "@noble/curves/secp256k1"
 import { hmac } from "@noble/hashes/hmac"
 import { sha256 } from "@noble/hashes/sha2"
 import { bytesToHex, hexToBytes, utf8ToBytes } from "@noble/hashes/utils"
 import { getEventHash, nip44 } from "nostr-core"
-import { replay } from "../../lib/game/engine.ts"
+import { correctDart, replay, visitBySeq } from "../../lib/game/engine.ts"
 import type { Throw } from "../../lib/game/types.ts"
 import { badgeAwardTemplate, badgeD, badgeDefinitionTemplate } from "../../lib/protocol/badges.ts"
 import { BOARD_MESSAGES, boardPlaintext, boardTemplate } from "../../lib/protocol/board.ts"
 import { chunkData } from "../../lib/protocol/chunks.ts"
+import type { InvitePreview } from "../../lib/protocol/invite.ts"
+import { invitePreview, previewKey } from "../../lib/protocol/invite.ts"
+import { encodeLinkPayload } from "../../lib/protocol/links.ts"
 import { liveContent } from "../../lib/protocol/live.ts"
 import { ENGINE_VERSION } from "../../lib/protocol/match.ts"
 import { announceMac, encodePairingCode, helloMac, PAIRING_MESSAGES, pairingCheckCode, pairingCodeKeys, pairingPlaintext, pairingTemplate } from "../../lib/protocol/pairing.ts"
 import { paymentRequestRumor } from "../../lib/protocol/payment.ts"
 import { dataKeyRecord, dataKeySlot, encodeEnvelope, privateRecord, privateTemplate, recordPart, recordSlot } from "../../lib/protocol/private.ts"
-import { buildRecord, RECORD_TYPES, sealTemplate } from "../../lib/protocol/records.ts"
+import { buildRecord, encryptForLinkKey, RECORD_TYPES, sealRecord } from "../../lib/protocol/records.ts"
 import type { ContentOf, RecordType } from "../../lib/protocol/records.ts"
 import type { JsonSchema, Schema } from "../../lib/protocol/schema.ts"
 import type { SignedEvent } from "../../lib/protocol/tags.ts"
-import { encodeLinkPayload } from "../../lib/protocol/links.ts"
 import { encodeThrows } from "../../lib/protocol/throws.ts"
 import { config, dart, miss3, play } from "../helpers.ts"
 
@@ -38,7 +41,7 @@ type EventTemplate = { kind: number; created_at: number; tags: string[][]; conte
 
 export const T0 = 1760000000
 
-// ---- Keys and signing -------------------------------------------------------------------------
+// ---- Keys, signing, encryption ----------------------------------------------------------------
 
 // Names of the keys a vector file uses; its key table lists exactly these.
 const usedKeys = new Set<string>()
@@ -61,16 +64,66 @@ function sign(name: string, t: EventTemplate): SignedEvent {
   return { id, pubkey, created_at: t.created_at, kind: t.kind, tags: t.tags, content: t.content, sig }
 }
 
-const nonceFor = (...parts: (string | number)[]) => sha256(utf8ToBytes(`blueline-vector-nonce:${parts.join(":")}`))
+const fixed = (...parts: (string | number)[]) => sha256(utf8ToBytes(`blueline-vector-nonce:${parts.join(":")}`))
 
-// NIP-44 from `author` to `recipient` (a group key or a one-time key) with a fixed nonce.
-function encryptTo(author: string, recipient: string, plaintext: string) {
+// NIP-44 from `author` to `recipient` (a link key, a one-time key, a reader) with a fixed nonce.
+function nip44To(author: string, recipient: string, plaintext: string) {
   usedKeys.add(author)
   usedKeys.add(recipient)
-  return nip44.encrypt(plaintext, nip44.getConversationKey(secretOf(author), pub(recipient)), nonceFor(author, recipient, plaintext))
+  return nip44.encrypt(plaintext, nip44.getConversationKey(secretOf(author), pub(recipient)), fixed(author, recipient, plaintext))
 }
 
 const at = (seconds: number) => T0 + seconds
+
+// Independent helpers (deliberately not lib/protocol): the rules from docs/protocol.
+const proof = (token: string, pubkey: string) => bytesToHex(hmac(sha256, hexToBytes(token), utf8ToBytes(`blueline-invite-v1:${pubkey}`)))
+const shaHex = (text: string) => bytesToHex(sha256(utf8ToBytes(text)))
+const commit = (seed: string) => shaHex(`blueline-seed-v1\n${seed}`)
+const order = (seed: string, field: string[]) =>
+  field
+    .map((id) => ({ id, k: shaHex(`blueline-draw-v1\n${seed}\n${id}`) }))
+    .sort((a, b) => (a.k < b.k ? -1 : 1))
+    .map((x) => x.id)
+
+const hex16 = (label: string) => shaHex(`blueline-vector-id:${label}`).slice(0, 32)
+const hex32 = (label: string) => shaHex(`blueline-vector-id:${label}`)
+
+// ---- Records ------------------------------------------------------------------------------------
+
+interface RecordOpts {
+  at: number
+  root?: string
+  d?: string
+  // Seal for these readers (closed clubs): fixed content key and nonce per record.
+  seal?: string[]
+  // With seal on a club.invite: the preview under the link token.
+  preview?: { token: string; content: InvitePreview }
+  // Encrypt to this link key (private matches).
+  link?: string
+  version?: string
+}
+
+function record<T extends RecordType>(author: string, type: T, content: ContentOf<T>, opts: RecordOpts): { event: SignedEvent; plaintext?: string } {
+  let template: EventTemplate = buildRecord(type, content, { created_at: at(opts.at), root: opts.root, d: opts.d })
+  if (opts.version) template = { ...template, tags: template.tags.map((t) => (t[0] === "v" ? ["v", opts.version as string] : t)) }
+  const plaintext = template.content
+  if (opts.seal) {
+    const key = fixed("content-key", author, type, opts.at, plaintext)
+    const nonce = fixed("seal-nonce", author, type, opts.at, plaintext).slice(0, 24)
+    const wraps = opts.seal.map((reader) => ({ reader: pub(reader), payload: nip44To(author, reader, bytesToHex(key)) }))
+    const preview = opts.preview ? { key: previewKey(opts.preview.token), nonce: fixed("preview-nonce", opts.preview.token).slice(0, 24), content: opts.preview.content } : undefined
+    template = sealRecord(template, { key, nonce, wraps, ...(preview ? { preview } : {}) })
+    return { event: sign(author, template), plaintext }
+  }
+  if (opts.link) {
+    template = encryptForLinkKey(template, pub(opts.link), nip44To(author, opts.link, plaintext))
+    return { event: sign(author, template), plaintext }
+  }
+  return { event: sign(author, template) }
+}
+
+// The content key a sealed vector record was made with (for key shares).
+const contentKeyOf = (author: string, type: string, seconds: number, plaintext: string) => bytesToHex(fixed("content-key", author, type, seconds, plaintext))
 
 // ---- Cases ------------------------------------------------------------------------------------
 
@@ -82,10 +135,11 @@ interface Expect {
   state?: Record<string, unknown>
 }
 
-function newCase(name: string, description: string, opts: { now?: number; group?: string; open?: boolean } = {}) {
+function newCase(name: string, description: string, opts: { now?: number; reader?: string; link?: string } = {}) {
   const events: SignedEvent[] = []
   const labels: Record<string, string> = {}
   const plaintexts: Record<string, string> = {}
+  const sealedWith: Record<string, { author: string; type: string; at: number }> = {}
   let root = ""
   const c = {
     add(label: string, event: SignedEvent, plaintext?: string) {
@@ -94,6 +148,17 @@ function newCase(name: string, description: string, opts: { now?: number; group?
       labels[label] = event.id
       if (plaintext !== undefined) plaintexts[event.id] = plaintext
       return event
+    },
+    put<T extends RecordType>(label: string, author: string, type: T, content: ContentOf<T>, o: RecordOpts) {
+      const r = record(author, type, content, o)
+      if (o.seal) sealedWith[label] = { author, type, at: o.at }
+      return c.add(label, r.event, r.plaintext)
+    },
+    // The content key of a record this case sealed: what a club.keys record shares.
+    keyOf(label: string): [string, string] {
+      const s = sealedWith[label]
+      if (!s) throw new Error(`${label} is not sealed`)
+      return [c.id(label), contentKeyOf(s.author, s.type, s.at, plaintexts[c.id(label)])]
     },
     // The same event delivered once more (a second relay).
     again(label: string) {
@@ -107,6 +172,7 @@ function newCase(name: string, description: string, opts: { now?: number; group?
     setRoot(label: string) {
       root = c.id(label)
     },
+    root: () => root,
     done(expect: Expect, extra: Record<string, unknown> = {}) {
       const id = (label: string) => c.id(label)
       return {
@@ -114,8 +180,8 @@ function newCase(name: string, description: string, opts: { now?: number; group?
         description,
         now: opts.now ?? at(100000),
         root,
-        ...(opts.group ? { groupKey: opts.group } : {}),
-        open: opts.open ?? true,
+        ...(opts.reader ? { reader: opts.reader } : {}),
+        ...(opts.link ? { linkKey: opts.link } : {}),
         ...extra,
         events,
         plaintexts,
@@ -133,148 +199,219 @@ function newCase(name: string, description: string, opts: { now?: number; group?
   return c
 }
 
-type CaseBuilder = ReturnType<typeof newCase>
-
-function record<T extends RecordType>(
-  author: string,
-  type: T,
-  content: ContentOf<T>,
-  opts: { at: number; root?: string; d?: string; seal?: string; version?: string },
-): { event: SignedEvent; plaintext?: string } {
-  let template = buildRecord(type, content, { created_at: at(opts.at), root: opts.root, d: opts.d })
-  let plaintext: string | undefined
-  if (opts.version) template = { ...template, tags: template.tags.map((t) => (t[0] === "v" ? ["v", opts.version as string] : t)) }
-  if (opts.seal) {
-    plaintext = template.content
-    template = sealTemplate(template, pub(opts.seal), encryptTo(author, opts.seal, template.content))
-  }
-  return { event: sign(author, template), plaintext }
-}
-
-const put = <T extends RecordType>(c: CaseBuilder, label: string, author: string, type: T, content: ContentOf<T>, opts: Parameters<typeof record>[3]) => {
-  const r = record(author, type, content, opts)
-  return c.add(label, r.event, r.plaintext)
-}
-
-// Independent helpers (deliberately not lib/protocol): the rules from docs/protocol.
-const proof = (token: string, pubkey: string) => bytesToHex(hmac(sha256, hexToBytes(token), utf8ToBytes(`blueline-invite-v1:${pubkey}`)))
-const commit = (seed: string) => bytesToHex(sha256(utf8ToBytes(`blueline-seed-v1:${seed}`)))
-const order = (seed: string, field: string[]) =>
-  field
-    .map((id) => ({ id, k: bytesToHex(sha256(utf8ToBytes(`blueline-draw-v1:${seed}:${id}`))) }))
-    .sort((a, b) => (a.k < b.k ? -1 : 1))
-    .map((x) => x.id)
-
-const hex16 = (label: string) => bytesToHex(sha256(utf8ToBytes(`blueline-vector-id:${label}`))).slice(0, 32)
-const hex32 = (label: string) => bytesToHex(sha256(utf8ToBytes(`blueline-vector-id:${label}`)))
-
 // ---- Club ---------------------------------------------------------------------------------------
 
-const club = (extra: Partial<ContentOf<"club.found">> = {}): ContentOf<"club.found"> => ({ name: "Dartfreunde Nord", visibility: "closed", key: pub("club"), ...extra })
+const closedClub = (extra: Partial<ContentOf<"club.found">> = {}): ContentOf<"club.found"> => ({ name: "Dartfreunde Nord", about: "Dienstags ab 19 Uhr im Vereinsheim.", visibility: "closed", ...extra })
+const publicClub = (extra: Partial<ContentOf<"club.found">> = {}): ContentOf<"club.found"> => ({ name: "Dartfreunde Nord", visibility: "public", ...extra })
+
+const SEASON_RULES: ContentOf<"club.season">["rules"] = { modes: ["501"], points: { win: 2, draw: 1, loss: 0 }, confirmations: "opponent", minGames: 5, tiebreak: ["wins", "legDifference"] }
 
 function clubCases() {
   const cases = []
   const T = hex16("token-1")
   const T2 = hex16("token-2")
-  const INV = hex16("invite-1")
-  const INV2 = hex16("invite-2")
-  const invite = (id = INV, token = T, extra: Partial<ContentOf<"club.invite">> = {}): ContentOf<"club.invite"> => ({ invite: id, token, maxUses: 5, expires: at(86400), ...extra })
-  const join = (who: string, id = INV, token = T): ContentOf<"club.join"> => ({ invite: id, proof: proof(token, pub(who)) })
+  const T3 = hex16("token-3")
+  const preview = (kind: "group" | "personal", expires: number): InvitePreview => ({
+    name: "Dartfreunde Nord",
+    about: "Dienstags ab 19 Uhr im Vereinsheim.",
+    host: pub("owner"),
+    hostName: "Mia",
+    kind,
+    expires,
+    next: { title: "Clubabend", starts: at(7200), place: "Vereinsheim" },
+  })
+  // An invite: always sealed for the members, with the preview for whoever holds the link.
+  const invite = (kind: "group" | "personal", token: string, seconds: number, readers: string[], root: string, expires = at(86400), label?: string) => ({
+    content: { kind, token, expires, ...(label ? { label } : {}) } as ContentOf<"club.invite">,
+    opts: { at: seconds, root, seal: readers, preview: { token, content: preview(kind, expires) } },
+  })
+  const join = (who: string, inviteId: string, token: string): ContentOf<"club.join"> => ({ invite: inviteId, proof: proof(token, pub(who)) })
+  const season = (id = "season-1"): ContentOf<"club.season"> => ({ season: hex16(id), name: "Herbst 2025", starts: at(1000), rules: SEASON_RULES })
 
   {
-    const c = newCase("invite-join", "A closed club (founding and invite encrypted to the club key). Two people join with the invite's proof.", { group: "club" })
-    put(c, "found", "owner", "club.found", club(), { at: 0, seal: "club" })
+    const c = newCase("group-link", "A closed club: founding, invite and season are sealed for the members. Two people join through the group link with their proof and are members at once.", { reader: "owner" })
+    c.put("found", "owner", "club.found", closedClub(), { at: 0, seal: ["owner"] })
     c.setRoot("found")
-    const root = c.id("found")
-    put(c, "invite", "owner", "club.invite", invite(INV, T, { maxUses: 2 }), { at: 10, root, seal: "club" })
-    put(c, "join-alice", "alice", "club.join", join("alice"), { at: 20, root })
-    put(c, "join-bob", "bob", "club.join", join("bob"), { at: 30, root })
-    cases.push(c.done({ applied: ["found", "invite", "join-alice", "join-bob"], rejected: [], state: { owner: "owner", members: { owner: "owner", alice: "member", bob: "member" }, inviteUses: { [INV]: 2 } } }))
-  }
-  {
-    const c = newCase("replayed-invite", "Mallory copies Alice's proof into her own join: worthless for another key. Alice's join arrives twice and counts once.", { group: "club" })
-    put(c, "found", "owner", "club.found", club(), { at: 0, seal: "club" })
-    c.setRoot("found")
-    const root = c.id("found")
-    put(c, "invite", "owner", "club.invite", invite(), { at: 10, root, seal: "club" })
-    put(c, "join-alice", "alice", "club.join", join("alice"), { at: 20, root })
-    c.again("join-alice")
-    put(c, "join-mallory", "mallory", "club.join", { invite: INV, proof: proof(T, pub("alice")) }, { at: 30, root })
-    cases.push(c.done({ applied: ["found", "invite", "join-alice"], rejected: [["join-mallory", "invite_proof_invalid"]], state: { members: { owner: "owner", alice: "member" }, inviteUses: { [INV]: 1 } } }))
-  }
-  {
-    const c = newCase("invite-race", "Single-use invites: the earlier join (created_at, then id) takes the place, the other is refused. Dave and Erin join the second invite in the same second; the lower event id wins.", { group: "club" })
-    put(c, "found", "owner", "club.found", club(), { at: 0, seal: "club" })
-    c.setRoot("found")
-    const root = c.id("found")
-    put(c, "invite", "owner", "club.invite", invite(INV, T, { maxUses: 1 }), { at: 10, root, seal: "club" })
-    put(c, "join-bob", "bob", "club.join", join("bob"), { at: 30, root })
-    put(c, "join-carol", "carol", "club.join", join("carol"), { at: 25, root })
-    put(c, "invite-2", "owner", "club.invite", invite(INV2, T2, { maxUses: 1 }), { at: 40, root, seal: "club" })
-    const dave = put(c, "join-dave", "dave", "club.join", join("dave", INV2, T2), { at: 50, root })
-    const erin = put(c, "join-erin", "erin", "club.join", join("erin", INV2, T2), { at: 50, root })
-    const [first, second] = dave.id < erin.id ? ["join-dave", "join-erin"] : ["join-erin", "join-dave"]
-    const winner = first === "join-dave" ? "dave" : "erin"
+    const root = c.root()
+    const inv = invite("group", T, 10, ["owner"], root, at(86400), "Clubabend")
+    c.put("invite", "owner", "club.invite", inv.content, inv.opts)
+    c.put("join-alice", "alice", "club.join", join("alice", c.id("invite"), T), { at: 20, root })
+    c.put("join-bob", "bob", "club.join", join("bob", c.id("invite"), T), { at: 30, root })
+    c.put("season", "owner", "club.season", season(), { at: 40, root, seal: ["owner", "alice", "bob"] })
     cases.push(
       c.done({
-        applied: ["found", "invite", "join-carol", "invite-2", first],
-        rejected: [
-          ["join-bob", "invite_exhausted"],
-          [second, "invite_exhausted"],
-        ],
-        state: { members: { owner: "owner", carol: "member", [winner]: "member" } },
+        applied: ["found", "invite", "join-alice", "join-bob", "season"],
+        rejected: [],
+        state: { owner: "owner", members: { owner: "owner", alice: "member", bob: "member" }, via: { alice: "group", bob: "group" }, inviteUses: { invite: 2 } },
       }),
     )
   }
   {
-    const c = newCase("expired-and-revoked-invite", "A join after the invite's expiry, and one after the invite was ended.", { group: "club" })
-    put(c, "found", "owner", "club.found", club(), { at: 0, seal: "club" })
+    const c = newCase("replayed-proof", "Mallory copies Alice's proof into her own join: worthless for another key. Alice's join arrives twice and counts once; joining again is refused.", { reader: "owner" })
+    c.put("found", "owner", "club.found", closedClub(), { at: 0, seal: ["owner"] })
     c.setRoot("found")
-    const root = c.id("found")
-    put(c, "invite", "owner", "club.invite", invite(INV, T, { expires: at(100) }), { at: 10, root, seal: "club" })
-    put(c, "join-alice", "alice", "club.join", join("alice"), { at: 200, root })
-    put(c, "invite-2", "owner", "club.invite", invite(INV2, T2), { at: 300, root, seal: "club" })
-    put(c, "revoke", "owner", "club.invite.revoke", { invite: INV2 }, { at: 310, root })
-    put(c, "join-bob", "bob", "club.join", join("bob", INV2, T2), { at: 320, root })
+    const root = c.root()
+    const inv = invite("group", T, 10, ["owner"], root)
+    c.put("invite", "owner", "club.invite", inv.content, inv.opts)
+    c.put("join-alice", "alice", "club.join", join("alice", c.id("invite"), T), { at: 20, root })
+    c.again("join-alice")
+    c.put("join-mallory", "mallory", "club.join", { invite: c.id("invite"), proof: proof(T, pub("alice")) }, { at: 30, root })
+    c.put("alice-again", "alice", "club.join", join("alice", c.id("invite"), T), { at: 40, root })
     cases.push(
       c.done({
-        applied: ["found", "invite", "invite-2", "revoke"],
+        applied: ["found", "invite", "join-alice"],
+        rejected: [
+          ["join-mallory", "invite_proof_invalid"],
+          ["alice-again", "already_member"],
+        ],
+        state: { members: { owner: "owner", alice: "member" }, inviteUses: { invite: 1 } },
+      }),
+    )
+  }
+  {
+    const c = newCase(
+      "group-link-with-limit",
+      "A club for three: the group link only files requests, and the owner decides who gets the places. Carol asked last but is accepted first; the third acceptance is refused because the club is full.",
+      { reader: "owner" },
+    )
+    c.put("found", "owner", "club.found", closedClub({ capacity: 3 }), { at: 0, seal: ["owner"] })
+    c.setRoot("found")
+    const root = c.root()
+    const inv = invite("group", T, 10, ["owner"], root)
+    c.put("invite", "owner", "club.invite", inv.content, inv.opts)
+    c.put("join-alice", "alice", "club.join", join("alice", c.id("invite"), T), { at: 20, root })
+    c.put("join-bob", "bob", "club.join", join("bob", c.id("invite"), T), { at: 21, root })
+    c.put("join-carol", "carol", "club.join", join("carol", c.id("invite"), T), { at: 22, root })
+    c.put("accept-carol", "owner", "club.accept", { request: c.id("join-carol"), member: pub("carol") }, { at: 30, root, seal: ["owner", "carol"] })
+    c.put("accept-alice", "owner", "club.accept", { request: c.id("join-alice"), member: pub("alice") }, { at: 31, root, seal: ["owner", "carol", "alice"] })
+    c.put("accept-bob", "owner", "club.accept", { request: c.id("join-bob"), member: pub("bob") }, { at: 32, root, seal: ["owner", "carol", "alice", "bob"] })
+    cases.push(
+      c.done({
+        applied: ["found", "invite", "join-alice", "join-bob", "join-carol", "accept-carol", "accept-alice"],
+        rejected: [["accept-bob", "club_full"]],
+        state: { members: { owner: "owner", carol: "member", alice: "member" }, requests: { bob: "ok" }, inviteUses: { invite: 2 } },
+      }),
+    )
+  }
+  {
+    const c = newCase(
+      "personal-invite",
+      "A personal invite for Tom. Tim got the forwarded link: his proof is valid for his own key, but the invite is used once, by the first acceptance. A later join with it is refused.",
+      { reader: "owner" },
+    )
+    c.put("found", "owner", "club.found", closedClub(), { at: 0, seal: ["owner"] })
+    c.setRoot("found")
+    const root = c.root()
+    const inv = invite("personal", T, 10, ["owner"], root, at(86400), "Für Tom")
+    c.put("invite", "owner", "club.invite", inv.content, inv.opts)
+    c.put("join-tom", "tom", "club.join", join("tom", c.id("invite"), T), { at: 20, root })
+    c.put("join-tim", "tim", "club.join", join("tim", c.id("invite"), T), { at: 21, root })
+    c.put("accept-tom", "owner", "club.accept", { request: c.id("join-tom"), member: pub("tom") }, { at: 30, root, seal: ["owner", "tom"] })
+    c.put("accept-tim", "owner", "club.accept", { request: c.id("join-tim"), member: pub("tim") }, { at: 31, root, seal: ["owner", "tom", "tim"] })
+    c.put("join-erin", "erin", "club.join", join("erin", c.id("invite"), T), { at: 40, root })
+    cases.push(
+      c.done({
+        applied: ["found", "invite", "join-tom", "join-tim", "accept-tom"],
+        rejected: [
+          ["accept-tim", "invite_exhausted"],
+          ["join-erin", "invite_exhausted"],
+        ],
+        state: { members: { owner: "owner", tom: "member" }, via: { tom: "accepted" }, requests: { tim: "ok" }, inviteUses: { invite: 1 } },
+      }),
+    )
+  }
+  {
+    const c = newCase(
+      "expired-and-revoked",
+      "A join after the group link expired, one after it was ended, a second end, a join after a personal invite expired, and an invite that expires before it is made.",
+      { reader: "owner" },
+    )
+    c.put("found", "owner", "club.found", closedClub(), { at: 0, seal: ["owner"] })
+    c.setRoot("found")
+    const root = c.root()
+    const short = invite("group", T, 10, ["owner"], root, at(100))
+    c.put("invite-short", "owner", "club.invite", short.content, short.opts)
+    c.put("join-alice", "alice", "club.join", join("alice", c.id("invite-short"), T), { at: 200, root })
+    const second = invite("group", T2, 300, ["owner"], root)
+    c.put("invite-2", "owner", "club.invite", second.content, second.opts)
+    c.put("revoke", "owner", "club.invite.revoke", { invite: c.id("invite-2") }, { at: 310, root, seal: ["owner"] })
+    c.put("join-bob", "bob", "club.join", join("bob", c.id("invite-2"), T2), { at: 320, root })
+    c.put("revoke-again", "owner", "club.invite.revoke", { invite: c.id("invite-2") }, { at: 330, root, seal: ["owner"] })
+    const personal = invite("personal", T3, 400, ["owner"], root, at(500))
+    c.put("invite-3", "owner", "club.invite", personal.content, personal.opts)
+    c.put("join-dave", "dave", "club.join", join("dave", c.id("invite-3"), T3), { at: 600, root })
+    const bad = invite("group", hex16("token-4"), 800, ["owner"], root, at(700))
+    c.put("invite-bad", "owner", "club.invite", bad.content, bad.opts)
+    cases.push(
+      c.done({
+        applied: ["found", "invite-short", "invite-2", "revoke", "invite-3"],
         rejected: [
           ["join-alice", "invite_expired"],
           ["join-bob", "invite_revoked"],
+          ["revoke-again", "invite_revoked"],
+          ["join-dave", "invite_expired"],
+          ["invite-bad", "invite_expired"],
         ],
         state: { members: { owner: "owner" } },
       }),
     )
   }
   {
-    const c = newCase("over-capacity", "A club for two: the third valid join is refused.", { group: "club" })
-    put(c, "found", "owner", "club.found", club({ capacity: 2 }), { at: 0, seal: "club" })
+    const c = newCase(
+      "requests",
+      "A public club. Asking without an invite waits for an owner or admin: Dave is accepted, Carol declined, Erin withdraws her request. Asking twice, accepting a gone request, an outsider accepting and withdrawing twice are refused.",
+      { reader: "owner" },
+    )
+    c.put("found", "owner", "club.found", publicClub(), { at: 0 })
     c.setRoot("found")
-    const root = c.id("found")
-    put(c, "invite", "owner", "club.invite", invite(), { at: 10, root, seal: "club" })
-    put(c, "join-alice", "alice", "club.join", join("alice"), { at: 20, root })
-    put(c, "join-bob", "bob", "club.join", join("bob"), { at: 30, root })
-    cases.push(c.done({ applied: ["found", "invite", "join-alice"], rejected: [["join-bob", "club_full"]], state: { members: { owner: "owner", alice: "member" } } }))
+    const root = c.root()
+    c.put("ask-dave", "dave", "club.join", {}, { at: 10, root })
+    c.put("ask-carol", "carol", "club.join", {}, { at: 11, root })
+    c.put("ask-carol-again", "carol", "club.join", {}, { at: 12, root })
+    c.put("ask-erin", "erin", "club.join", {}, { at: 13, root })
+    c.put("accept-dave", "owner", "club.accept", { request: c.id("ask-dave"), member: pub("dave") }, { at: 20, root })
+    c.put("decline-carol", "owner", "club.decline", { request: c.id("ask-carol") }, { at: 30, root })
+    c.put("accept-carol", "owner", "club.accept", { request: c.id("ask-carol"), member: pub("carol") }, { at: 40, root })
+    c.put("ask-dave-again", "dave", "club.join", {}, { at: 50, root })
+    c.put("outsider-accepts", "mallory", "club.accept", { request: c.id("ask-erin"), member: pub("erin") }, { at: 60, root })
+    c.put("erin-withdraws", "erin", "club.leave", {}, { at: 70, root })
+    c.put("erin-withdraws-again", "erin", "club.leave", {}, { at: 80, root })
+    cases.push(
+      c.done({
+        applied: ["found", "ask-dave", "ask-carol", "ask-erin", "accept-dave", "decline-carol", "erin-withdraws"],
+        rejected: [
+          ["ask-carol-again", "duplicate"],
+          ["accept-carol", "request_unknown"],
+          ["ask-dave-again", "already_member"],
+          ["outsider-accepts", "not_authorized"],
+          ["erin-withdraws-again", "not_member"],
+        ],
+        state: { members: { owner: "owner", dave: "member" }, requests: {} },
+      }),
+    )
   }
   {
-    const c = newCase("roles", "Who may do what: the owner appoints an admin, the admin appoints a director and removes a member; a director may not invite, a member may not give roles, an admin may not appoint admins or remove the owner.", {
-      group: "club",
-    })
-    put(c, "found", "owner", "club.found", club(), { at: 0, seal: "club" })
+    const c = newCase(
+      "roles",
+      "Who may do what: the owner appoints an admin, the admin appoints a director and removes a member; a director may not invite, a member may not give roles, an admin may not appoint admins or remove the owner.",
+      { reader: "owner" },
+    )
+    c.put("found", "owner", "club.found", publicClub(), { at: 0 })
     c.setRoot("found")
-    const root = c.id("found")
-    put(c, "invite", "owner", "club.invite", invite(), { at: 10, root, seal: "club" })
-    put(c, "join-admin", "admin", "club.join", join("admin"), { at: 20, root })
-    put(c, "join-alice", "alice", "club.join", join("alice"), { at: 21, root })
-    put(c, "join-bob", "bob", "club.join", join("bob"), { at: 22, root })
-    put(c, "make-admin", "owner", "club.role", { member: pub("admin"), role: "admin", prev: c.id("join-admin") }, { at: 30, root })
-    put(c, "make-director", "admin", "club.role", { member: pub("alice"), role: "director", prev: c.id("join-alice") }, { at: 40, root })
-    put(c, "director-invites", "alice", "club.invite", invite(INV2, T2), { at: 50, root, seal: "club" })
-    put(c, "member-gives-role", "bob", "club.role", { member: pub("alice"), role: "member", prev: c.id("make-director") }, { at: 60, root })
-    put(c, "admin-appoints-admin", "admin", "club.role", { member: pub("bob"), role: "admin", prev: c.id("join-bob") }, { at: 70, root })
-    put(c, "admin-removes-owner", "admin", "club.remove", { member: pub("owner"), prev: root }, { at: 80, root })
-    put(c, "admin-removes-bob", "admin", "club.remove", { member: pub("bob"), prev: c.id("join-bob"), reason: "Auf eigenen Wunsch" }, { at: 90, root })
+    const root = c.root()
+    const inv = invite("group", T, 10, ["owner"], root)
+    c.put("invite", "owner", "club.invite", inv.content, inv.opts)
+    c.put("join-admin", "admin", "club.join", join("admin", c.id("invite"), T), { at: 20, root })
+    c.put("join-alice", "alice", "club.join", join("alice", c.id("invite"), T), { at: 21, root })
+    c.put("join-bob", "bob", "club.join", join("bob", c.id("invite"), T), { at: 22, root })
+    c.put("make-admin", "owner", "club.role", { member: pub("admin"), role: "admin", prev: c.id("join-admin") }, { at: 30, root })
+    c.put("make-director", "admin", "club.role", { member: pub("alice"), role: "director", prev: c.id("join-alice") }, { at: 40, root })
+    const own = invite("group", T2, 50, ["owner", "admin", "alice", "bob"], root)
+    c.put("director-invites", "alice", "club.invite", own.content, own.opts)
+    c.put("member-gives-role", "bob", "club.role", { member: pub("alice"), role: "member", prev: c.id("make-director") }, { at: 60, root })
+    c.put("admin-appoints-admin", "admin", "club.role", { member: pub("bob"), role: "admin", prev: c.id("join-bob") }, { at: 70, root })
+    c.put("admin-removes-owner", "admin", "club.remove", { member: pub("owner"), prev: root }, { at: 80, root })
+    c.put("admin-removes-bob", "admin", "club.remove", { member: pub("bob"), prev: c.id("join-bob"), reason: "Auf eigenen Wunsch" }, { at: 90, root })
     cases.push(
       c.done({
         applied: ["found", "invite", "join-admin", "join-alice", "join-bob", "make-admin", "make-director", "admin-removes-bob"],
@@ -289,43 +426,18 @@ function clubCases() {
     )
   }
   {
-    const c = newCase("requests", "Joining without an invite waits for the leadership: Dave is accepted, Carol declined; accepting a gone request and asking twice are refused.", { group: "club" })
-    put(c, "found", "owner", "club.found", club(), { at: 0, seal: "club" })
+    const c = newCase("role-conflict", "Owner and admin change Alice's role from the same base. The later one is a visible conflict; the admin resolves it on the new base.", { reader: "owner" })
+    c.put("found", "owner", "club.found", publicClub(), { at: 0 })
     c.setRoot("found")
-    const root = c.id("found")
-    put(c, "ask-dave", "dave", "club.join", { message: "Ich spiele dienstags mit." }, { at: 10, root })
-    put(c, "ask-carol", "carol", "club.join", {}, { at: 11, root })
-    put(c, "ask-carol-again", "carol", "club.join", {}, { at: 12, root })
-    put(c, "accept-dave", "owner", "club.accept", { request: c.id("ask-dave"), member: pub("dave") }, { at: 20, root })
-    put(c, "decline-carol", "owner", "club.decline", { request: c.id("ask-carol") }, { at: 30, root })
-    put(c, "accept-carol", "owner", "club.accept", { request: c.id("ask-carol"), member: pub("carol") }, { at: 40, root })
-    put(c, "ask-dave-again", "dave", "club.join", {}, { at: 50, root })
-    put(c, "outsider-accepts", "mallory", "club.accept", { request: c.id("ask-dave"), member: pub("dave") }, { at: 60, root })
-    cases.push(
-      c.done({
-        applied: ["found", "ask-dave", "ask-carol", "accept-dave", "decline-carol"],
-        rejected: [
-          ["ask-carol-again", "duplicate"],
-          ["accept-carol", "request_unknown"],
-          ["ask-dave-again", "already_member"],
-          ["outsider-accepts", "not_authorized"],
-        ],
-        state: { members: { owner: "owner", dave: "member" }, requests: [] },
-      }),
-    )
-  }
-  {
-    const c = newCase("role-conflict", "Owner and admin change Alice's role from the same base. The later one is a visible conflict; the admin resolves it on the new base.", { group: "club" })
-    put(c, "found", "owner", "club.found", club(), { at: 0, seal: "club" })
-    c.setRoot("found")
-    const root = c.id("found")
-    put(c, "invite", "owner", "club.invite", invite(), { at: 10, root, seal: "club" })
-    put(c, "join-admin", "admin", "club.join", join("admin"), { at: 20, root })
-    put(c, "join-alice", "alice", "club.join", join("alice"), { at: 21, root })
-    put(c, "make-admin", "owner", "club.role", { member: pub("admin"), role: "admin", prev: c.id("join-admin") }, { at: 30, root })
-    put(c, "owner-sets", "owner", "club.role", { member: pub("alice"), role: "director", prev: c.id("join-alice") }, { at: 50, root })
-    put(c, "admin-sets", "admin", "club.role", { member: pub("alice"), role: "member", prev: c.id("join-alice") }, { at: 51, root })
-    put(c, "admin-resolves", "admin", "club.role", { member: pub("alice"), role: "member", prev: c.id("owner-sets") }, { at: 60, root })
+    const root = c.root()
+    const inv = invite("group", T, 10, ["owner"], root)
+    c.put("invite", "owner", "club.invite", inv.content, inv.opts)
+    c.put("join-admin", "admin", "club.join", join("admin", c.id("invite"), T), { at: 20, root })
+    c.put("join-alice", "alice", "club.join", join("alice", c.id("invite"), T), { at: 21, root })
+    c.put("make-admin", "owner", "club.role", { member: pub("admin"), role: "admin", prev: c.id("join-admin") }, { at: 30, root })
+    c.put("owner-sets", "owner", "club.role", { member: pub("alice"), role: "director", prev: c.id("join-alice") }, { at: 50, root })
+    c.put("admin-sets", "admin", "club.role", { member: pub("alice"), role: "member", prev: c.id("join-alice") }, { at: 51, root })
+    c.put("admin-resolves", "admin", "club.role", { member: pub("alice"), role: "member", prev: c.id("owner-sets") }, { at: 60, root })
     cases.push(
       c.done({
         applied: ["found", "invite", "join-admin", "join-alice", "make-admin", "owner-sets", "admin-resolves"],
@@ -335,47 +447,52 @@ function clubCases() {
     )
   }
   {
-    const c = newCase("owner-transfer", "Ownership changes only by offer and acceptance of the offered member. Afterwards the former owner is an admin and loses owner rights.", { group: "club" })
-    put(c, "found", "owner", "club.found", club(), { at: 0, seal: "club" })
+    const c = newCase("owner-transfer", "Ownership changes only by offer and acceptance of the offered member. Afterwards the former owner is an admin and loses what only the owner may do; the club id stays.", {
+      reader: "owner",
+    })
+    c.put("found", "owner", "club.found", publicClub(), { at: 0 })
     c.setRoot("found")
-    const root = c.id("found")
-    put(c, "invite", "owner", "club.invite", invite(), { at: 10, root, seal: "club" })
-    put(c, "join-alice", "alice", "club.join", join("alice"), { at: 20, root })
-    put(c, "join-bob", "bob", "club.join", join("bob"), { at: 21, root })
-    put(c, "offer", "owner", "club.owner.offer", { to: pub("alice"), prev: root }, { at: 30, root })
-    put(c, "bob-accepts", "bob", "club.owner.accept", { offer: c.id("offer") }, { at: 40, root })
-    put(c, "alice-accepts", "alice", "club.owner.accept", { offer: c.id("offer") }, { at: 50, root })
-    put(c, "old-owner-rotates", "owner", "club.key", { epoch: 1, key: pub("club-2"), wraps: [] }, { at: 60, root })
-    put(c, "old-owner-offers", "owner", "club.owner.offer", { to: pub("bob"), prev: c.id("alice-accepts") }, { at: 70, root })
-    put(c, "new-owner-rotates", "alice", "club.key", { epoch: 1, key: pub("club-2"), wraps: [encryptTo("alice", "owner", sec("club-2")), encryptTo("alice", "bob", sec("club-2"))] }, { at: 80, root })
+    const root = c.root()
+    const inv = invite("group", T, 10, ["owner"], root)
+    c.put("invite", "owner", "club.invite", inv.content, inv.opts)
+    c.put("join-alice", "alice", "club.join", join("alice", c.id("invite"), T), { at: 20, root })
+    c.put("join-bob", "bob", "club.join", join("bob", c.id("invite"), T), { at: 21, root })
+    c.put("offer", "owner", "club.owner.offer", { to: pub("alice"), prev: root }, { at: 30, root })
+    c.put("bob-accepts", "bob", "club.owner.accept", { offer: c.id("offer") }, { at: 40, root })
+    c.put("alice-accepts", "alice", "club.owner.accept", { offer: c.id("offer") }, { at: 50, root })
+    c.put("old-owner-closes", "owner", "club.update", { prev: root, visibility: "closed" }, { at: 60, root })
+    c.put("old-owner-offers", "owner", "club.owner.offer", { to: pub("bob"), prev: c.id("alice-accepts") }, { at: 70, root })
+    c.put("new-owner-renames", "alice", "club.update", { prev: root, name: "Dartfreunde Nord e.V." }, { at: 80, root })
     cases.push(
       c.done({
-        applied: ["found", "invite", "join-alice", "join-bob", "offer", "alice-accepts", "new-owner-rotates"],
+        applied: ["found", "invite", "join-alice", "join-bob", "offer", "alice-accepts", "new-owner-renames"],
         rejected: [
           ["bob-accepts", "not_authorized"],
-          ["old-owner-rotates", "not_authorized"],
+          ["old-owner-closes", "not_authorized"],
           ["old-owner-offers", "not_authorized"],
         ],
-        state: { owner: "alice", members: { owner: "admin", alice: "owner", bob: "member" }, keyEpoch: 1 },
+        state: { owner: "alice", members: { owner: "admin", alice: "owner", bob: "member" }, name: "Dartfreunde Nord e.V." },
       }),
     )
   }
   {
-    const c = newCase("leave-and-rejoin", "The owner cannot leave; a member leaves once. A removed member cannot come back with an invite made before the removal, but can with a new one.", { group: "club" })
-    put(c, "found", "owner", "club.found", club(), { at: 0, seal: "club" })
+    const c = newCase("leave-and-rejoin", "The owner cannot leave; a member leaves once. A removed member cannot come back with an invite made before the removal, but can with a new one.", { reader: "owner" })
+    c.put("found", "owner", "club.found", publicClub(), { at: 0 })
     c.setRoot("found")
-    const root = c.id("found")
-    put(c, "invite", "owner", "club.invite", invite(), { at: 10, root, seal: "club" })
-    put(c, "join-alice", "alice", "club.join", join("alice"), { at: 20, root })
-    put(c, "join-bob", "bob", "club.join", join("bob"), { at: 21, root })
-    put(c, "owner-leaves", "owner", "club.leave", {}, { at: 30, root })
-    put(c, "bob-leaves", "bob", "club.leave", {}, { at: 31, root })
-    put(c, "bob-leaves-again", "bob", "club.leave", {}, { at: 32, root })
-    put(c, "remove-alice", "owner", "club.remove", { member: pub("alice"), prev: c.id("join-alice") }, { at: 40, root })
-    put(c, "alice-old-invite", "alice", "club.join", join("alice"), { at: 50, root })
-    put(c, "invite-2", "owner", "club.invite", invite(INV2, T2), { at: 60, root, seal: "club" })
-    put(c, "alice-new-invite", "alice", "club.join", join("alice", INV2, T2), { at: 70, root })
-    put(c, "bob-returns", "bob", "club.join", join("bob", INV2, T2), { at: 80, root })
+    const root = c.root()
+    const inv = invite("group", T, 10, ["owner"], root)
+    c.put("invite", "owner", "club.invite", inv.content, inv.opts)
+    c.put("join-alice", "alice", "club.join", join("alice", c.id("invite"), T), { at: 20, root })
+    c.put("join-bob", "bob", "club.join", join("bob", c.id("invite"), T), { at: 21, root })
+    c.put("owner-leaves", "owner", "club.leave", {}, { at: 30, root })
+    c.put("bob-leaves", "bob", "club.leave", {}, { at: 31, root })
+    c.put("bob-leaves-again", "bob", "club.leave", {}, { at: 32, root })
+    c.put("remove-alice", "owner", "club.remove", { member: pub("alice"), prev: c.id("join-alice") }, { at: 40, root })
+    c.put("alice-old-invite", "alice", "club.join", join("alice", c.id("invite"), T), { at: 50, root })
+    const inv2 = invite("group", T2, 60, ["owner"], root)
+    c.put("invite-2", "owner", "club.invite", inv2.content, inv2.opts)
+    c.put("alice-new-invite", "alice", "club.join", join("alice", c.id("invite-2"), T2), { at: 70, root })
+    c.put("bob-returns", "bob", "club.join", join("bob", c.id("invite-2"), T2), { at: 80, root })
     cases.push(
       c.done({
         applied: ["found", "invite", "join-alice", "join-bob", "bob-leaves", "remove-alice", "invite-2", "alice-new-invite", "bob-returns"],
@@ -389,44 +506,92 @@ function clubCases() {
     )
   }
   {
-    const c = newCase("key-rotation", "Only the owner rotates the club key, one epoch at a time.", { group: "club" })
-    put(c, "found", "owner", "club.found", club(), { at: 0, seal: "club" })
+    const c = newCase(
+      "new-member-reads-history",
+      "Read by Bob, who joined later: what was sealed before he joined opens through the owner's key share. A key share by a plain member is refused (the keys it carries still only open what they belong to).",
+      { reader: "bob" },
+    )
+    c.put("found", "owner", "club.found", closedClub(), { at: 0, seal: ["owner"] })
     c.setRoot("found")
-    const root = c.id("found")
-    put(c, "invite", "owner", "club.invite", invite(), { at: 10, root, seal: "club" })
-    put(c, "join-admin", "admin", "club.join", join("admin"), { at: 20, root })
-    put(c, "make-admin", "owner", "club.role", { member: pub("admin"), role: "admin", prev: c.id("join-admin") }, { at: 30, root })
-    put(c, "rotate-1", "owner", "club.key", { epoch: 1, key: pub("club-2"), wraps: [encryptTo("owner", "admin", sec("club-2"))] }, { at: 40, root })
-    put(c, "rotate-skip", "owner", "club.key", { epoch: 3, key: pub("club-3"), wraps: [] }, { at: 50, root })
-    put(c, "admin-rotates", "admin", "club.key", { epoch: 2, key: pub("club-3"), wraps: [] }, { at: 60, root })
+    const root = c.root()
+    const inv = invite("group", T, 10, ["owner"], root)
+    c.put("invite", "owner", "club.invite", inv.content, inv.opts)
+    c.put("join-alice", "alice", "club.join", join("alice", c.id("invite"), T), { at: 20, root })
+    c.put("season", "owner", "club.season", season(), { at: 30, root, seal: ["owner", "alice"] })
+    c.put("date", "owner", "club.date", { date: hex16("date-1"), title: "Clubabend", starts: at(7200), place: "Vereinsheim", prev: root }, { at: 31, root, seal: ["owner", "alice"] })
+    c.put("join-bob", "bob", "club.join", join("bob", c.id("invite"), T), { at: 40, root })
+    c.put("share", "owner", "club.keys", { keys: [c.keyOf("found"), c.keyOf("invite"), c.keyOf("season"), c.keyOf("date")] }, { at: 50, root, seal: ["owner", "alice", "bob"] })
+    c.put("alice-shares", "alice", "club.keys", { keys: [c.keyOf("found")] }, { at: 60, root, seal: ["owner", "alice", "bob"] })
     cases.push(
       c.done({
-        applied: ["found", "invite", "join-admin", "make-admin", "rotate-1"],
-        rejected: [
-          ["rotate-skip", "epoch_mismatch"],
-          ["admin-rotates", "not_authorized"],
-        ],
-        state: { keyEpoch: 1, key: pub("club-2") },
+        applied: ["found", "invite", "join-alice", "season", "date", "join-bob", "share"],
+        rejected: [["alice-shares", "not_authorized"]],
+        state: { members: { owner: "owner", alice: "member", bob: "member" }, seasons: { [hex16("season-1")]: { versions: 1, ended: false } }, shares: 1 },
       }),
     )
   }
   {
-    const SEASON = hex16("season-1")
-    const rules: ContentOf<"club.season">["rules"] = { modes: ["501"], points: { win: 2, draw: 1, loss: 0 }, confirmations: "opponent", minGames: 5, tiebreak: ["wins", "legDifference"] }
-    const c = newCase("season-rules", "Season rules are versioned: free changes before the start, after it only with a visible reason, one version at a time, none after the end.", { group: "club" })
-    put(c, "found", "owner", "club.found", club(), { at: 0, seal: "club" })
+    const c = newCase("removed-member", "Read by Alice after her removal: she still reads what was shared with her and her removal, but nothing sealed afterwards is wrapped for her.", { reader: "alice" })
+    c.put("found", "owner", "club.found", closedClub(), { at: 0, seal: ["owner"] })
     c.setRoot("found")
-    const root = c.id("found")
-    put(c, "invite", "owner", "club.invite", invite(), { at: 1, root, seal: "club" })
-    put(c, "join-alice", "alice", "club.join", join("alice"), { at: 2, root })
-    put(c, "season", "owner", "club.season", { season: SEASON, name: "Herbst 2025", starts: at(1000), rules }, { at: 10, root })
-    put(c, "member-season", "alice", "club.season", { season: hex16("season-2"), name: "Eigene Saison", starts: at(1000), rules }, { at: 11, root })
-    put(c, "v2-before", "owner", "club.season.rules", { season: SEASON, version: 2, rules: { ...rules, minGames: 3 } }, { at: 20, root })
-    put(c, "v3-silent", "owner", "club.season.rules", { season: SEASON, version: 3, rules: { ...rules, minGames: 1 } }, { at: 1100, root })
-    put(c, "v3-reason", "owner", "club.season.rules", { season: SEASON, version: 3, rules: { ...rules, minGames: 1 }, reason: "Beschluss Clubabend 14.10." }, { at: 1110, root })
-    put(c, "v5-skip", "owner", "club.season.rules", { season: SEASON, version: 5, rules, reason: "Sprung" }, { at: 1120, root })
-    put(c, "end", "owner", "club.season.end", { season: SEASON }, { at: 1200, root })
-    put(c, "after-end", "owner", "club.season.rules", { season: SEASON, version: 4, rules, reason: "Zu spät" }, { at: 1300, root })
+    const root = c.root()
+    const inv = invite("group", T, 10, ["owner"], root)
+    c.put("invite", "owner", "club.invite", inv.content, inv.opts)
+    c.put("join-alice", "alice", "club.join", join("alice", c.id("invite"), T), { at: 20, root })
+    c.put("join-bob", "bob", "club.join", join("bob", c.id("invite"), T), { at: 21, root })
+    c.put("share", "owner", "club.keys", { keys: [c.keyOf("found"), c.keyOf("invite")] }, { at: 25, root, seal: ["owner", "alice", "bob"] })
+    c.put("remove-alice", "owner", "club.remove", { member: pub("alice"), prev: c.id("join-alice") }, { at: 30, root, seal: ["owner", "bob", "alice"] })
+    c.put("season", "owner", "club.season", season(), { at: 40, root, seal: ["owner", "bob"] })
+    cases.push(
+      c.done({
+        applied: ["found", "invite", "join-alice", "join-bob", "share", "remove-alice"],
+        rejected: [],
+        unapplied: [["season", "sealed"]],
+        state: { members: { owner: "owner", bob: "member" }, former: { alice: "removed" } },
+      }),
+    )
+  }
+  {
+    const c = newCase("closed-club-in-clear", "In a closed club only a join and a leave may travel in the clear; a season in the clear is refused.", { reader: "owner" })
+    c.put("found", "owner", "club.found", closedClub(), { at: 0, seal: ["owner"] })
+    c.setRoot("found")
+    const root = c.root()
+    const inv = invite("group", T, 10, ["owner"], root)
+    c.put("invite", "owner", "club.invite", inv.content, inv.opts)
+    c.put("join-alice", "alice", "club.join", join("alice", c.id("invite"), T), { at: 20, root })
+    c.put("season-in-clear", "owner", "club.season", season(), { at: 30, root })
+    c.put("alice-leaves", "alice", "club.leave", {}, { at: 40, root })
+    cases.push(
+      c.done({
+        applied: ["found", "invite", "join-alice", "alice-leaves"],
+        rejected: [["season-in-clear", "sealing_required"]],
+        state: { members: { owner: "owner" }, former: { alice: "left" } },
+      }),
+    )
+  }
+  {
+    const c = newCase("closed-founding-in-clear", "A closed club whose founding travels in the clear does not exist.", { reader: "owner" })
+    c.put("found", "owner", "club.found", closedClub(), { at: 0 })
+    c.setRoot("found")
+    cases.push(c.done({ problem: "invalid" }))
+  }
+  {
+    const S = hex16("season-1")
+    const c = newCase("season-rules", "Season rules are versioned: free changes before the start, after it only with a visible reason, one version at a time, none after the end.", { reader: "owner" })
+    c.put("found", "owner", "club.found", publicClub(), { at: 0 })
+    c.setRoot("found")
+    const root = c.root()
+    const inv = invite("group", T, 1, ["owner"], root)
+    c.put("invite", "owner", "club.invite", inv.content, inv.opts)
+    c.put("join-alice", "alice", "club.join", join("alice", c.id("invite"), T), { at: 2, root })
+    c.put("season", "owner", "club.season", season(), { at: 10, root })
+    c.put("member-season", "alice", "club.season", season("season-2"), { at: 11, root })
+    c.put("v2-before", "owner", "club.season.rules", { season: S, version: 2, rules: { ...SEASON_RULES, minGames: 3 } }, { at: 20, root })
+    c.put("v3-silent", "owner", "club.season.rules", { season: S, version: 3, rules: { ...SEASON_RULES, minGames: 1 } }, { at: 1100, root })
+    c.put("v3-reason", "owner", "club.season.rules", { season: S, version: 3, rules: { ...SEASON_RULES, minGames: 1 }, reason: "Beschluss Clubabend 14.10." }, { at: 1110, root })
+    c.put("v5-skip", "owner", "club.season.rules", { season: S, version: 5, rules: SEASON_RULES, reason: "Sprung" }, { at: 1120, root })
+    c.put("end", "owner", "club.season.end", { season: S }, { at: 1200, root })
+    c.put("after-end", "owner", "club.season.rules", { season: S, version: 4, rules: SEASON_RULES, reason: "Zu spät" }, { at: 1300, root })
     cases.push(
       c.done({
         applied: ["found", "invite", "join-alice", "season", "v2-before", "v3-reason", "end"],
@@ -436,22 +601,67 @@ function clubCases() {
           ["v5-skip", "season_version_mismatch"],
           ["after-end", "season_ended"],
         ],
-        state: { seasons: { [SEASON]: { versions: 3, ended: true } } },
+        state: { seasons: { [S]: { versions: 3, ended: true } } },
       }),
     )
   }
   {
-    const c = newCase("unknown-version-and-time", "A change in a newer format version is kept, not executed. A record dated more than 15 minutes ahead of the reader's clock and one dated before the founding are refused.", {
-      group: "club",
-      now: at(5000),
-    })
-    put(c, "found", "owner", "club.found", club(), { at: 1000, seal: "club" })
+    const S = hex16("season-1")
+    const M = hex32("club-match-1")
+    const D = hex16("date-1")
+    const c = newCase(
+      "results-and-dates",
+      "A director decides whether a match result counts for the season and plans dates; a member may do neither. Decisions and dates name their predecessor; nothing is decided after the season's end.",
+      { reader: "owner" },
+    )
+    c.put("found", "owner", "club.found", publicClub(), { at: 0 })
     c.setRoot("found")
-    const root = c.id("found")
-    put(c, "update-v2", "owner", "club.update", { prev: root, name: "Version 2" }, { at: 1010, root, version: "2" })
-    put(c, "update-v1", "owner", "club.update", { prev: root, name: "Dartfreunde Nord e.V." }, { at: 1020, root })
-    put(c, "future", "owner", "club.update", { prev: c.id("update-v1"), about: "Aus der Zukunft" }, { at: 5000 + 901, root })
-    put(c, "too-early", "owner", "club.update", { prev: root, about: "Vor der Gründung" }, { at: 900, root })
+    const root = c.root()
+    const inv = invite("group", T, 1, ["owner"], root)
+    c.put("invite", "owner", "club.invite", inv.content, inv.opts)
+    c.put("join-director", "director", "club.join", join("director", c.id("invite"), T), { at: 2, root })
+    c.put("join-alice", "alice", "club.join", join("alice", c.id("invite"), T), { at: 3, root })
+    c.put("make-director", "owner", "club.role", { member: pub("director"), role: "director", prev: c.id("join-director") }, { at: 4, root })
+    c.put("season", "owner", "club.season", season(), { at: 10, root })
+    const decision = (count: boolean, prev: string, reason?: string): ContentOf<"club.result"> => ({ season: S, match: M, result: hex32("club-result-1"), count, prev, ...(reason ? { reason } : {}) })
+    c.put("decide", "director", "club.result", decision(false, root, "Ergebnis nicht bestätigt"), { at: 20, root })
+    c.put("member-decides", "alice", "club.result", decision(true, c.id("decide")), { at: 21, root })
+    c.put("stale-decide", "owner", "club.result", decision(true, root), { at: 22, root })
+    c.put("re-decide", "owner", "club.result", decision(true, c.id("decide"), "Nachträglich bestätigt"), { at: 23, root })
+    const date = (starts: number, prev: string, extra: Partial<ContentOf<"club.date">> = {}): ContentOf<"club.date"> => ({ date: D, title: "Clubabend", starts, place: "Vereinsheim", prev, ...extra })
+    c.put("date", "director", "club.date", date(at(7200), root), { at: 30, root })
+    c.put("date-move", "owner", "club.date", date(at(10800), c.id("date")), { at: 31, root })
+    c.put("member-date", "alice", "club.date", date(at(9000), c.id("date-move")), { at: 32, root })
+    c.put("date-cancel", "director", "club.date", date(at(7200), c.id("date"), { cancelled: true }), { at: 33, root })
+    c.put("end", "owner", "club.season.end", { season: S }, { at: 40, root })
+    c.put("late-decide", "director", "club.result", decision(false, c.id("re-decide")), { at: 50, root })
+    cases.push(
+      c.done({
+        applied: ["found", "invite", "join-director", "join-alice", "make-director", "season", "decide", "re-decide", "date", "date-move", "end"],
+        rejected: [
+          ["member-decides", "not_authorized"],
+          ["stale-decide", "stale_predecessor"],
+          ["member-date", "not_authorized"],
+          ["date-cancel", "stale_predecessor"],
+          ["late-decide", "season_ended"],
+        ],
+        state: { results: { [S]: { [M]: true } }, dates: { [D]: { starts: at(10800), cancelled: false } } },
+      }),
+    )
+  }
+  {
+    const c = newCase(
+      "unknown-version-and-time",
+      "A change in a newer format version is kept, not executed. A record dated more than 15 minutes ahead of the reader's clock and one dated before the founding are refused.",
+      { now: at(5000), reader: "owner" },
+    )
+    c.put("found", "owner", "club.found", publicClub(), { at: 1000 })
+    c.setRoot("found")
+    const root = c.root()
+    c.put("update-v2", "owner", "club.update", { prev: root, name: "Version 2" }, { at: 1010, root, version: "2" })
+    c.put("update-v1", "owner", "club.update", { prev: root, name: "Dartfreunde Nord e.V." }, { at: 1020, root })
+    c.put("future", "owner", "club.update", { prev: c.id("update-v1"), about: "Aus der Zukunft" }, { at: 5000 + 901, root })
+    c.put("too-early", "owner", "club.update", { prev: root, about: "Vor der Gründung" }, { at: 900, root })
     cases.push(
       c.done({
         applied: ["found", "update-v1"],
@@ -465,20 +675,62 @@ function clubCases() {
     )
   }
   {
-    const c = newCase("reader-without-club-key", "A public club read by an outsider: invites are always encrypted, so a join with an invite waits like a request until the leadership accepts it.", { open: false })
-    put(c, "found", "owner", "club.found", club({ visibility: "public" }), { at: 0 })
+    const c = newCase("archived", "An archived club takes no requests and no new seasons; the owner can still change its details.", { reader: "owner" })
+    c.put("found", "owner", "club.found", publicClub(), { at: 0 })
     c.setRoot("found")
-    const root = c.id("found")
-    put(c, "invite", "owner", "club.invite", invite(), { at: 10, root, seal: "club" })
-    put(c, "join-alice", "alice", "club.join", join("alice"), { at: 20, root })
-    put(c, "join-bob", "bob", "club.join", join("bob"), { at: 21, root })
-    put(c, "accept-alice", "owner", "club.accept", { request: c.id("join-alice"), member: pub("alice") }, { at: 30, root })
+    const root = c.root()
+    c.put("archive", "owner", "club.update", { prev: root, archived: true }, { at: 10, root })
+    c.put("ask-dave", "dave", "club.join", {}, { at: 20, root })
+    c.put("season", "owner", "club.season", season(), { at: 30, root })
+    c.put("rename", "owner", "club.update", { prev: c.id("archive"), name: "Dartfreunde Nord (bis 2025)" }, { at: 40, root })
+    cases.push(
+      c.done({
+        applied: ["found", "archive", "rename"],
+        rejected: [
+          ["ask-dave", "club_archived"],
+          ["season", "club_archived"],
+        ],
+        state: { members: { owner: "owner" }, name: "Dartfreunde Nord (bis 2025)" },
+      }),
+    )
+  }
+  {
+    const c = newCase(
+      "outsider-reader",
+      "A public club read by an outsider: invites are always sealed, so joins through a group link stay unverified requests for this reader, and an acceptance by the owner counts.",
+      { reader: "mallory" },
+    )
+    c.put("found", "owner", "club.found", publicClub(), { at: 0 })
+    c.setRoot("found")
+    const root = c.root()
+    const inv = invite("group", T, 10, ["owner"], root)
+    c.put("invite", "owner", "club.invite", inv.content, inv.opts)
+    c.put("join-alice", "alice", "club.join", join("alice", c.id("invite"), T), { at: 20, root })
+    c.put("join-bob", "bob", "club.join", join("bob", c.id("invite"), T), { at: 21, root })
+    c.put("accept-alice", "owner", "club.accept", { request: c.id("join-alice"), member: pub("alice") }, { at: 30, root })
     cases.push(
       c.done({
         applied: ["found", "join-alice", "join-bob", "accept-alice"],
         rejected: [],
         unapplied: [["invite", "sealed"]],
-        state: { members: { owner: "owner", alice: "member" }, requests: ["bob"] },
+        state: { members: { owner: "owner", alice: "member" }, requests: { bob: "unverified" } },
+      }),
+    )
+  }
+  {
+    const c = newCase("backdated-join", "A join dated before the invite it names is refused: nobody can have held that link yet.", { reader: "owner" })
+    c.put("found", "owner", "club.found", publicClub(), { at: 0 })
+    c.setRoot("found")
+    const root = c.root()
+    const inv = invite("group", T, 100, ["owner"], root)
+    c.put("invite", "owner", "club.invite", inv.content, inv.opts)
+    c.put("join-alice", "alice", "club.join", join("alice", c.id("invite"), T), { at: 50, root })
+    c.put("join-bob", "bob", "club.join", join("bob", c.id("invite"), T), { at: 150, root })
+    cases.push(
+      c.done({
+        applied: ["found", "invite", "join-bob"],
+        rejected: [["join-alice", "invite_unknown"]],
+        state: { members: { owner: "owner", bob: "member" } },
       }),
     )
   }
@@ -499,13 +751,14 @@ const rules501: ContentOf<"tournament.found">["rules"] = {
   setsToWin: 1,
   startRule: "alternate",
 }
-const SEED = hex32("seed-1")
+const SEED = hex16("seed-1")
 const cup = (extra: Partial<ContentOf<"tournament.found">> = {}): ContentOf<"tournament.found"> => ({
   name: "Herbstcup",
-  format: "single_ko",
+  engine: 1,
+  format: "single",
   rules: rules501,
   capacity: 4,
-  admission: "auto",
+  admission: "manual",
   waitlist: true,
   checkIn: true,
   approval: "organizer",
@@ -518,88 +771,131 @@ const cup = (extra: Partial<ContentOf<"tournament.found">> = {}): ContentOf<"tou
 function tournamentCases() {
   const cases = []
   const G = hex16("guest-1")
+  const G2 = hex16("guest-2")
+  const G3 = hex16("guest-3")
   {
-    const c = newCase("registration-waitlist", "Two places: the third registration goes to the waiting list and moves up when a player withdraws. Registering twice, and after registration closed, is refused.")
-    put(c, "found", "organizer", "tournament.found", cup({ capacity: 2 }), { at: 0 })
+    const c = newCase(
+      "registration-and-admission",
+      "Registrations wait for the organizer, whatever their created_at: P4 dated hers before everyone and still waits. The organizer admits two, the third admission is refused (full), puts two on the waiting list and later admits P4 from it, not P3. A late registration during check-in waits, marked late.",
+    )
+    c.put("found", "organizer", "tournament.found", cup({ capacity: 2, registrationCloses: at(55) }), { at: 0 })
     c.setRoot("found")
-    const root = c.id("found")
-    put(c, "p1", "p1", "tournament.register", { alias: "Mia" }, { at: 10, root })
-    put(c, "p2", "p2", "tournament.register", {}, { at: 20, root })
-    put(c, "p3", "p3", "tournament.register", {}, { at: 30, root })
-    put(c, "p1-withdraws", "p1", "tournament.withdraw", { reason: "krank" }, { at: 40, root })
-    put(c, "p2-again", "p2", "tournament.register", {}, { at: 45, root })
-    put(c, "p4", "p4", "tournament.register", {}, { at: 50, root })
-    put(c, "checkin", "organizer", "tournament.phase", { phase: "checkin", prev: root }, { at: 60, root })
-    put(c, "p5-late", "p5", "tournament.register", {}, { at: 70, root })
+    const root = c.root()
+    c.put("p1", "p1", "tournament.register", { alias: "Mia" }, { at: 10, root })
+    c.put("p2", "p2", "tournament.register", {}, { at: 20, root })
+    c.put("p3", "p3", "tournament.register", {}, { at: 30, root })
+    c.put("p4", "p4", "tournament.register", {}, { at: 5, root })
+    c.put("p1-admits-self", "p1", "tournament.admit", { participant: pub("p1"), prev: c.id("p1") }, { at: 35, root })
+    c.put("admit-p2", "organizer", "tournament.admit", { participant: pub("p2"), prev: c.id("p2") }, { at: 40, root })
+    c.put("admit-p1", "organizer", "tournament.admit", { participant: pub("p1"), prev: c.id("p1") }, { at: 41, root })
+    c.put("admit-p3", "organizer", "tournament.admit", { participant: pub("p3"), prev: c.id("p3") }, { at: 42, root })
+    c.put("wait-p3", "organizer", "tournament.waitlist", { participant: pub("p3"), prev: c.id("p3") }, { at: 43, root })
+    c.put("wait-p4", "organizer", "tournament.waitlist", { participant: pub("p4"), prev: c.id("p4") }, { at: 44, root })
+    c.put("p1-withdraws", "p1", "tournament.withdraw", { reason: "krank" }, { at: 45, root })
+    c.put("p2-again", "p2", "tournament.register", {}, { at: 46, root })
+    c.put("admit-p4", "organizer", "tournament.admit", { participant: pub("p4"), prev: c.id("wait-p4") }, { at: 50, root })
+    c.put("checkin", "organizer", "tournament.phase", { phase: "checkin", prev: root }, { at: 60, root })
+    c.put("p5", "p5", "tournament.register", {}, { at: 70, root })
     cases.push(
       c.done({
-        applied: ["found", "p1", "p2", "p3", "p1-withdraws", "p4", "checkin"],
+        applied: ["found", "p4", "p1", "p2", "p3", "admit-p2", "admit-p1", "wait-p3", "wait-p4", "p1-withdraws", "admit-p4", "checkin", "p5"],
         rejected: [
+          ["p1-admits-self", "not_authorized"],
+          ["admit-p3", "tournament_full"],
           ["p2-again", "already_registered"],
-          ["p5-late", "registration_closed"],
         ],
-        state: { phase: "checkin", participants: { p1: "withdrawn", p2: "registered", p3: "registered", p4: "waitlist" } },
+        state: { phase: "checkin", participants: { p1: "withdrawn", p2: "registered", p3: "waitlist", p4: "registered", p5: "pending" }, late: ["p5"], waitlist: ["p3"] },
       }),
     )
   }
   {
-    const c = newCase("full-without-waitlist", "No waiting list: a registration beyond capacity is refused; manual admission keeps registrations waiting for the organizer.")
-    put(c, "found", "organizer", "tournament.found", cup({ capacity: 2, waitlist: false }), { at: 0 })
+    const c = newCase("capacity", "Three places: a fourth guest and an admission beyond capacity are refused, a tournament without a waiting list has none, and the capacity cannot shrink below the admitted field.")
+    c.put("found", "organizer", "tournament.found", cup({ capacity: 3, waitlist: false, checkIn: false }), { at: 0 })
     c.setRoot("found")
-    const root = c.id("found")
-    put(c, "p1", "p1", "tournament.register", {}, { at: 10, root })
-    put(c, "p2", "p2", "tournament.register", {}, { at: 20, root })
-    put(c, "p3", "p3", "tournament.register", {}, { at: 30, root })
-    cases.push(c.done({ applied: ["found", "p1", "p2"], rejected: [["p3", "tournament_full"]], state: { participants: { p1: "registered", p2: "registered" } } }))
-  }
-  {
-    const c = newCase("guests-and-claims", "The organizer adds a guest under an alias. A guest place is linked to a player only after that player claimed it; only the organizer adds guests.")
-    put(c, "found", "organizer", "tournament.found", cup(), { at: 0 })
-    c.setRoot("found")
-    const root = c.id("found")
-    put(c, "guest", "organizer", "tournament.guest", { guest: G, alias: "Gast 1" }, { at: 10, root })
-    put(c, "link-unclaimed", "organizer", "tournament.link", { guest: G, player: pub("p1"), prev: c.id("guest") }, { at: 20, root })
-    put(c, "claim", "p1", "tournament.claim", { guest: G }, { at: 30, root })
-    put(c, "link", "organizer", "tournament.link", { guest: G, player: pub("p1"), prev: c.id("guest") }, { at: 40, root })
-    put(c, "mallory-guest", "mallory", "tournament.guest", { guest: hex16("guest-2"), alias: "Gast 2" }, { at: 50, root })
+    const root = c.root()
+    c.put("guest-1", "organizer", "tournament.guest", { guest: G, alias: "Gast 1" }, { at: 10, root })
+    c.put("guest-2", "organizer", "tournament.guest", { guest: G2, alias: "Gast 2" }, { at: 11, root })
+    c.put("guest-3", "organizer", "tournament.guest", { guest: G3, alias: "Gast 3" }, { at: 12, root })
+    c.put("guest-4", "organizer", "tournament.guest", { guest: hex16("guest-4"), alias: "Gast 4" }, { at: 13, root })
+    c.put("p1", "p1", "tournament.register", {}, { at: 20, root })
+    c.put("admit-p1", "organizer", "tournament.admit", { participant: pub("p1"), prev: c.id("p1") }, { at: 21, root })
+    c.put("wait-p1", "organizer", "tournament.waitlist", { participant: pub("p1"), prev: c.id("p1") }, { at: 22, root })
+    c.put("shrink", "organizer", "tournament.update", { prev: root, capacity: 2 }, { at: 23, root })
     cases.push(
       c.done({
-        applied: ["found", "guest", "claim", "link"],
+        applied: ["found", "guest-1", "guest-2", "guest-3", "p1"],
+        rejected: [
+          ["guest-4", "tournament_full"],
+          ["admit-p1", "tournament_full"],
+          ["wait-p1", "invalid_content"],
+          ["shrink", "tournament_full"],
+        ],
+        state: { participants: { [G]: "registered", [G2]: "registered", [G3]: "registered", p1: "pending" } },
+      }),
+    )
+  }
+  {
+    const c = newCase(
+      "guests-and-claims",
+      "The organizer adds guests: one under a neutral alias, one who agreed to be shown by name. A guest place is linked to a player only after that player claimed it; only the organizer adds guests.",
+    )
+    c.put("found", "organizer", "tournament.found", cup(), { at: 0 })
+    c.setRoot("found")
+    const root = c.root()
+    c.put("guest", "organizer", "tournament.guest", { guest: G, alias: "Gast 1" }, { at: 10, root })
+    c.put("guest-named", "organizer", "tournament.guest", { guest: G2, alias: "Jonas K.", named: true }, { at: 11, root })
+    c.put("link-unclaimed", "organizer", "tournament.link", { guest: G, player: pub("p1"), prev: c.id("guest") }, { at: 20, root })
+    c.put("claim", "p1", "tournament.claim", { guest: G }, { at: 30, root })
+    c.put("link", "organizer", "tournament.link", { guest: G, player: pub("p1"), prev: c.id("guest") }, { at: 40, root })
+    c.put("mallory-guest", "mallory", "tournament.guest", { guest: G3, alias: "Gast 3" }, { at: 50, root })
+    cases.push(
+      c.done({
+        applied: ["found", "guest", "guest-named", "claim", "link"],
         rejected: [
           ["link-unclaimed", "not_authorized"],
           ["mallory-guest", "not_authorized"],
         ],
-        state: { participants: { [G]: "registered" }, linked: { [G]: "p1" } },
+        state: { participants: { [G]: "registered", [G2]: "registered" }, linked: { [G]: "p1" }, named: [G2] },
       }),
     )
   }
   {
-    const c = newCase("checkin-and-draw", "Check-in, then the draw opens the seed committed at the founding. The field is everyone admitted and checked in; a wrong seed, a wrong field and a second draw without a new commitment are refused.")
-    put(c, "found", "organizer", "tournament.found", cup(), { at: 0 })
+    const c = newCase(
+      "checkin-and-draw",
+      "Check-in, then the draw opens the seed committed at the founding and fixes the field. A wrong seed, a field with someone who never registered or whom the organizer took out, and a second draw without a new commitment are refused.",
+    )
+    c.put("found", "organizer", "tournament.found", cup(), { at: 0 })
     c.setRoot("found")
-    const root = c.id("found")
-    put(c, "p1", "p1", "tournament.register", {}, { at: 10, root })
-    put(c, "p2", "p2", "tournament.register", {}, { at: 11, root })
-    put(c, "p3", "p3", "tournament.register", {}, { at: 12, root })
-    put(c, "guest", "organizer", "tournament.guest", { guest: G, alias: "Gast 1" }, { at: 13, root })
-    put(c, "checkin", "organizer", "tournament.phase", { phase: "checkin", prev: root }, { at: 20, root })
-    put(c, "in-p1", "p1", "tournament.checkin", {}, { at: 30, root })
-    put(c, "in-p2", "p2", "tournament.checkin", {}, { at: 31, root })
-    put(c, "in-guest", "organizer", "tournament.checkin", { participant: G, prev: c.id("guest") }, { at: 32, root })
-    put(c, "in-mallory", "mallory", "tournament.checkin", {}, { at: 33, root })
+    const root = c.root()
+    c.put("p1", "p1", "tournament.register", {}, { at: 10, root })
+    c.put("p2", "p2", "tournament.register", {}, { at: 11, root })
+    c.put("p3", "p3", "tournament.register", {}, { at: 12, root })
+    c.put("admit-p1", "organizer", "tournament.admit", { participant: pub("p1"), prev: c.id("p1") }, { at: 13, root })
+    c.put("admit-p2", "organizer", "tournament.admit", { participant: pub("p2"), prev: c.id("p2") }, { at: 14, root })
+    c.put("admit-p3", "organizer", "tournament.admit", { participant: pub("p3"), prev: c.id("p3") }, { at: 15, root })
+    c.put("guest", "organizer", "tournament.guest", { guest: G, alias: "Gast 1" }, { at: 16, root })
+    c.put("checkin", "organizer", "tournament.phase", { phase: "checkin", prev: root }, { at: 20, root })
+    c.put("in-p1", "p1", "tournament.checkin", {}, { at: 30, root })
+    c.put("in-p2", "p2", "tournament.checkin", {}, { at: 31, root })
+    c.put("in-guest", "organizer", "tournament.checkin", { participant: G, prev: c.id("guest") }, { at: 32, root })
+    c.put("in-mallory", "mallory", "tournament.checkin", {}, { at: 33, root })
+    c.put("remove-p3", "organizer", "tournament.remove", { participant: pub("p3"), prev: c.id("admit-p3"), reason: "Nicht erschienen" }, { at: 34, root })
     const field = [pub("p1"), pub("p2"), G]
-    put(c, "draw-wrong-seed", "organizer", "tournament.draw", { seed: hex32("other-seed"), seeded: [], order: order(hex32("other-seed"), field), prev: c.id("checkin") }, { at: 40, root })
-    put(c, "draw-wrong-field", "organizer", "tournament.draw", { seed: SEED, seeded: [], order: order(SEED, [...field, pub("p3")]), prev: c.id("checkin") }, { at: 41, root })
-    put(c, "draw", "organizer", "tournament.draw", { seed: SEED, seeded: [], order: order(SEED, field), prev: c.id("checkin") }, { at: 42, root })
-    put(c, "redraw", "organizer", "tournament.draw", { seed: SEED, seeded: [], order: order(SEED, field), prev: c.id("draw") }, { at: 50, root })
+    const other = hex16("other-seed")
+    c.put("draw-wrong-seed", "organizer", "tournament.draw", { seed: other, seeded: [], order: order(other, field), prev: c.id("checkin") }, { at: 40, root })
+    c.put("draw-stranger", "organizer", "tournament.draw", { seed: SEED, seeded: [], order: order(SEED, [...field, pub("mallory")]), prev: c.id("checkin") }, { at: 41, root })
+    c.put("draw-removed", "organizer", "tournament.draw", { seed: SEED, seeded: [], order: order(SEED, [...field, pub("p3")]), prev: c.id("checkin") }, { at: 42, root })
+    c.put("draw", "organizer", "tournament.draw", { seed: SEED, seeded: [], order: order(SEED, field), prev: c.id("checkin") }, { at: 43, root })
+    c.put("redraw", "organizer", "tournament.draw", { seed: SEED, seeded: [], order: order(SEED, field), prev: c.id("draw") }, { at: 50, root })
     cases.push(
       c.done(
         {
-          applied: ["found", "p1", "p2", "p3", "guest", "checkin", "in-p1", "in-p2", "in-guest", "draw"],
+          applied: ["found", "p1", "p2", "p3", "admit-p1", "admit-p2", "admit-p3", "guest", "checkin", "in-p1", "in-p2", "in-guest", "remove-p3", "draw"],
           rejected: [
             ["in-mallory", "not_registered"],
             ["draw-wrong-seed", "seed_mismatch"],
-            ["draw-wrong-field", "draw_mismatch"],
+            ["draw-stranger", "draw_mismatch"],
+            ["draw-removed", "draw_mismatch"],
             ["redraw", "seed_not_committed"],
           ],
           state: { phase: "drawn", order: order(SEED, field), checkedIn: [pub("p1"), pub("p2"), G] },
@@ -609,54 +905,109 @@ function tournamentCases() {
     )
   }
   {
-    const c = newCase("boards-and-results", "Boards submit results only for slots assigned to them; the organizer approves and corrects. A correction marks the next match built on it as affected.")
-    put(c, "found", "organizer", "tournament.found", cup({ capacity: 4, checkIn: false }), { at: 0 })
+    const c = newCase(
+      "draw-holds-against-backdated-player-records",
+      "Players date their own records. P2 dates a withdrawal before the organizer admitted her and P3 one just before the draw: the admission of P2 is refused, but the organizer's draw, which includes both, still stands; both are withdrawn (walkovers for the engine).",
+    )
+    c.put("found", "organizer", "tournament.found", cup({ checkIn: false }), { at: 0 })
     c.setRoot("found")
-    const root = c.id("found")
-    put(c, "p1", "p1", "tournament.register", {}, { at: 10, root })
-    put(c, "p2", "p2", "tournament.register", {}, { at: 11, root })
-    put(c, "draw", "organizer", "tournament.draw", { seed: SEED, seeded: [], order: order(SEED, [pub("p1"), pub("p2")]), prev: root }, { at: 20, root })
-    const B1 = hex16("board-1")
-    const B2 = hex16("board-2")
-    put(c, "board-1", "organizer", "tournament.board", { board: B1, name: "Board 1", key: pub("board1"), prev: root }, { at: 30, root })
-    put(c, "board-2", "organizer", "tournament.board", { board: B2, name: "Board 2", key: pub("board2"), prev: root }, { at: 31, root })
-    put(c, "assign", "organizer", "tournament.assign", { slot: "R1-1", board: B1, prev: root }, { at: 40, root })
-    put(c, "assign-next", "organizer", "tournament.assign", { slot: "R2-1", board: B2, prev: root }, { at: 41, root })
-    put(c, "early-result", "board1", "tournament.result", { slot: "R1-1", winner: pub("p1"), score: [2, 1] }, { at: 45, root })
-    put(c, "start", "organizer", "tournament.phase", { phase: "running", prev: c.id("draw") }, { at: 50, root })
-    put(c, "wrong-board", "board2", "tournament.result", { slot: "R1-1", winner: pub("p2"), score: [0, 2] }, { at: 60, root })
-    put(c, "stranger", "mallory", "tournament.result", { slot: "R1-1", winner: pub("p2"), score: [0, 2] }, { at: 61, root })
-    put(c, "result", "board1", "tournament.result", { slot: "R1-1", winner: pub("p1"), score: [2, 1] }, { at: 70, root })
-    put(c, "approve", "organizer", "tournament.approve", { slot: "R1-1", submission: c.id("result"), prev: c.id("assign") }, { at: 80, root })
-    put(c, "result-again", "board1", "tournament.result", { slot: "R1-1", winner: pub("p2"), score: [1, 2] }, { at: 90, root })
-    put(c, "correct", "organizer", "tournament.correct", { slot: "R1-1", winner: pub("p2"), score: [1, 2], reason: "Leg 2 falsch eingetragen", prev: c.id("approve") }, { at: 100, root })
+    const root = c.root()
+    c.put("p1", "p1", "tournament.register", {}, { at: 10, root })
+    c.put("p2", "p2", "tournament.register", {}, { at: 11, root })
+    c.put("p3", "p3", "tournament.register", {}, { at: 12, root })
+    c.put("p2-withdraws", "p2", "tournament.withdraw", {}, { at: 19, root })
+    c.put("admit-p1", "organizer", "tournament.admit", { participant: pub("p1"), prev: c.id("p1") }, { at: 20, root })
+    c.put("admit-p2", "organizer", "tournament.admit", { participant: pub("p2"), prev: c.id("p2") }, { at: 21, root })
+    c.put("admit-p3", "organizer", "tournament.admit", { participant: pub("p3"), prev: c.id("p3") }, { at: 22, root })
+    c.put("p3-withdraws", "p3", "tournament.withdraw", {}, { at: 29, root })
+    const field = [pub("p1"), pub("p2"), pub("p3")]
+    c.put("draw", "organizer", "tournament.draw", { seed: SEED, seeded: [], order: order(SEED, field), prev: root }, { at: 30, root })
     cases.push(
       c.done(
         {
-          applied: ["found", "p1", "p2", "draw", "board-1", "board-2", "assign", "assign-next", "start", "result", "approve", "correct"],
+          applied: ["found", "p1", "p2", "p3", "p2-withdraws", "admit-p1", "admit-p3", "p3-withdraws", "draw"],
+          rejected: [["admit-p2", "not_registered"]],
+          state: { phase: "drawn", order: order(SEED, field), participants: { p1: "registered", p2: "withdrawn", p3: "withdrawn" } },
+        },
+        { seed: SEED, field },
+      ),
+    )
+  }
+  {
+    const c = newCase(
+      "boards-and-results",
+      "Boards submit results only for slots assigned to them; the organizer approves and corrects. A walkover is a result too. A correction marks the next match built on it as affected.",
+    )
+    c.put("found", "organizer", "tournament.found", cup({ capacity: 4, checkIn: false }), { at: 0 })
+    c.setRoot("found")
+    const root = c.root()
+    for (const p of ["p1", "p2", "p3", "p4"]) c.put(p, p, "tournament.register", {}, { at: 10, root })
+    for (const [i, p] of ["p1", "p2", "p3", "p4"].entries()) c.put(`admit-${p}`, "organizer", "tournament.admit", { participant: pub(p), prev: c.id(p) }, { at: 11 + i, root })
+    const field = [pub("p1"), pub("p2"), pub("p3"), pub("p4")]
+    c.put("draw", "organizer", "tournament.draw", { seed: SEED, seeded: [], order: order(SEED, field), prev: root }, { at: 20, root })
+    const B1 = hex16("board-1")
+    const B2 = hex16("board-2")
+    c.put("board-1", "organizer", "tournament.board", { board: B1, name: "Board 1", key: pub("board1"), prev: root }, { at: 30, root })
+    c.put("board-2", "organizer", "tournament.board", { board: B2, name: "Board 2", key: pub("board2"), prev: root }, { at: 31, root })
+    c.put("assign", "organizer", "tournament.assign", { slot: "R1-1", board: B1, prev: root }, { at: 40, root })
+    c.put("assign-2", "organizer", "tournament.assign", { slot: "R1-2", board: B2, prev: root }, { at: 41, root })
+    c.put("assign-next", "organizer", "tournament.assign", { slot: "R2-1", board: B1, prev: root }, { at: 42, root })
+    c.put("early-result", "board1", "tournament.result", { slot: "R1-1", winner: pub("p1"), score: [2, 1] }, { at: 45, root })
+    c.put("start", "organizer", "tournament.phase", { phase: "running", prev: c.id("draw") }, { at: 50, root })
+    c.put("wrong-board", "board2", "tournament.result", { slot: "R1-1", winner: pub("p2"), score: [0, 2] }, { at: 60, root })
+    c.put("stranger", "mallory", "tournament.result", { slot: "R1-1", winner: pub("p2"), score: [0, 2] }, { at: 61, root })
+    c.put("result", "board1", "tournament.result", { slot: "R1-1", winner: pub("p1"), score: [2, 1] }, { at: 70, root })
+    c.put("approve", "organizer", "tournament.approve", { slot: "R1-1", submission: c.id("result"), prev: c.id("assign") }, { at: 80, root })
+    c.put("result-again", "board1", "tournament.result", { slot: "R1-1", winner: pub("p2"), score: [1, 2] }, { at: 90, root })
+    c.put("walkover", "board2", "tournament.result", { slot: "R1-2", winner: pub("p3"), score: [0, 0], walkover: "noShow" }, { at: 91, root })
+    c.put("approve-2", "organizer", "tournament.approve", { slot: "R1-2", submission: c.id("walkover"), prev: c.id("assign-2") }, { at: 92, root })
+    c.put("correct", "organizer", "tournament.correct", { slot: "R1-1", winner: pub("p2"), score: [1, 2], reason: "Leg 2 falsch eingetragen", prev: c.id("approve") }, { at: 100, root })
+    cases.push(
+      c.done(
+        {
+          applied: [
+            "found",
+            ...["p1", "p2", "p3", "p4"].sort((a, b) => (c.id(a) < c.id(b) ? -1 : 1)),
+            "admit-p1",
+            "admit-p2",
+            "admit-p3",
+            "admit-p4",
+            "draw",
+            "board-1",
+            "board-2",
+            "assign",
+            "assign-2",
+            "assign-next",
+            "start",
+            "result",
+            "approve",
+            "walkover",
+            "approve-2",
+            "correct",
+          ],
           rejected: [
             ["early-result", "phase_invalid"],
             ["wrong-board", "board_not_assigned"],
             ["stranger", "not_authorized"],
             ["result-again", "already_approved"],
           ],
-          state: { phase: "running", slots: { "R1-1": { winner: pub("p2"), corrected: true }, "R2-1": { affected: true } } },
+          state: { phase: "running", slots: { "R1-1": { winner: pub("p2"), corrected: true }, "R1-2": { winner: pub("p3"), walkover: "noShow" }, "R2-1": { affected: true } } },
         },
-        { dependents: { "R1-1": ["R2-1"] } },
+        { dependents: { "R1-1": ["R2-1"], "R1-2": ["R2-1"] } },
       ),
     )
   }
   {
     const c = newCase("organizer-handover", "The organization changes only by offer and acceptance. Afterwards the former organizer's decisions are refused.")
-    put(c, "found", "organizer", "tournament.found", cup(), { at: 0 })
+    c.put("found", "organizer", "tournament.found", cup(), { at: 0 })
     c.setRoot("found")
-    const root = c.id("found")
-    put(c, "offer", "organizer", "tournament.handover.offer", { to: pub("organizer2"), prev: root }, { at: 10, root })
-    put(c, "mallory-accepts", "mallory", "tournament.handover.accept", { offer: c.id("offer") }, { at: 20, root })
-    put(c, "accept", "organizer2", "tournament.handover.accept", { offer: c.id("offer") }, { at: 30, root })
-    put(c, "old-organizer", "organizer", "tournament.phase", { phase: "checkin", prev: root }, { at: 40, root })
-    put(c, "new-organizer", "organizer2", "tournament.phase", { phase: "checkin", prev: root }, { at: 50, root })
-    put(c, "player-admits", "p1", "tournament.admit", { participant: pub("p1"), prev: root }, { at: 60, root })
+    const root = c.root()
+    c.put("offer", "organizer", "tournament.handover.offer", { to: pub("organizer2"), prev: root }, { at: 10, root })
+    c.put("mallory-accepts", "mallory", "tournament.handover.accept", { offer: c.id("offer") }, { at: 20, root })
+    c.put("accept", "organizer2", "tournament.handover.accept", { offer: c.id("offer") }, { at: 30, root })
+    c.put("old-organizer", "organizer", "tournament.phase", { phase: "checkin", prev: root }, { at: 40, root })
+    c.put("new-organizer", "organizer2", "tournament.phase", { phase: "checkin", prev: root }, { at: 50, root })
+    c.put("player-admits", "p1", "tournament.admit", { participant: pub("p1"), prev: root }, { at: 60, root })
     cases.push(
       c.done({
         applied: ["found", "offer", "accept", "new-organizer"],
@@ -671,23 +1022,47 @@ function tournamentCases() {
   }
   {
     const c = newCase("rules-locked-and-unknown", "Rules cannot change once drawn, details can. A registration in a newer format version is kept, not executed.")
-    put(c, "found", "organizer", "tournament.found", cup({ checkIn: false }), { at: 0 })
+    c.put("found", "organizer", "tournament.found", cup({ checkIn: false }), { at: 0 })
     c.setRoot("found")
-    const root = c.id("found")
-    put(c, "p1", "p1", "tournament.register", {}, { at: 10, root })
-    put(c, "p2", "p2", "tournament.register", {}, { at: 11, root })
-    put(c, "p3-v2", "p3", "tournament.register", {}, { at: 12, root, version: "2" })
-    put(c, "draw", "organizer", "tournament.draw", { seed: SEED, seeded: [], order: order(SEED, [pub("p1"), pub("p2")]), prev: root }, { at: 20, root })
-    put(c, "rules", "organizer", "tournament.update", { prev: c.id("draw"), rules: { ...rules501, legsToWin: 3 } }, { at: 30, root })
-    put(c, "place", "organizer", "tournament.update", { prev: c.id("draw"), place: "Vereinsheim, Saal 2" }, { at: 31, root })
+    const root = c.root()
+    c.put("guest-1", "organizer", "tournament.guest", { guest: G, alias: "Gast 1" }, { at: 10, root })
+    c.put("guest-2", "organizer", "tournament.guest", { guest: G2, alias: "Gast 2" }, { at: 11, root })
+    c.put("p3-v2", "p3", "tournament.register", {}, { at: 12, root, version: "2" })
+    c.put("draw", "organizer", "tournament.draw", { seed: SEED, seeded: [], order: order(SEED, [G, G2]), prev: root }, { at: 20, root })
+    c.put("rules", "organizer", "tournament.update", { prev: c.id("draw"), rules: { ...rules501, legsToWin: 3 } }, { at: 30, root })
+    c.put("place", "organizer", "tournament.update", { prev: c.id("draw"), place: "Vereinsheim, Saal 2" }, { at: 31, root })
     cases.push(
       c.done({
-        applied: ["found", "p1", "p2", "draw", "place"],
+        applied: ["found", "guest-1", "guest-2", "draw", "place"],
         rejected: [["rules", "rules_locked"]],
         unapplied: [["p3-v2", "unknown"]],
         state: { phase: "drawn", place: "Vereinsheim, Saal 2" },
       }),
     )
+  }
+  {
+    const CLUB = hex32("tournament-club")
+    const c = newCase("club-tournament", "A club's tournament: founded by a director of the club. Handing the organization to a plain member of the club is refused.")
+    c.put("found", "director", "tournament.found", cup({ club: CLUB }), { at: 0 })
+    c.setRoot("found")
+    const root = c.root()
+    c.put("offer", "director", "tournament.handover.offer", { to: pub("member"), prev: root }, { at: 10, root })
+    c.put("accept", "member", "tournament.handover.accept", { offer: c.id("offer") }, { at: 20, root })
+    cases.push(
+      c.done({ applied: ["found", "offer"], rejected: [["accept", "not_authorized"]], state: { organizer: "director", club: CLUB } }, { clubRoles: { director: "director", member: "member" } }),
+    )
+  }
+  {
+    const c = newCase("club-tournament-by-member", "A plain member cannot found a tournament for the club.")
+    c.put("found", "member", "tournament.found", cup({ club: hex32("tournament-club") }), { at: 0 })
+    c.setRoot("found")
+    cases.push(c.done({ problem: "not_authorized" }, { clubRoles: { director: "director", member: "member" } }))
+  }
+  {
+    const c = newCase("newer-engine", "A tournament built with newer bracket rules is kept, never run with today's rules.")
+    c.put("found", "organizer", "tournament.found", cup({ engine: 2 }), { at: 0 })
+    c.setRoot("found")
+    cases.push(c.done({ problem: "unknown_version" }))
   }
   return cases
 }
@@ -708,10 +1083,10 @@ const agreement = (extra: Partial<ContentOf<"match.session">["agreement"] & obje
 const gameConfig = () => config({ startScore: 501, legsToWin: 1 })
 const sampleLog = (): Throw[] => play(gameConfig(), [dart(20, 3), dart(20, 3), dart(20, 3), dart(19), dart(19), dart(19), dart(20, 3), dart(20), dart(5)])
 
-function snapshot(author: string, root: string, auth: SignedEvent, sv: number, n: number, atSeconds: number, version?: string) {
+function snapshot(author: string, root: string, auth: SignedEvent, sv: number, n: number, atSeconds: number, extra: { version?: string; link?: string } = {}) {
   const log = sampleLog().slice(0, Math.min(9, 3 * n))
   const content = liveContent({ state: replay(gameConfig(), log), throws: log, sv, n, status: "playing", auth })
-  return record(author, "match.live", content, { at: atSeconds, root, d: root, version })
+  return record(author, "match.live", content, { at: atSeconds, root, d: root, ...extra })
 }
 
 function result(author: string, root: string, sv: number, atSeconds: number, extra: Partial<ContentOf<"match.result">> = {}) {
@@ -729,12 +1104,16 @@ function matchCases() {
     ...extra,
   })
   {
-    const c = newCase("session-handover", "The match moves to another device: session 2 replaces session 1. From the handover on, session 1's snapshots and results are refused.")
-    const found = put(c, "found", "host", "match.session", session(1, "session1", 0), { at: 0 })
+    const c = newCase(
+      "session-handover",
+      "The match moves to another device: session 2 replaces session 1. Session 1's snapshots and results after the handover are refused, and so is a result session 1 dated before the handover: a handed-over session key is worthless for results.",
+    )
+    const found = c.put("found", "host", "match.session", session(1, "session1", 0), { at: 0 })
     c.setRoot("found")
     const root = found.id
     c.add("live-1", snapshot("session1", root, found, 1, 1, 100).event)
-    const hand = put(c, "handover", "host", "match.session", session(2, "session2", 200, root), { at: 200, root })
+    c.add("result-backdated", result("session1", root, 1, 190, { auth: found }).event)
+    const hand = c.put("handover", "host", "match.session", session(2, "session2", 200, root), { at: 200, root })
     c.add("live-2", snapshot("session2", root, hand, 2, 2, 210).event)
     c.add("live-old", snapshot("session1", root, found, 1, 3, 220).event)
     c.add("result-old", result("session1", root, 1, 230, { auth: found }).event)
@@ -743,6 +1122,7 @@ function matchCases() {
       c.done({
         applied: ["found", "live-1", "handover", "live-2", "result"],
         rejected: [
+          ["result-backdated", "session_superseded"],
           ["live-old", "session_superseded"],
           ["result-old", "session_superseded"],
         ],
@@ -752,12 +1132,12 @@ function matchCases() {
   }
   {
     const c = newCase("forged-handover", "Only the match authority hands over, always to the next session on top of the current one; strangers cannot write.")
-    const found = put(c, "found", "host", "match.session", session(1, "session1", 0), { at: 0 })
+    const found = c.put("found", "host", "match.session", session(1, "session1", 0), { at: 0 })
     c.setRoot("found")
     const root = found.id
-    put(c, "by-session", "session1", "match.session", session(2, "session2", 100, root), { at: 100, root })
-    put(c, "skip", "host", "match.session", session(3, "session2", 110, root), { at: 110, root })
-    put(c, "wrong-prev", "host", "match.session", session(2, "session2", 120, hex32("not-a-session")), { at: 120, root })
+    c.put("by-session", "session1", "match.session", session(2, "session2", 100, root), { at: 100, root })
+    c.put("skip", "host", "match.session", session(3, "session2", 110, root), { at: 110, root })
+    c.put("wrong-prev", "host", "match.session", session(2, "session2", 120, hex32("not-a-session")), { at: 120, root })
     c.add("stranger-live", snapshot("mallory", root, found, 1, 1, 130).event)
     cases.push(
       c.done({
@@ -774,10 +1154,10 @@ function matchCases() {
   }
   {
     const c = newCase("session-window", "A session writes only inside its window, and a snapshot must carry its own session's authorization.")
-    const found = put(c, "found", "host", "match.session", session(1, "session1", 0), { at: 0 })
+    const found = c.put("found", "host", "match.session", session(1, "session1", 0), { at: 0 })
     c.setRoot("found")
     const root = found.id
-    const hand = put(c, "handover", "host", "match.session", session(2, "session2", 100, root), { at: 100, root })
+    const hand = c.put("handover", "host", "match.session", session(2, "session2", 100, root), { at: 100, root })
     c.add("wrong-auth", snapshot("session2", root, found, 2, 1, 110).event)
     c.add("live", snapshot("session2", root, hand, 2, 2, 120).event)
     c.add("too-late", snapshot("session2", root, hand, 2, 3, 100 + 3 * 3600 + 1).event)
@@ -793,17 +1173,20 @@ function matchCases() {
     )
   }
   {
-    const c = newCase("confirm-and-correct", "Players confirm or dispute one exact result. A correction replaces it and its verdicts no longer count; only seated players give verdicts; a second result must name the one it replaces.")
-    const found = put(c, "found", "host", "match.session", session(1, "session1", 0), { at: 0 })
+    const c = newCase(
+      "confirm-and-correct",
+      "Players confirm or dispute one exact result. A correction replaces it and its verdicts no longer count; only seated players give verdicts; a second result must name the one it replaces.",
+    )
+    const found = c.put("found", "host", "match.session", session(1, "session1", 0), { at: 0 })
     c.setRoot("found")
     const root = found.id
     c.add("result-1", result("session1", root, 1, 100, { auth: found }).event)
-    put(c, "p1-confirms", "p1", "match.confirm", { result: c.id("result-1"), verdict: "confirm", seat: 0 }, { at: 110, root })
-    put(c, "p2-disputes", "p2", "match.confirm", { result: c.id("result-1"), verdict: "dispute", seat: 1, reason: "Letzte Aufnahme war 45" }, { at: 111, root })
-    put(c, "mallory-confirms", "mallory", "match.confirm", { result: c.id("result-1"), verdict: "confirm", seat: 0 }, { at: 112, root })
+    c.put("p1-confirms", "p1", "match.confirm", { result: c.id("result-1"), verdict: "confirm", seat: 0 }, { at: 110, root })
+    c.put("p2-disputes", "p2", "match.confirm", { result: c.id("result-1"), verdict: "dispute", seat: 1, reason: "Letzte Aufnahme war 45" }, { at: 111, root })
+    c.put("mallory-confirms", "mallory", "match.confirm", { result: c.id("result-1"), verdict: "confirm", seat: 0 }, { at: 112, root })
     c.add("unlinked", result("host", root, 1, 115).event)
     c.add("result-2", result("host", root, 1, 120, { replaces: c.id("result-1"), reason: "Aufnahme korrigiert", legs: [0, 1], winner: 1 }).event)
-    put(c, "p2-confirms", "p2", "match.confirm", { result: c.id("result-2"), verdict: "confirm", seat: 1 }, { at: 130, root })
+    c.put("p2-confirms", "p2", "match.confirm", { result: c.id("result-2"), verdict: "confirm", seat: 1 }, { at: 130, root })
     cases.push(
       c.done({
         applied: ["found", "result-1", "p1-confirms", "p2-disputes", "result-2", "p2-confirms"],
@@ -826,25 +1209,19 @@ function matchCases() {
     cases.push(c.done({ problem: "invalid" }))
   }
   {
-    const c = newCase("private-match", "A private match: founding and snapshots are encrypted to the match key from the link; the agreed stake is inside.", { group: "matchkey" })
-    const found = put(c, "found", "host", "match.session", session(1, "session1", 0, undefined, { agreement: agreement({ visibility: "private", stake: { msat: 500000, note: "Verlierer zahlt" } }) }), {
+    const c = newCase("private-match", "A private match: founding and snapshots are encrypted to the match key from the link; the agreed stake is inside.", { link: "matchkey" })
+    const found = c.put("found", "host", "match.session", session(1, "session1", 0, undefined, { agreement: agreement({ visibility: "private", stake: { msat: 500000, note: "Verlierer zahlt" } }) }), {
       at: 0,
-      seal: "matchkey",
+      link: "matchkey",
     })
     c.setRoot("found")
-    const root = found.id
-    const live = snapshot("session1", root, found, 1, 1, 100)
-    const sealedLive = sealTemplate(
-      { kind: live.event.kind, created_at: live.event.created_at, tags: live.event.tags, content: live.event.content },
-      pub("matchkey"),
-      encryptTo("session1", "matchkey", live.event.content),
-    )
-    c.add("live", sign("session1", sealedLive), live.event.content)
+    const live = snapshot("session1", found.id, found, 1, 1, 100, { link: "matchkey" })
+    c.add("live", live.event, live.plaintext)
     cases.push(c.done({ applied: ["found", "live"], rejected: [], state: { stake: 500000, live: "live" } }))
   }
   {
     const c = newCase("chunked-log", "A long throw log travels in hash-chained pieces; the result names the chain's head, piece count and size.")
-    const found = put(c, "found", "host", "match.session", session(1, "session1", 0), { at: 0 })
+    const found = c.put("found", "host", "match.session", session(1, "session1", 0), { at: 0 })
     c.setRoot("found")
     const root = found.id
     const legs: Throw[] = []
@@ -852,15 +1229,15 @@ function matchCases() {
     const log = play(config({ startScore: 501, legsToWin: 1 }), [...legs.slice(0, 120), ...miss3()])
     const text = encodeThrows(log)
     const { chunks, head, bytes } = chunkData(text, 64)
-    chunks.forEach((piece, i) => put(c, `log-${i}`, "session1", "match.log", piece, { at: 100 + i, root }))
+    chunks.forEach((piece, i) => c.put(`log-${i}`, "session1", "match.log", piece, { at: 100 + i, root }))
     c.add("result", result("session1", root, 1, 200, { auth: found, throws: undefined, log: { head, total: chunks.length, bytes }, status: "finished", winner: null, legs: [0, 0] }).event)
     cases.push(c.done({ applied: ["found", ...chunks.map((_, i) => `log-${i}`), "result"], rejected: [], state: { result: "result", log: { head, pieces: chunks.length, text } } }))
   }
   {
     const c = newCase("unknown-version", "A snapshot in a newer format version is kept, not executed.")
-    const found = put(c, "found", "host", "match.session", session(1, "session1", 0), { at: 0 })
+    const found = c.put("found", "host", "match.session", session(1, "session1", 0), { at: 0 })
     c.setRoot("found")
-    c.add("live-v2", snapshot("session1", found.id, found, 1, 1, 100, "2").event)
+    c.add("live-v2", snapshot("session1", found.id, found, 1, 1, 100, { version: "2" }).event)
     cases.push(c.done({ applied: ["found"], rejected: [], unapplied: [["live-v2", "unknown"]], state: { live: null } }))
   }
   return cases
@@ -934,7 +1311,10 @@ function badgeCases() {
   const award = (issuer: string, d: string, recipient: string, occasion: string, seconds: number, evidence = resultId) =>
     sign(issuer, badgeAwardTemplate({ issuer: pub(issuer), d, recipient: pub(recipient), evidence, occasion }, at(seconds)))
   const forged = sign("mallory", badgeAwardTemplate({ issuer: pub("organizer"), d: dT, recipient: pub("mallory"), evidence: resultId, occasion: tournament }, at(40)))
-  const noRecipient = sign("organizer", { ...badgeAwardTemplate({ issuer: pub("organizer"), d: dT, recipient: pub("p1"), evidence: resultId, occasion: tournament }, at(41)), tags: [["a", `30009:${pub("organizer")}:${dT}`], ["e", resultId], ["occasion", tournament], ["L", "blueline"], ["l", "badge.award", "blueline"], ["v", "1"]] })
+  const noRecipient = sign("organizer", {
+    ...badgeAwardTemplate({ issuer: pub("organizer"), d: dT, recipient: pub("p1"), evidence: resultId, occasion: tournament }, at(41)),
+    tags: [["a", `30009:${pub("organizer")}:${dT}`], ["e", resultId], ["occasion", tournament], ["L", "blueline"], ["l", "badge.award", "blueline"], ["v", "1"]],
+  })
   const first = award("organizer", dT, "p1", tournament, 50)
   const resigned = award("organizer", dT, "p1", tournament, 60)
   const ctx = { mayIssue: [["tournament", tournament, pub("organizer")]], voided: [hex32("voided-result")] }
@@ -962,18 +1342,19 @@ function pairingVectors() {
   const oldDev = "old-device"
   const msg = (from: string, to: string, message: Parameters<typeof pairingPlaintext>[0], seconds: number) => {
     const plaintext = pairingPlaintext(message)
-    return { event: sign(from, pairingTemplate({ message, created_at: at(seconds), recipient: pub(to), ciphertext: encryptTo(from, to, plaintext) })), plaintext }
+    return { event: sign(from, pairingTemplate({ message, created_at: at(seconds), recipient: pub(to), ciphertext: nip44To(from, to, plaintext) })), plaintext }
   }
   const announce = { t: "announce" as const, sid, exp: now + 300, mac: announceMac(keys.auth, pub(newDev), sid, now + 300) }
+  const packageData = { v: 1, profile: "lib/devices defines this", relays: ["wss://nos.lol"] }
   const steps = {
     announce: { event: sign(newDev, pairingTemplate({ message: announce, created_at: at(400), lookup: keys.lookup })), plaintext: pairingPlaintext(announce) },
     hello: msg(oldDev, newDev, { t: "hello", sid, device: "iPhone von Mia", mac: helloMac(keys.auth, pub(oldDev), pub(newDev), sid) }, 410),
     helloAttacker: msg("attacker", newDev, { t: "hello", sid, device: "iPhone von Mia" }, 411),
     accept: msg(newDev, oldDev, { t: "accept", sid, device: "iPad Wohnzimmer" }, 420),
-    package: msg(oldDev, newDev, { t: "package", sid, data: { v: 1, profile: "lib/devices defines this", relays: ["wss://nos.lol"] } }, 430),
-    ack: msg(newDev, oldDev, { t: "ack", sid, hash: bytesToHex(sha256(utf8ToBytes(JSON.stringify({ v: 1, profile: "lib/devices defines this", relays: ["wss://nos.lol"] })))) }, 440),
+    package: msg(oldDev, newDev, { t: "package", sid, data: packageData }, 430),
+    ack: msg(newDev, oldDev, { t: "ack", sid, hash: shaHex(JSON.stringify(packageData)) }, 440),
     boardJoin: {
-      event: sign(newDev, boardTemplate({ recipient: pub(oldDev), ciphertext: encryptTo(newDev, oldDev, boardPlaintext({ t: "join", sid, seat: 0, confirm: true })), created_at: at(450) })),
+      event: sign(newDev, boardTemplate({ recipient: pub(oldDev), ciphertext: nip44To(newDev, oldDev, boardPlaintext({ t: "join", sid, seat: 0, confirm: true })), created_at: at(450) })),
       plaintext: boardPlaintext({ t: "join", sid, seat: 0, confirm: true }),
     },
   }
@@ -986,7 +1367,7 @@ function pairingVectors() {
       pair: encodeLinkPayload({ type: "pair", pubkey: pub(newDev), sid, expires: now + 300, relays: ["wss://nos.lol", "wss://relay.primal.net"] }),
       board: encodeLinkPayload({ type: "board", pubkey: pub("board1"), sid, expires: now + 3000, relays: ["wss://nos.lol"] }),
       watch: encodeLinkPayload({ type: "watch", match: hex32("watch-match"), key: sec("matchkey"), relays: ["wss://nos.lol"] }),
-      club: encodeLinkPayload({ type: "club", club: hex32("link-club"), invite: hex16("invite-1"), token: hex16("token-1"), secret: sec("club"), relays: ["ws://localhost:10547"] }),
+      club: encodeLinkPayload({ type: "club", club: hex32("link-club"), invite: hex32("link-invite"), token: hex16("token-1"), relays: ["ws://localhost:10547"] }),
     },
     steps,
   }
@@ -997,7 +1378,7 @@ function boardVectors() {
   const sid = hex16("board-session")
   const join = (from: string, message: Parameters<typeof boardPlaintext>[0] | Record<string, unknown>, seconds: number) => {
     const plaintext = JSON.stringify(message)
-    return { event: sign(from, boardTemplate({ recipient: pub("board1"), ciphertext: encryptTo(from, "board1", plaintext), created_at: at(seconds) })), plaintext }
+    return { event: sign(from, boardTemplate({ recipient: pub("board1"), ciphertext: nip44To(from, "board1", plaintext), created_at: at(seconds) })), plaintext }
   }
   const seatPlain = boardPlaintext({ t: "seat", sid, seat: 0 })
   return {
@@ -1006,7 +1387,7 @@ function boardVectors() {
     expires: now + 1800,
     steps: {
       join: join("p1", { t: "join", sid, seat: 0, alias: "Mia", confirm: true }, 590),
-      seat: { event: sign("board1", boardTemplate({ recipient: pub("p1"), ciphertext: encryptTo("board1", "p1", seatPlain), created_at: at(591) })), plaintext: seatPlain },
+      seat: { event: sign("board1", boardTemplate({ recipient: pub("p1"), ciphertext: nip44To("board1", "p1", seatPlain), created_at: at(591) })), plaintext: seatPlain },
       joinTaken: join("p2", { t: "join", sid, seat: 0, confirm: false }, 592),
       smuggled: join("p2", { t: "join", sid, seat: 1, confirm: false, nsec: "nsec1…" }, 593),
       packageToBoard: join("p2", { t: "package", sid, data: { key: "…" } }, 594),
@@ -1014,13 +1395,13 @@ function boardVectors() {
   }
 }
 
-// ---- Private records, invites, chunks ---------------------------------------------------------------
+// ---- Private records, invites, seal, chunks ---------------------------------------------------------
 
 function privateVectors() {
   const dataKey = hex32("data-key")
   const slot = recordSlot(dataKey, "match:7d1c0b6c2f0a4c4b")
-  const nonce = nonceFor("private-nonce").slice(0, 24)
-  const fakeCiphertext = nonceFor("private-ct")
+  const nonce = fixed("private-nonce").slice(0, 24)
+  const fakeCiphertext = fixed("private-ct")
   const content = encodeEnvelope(nonce, fakeCiphertext)
   return {
     dataKey,
@@ -1038,11 +1419,41 @@ function privateVectors() {
   }
 }
 
-const inviteVectors = () => [
-  { token: hex16("token-1"), pubkey: pub("alice"), proof: proof(hex16("token-1"), pub("alice")) },
-  { token: hex16("token-1"), pubkey: pub("bob"), proof: proof(hex16("token-1"), pub("bob")) },
-  { token: hex16("token-2"), pubkey: pub("alice"), proof: proof(hex16("token-2"), pub("alice")) },
-]
+const inviteVectors = () =>
+  [
+    [hex16("token-1"), "alice"],
+    [hex16("token-1"), "bob"],
+    [hex16("token-2"), "alice"],
+  ].map(([token, who]) => ({ token, pubkey: pub(who), proof: proof(token, pub(who)), previewKey: bytesToHex(previewKey(token)) }))
+
+// One sealed record with every intermediate value, for an independent implementation.
+function sealVectors() {
+  const root = hex32("seal-club")
+  const content: ContentOf<"club.season.end"> = { season: hex16("season-1") }
+  const type = "club.season.end"
+  const plaintext = JSON.stringify(content)
+  const key = fixed("content-key", "owner", type, 10, plaintext)
+  const nonce = fixed("seal-nonce", "owner", type, 10, plaintext).slice(0, 24)
+  const { event } = record("owner", type, content, { at: 10, root, seal: ["owner", "alice", "bob"] })
+  const envelope = JSON.parse(event.content)
+  const hint = (reader: string) => bytesToHex(sha256(new Uint8Array([...utf8ToBytes("blueline-seal-hint-v1"), ...nonce, ...hexToBytes(pub(reader))])).slice(0, 4))
+  const token = hex16("token-1")
+  const invitePreviewContent: InvitePreview = { name: "Dartfreunde Nord", host: pub("owner"), kind: "group", expires: at(86400) }
+  const invite = record("owner", "club.invite", { kind: "group", token, expires: at(86400) }, { at: 20, root, seal: ["owner"], preview: { token, content: invitePreviewContent } })
+  return {
+    sealed: {
+      type,
+      aad: `blueline-seal-v1:${type}`,
+      plaintext,
+      contentKey: bytesToHex(key),
+      nonce: bytesToHex(nonce),
+      readers: ["owner", "alice", "bob"].map((r) => ({ name: r, pubkey: pub(r), hint: hint(r) })),
+      envelope,
+      event,
+    },
+    invite: { token, previewKey: bytesToHex(previewKey(token)), previewAad: "blueline-preview-v1", preview: invitePreviewContent, event: invite.event, plaintext: invite.plaintext },
+  }
+}
 
 function chunkVectors() {
   const data = `1${"5".repeat(150)}.${"ä".repeat(20)}`
@@ -1056,7 +1467,8 @@ const header = (family: string, description: string) => ({
   family,
   description,
   generator: "tests/support/make-vectors.ts",
-  format: "Events are signed (BIP-340, zero aux randomness) with keys derived as sha256('blueline-vector:' + name). Expected outcomes are written by hand from docs/protocol.",
+  format:
+    "Events are signed (BIP-340, zero aux randomness) with keys derived as sha256('blueline-vector:' + name). Content keys, nonces and NIP-44 nonces are fixed. Expected outcomes are written by hand from docs/protocol.",
 })
 
 function keyTable() {
@@ -1071,14 +1483,19 @@ function family(name: string, description: string, build: () => Record<string, u
 }
 
 function throwVectors() {
+  const storage = JSON.parse(readFileSync(`${ROOT}docs/implementation/evidence/P0.01/storage-finished.json`, "utf8"))
+  const recorded = JSON.parse(storage["dart-scorer.current-match.v1"]) as { config: ReturnType<typeof config>; throws: Throw[] }
   const c = config({ startScore: 301, legsToWin: 2 })
   const leg1 = [dart(20, 3), dart(20, 3), dart(20, 3), ...miss3(), dart(20, 3), dart(11, 3), dart(14, 2)]
-  const corrected = play(c, [...leg1, dart(20), { kind: "noScore" }, { kind: "visit", total: 60, darts: 3, atDouble: 1 }, { kind: "turn", player: 0 }])
-  corrected[1] = { kind: "dart", dart: { segment: 19, multiplier: 3 }, visit: corrected[1].visit, leg: corrected[1].leg, edited: true }
-  corrected[8] = { ...corrected[8], closesLeg: true }
+  const leg2 = [dart(20), { kind: "noScore" } as Throw, { kind: "visit", total: 60, darts: 3, atDouble: 1 } as Throw, { kind: "turn", player: 0 } as Throw]
+  const played = play(c, [...leg1, ...leg2])
+  // Corrected the way the app corrects: the first dart of the first visit was a T19, and the
+  // finished first leg keeps its result (lib/game/engine.ts correctDart).
+  const plan = correctDart(c, played, visitBySeq(replay(c, played), 0)!, 0, { segment: 19, multiplier: 3 })
+  const corrected = plan.keepResult ? plan.keepResult.throws : plan.rescored
   const logs = [
-    { description: "Recorded P0.01 game, 301", config: config({ startScore: 301 }), log: sampleLog() },
-    { description: "Two legs with an edited dart, a kept leg result, no-score, a visit total and a turn", config: c, log: corrected },
+    { description: "Recorded P0.01 game (Anna vs Ben, 301), as stored by the app", config: recorded.config, log: recorded.throws },
+    { description: "Two legs, the first dart corrected (edited, leg result kept), no-score, a visit total and a turn", config: c, log: JSON.parse(JSON.stringify(corrected)) as Throw[] },
     { description: "Log saved before throws were tagged", config: config(), log: [dart(20), dart(25, 2), dart(0)] },
   ]
   return { alphabet: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-", cases: logs.map((l) => ({ ...l, encoded: encodeThrows(l.log) })) }
@@ -1086,7 +1503,7 @@ function throwVectors() {
 
 export function buildVectors(): Record<string, unknown> {
   return {
-    club: family("club", "Club founding and changes, replayed by reduceClub (lib/protocol/club-state.ts).", () => ({ cases: clubCases() })),
+    club: family("club", "Club founding and changes, replayed by reduceClub (lib/protocol/club-state.ts) as read by `reader`.", () => ({ cases: clubCases() })),
     tournament: family("tournament", "Tournament founding and changes, replayed by reduceTournament (lib/protocol/tournament-state.ts).", () => ({ cases: tournamentCases() })),
     match: family("match", "Match session authorization, live snapshots and results, replayed by reduceMatch (lib/protocol/match-state.ts).", () => ({ cases: matchCases() })),
     "payment-request": family("payment-request", "Unwrapped payment request rumors checked by checkPaymentRequest (lib/protocol/payment.ts).", () => ({ cases: paymentCases() })),
@@ -1094,7 +1511,10 @@ export function buildVectors(): Record<string, unknown> {
     pairing: family("pairing", "Device pairing: code, check code, links and the message sequence (lib/protocol/pairing.ts).", pairingVectors),
     "board-join": family("board-join", "Joining a shared board (lib/protocol/board.ts).", boardVectors),
     "private-records": family("private-records", "Private record slots, data key slot and envelope (lib/protocol/private.ts).", privateVectors),
-    invite: family("invite", "Invite proofs: HMAC-SHA256(token, 'blueline-invite-v1:' + pubkey).", () => ({ cases: inviteVectors() })),
+    invite: family("invite", "Invite proofs HMAC-SHA256(token, 'blueline-invite-v1:' + pubkey) and preview keys HKDF-SHA256(token, 'blueline-invite-v1', 'preview').", () => ({
+      cases: inviteVectors(),
+    })),
+    seal: family("seal", "A sealed record of a closed club and an invite with its preview, with every intermediate value (lib/protocol/seal.ts).", sealVectors),
     chunks: family("chunks", "Hash-chained pieces (lib/protocol/chunks.ts).", chunkVectors),
     throws: family("throws", "Compact throw logs (lib/protocol/throws.ts): engine log as stored and its encoding.", throwVectors),
   }
@@ -1106,14 +1526,15 @@ export function buildSchemas(): Record<string, JsonSchema> {
   const families: Record<string, Record<string, JsonSchema>> = {}
   for (const [type, spec] of Object.entries(RECORD_TYPES)) {
     const family = FAMILY_OF[type.split(".")[0]]
-    ;(families[family] ??= {})[type] = { description: spec.description, kind: spec.kind, ...spec.schema.json() }
+    ;(families[family] ??= {})[type] = { description: spec.description, kind: spec.kind, encryption: spec.encryption, ...("encrypted" in spec ? { encrypted: true } : {}), ...spec.schema.json() }
   }
+  families.club["club.invite#preview"] = { description: "Preview in the invite's envelope, opened with the link token (invite.ts)", ...invitePreview.json() }
   const out: Record<string, JsonSchema> = {}
   const doc = (title: string, defs: Record<string, JsonSchema>) => ({ $schema: "https://json-schema.org/draft/2020-12/schema", title, $defs: defs })
   for (const [family, defs] of Object.entries(families)) out[family] = doc(`BlueLine ${family} record content`, defs)
   const messages = (m: Record<string, Schema<unknown>>) => Object.fromEntries(Object.entries(m).map(([k, s]) => [k, s.json()]))
-  out.pairing = doc("BlueLine pairing messages (decrypted content of kind 21501)", messages(PAIRING_MESSAGES))
-  out["board-join"] = doc("BlueLine board join messages (decrypted content of kind 21501)", messages(BOARD_MESSAGES))
+  out.pairing = doc("BlueLine pairing messages (decrypted content of kind 21180)", messages(PAIRING_MESSAGES))
+  out["board-join"] = doc("BlueLine board join messages (decrypted content of kind 21180)", messages(BOARD_MESSAGES))
   out["private-records"] = doc("BlueLine private record plaintexts (kind 30078)", { record: privateRecord.json(), part: recordPart.json(), dataKey: dataKeyRecord.json() })
   return out
 }

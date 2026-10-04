@@ -6,7 +6,7 @@ import { SchemaError } from "./schema.ts"
 import type { SignedEvent } from "./tags.ts"
 import { HEX64, isSignedEventShape, oversizedTag, readLabels, tagValue, tagValues } from "./tags.ts"
 
-// Ephemeral handshake messages (kind 21501) shared by device pairing and board join. The
+// Ephemeral handshake messages (kind 21180) shared by device pairing and board join. The
 // content is NIP-44 encrypted between the two parties (pubkey in the "p" tag); only a pairing
 // announce, which has no recipient yet, is plaintext and carries the lookup tag "x". The
 // message type sits inside the encrypted content; relays see kind, author, recipient and time.

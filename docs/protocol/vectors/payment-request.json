@@ -2,7 +2,7 @@
   "family": "payment-request",
   "description": "Unwrapped payment request rumors checked by checkPaymentRequest (lib/protocol/payment.ts).",
   "generator": "tests/support/make-vectors.ts",
-  "format": "Events are signed (BIP-340, zero aux randomness) with keys derived as sha256('blueline-vector:' + name). Expected outcomes are written by hand from docs/protocol.",
+  "format": "Events are signed (BIP-340, zero aux randomness) with keys derived as sha256('blueline-vector:' + name). Content keys, nonces and NIP-44 nonces are fixed. Expected outcomes are written by hand from docs/protocol.",
   "cases": [
     {
       "name": "valid",
@@ -46,7 +46,7 @@
         "expiresAt": 1496314718
       },
       "rumor": {
-        "kind": 1501,
+        "kind": 1180,
         "created_at": 1496314665,
         "tags": [
           ["L", "blueline"],
@@ -58,7 +58,7 @@
         ],
         "content": "{\"amount\":250000000,\"invoice\":\"lnbc2500u1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdq5xysxxatsyp3k7enxv4jsxqzpuaztrnwngzn3kdzw5hydlzf03qdgm2hdq27cqv3agm2awhz5se903vruatfhq77w3ls4evs3ch9zw97j25emudupq63nyw24cg27h2rspfj9srp\",\"hash\":\"0001020304050607080900010203040506070809000102030405060708090102\",\"expires\":1496314700,\"seat\":0,\"memo\":\"501, Verlierer zahlt\"}",
         "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
-        "id": "25d9178a9b629d4f201c946b7e581fc370e1cd610aa10356317d8f321cc53135"
+        "id": "2677715a933c85589c5f21c135b90e842627edc4cfee8d81042bd896f507ba6e"
       },
       "expect": {
         "ok": true
@@ -106,7 +106,7 @@
         "expiresAt": 1496314718
       },
       "rumor": {
-        "kind": 1501,
+        "kind": 1180,
         "created_at": 1496314665,
         "tags": [
           ["L", "blueline"],
@@ -118,7 +118,7 @@
         ],
         "content": "{\"amount\":250000000,\"invoice\":\"lnbc2500u1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdq5xysxxatsyp3k7enxv4jsxqzpuaztrnwngzn3kdzw5hydlzf03qdgm2hdq27cqv3agm2awhz5se903vruatfhq77w3ls4evs3ch9zw97j25emudupq63nyw24cg27h2rspfj9srp\",\"hash\":\"0001020304050607080900010203040506070809000102030405060708090102\",\"expires\":1496314700,\"seat\":0,\"memo\":\"501, Verlierer zahlt\"}",
         "pubkey": "2e594645da039653d1a27edbb56c0e4a3693b68cf62345bc68f564fa5ed7c505",
-        "id": "b612a47518bf2b4160afff781a1a707691f2b68fa311b930550148c2d8ac7607"
+        "id": "bcca5bed6b49493411390c125909116ae3c2fc9877c3706706af955a9b0caa4f"
       },
       "expect": {
         "ok": false,
@@ -167,7 +167,7 @@
         "expiresAt": 1496314718
       },
       "rumor": {
-        "kind": 1501,
+        "kind": 1180,
         "created_at": 1496314665,
         "tags": [
           ["L", "blueline"],
@@ -179,7 +179,7 @@
         ],
         "content": "{\"amount\":250000000,\"invoice\":\"lnbc2500u1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdq5xysxxatsyp3k7enxv4jsxqzpuaztrnwngzn3kdzw5hydlzf03qdgm2hdq27cqv3agm2awhz5se903vruatfhq77w3ls4evs3ch9zw97j25emudupq63nyw24cg27h2rspfj9srp\",\"hash\":\"0001020304050607080900010203040506070809000102030405060708090102\",\"expires\":1496314700,\"seat\":0,\"memo\":\"501, Verlierer zahlt\"}",
         "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
-        "id": "25d9178a9b629d4f201c946b7e581fc370e1cd610aa10356317d8f321cc53135"
+        "id": "2677715a933c85589c5f21c135b90e842627edc4cfee8d81042bd896f507ba6e"
       },
       "expect": {
         "ok": false,
@@ -228,7 +228,7 @@
         "expiresAt": 1496314718
       },
       "rumor": {
-        "kind": 1501,
+        "kind": 1180,
         "created_at": 1496314665,
         "tags": [
           ["L", "blueline"],
@@ -240,7 +240,7 @@
         ],
         "content": "{\"amount\":300000000,\"invoice\":\"lnbc2500u1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdq5xysxxatsyp3k7enxv4jsxqzpuaztrnwngzn3kdzw5hydlzf03qdgm2hdq27cqv3agm2awhz5se903vruatfhq77w3ls4evs3ch9zw97j25emudupq63nyw24cg27h2rspfj9srp\",\"hash\":\"0001020304050607080900010203040506070809000102030405060708090102\",\"expires\":1496314700,\"seat\":0,\"memo\":\"501, Verlierer zahlt\"}",
         "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
-        "id": "c26b746a3657eb2932db1815dc119062f366a0bbe776def18645b95d2e62f23a"
+        "id": "28de07ced62599384adad1b4ca8325dff582c57168e0c5e1208f837846e914ee"
       },
       "expect": {
         "ok": false,
@@ -289,7 +289,7 @@
         "expiresAt": 1496314718
       },
       "rumor": {
-        "kind": 1501,
+        "kind": 1180,
         "created_at": 1496314665,
         "tags": [
           ["L", "blueline"],
@@ -301,7 +301,7 @@
         ],
         "content": "{\"amount\":250000000,\"invoice\":\"lnbc2500u1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdq5xysxxatsyp3k7enxv4jsxqzpuaztrnwngzn3kdzw5hydlzf03qdgm2hdq27cqv3agm2awhz5se903vruatfhq77w3ls4evs3ch9zw97j25emudupq63nyw24cg27h2rspfj9srp\",\"hash\":\"b97a9e4704d0d99c73e7877715c766a5a2d1de1ea5673a69bd7b5132d84c79e9\",\"expires\":1496314700,\"seat\":0,\"memo\":\"501, Verlierer zahlt\"}",
         "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
-        "id": "6f9cdd2a7f4268bfe0bb29feeaeff8c3aeceec7b8f867c217fbd6cc32820b794"
+        "id": "7da73bb522b1288dfa9036cb21d46e574179574cdcf4646d407227bdbf3b1d69"
       },
       "expect": {
         "ok": false,
@@ -350,7 +350,7 @@
         "expiresAt": 1496314718
       },
       "rumor": {
-        "kind": 1501,
+        "kind": 1180,
         "created_at": 1496314665,
         "tags": [
           ["L", "blueline"],
@@ -362,7 +362,7 @@
         ],
         "content": "{\"amount\":250000000,\"invoice\":\"lnbc2500u1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdq5xysxxatsyp3k7enxv4jsxqzpuaztrnwngzn3kdzw5hydlzf03qdgm2hdq27cqv3agm2awhz5se903vruatfhq77w3ls4evs3ch9zw97j25emudupq63nyw24cg27h2rspfj9srp\",\"hash\":\"0001020304050607080900010203040506070809000102030405060708090102\",\"expires\":1496314700,\"seat\":0,\"memo\":\"501, Verlierer zahlt\"}",
         "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
-        "id": "25d9178a9b629d4f201c946b7e581fc370e1cd610aa10356317d8f321cc53135"
+        "id": "2677715a933c85589c5f21c135b90e842627edc4cfee8d81042bd896f507ba6e"
       },
       "expect": {
         "ok": false,
@@ -411,7 +411,7 @@
         "expiresAt": 1496314718
       },
       "rumor": {
-        "kind": 1501,
+        "kind": 1180,
         "created_at": 1496314665,
         "tags": [
           ["L", "blueline"],
@@ -423,7 +423,7 @@
         ],
         "content": "{\"amount\":250000000,\"invoice\":\"lnbc2500u1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdq5xysxxatsyp3k7enxv4jsxqzpuaztrnwngzn3kdzw5hydlzf03qdgm2hdq27cqv3agm2awhz5se903vruatfhq77w3ls4evs3ch9zw97j25emudupq63nyw24cg27h2rspfj9srp\",\"hash\":\"0001020304050607080900010203040506070809000102030405060708090102\",\"expires\":1496314700,\"seat\":1,\"memo\":\"501, Verlierer zahlt\"}",
         "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
-        "id": "61a321e01312af490ca0210ae4d9516ebb16855bfa1aa28a498c27cfd91eae19"
+        "id": "991a3f069849e399d0e3f75f0908f044669587c46f309b2171915de1dd5f6327"
       },
       "expect": {
         "ok": false,
@@ -472,7 +472,7 @@
         "expiresAt": 1496314718
       },
       "rumor": {
-        "kind": 1501,
+        "kind": 1180,
         "created_at": 1496314665,
         "tags": [
           ["L", "blueline"],
@@ -484,7 +484,7 @@
         ],
         "content": "{\"amount\":250000000,\"invoice\":\"lnbc2500u1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdq5xysxxatsyp3k7enxv4jsxqzpuaztrnwngzn3kdzw5hydlzf03qdgm2hdq27cqv3agm2awhz5se903vruatfhq77w3ls4evs3ch9zw97j25emudupq63nyw24cg27h2rspfj9srp\",\"hash\":\"0001020304050607080900010203040506070809000102030405060708090102\",\"expires\":1496314700,\"seat\":0,\"memo\":\"501, Verlierer zahlt\"}",
         "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
-        "id": "884e1aee30eae08a9ab63d7a98264ea05633cffedab708fded8d7d22c3fb138d"
+        "id": "dd66481cfbccc8805fb772ead220ae196fe8af95e19e2162c45f9e3d551134d3"
       },
       "expect": {
         "ok": false,
@@ -533,7 +533,7 @@
         "expiresAt": 1496314718
       },
       "rumor": {
-        "kind": 1501,
+        "kind": 1180,
         "created_at": 1496314665,
         "tags": [
           ["L", "blueline"],
@@ -545,7 +545,7 @@
         ],
         "content": "{\"amount\":250000000,\"invoice\":\"lnbc2500u1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdq5xysxxatsyp3k7enxv4jsxqzpuaztrnwngzn3kdzw5hydlzf03qdgm2hdq27cqv3agm2awhz5se903vruatfhq77w3ls4evs3ch9zw97j25emudupq63nyw24cg27h2rspfj9srp\",\"hash\":\"0001020304050607080900010203040506070809000102030405060708090102\",\"expires\":1496314700,\"seat\":0,\"memo\":\"geändert\"}",
         "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
-        "id": "25d9178a9b629d4f201c946b7e581fc370e1cd610aa10356317d8f321cc53135"
+        "id": "2677715a933c85589c5f21c135b90e842627edc4cfee8d81042bd896f507ba6e"
       },
       "expect": {
         "ok": false,

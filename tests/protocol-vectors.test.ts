@@ -8,8 +8,9 @@ import { replay } from "../lib/game/engine.ts"
 import { checkBadgeAward, dedupeAwards } from "../lib/protocol/badges.ts"
 import { checkJoin, decodeBoardLink, parseBoardEvent } from "../lib/protocol/board.ts"
 import { assembleChunks, chunkData } from "../lib/protocol/chunks.ts"
-import { reduceClub } from "../lib/protocol/club-state.ts"
-import { inviteProof, verifyInviteProof } from "../lib/protocol/invite.ts"
+import type { ClubRole } from "../lib/protocol/club.ts"
+import { clubRoleAt, reduceClub } from "../lib/protocol/club-state.ts"
+import { inviteProof, previewKey, readInvitePreview, verifyInviteProof } from "../lib/protocol/invite.ts"
 import { decodeLinkPayload, parseLinkFragment } from "../lib/protocol/links.ts"
 import { reduceMatch } from "../lib/protocol/match-state.ts"
 import type { PairingSession } from "../lib/protocol/pairing.ts"
@@ -29,9 +30,10 @@ import {
 import { checkPaymentRequest } from "../lib/protocol/payment.ts"
 import { dataKeySlot, decodeEnvelope, parsePrivateEvent, recordSlot } from "../lib/protocol/private.ts"
 import type { ReplayLog } from "../lib/protocol/replay.ts"
+import { openEnvelope, openSealedEvents, parseEnvelope, wrapsFor } from "../lib/protocol/seal.ts"
 import type { SignedEvent } from "../lib/protocol/tags.ts"
 import { decodeThrows, encodeThrows } from "../lib/protocol/throws.ts"
-import { reduceTournament } from "../lib/protocol/tournament-state.ts"
+import { reduceTournament, waitingList } from "../lib/protocol/tournament-state.ts"
 import { buildSchemas, buildVectors, serialize } from "./support/make-vectors.ts"
 
 // The vectors in docs/protocol/vectors/ carry hand-written expectations; this file runs the
@@ -49,14 +51,23 @@ const decrypt = (secretHex: string, otherPubkey: string, payload: string) => nip
 // A key name from the vector's key table, or a raw id (guest ids, slots).
 const idOf = (keys: Keys, name: string) => keys[name]?.pubkey ?? name
 
-function opener(file: Vector, c: Vector) {
-  if (!c.open || !c.groupKey) return undefined
-  const secret = file.keys[c.groupKey].secret
-  return (event: SignedEvent) => {
-    const plaintext = decrypt(secret, event.pubkey, event.content)
-    assert.equal(plaintext, c.plaintexts[event.id], `plaintext of ${event.id}`)
-    return plaintext
+// What the case's reader can open: sealed records through their own wraps and key shares
+// (openSealedEvents with NIP-44 by nostr-core), private matches with the link key. Every
+// plaintext must be exactly the one the generator sealed.
+async function opener(file: Vector, c: Vector): Promise<((e: SignedEvent) => string | null) | undefined> {
+  if (c.linkKey) {
+    const secret = file.keys[c.linkKey].secret
+    return (event: SignedEvent) => {
+      const plaintext = decrypt(secret, event.pubkey, event.content)
+      assert.equal(plaintext, c.plaintexts[event.id], `plaintext of ${event.id}`)
+      return plaintext
+    }
   }
+  if (!c.reader) return undefined
+  const reader = file.keys[c.reader]
+  const opened = await openSealedEvents(c.events, { reader: reader.pubkey, unwrap: async (author, payload) => decrypt(reader.secret, author, payload) })
+  for (const [id, plaintext] of opened.plaintexts) assert.equal(plaintext, c.plaintexts[id], `${c.name}: plaintext of ${id}`)
+  return (event: SignedEvent) => opened.plaintexts.get(event.id) ?? null
 }
 
 function checkLog(log: ReplayLog, c: Vector) {
@@ -79,37 +90,41 @@ test("vectors and schemas on disk are exactly what the generator writes", () => 
   }
 })
 
-test("every signed vector event verifies with nostr-core", () => {
+test("every signed vector event verifies with nostr-core and uses the BlueLine kinds", () => {
   let count = 0
+  const kinds = new Set<number>()
   const walk = (v: unknown) => {
     if (Array.isArray(v)) return v.forEach(walk)
     if (typeof v !== "object" || v === null) return
     const e = v as Record<string, unknown>
     if (typeof e.sig === "string" && typeof e.id === "string" && typeof e.pubkey === "string") {
       assert.ok(verifyEvent({ ...(e as NostrEvent) }), `signature of ${e.id}`)
+      kinds.add(e.kind as number)
       count++
     }
     Object.values(e).forEach(walk)
   }
-  for (const name of ["club", "tournament", "match", "badges", "pairing", "board-join", "private-records"]) walk(load(name))
-  assert.ok(count > 150, `${count} events`)
+  for (const name of ["club", "tournament", "match", "badges", "pairing", "board-join", "private-records", "seal"]) walk(load(name))
+  assert.ok(count > 250, `${count} events`)
+  assert.deepEqual([...kinds].sort((a, b) => a - b), [8, 1180, 21180, 30009, 30078, 31180])
 })
 
 test("vector key tables match their derivation", () => {
-  for (const name of ["club", "tournament", "match", "badges", "pairing", "board-join"]) {
+  for (const name of ["club", "tournament", "match", "badges", "pairing", "board-join", "seal"]) {
     for (const [label, k] of Object.entries(load(name).keys as Keys)) {
       assert.equal(k.secret, createHash("sha256").update(`blueline-vector:${label}`).digest("hex"))
     }
   }
 })
 
-test("club vectors", () => {
+test("club vectors", async () => {
   const file = load("club")
   const keys: Keys = file.keys
   for (const c of file.cases) {
-    const result = reduceClub(c.events, c.root, { now: c.now, open: opener(file, c) })
+    const result = reduceClub(c.events, c.root, { now: c.now, open: await opener(file, c) })
     if (c.expect.problem) {
       assert.equal(result.state, null, c.name)
+      assert.equal((result as { problem: string }).problem, c.expect.problem, c.name)
       continue
     }
     assert.ok(result.state, `${c.name}: state`)
@@ -121,28 +136,82 @@ test("club vectors", () => {
       const expected = Object.fromEntries(Object.entries(want.members as Record<string, string>).map(([n, role]) => [idOf(keys, n), role]))
       assert.deepEqual(Object.fromEntries(Object.entries(s.members).map(([pk, m]) => [pk, m.role])), expected, `${c.name}: members`)
     }
-    if (want.inviteUses) for (const [invite, n] of Object.entries(want.inviteUses)) assert.equal(s.invites[invite].uses.length, n, `${c.name}: uses`)
-    if (want.requests) assert.deepEqual(Object.keys(s.requests).sort(), (want.requests as string[]).map((n) => idOf(keys, n)).sort(), `${c.name}: requests`)
+    if (want.via) for (const [n, via] of Object.entries(want.via)) assert.equal(s.members[idOf(keys, n)]?.via, via, `${c.name}: via`)
+    if (want.inviteUses) for (const [label, n] of Object.entries(want.inviteUses)) assert.equal(s.invites[c.labels[label]].uses.length, n, `${c.name}: uses`)
+    if (want.requests)
+      assert.deepEqual(
+        Object.fromEntries(Object.values(s.requests).map((r) => [r.pubkey, r.check])),
+        Object.fromEntries(Object.entries(want.requests as Record<string, string>).map(([n, check]) => [idOf(keys, n), check])),
+        `${c.name}: requests`,
+      )
     if (want.former) for (const [n, how] of Object.entries(want.former)) assert.equal(s.former[idOf(keys, n)]?.how, how, `${c.name}: former`)
-    if (want.keyEpoch !== undefined) assert.equal(s.key.epoch, want.keyEpoch, `${c.name}: epoch`)
-    if (want.key) assert.equal(s.key.pubkey, want.key, `${c.name}: key`)
     if (want.name) assert.equal(s.info.name, want.name, `${c.name}: name`)
+    if (want.shares !== undefined) assert.equal(s.shares.length, want.shares, `${c.name}: shares`)
     if (want.seasons)
       for (const [id, season] of Object.entries(want.seasons as Record<string, { versions: number; ended: boolean }>)) {
         assert.equal(s.seasons[id].versions.length, season.versions, `${c.name}: season versions`)
         assert.equal(s.seasons[id].ended, season.ended, `${c.name}: season ended`)
       }
+    if (want.results)
+      for (const [season, matches] of Object.entries(want.results as Record<string, Record<string, boolean>>))
+        for (const [match, count] of Object.entries(matches)) assert.equal(s.results[season][match].count, count, `${c.name}: result`)
+    if (want.dates)
+      for (const [id, d] of Object.entries(want.dates as Record<string, { starts: number; cancelled: boolean }>)) {
+        assert.equal(s.dates[id].starts, d.starts, `${c.name}: date`)
+        assert.equal(s.dates[id].cancelled, d.cancelled, `${c.name}: date cancelled`)
+      }
+    // Every member's role in the history matches the final state.
+    for (const [pk, m] of Object.entries(s.members)) assert.equal(clubRoleAt(s, pk, c.now), m.role, `${c.name}: history of ${pk}`)
+    for (const pk of Object.keys(s.former)) assert.equal(clubRoleAt(s, pk, c.now), null, `${c.name}: history of former ${pk}`)
   }
 })
 
-test("club vectors: invite proofs follow the documented HMAC", () => {
+test("club vectors: no invite token or plaintext of a sealed record reaches a relay", () => {
+  const file = load("club")
+  for (const c of file.cases) {
+    for (const e of c.events as SignedEvent[]) {
+      if (!e.tags.some((t) => t[0] === "enc")) continue
+      const plaintext = c.plaintexts[e.id]
+      const token = JSON.parse(plaintext).token
+      if (token) assert.ok(!JSON.stringify(e).includes(token), `${c.name}: token in ${e.id}`)
+      for (const name of Object.keys(file.keys)) assert.ok(!e.content.includes(file.keys[name].pubkey), `${c.name}: ${name} named in a sealed envelope`)
+    }
+  }
+})
+
+test("invite vectors: proofs and preview keys follow the documented derivations", () => {
   for (const v of load("invite").cases) {
     const independent = createHmac("sha256", Buffer.from(v.token, "hex")).update(`blueline-invite-v1:${v.pubkey}`).digest("hex")
     assert.equal(v.proof, independent)
     assert.equal(inviteProof(v.token, v.pubkey), independent)
     assert.ok(verifyInviteProof(v.token, v.pubkey, v.proof))
     assert.ok(!verifyInviteProof(v.token, v.pubkey, independent.replace(/^./, (ch: string) => (ch === "0" ? "1" : "0"))))
+    const hkdf = Buffer.from(hkdfSync("sha256", Buffer.from(v.token, "hex"), "blueline-invite-v1", "preview", 32)).toString("hex")
+    assert.equal(v.previewKey, hkdf)
+    assert.equal(Buffer.from(previewKey(v.token)).toString("hex"), hkdf)
   }
+})
+
+test("seal vectors: hints, wraps, content key and preview", () => {
+  const v = load("seal")
+  const s = v.sealed
+  const env = parseEnvelope(s.event.content)
+  assert.deepEqual(s.envelope, JSON.parse(s.event.content))
+  assert.equal(Buffer.from(env.nonce).toString("hex"), s.nonce)
+  for (const r of s.readers) {
+    const hint = createHash("sha256")
+      .update(Buffer.concat([Buffer.from("blueline-seal-hint-v1"), Buffer.from(s.nonce, "hex"), Buffer.from(r.pubkey, "hex")]))
+      .digest()
+      .subarray(0, 4)
+      .toString("hex")
+    assert.equal(r.hint, hint)
+    const [payload] = wrapsFor(env, r.pubkey)
+    assert.equal(decrypt(v.keys[r.name].secret, s.event.pubkey, payload), s.contentKey, `${r.name} unwraps the content key`)
+  }
+  assert.equal(openEnvelope(env, s.type, hexBytes(s.contentKey)), s.plaintext)
+  const inviteEnv = parseEnvelope(v.invite.event.content)
+  assert.deepEqual(readInvitePreview(inviteEnv, v.invite.token), v.invite.preview)
+  assert.equal(Buffer.from(previewKey(v.invite.token)).toString("hex"), v.invite.previewKey)
 })
 
 test("tournament vectors", () => {
@@ -150,15 +219,45 @@ test("tournament vectors", () => {
   const keys: Keys = file.keys
   for (const c of file.cases) {
     const dependents = c.dependents ? (slot: string) => c.dependents[slot] ?? [] : undefined
-    const result = reduceTournament(c.events, c.root, { now: c.now, dependents })
+    const roles = c.clubRoles ? new Map(Object.entries(c.clubRoles as Record<string, ClubRole>).map(([n, role]) => [idOf(keys, n), role])) : null
+    const clubRole = roles ? (pubkey: string) => roles.get(pubkey) ?? null : undefined
+    const result = reduceTournament(c.events, c.root, { now: c.now, dependents, clubRole })
+    if (c.expect.problem) {
+      assert.equal(result.state, null, c.name)
+      assert.equal((result as { problem: string }).problem, c.expect.problem, c.name)
+      continue
+    }
     assert.ok(result.state, `${c.name}: state`)
     const s = result.state
     checkLog(s.log, c)
     const want = c.expect.state ?? {}
     if (want.phase) assert.equal(s.phase, want.phase, `${c.name}: phase`)
     if (want.organizer) assert.equal(s.organizer, idOf(keys, want.organizer), `${c.name}: organizer`)
+    if (want.club) assert.deepEqual(s.club, { id: want.club, verified: true }, `${c.name}: club`)
     if (want.participants)
       for (const [n, status] of Object.entries(want.participants)) assert.equal(s.participants[idOf(keys, n)]?.status, status, `${c.name}: ${n}`)
+    if (want.late)
+      assert.deepEqual(
+        Object.values(s.participants)
+          .filter((p) => p.late)
+          .map((p) => p.id),
+        want.late.map((n: string) => idOf(keys, n)),
+        `${c.name}: late`,
+      )
+    if (want.waitlist)
+      assert.deepEqual(
+        waitingList(s).map((p) => p.id),
+        want.waitlist.map((n: string) => idOf(keys, n)),
+        `${c.name}: waiting list`,
+      )
+    if (want.named)
+      assert.deepEqual(
+        Object.values(s.participants)
+          .filter((p) => p.named)
+          .map((p) => p.id),
+        want.named,
+        `${c.name}: named guests`,
+      )
     if (want.linked) for (const [g, n] of Object.entries(want.linked as Record<string, string>)) assert.equal(s.participants[g].player, idOf(keys, n), `${c.name}: link`)
     if (want.order) assert.deepEqual(s.draw?.order, want.order, `${c.name}: order`)
     if (want.checkedIn)
@@ -172,29 +271,29 @@ test("tournament vectors", () => {
       )
     if (want.place) assert.equal(s.settings.place, want.place)
     if (want.slots)
-      for (const [slot, w] of Object.entries(want.slots as Record<string, { winner?: string; corrected?: boolean; affected?: boolean }>)) {
+      for (const [slot, w] of Object.entries(want.slots as Record<string, { winner?: string; corrected?: boolean; affected?: boolean; walkover?: string }>)) {
         if (w.winner !== undefined) assert.equal(s.slots[slot].approved?.winner, w.winner, `${c.name}: ${slot} winner`)
         if (w.corrected !== undefined) assert.equal(s.slots[slot].approved?.corrected, w.corrected, `${c.name}: ${slot} corrected`)
+        if (w.walkover !== undefined) assert.equal(s.slots[slot].approved?.walkover, w.walkover, `${c.name}: ${slot} walkover`)
         if (w.affected !== undefined) assert.equal(s.slots[slot].affected, w.affected, `${c.name}: ${slot} affected`)
       }
-    // The draw order follows from the seed by the documented rule (recomputed independently).
+    // The draw order follows from the seed by the engine's rule (recomputed independently).
     if (c.seed) {
-      const order = [...c.field].sort((a: string, b: string) => {
-        const ka = createHash("sha256").update(`blueline-draw-v1:${c.seed}:${a}`).digest("hex")
-        const kb = createHash("sha256").update(`blueline-draw-v1:${c.seed}:${b}`).digest("hex")
-        return ka < kb ? -1 : 1
-      })
-      assert.deepEqual(s.draw?.order, order)
-      assert.equal(s.settings.seedCommit, createHash("sha256").update(`blueline-seed-v1:${c.seed}`).digest("hex"))
+      const key = (id: string) => createHash("sha256").update(`blueline-draw-v1\n${c.seed}\n${id}`).digest("hex")
+      assert.deepEqual(
+        s.draw?.order,
+        [...c.field].sort((a: string, b: string) => (key(a) < key(b) ? -1 : 1)),
+      )
+      assert.equal(s.settings.seedCommit, createHash("sha256").update(`blueline-seed-v1\n${c.seed}`).digest("hex"))
     }
   }
 })
 
-test("match vectors", () => {
+test("match vectors", async () => {
   const file = load("match")
   const keys: Keys = file.keys
   for (const c of file.cases) {
-    const result = reduceMatch(c.events, c.root, { now: c.now, open: opener(file, c) })
+    const result = reduceMatch(c.events, c.root, { now: c.now, open: await opener(file, c) })
     if (c.expect.problem) {
       assert.equal(result.state, null, c.name)
       assert.equal((result as { problem: string }).problem, c.expect.problem, c.name)
@@ -244,6 +343,7 @@ test("payment request vectors", () => {
     // The vector's decoded invoice is what nostr-core decodes from the BOLT-11 spec example.
     const decoded = decodeBolt11(JSON.parse(c.rumor.content).invoice)
     assert.deepEqual({ amountMsat: decoded.amountMsat, paymentHash: decoded.paymentHash, expiresAt: decoded.expiresAt }, c.invoice)
+    assert.equal(c.rumor.kind, 1180)
     const result = checkPaymentRequest(c.rumor, { sealPubkey: c.sealPubkey, match: c.match, agreement: c.agreement, payer: c.payer, invoice: c.invoice, now: c.now })
     if (c.expect.ok) assert.ok(result.ok, `${c.name}: ${JSON.stringify(result)}`)
     else assert.equal(result.ok ? "ok" : result.reason, c.expect.reason, c.name)
@@ -304,10 +404,12 @@ test("pairing vectors: a board code is never taken for a pairing code, nor the o
   assert.throws(() => decodeBoardLink(v.links.pair), /wrong_flow/)
   assert.throws(() => parseLinkFragment(`#pair=${v.links.board}`), /wrong_flow/)
   assert.throws(() => parseLinkFragment(`#board=${v.links.watch}`), /wrong_flow/)
+  assert.throws(() => parseLinkFragment(`#pair=${v.links.club}`), /wrong_flow/)
   assert.equal(parseLinkFragment(`#board=${v.links.board}`).type, "board")
   const clubLink = decodeLinkPayload("club", v.links.club)
   assert.deepEqual(clubLink.relays, ["ws://localhost:10547"])
-  assert.equal(clubLink.secret, v.keys.club.secret)
+  assert.equal(clubLink.token?.length, 32)
+  assert.equal(clubLink.invite?.length, 64)
   assert.equal(decodeLinkPayload("watch", v.links.watch).key, v.keys.matchkey.secret)
 })
 
@@ -320,6 +422,7 @@ test("pairing vectors: the message sequence on both devices", () => {
     if (plaintext !== null) assert.equal(plaintext, step.plaintext)
     const parsed = parsePairingEvent(step.event, { plaintext, now })
     assert.ok(parsed.ok, JSON.stringify(parsed))
+    assert.equal(step.event.kind, 21180)
     return parsed
   }
 
@@ -420,5 +523,8 @@ test("throw vectors", () => {
   for (const c of v.cases) {
     assert.equal(encodeThrows(c.log), c.encoded)
     assert.deepEqual(decodeThrows(c.encoded), c.log)
+    // The decoded log replays to the same game as the stored one.
+    assert.deepEqual(replay(c.config, decodeThrows(c.encoded)).legResults, replay(c.config, c.log).legResults)
   }
+  assert.ok(v.cases.some((c: Vector) => c.log.some((t: { edited?: boolean }) => t.edited)), "a corrected log is among the vectors")
 })

@@ -16,6 +16,7 @@ export const REASONS = [
   "before_founding",
   "duplicate",
   "unknown_version",
+  "sealing_required",
   // Authority and ordering
   "not_authorized",
   "stale_predecessor",
@@ -33,7 +34,6 @@ export const REASONS = [
   "request_unknown",
   "owner_cannot_leave",
   "no_open_offer",
-  "epoch_mismatch",
   "season_unknown",
   "season_exists",
   "season_version_mismatch",

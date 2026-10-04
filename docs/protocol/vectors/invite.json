@@ -1,23 +1,26 @@
 {
   "family": "invite",
-  "description": "Invite proofs: HMAC-SHA256(token, 'blueline-invite-v1:' + pubkey).",
+  "description": "Invite proofs HMAC-SHA256(token, 'blueline-invite-v1:' + pubkey) and preview keys HKDF-SHA256(token, 'blueline-invite-v1', 'preview').",
   "generator": "tests/support/make-vectors.ts",
-  "format": "Events are signed (BIP-340, zero aux randomness) with keys derived as sha256('blueline-vector:' + name). Expected outcomes are written by hand from docs/protocol.",
+  "format": "Events are signed (BIP-340, zero aux randomness) with keys derived as sha256('blueline-vector:' + name). Content keys, nonces and NIP-44 nonces are fixed. Expected outcomes are written by hand from docs/protocol.",
   "cases": [
     {
       "token": "1f7f9485c7c897e7959aab95e044464f",
       "pubkey": "48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d",
-      "proof": "f14694782a39f3205cbabe239f01e9371fe3de8cf26f5d8a086cbad7d55eb825"
+      "proof": "f14694782a39f3205cbabe239f01e9371fe3de8cf26f5d8a086cbad7d55eb825",
+      "previewKey": "862473241a16d99218395a99597ca696469a684de033caff54d7481770d739ff"
     },
     {
       "token": "1f7f9485c7c897e7959aab95e044464f",
       "pubkey": "b400d330df264198a54d0f21847e5c3de7d470529c9e8f99cd1acf0bb256433b",
-      "proof": "9579ea93730b325d1c1c951ad3668011194aba455117a3546a644e0501f1efaa"
+      "proof": "9579ea93730b325d1c1c951ad3668011194aba455117a3546a644e0501f1efaa",
+      "previewKey": "862473241a16d99218395a99597ca696469a684de033caff54d7481770d739ff"
     },
     {
       "token": "e1605eae8f73d2a4d4f13b8506dde37c",
       "pubkey": "48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d",
-      "proof": "78fa3b173c02a5e4a043ba9e2510de0abda6dc65e913e9253653264ba00c957b"
+      "proof": "78fa3b173c02a5e4a043ba9e2510de0abda6dc65e913e9253653264ba00c957b",
+      "previewKey": "23eceb25eee7760b9c1bf54ff2c71983072081c690877db737bb4c893fb2bb36"
     }
   ],
   "keys": {

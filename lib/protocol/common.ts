@@ -4,14 +4,18 @@ import { arr, bool, hex, id32, int, obj, oneOf, opt, refine, relayUrl, str, time
 // Schemas several families share: match rules, seats, stakes, embedded events.
 
 // What a record spec says about a type: which kind carries it, how it points at its root
-// object, and whether its content may or must be encrypted to a group key.
+// object, and how its content may be encrypted (docs/protocol/kinds.md, "Verschlüsselung").
 export interface RecordSpec {
   kind: number
   // "self": the record founds an object and its own id is the object id (no "e" tag).
   // "required": exactly one "e" tag naming the root. "session": match.session (see match.ts).
   root: "self" | "required" | "session"
   d?: true
-  sealed: "never" | "allowed" | "required"
+  // "seal": a sealed envelope, one random content key per record, wrapped for every reader
+  // (closed clubs, seal.ts). "link": NIP-44 to a key that travels in a link (private matches).
+  // "none": never encrypted. `encrypted`: never in the clear.
+  encryption: "none" | "seal" | "link"
+  encrypted?: true
   schema: Schema<unknown>
   description: string
 }

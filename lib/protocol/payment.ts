@@ -8,7 +8,7 @@ import { hex, int, obj, opt, refine, SchemaError, str, time } from "./schema.ts"
 import { eventHash, readLabels, recordTags, tagValues } from "./tags.ts"
 
 // Private payment request between players (docs/protocol/families/payment-request.md). An
-// unsigned rumor of kind 1501, sealed by the requesting player's profile key (NIP-59 kind 13)
+// unsigned rumor of kind 1180, sealed by the requesting player's profile key (NIP-59 kind 13)
 // and gift-wrapped (kind 1059) to the player who should pay. It is a request only: the payer
 // sees recipient, amount and expiry and decides; nothing here or anywhere in BlueLine pays on
 // its own. The in-person route (invoice shown as QR) needs no event at all.
@@ -27,7 +27,7 @@ export const PAYMENT_TYPES = {
   "payment.request": {
     kind: KIND_RECORD,
     root: "required",
-    sealed: "never",
+    encryption: "none",
     schema: paymentRequest,
     description: "Payment request to a fellow player; only ever inside a NIP-59 gift wrap",
   },

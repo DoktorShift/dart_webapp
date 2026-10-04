@@ -1,4 +1,5 @@
 import type { Chunk } from "./chunks.ts"
+import type { Reason } from "./reasons.ts"
 import { MAX_FUTURE_SKEW_SECONDS } from "./kinds.ts"
 import type { Agreement } from "./match.ts"
 import type { AnyRecord, BlueLineRecord } from "./records.ts"
@@ -59,7 +60,7 @@ export interface MatchOptions extends ReplayOptions {
   authorities?: string[]
 }
 
-type Problem = [Parameters<typeof reject>[2], string] | null
+type Problem = [Reason, string] | null
 
 export function reduceMatch(events: readonly unknown[], matchId: string, opts: MatchOptions = {}): MatchResult {
   const { records, log, founding } = prepare(events, matchId, opts)
@@ -83,6 +84,10 @@ export function reduceMatch(events: readonly unknown[], matchId: string, opts: M
   }
   applied(log, founding)
   const verdicts: BlueLineRecord<"match.confirm">[] = []
+  const authorities = opts.authorities ?? []
+  // The writer that counts in the end. A result signed by an earlier session is superseded
+  // however its author dated it: a session key that was handed over stays worthless for results.
+  const finalSv = lastSession(records, founding, authorities)
 
   for (const r of records) {
     if (r === founding) continue
@@ -90,7 +95,7 @@ export function reduceMatch(events: readonly unknown[], matchId: string, opts: M
       reject(log, r, "before_founding", "dated before the match started")
       continue
     }
-    const problem = apply(s, r, opts.authorities ?? [], verdicts)
+    const problem = apply(s, r, authorities, verdicts, finalSv)
     if (problem) reject(log, r, problem[0], problem[1])
     else applied(log, r)
   }
@@ -114,6 +119,18 @@ const sessionOf = (r: BlueLineRecord<"match.session">): MatchSession => ({
   by: r.pubkey,
 })
 
+// The session version of the last valid handover: the same chain rule as apply() below,
+// applied to the authority's match.session records alone (no session key can extend it).
+function lastSession(records: readonly AnyRecord[], founding: BlueLineRecord<"match.session">, authorities: string[]): number {
+  let current = { sv: 1, event: founding.id }
+  for (const r of records) {
+    if (r.type !== "match.session" || r === founding || r.created_at < founding.created_at) continue
+    if (r.pubkey !== founding.pubkey && !authorities.includes(r.pubkey)) continue
+    if (r.content.sv === current.sv + 1 && r.content.prev === current.event) current = { sv: r.content.sv, event: r.id }
+  }
+  return current.sv
+}
+
 // A record signed by a session key is valid while that session is the current one and inside
 // its window (with the usual clock allowance at the start).
 function sessionProblem(s: MatchStateP, r: AnyRecord, sv: number): Problem {
@@ -125,7 +142,7 @@ function sessionProblem(s: MatchStateP, r: AnyRecord, sv: number): Problem {
   return null
 }
 
-function apply(s: MatchStateP, r: AnyRecord, authorities: string[], verdicts: BlueLineRecord<"match.confirm">[]): Problem {
+function apply(s: MatchStateP, r: AnyRecord, authorities: string[], verdicts: BlueLineRecord<"match.confirm">[], finalSv: number): Problem {
   const isAuthority = r.pubkey === s.authority || authorities.includes(r.pubkey)
 
   switch (r.type) {
@@ -157,9 +174,8 @@ function apply(s: MatchStateP, r: AnyRecord, authorities: string[], verdicts: Bl
         const problem = sessionProblem(s, r, c.sv)
         if (problem) return problem
         if (!c.auth || c.auth.id !== s.sessions.find((x) => x.sv === c.sv)?.event) return ["session_mismatch", "a session's result carries its authorization"]
-      } else if (c.sv !== s.current.sv) {
-        return c.sv < s.current.sv ? ["session_superseded", `session ${c.sv} was handed over`] : ["session_unknown", `no session ${c.sv}`]
       }
+      if (c.sv !== finalSv) return c.sv < finalSv ? ["session_superseded", `session ${c.sv} was handed over`] : ["session_unknown", `no session ${c.sv}`]
       const seats = s.agreement.seats.length
       if (c.legs.length !== seats || (c.sets && c.sets.length !== seats) || (c.winner !== null && c.winner >= seats)) return ["invalid_content", "does not fit the seats"]
       if (c.throws !== undefined && !throwsReadable(c.throws)) return ["invalid_content", "throw log does not decode"]

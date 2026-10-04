@@ -1,14 +1,22 @@
+import type { ClubRole } from "./club.ts"
+import type { Reason } from "./reasons.ts"
 import type { AnyRecord, BlueLineRecord, ContentOf } from "./records.ts"
 import type { FoundingProblem, ReplayLog, ReplayOptions } from "./replay.ts"
 import { applied, foundingProblem, prepare, reject } from "./replay.ts"
 import type { TournamentPhase } from "./tournament.ts"
-import { drawOrder, seedCommitment } from "./tournament.ts"
+import { drawOrder, seedCommitment, TOURNAMENT_ENGINE } from "./tournament.ts"
 
 // Tournament state from the founding and all changes (docs/protocol/families/tournament.md).
-// The organizer decides; boards submit results for the slots assigned to them; players
-// register, check in, withdraw and claim guest places. Every change is checked against the
-// author's role at that point of the replay. Pairings are the tournament engine's: it reads
-// `draw.order` and the approved results; `dependents` lets it mark slots a correction affects.
+// The organizer decides; boards submit results for the slots assigned to them; players ask for
+// a place, check in, withdraw and claim guest places. Every change is checked against the
+// author's role at that point of the replay.
+//
+// Players choose their own created_at, so nothing they write decides admission, capacity or
+// order (docs/decisions/0001, point 10): a registration waits until the organizer admits it or
+// puts it on the waiting list, and the draw fixes the field itself. A player's late check-in
+// or withdrawal can therefore never make the organizer's draw invalid. Pairings are the
+// tournament engine's: it reads `draw.order` and the approved results; `dependents` lets it
+// mark slots a correction affects.
 
 export type ParticipantStatus = "pending" | "registered" | "waitlist" | "withdrawn" | "removed"
 
@@ -16,10 +24,20 @@ export interface Participant {
   id: string
   kind: "player" | "guest"
   alias?: string
+  // Guests: true when they agreed to be shown under this name (docs/protocol/privacy.md).
+  named?: boolean
   status: ParticipantStatus
+  // The organizer admitted this place at some point (stays true after a withdrawal).
+  admitted: boolean
   checkedIn: boolean
-  // When the place was first taken: the waiting list moves up in this order.
+  // When the player asked (their own clock; shown, never used for order).
   at: number
+  // Registered after the announced registration deadline (by the player's clock).
+  late?: boolean
+  // When the organizer put the place on the waiting list: the list's order.
+  waitlistAt?: number
+  // The organizer's last decision about this place (or the first registration): the base the
+  // next decision names as `prev`. Only organizer records move it.
   head: string
   // A guest place linked to the player who claimed it.
   player?: string
@@ -41,6 +59,7 @@ export interface Submission {
   at: number
   winner: string | null
   score: number[]
+  walkover?: "noShow" | "retired"
   match?: string
   result?: string
 }
@@ -50,7 +69,7 @@ export interface SlotState {
   board?: string
   head: string
   submissions: Submission[]
-  approved: { event: string; winner: string | null; score: number[]; at: number; corrected: boolean; reason?: string } | null
+  approved: { event: string; winner: string | null; score: number[]; walkover?: "noShow" | "retired"; at: number; corrected: boolean; reason?: string } | null
   // A correction of an earlier result changed what this slot depends on.
   affected: boolean
 }
@@ -59,7 +78,8 @@ export interface TournamentState {
   id: string
   founder: string
   organizer: string
-  club?: string
+  // The club that runs it; `verified` when the founder's club role was checked (clubRole).
+  club?: { id: string; verified: boolean }
   settings: ContentOf<"tournament.found">
   phase: TournamentPhase
   participants: Record<string, Participant>
@@ -78,9 +98,12 @@ export type TournamentResult = { state: TournamentState } | { state: null; probl
 export interface TournamentOptions extends ReplayOptions {
   // Slots whose pairing depends on the given slot's result (from the tournament engine).
   dependents?: (slot: string, state: TournamentState) => string[]
+  // For a club's tournament: the role a key held in that club at a time (club-state.ts
+  // clubRoleAt). Founding and taking over the organization need owner, admin or director.
+  clubRole?: (pubkey: string, at: number) => ClubRole | null
 }
 
-type Problem = [Parameters<typeof reject>[2], string] | null
+type Problem = [Reason, string] | null
 
 const BEFORE_DRAW: readonly TournamentPhase[] = ["registration", "checkin"]
 const PLAYING: readonly TournamentPhase[] = ["running", "paused"]
@@ -93,21 +116,29 @@ const NEXT_PHASE: Record<TournamentPhase, readonly TournamentPhase[]> = {
   finished: [],
   cancelled: [],
 }
+const CLUB_LEADERS: readonly (ClubRole | null)[] = ["owner", "admin", "director"]
 
 export function reduceTournament(events: readonly unknown[], tournamentId: string, opts: TournamentOptions = {}): TournamentResult {
   const { records, log, founding } = prepare(events, tournamentId, opts)
   if (!founding || founding.type !== "tournament.found")
     return { state: null, problem: founding ? "invalid" : foundingProblem(log, tournamentId) }
+  const f = founding.content
+  // Bracket rules of a newer engine are kept, never run with today's rules.
+  if (f.engine !== TOURNAMENT_ENGINE) return { state: null, problem: "unknown_version" }
+  if (f.club && opts.clubRole && !CLUB_LEADERS.includes(opts.clubRole(founding.pubkey, founding.created_at))) {
+    reject(log, founding, "not_authorized", "only the club's owner, an admin or a director founds its tournaments")
+    return { state: null, problem: "not_authorized" }
+  }
 
   const s: TournamentState = {
     id: tournamentId,
     founder: founding.pubkey,
     organizer: founding.pubkey,
-    ...(founding.content.club ? { club: founding.content.club } : {}),
-    settings: { ...founding.content },
+    ...(f.club ? { club: { id: f.club, verified: opts.clubRole !== undefined } } : {}),
+    settings: { ...f },
     phase: "registration",
     participants: {},
-    seedCommit: founding.content.seedCommit ?? null,
+    seedCommit: f.seedCommit ?? null,
     draw: null,
     draws: 0,
     boards: {},
@@ -135,25 +166,11 @@ const admittedCount = (s: TournamentState) => Object.values(s.participants).filt
 const hasRoom = (s: TournamentState) => admittedCount(s) < s.settings.capacity
 const headOf = (s: TournamentState, subject: { head: string } | undefined) => subject?.head ?? s.id
 
-// With automatic admission a free place goes to the longest-waiting participant.
-function moveUpWaitlist(s: TournamentState, r: AnyRecord) {
-  if (s.settings.admission !== "auto" || !BEFORE_DRAW.includes(s.phase)) return
-  const waiting = Object.values(s.participants)
+// The waiting list in the organizer's order.
+export const waitingList = (s: TournamentState) =>
+  Object.values(s.participants)
     .filter((p) => p.status === "waitlist")
-    .sort((a, b) => a.at - b.at || (a.id < b.id ? -1 : 1))
-  for (const p of waiting) {
-    if (!hasRoom(s)) return
-    p.status = "registered"
-    p.head = r.id
-  }
-}
-
-// The status a new place gets: admitted while there is room, else the waiting list.
-function newPlaceStatus(s: TournamentState, manual: boolean): ParticipantStatus | null {
-  if (manual) return "pending"
-  if (hasRoom(s)) return "registered"
-  return s.settings.waitlist ? "waitlist" : null
-}
+    .sort((a, b) => (a.waitlistAt as number) - (b.waitlistAt as number) || (a.head < b.head ? -1 : 1))
 
 function apply(s: TournamentState, r: AnyRecord, opts: TournamentOptions): Problem {
   const organizer = r.pubkey === s.organizer
@@ -171,6 +188,7 @@ function apply(s: TournamentState, r: AnyRecord, opts: TournamentOptions): Probl
       if (!organizer) return notOrganizer
       if (prev !== s.heads.core) return ["stale_predecessor", "the tournament was changed meanwhile"]
       if ((rest.rules !== undefined || rest.final !== undefined) && !BEFORE_DRAW.includes(s.phase)) return ["rules_locked", "rules are fixed once drawn"]
+      if (rest.capacity !== undefined && rest.capacity < admittedCount(s)) return ["tournament_full", "more players are admitted than the new capacity"]
       Object.assign(s.settings, rest)
       if (picture !== undefined) {
         if (picture === null) delete s.settings.picture
@@ -209,22 +227,23 @@ function apply(s: TournamentState, r: AnyRecord, opts: TournamentOptions): Probl
       return draw(s, r)
 
     case "tournament.register": {
-      if (s.settings.registrationCloses !== undefined && r.created_at > s.settings.registrationCloses) return ["registration_closed", "registration has closed"]
-      if (s.phase !== "registration") return ["registration_closed", "registration is not open"]
+      if (!BEFORE_DRAW.includes(s.phase)) return ["registration_closed", "the field is drawn"]
       const existing = s.participants[r.pubkey]
       if (existing && existing.status !== "withdrawn") {
         return existing.status === "removed" ? ["not_authorized", "taken out by the organizer"] : ["already_registered", "already registered"]
       }
-      const status = newPlaceStatus(s, s.settings.admission === "manual")
-      if (!status) return ["tournament_full", "the tournament is full"]
+      const late = s.settings.registrationCloses !== undefined && r.created_at > s.settings.registrationCloses
       s.participants[r.pubkey] = {
         id: r.pubkey,
         kind: "player",
         ...(r.content.alias ? { alias: r.content.alias } : {}),
-        status,
+        status: "pending",
+        admitted: existing?.admitted ?? false,
         checkedIn: false,
         at: r.created_at,
-        head: r.id,
+        ...(late ? { late: true } : {}),
+        // A new registration after a withdrawal keeps the organizer's chain of decisions.
+        head: existing?.head ?? r.id,
       }
       return null
     }
@@ -232,32 +251,43 @@ function apply(s: TournamentState, r: AnyRecord, opts: TournamentOptions): Probl
     case "tournament.withdraw": {
       const p = s.participants[r.pubkey]
       if (!p || p.status === "withdrawn" || p.status === "removed") return ["not_registered", "not taking part"]
-      const wasIn = p.status === "registered"
+      // The player's own records never move `head`: the organizer's decisions about this place
+      // keep their base however the player dates a withdrawal.
       p.status = "withdrawn"
       p.checkedIn = false
-      p.head = r.id
       if (r.content.reason) p.reason = r.content.reason
-      if (wasIn) moveUpWaitlist(s, r)
       return null
     }
 
-    case "tournament.admit":
-    case "tournament.waitlist": {
+    case "tournament.admit": {
       const c = r.content
       const p = s.participants[c.participant]
       if (!organizer) return notOrganizer
       if (!BEFORE_DRAW.includes(s.phase)) return ["phase_invalid", "the field is fixed once drawn"]
       if (!p) return ["not_registered", "not registered"]
       if (c.prev !== p.head) return ["stale_predecessor", "the participant was changed meanwhile"]
-      if (r.type === "tournament.admit") {
-        if (p.status === "registered") return ["already_registered", "already admitted"]
-        if (!hasRoom(s)) return ["tournament_full", "the tournament is full"]
-        p.status = "registered"
-      } else {
-        if (p.status !== "registered" && p.status !== "pending") return ["not_registered", "only an admitted or waiting registration moves to the list"]
-        p.status = "waitlist"
-        p.checkedIn = false
-      }
+      if (p.status === "registered") return ["already_registered", "already admitted"]
+      if (p.status !== "pending" && p.status !== "waitlist") return ["not_registered", "only a waiting registration is admitted"]
+      if (!hasRoom(s)) return ["tournament_full", "the tournament is full"]
+      p.status = "registered"
+      p.admitted = true
+      delete p.waitlistAt
+      p.head = r.id
+      return null
+    }
+
+    case "tournament.waitlist": {
+      const c = r.content
+      const p = s.participants[c.participant]
+      if (!organizer) return notOrganizer
+      if (!s.settings.waitlist) return ["invalid_content", "this tournament has no waiting list"]
+      if (!BEFORE_DRAW.includes(s.phase)) return ["phase_invalid", "the field is fixed once drawn"]
+      if (!p) return ["not_registered", "not registered"]
+      if (c.prev !== p.head) return ["stale_predecessor", "the participant was changed meanwhile"]
+      if (p.status !== "registered" && p.status !== "pending") return ["not_registered", "only an admitted or waiting registration moves to the list"]
+      p.status = "waitlist"
+      p.waitlistAt = r.created_at
+      p.checkedIn = false
       p.head = r.id
       return null
     }
@@ -268,12 +298,10 @@ function apply(s: TournamentState, r: AnyRecord, opts: TournamentOptions): Probl
       if (!organizer) return notOrganizer
       if (!p || p.status === "removed") return ["not_registered", "not taking part"]
       if (c.prev !== p.head) return ["stale_predecessor", "the participant was changed meanwhile"]
-      const wasIn = p.status === "registered"
       p.status = "removed"
       p.checkedIn = false
       p.reason = c.reason
       p.head = r.id
-      if (wasIn) moveUpWaitlist(s, r)
       return null
     }
 
@@ -282,9 +310,18 @@ function apply(s: TournamentState, r: AnyRecord, opts: TournamentOptions): Probl
       if (!organizer) return notOrganizer
       if (!BEFORE_DRAW.includes(s.phase)) return ["phase_invalid", "the field is fixed once drawn"]
       if (s.participants[c.guest]) return ["already_registered", "guest id already used"]
-      const status = newPlaceStatus(s, false)
-      if (!status) return ["tournament_full", "the tournament is full"]
-      s.participants[c.guest] = { id: c.guest, kind: "guest", alias: c.alias, status, checkedIn: false, at: r.created_at, head: r.id }
+      if (!hasRoom(s)) return ["tournament_full", "the tournament is full"]
+      s.participants[c.guest] = {
+        id: c.guest,
+        kind: "guest",
+        alias: c.alias,
+        ...(c.named ? { named: true } : {}),
+        status: "registered",
+        admitted: true,
+        checkedIn: false,
+        at: r.created_at,
+        head: r.id,
+      }
       return null
     }
 
@@ -366,7 +403,14 @@ function apply(s: TournamentState, r: AnyRecord, opts: TournamentOptions): Probl
       if (!slot || !submission) return ["result_unknown", "no such submitted result"]
       if (slot.approved) return ["already_approved", "use a correction to change an approved result"]
       if (c.prev !== slot.head) return ["stale_predecessor", "the slot was changed meanwhile"]
-      slot.approved = { event: r.id, winner: submission.winner, score: submission.score, at: r.created_at, corrected: false }
+      slot.approved = {
+        event: r.id,
+        winner: submission.winner,
+        score: submission.score,
+        ...(submission.walkover ? { walkover: submission.walkover } : {}),
+        at: r.created_at,
+        corrected: false,
+      }
       slot.head = r.id
       return null
     }
@@ -408,6 +452,8 @@ function apply(s: TournamentState, r: AnyRecord, opts: TournamentOptions): Probl
     case "tournament.handover.accept":
       if (!s.offer || s.offer.event !== r.content.offer) return ["no_open_offer", "no such open offer"]
       if (r.pubkey !== s.offer.to) return ["not_authorized", "the offer is for someone else"]
+      if (s.club && opts.clubRole && !CLUB_LEADERS.includes(opts.clubRole(r.pubkey, r.created_at)))
+        return ["not_authorized", "a club's tournament is organized by its owner, an admin or a director"]
       s.organizer = r.pubkey
       s.offer = null
       s.heads.organizer = r.id
@@ -423,6 +469,10 @@ function slotOf(s: TournamentState, slot: string): SlotState {
   return s.slots[slot]
 }
 
+// The draw fixes the field: it is the organizer's decision who plays, in the order that follows
+// from the revealed seed. Only the organizer's own records can contradict it (a place taken out
+// or never registered); whatever players write, however they date it, cannot. Check-in is the
+// organizer's aid, not a condition here.
 function draw(s: TournamentState, r: BlueLineRecord<"tournament.draw">): Problem {
   const c = r.content
   if (r.pubkey !== s.organizer) return ["not_authorized", "only the organizer draws"]
@@ -431,15 +481,14 @@ function draw(s: TournamentState, r: BlueLineRecord<"tournament.draw">): Problem
   if (!allowed.includes(s.phase)) return ["phase_invalid", `no draw while ${s.phase}`]
   if (!s.seedCommit) return ["seed_not_committed", "a draw opens an earlier seed commitment"]
   if (seedCommitment(c.seed) !== s.seedCommit) return ["seed_mismatch", "the seed does not open the commitment"]
-
-  const field = Object.values(s.participants)
-    .filter((p) => p.status === "registered" && (!s.settings.checkIn || p.checkedIn))
-    .map((p) => p.id)
-  if (field.length < 2) return ["draw_mismatch", "fewer than two in the field"]
-  const fieldSet = new Set(field)
-  if (c.order.length !== field.length || c.order.some((id) => !fieldSet.has(id))) return ["draw_mismatch", "the order is not the current field"]
-  if (c.seeded.some((id) => !fieldSet.has(id))) return ["draw_mismatch", "a seeded player is not in the field"]
-  const expected = drawOrder(c.seed, field, c.seeded)
+  if (c.order.length > s.settings.capacity) return ["draw_mismatch", "more in the field than places"]
+  for (const id of c.order) {
+    const p = s.participants[id]
+    if (!p) return ["draw_mismatch", "the field holds someone who never registered"]
+    if (p.status === "removed") return ["draw_mismatch", "the field holds someone the organizer took out"]
+  }
+  if (c.seeded.some((id) => !c.order.includes(id))) return ["draw_mismatch", "a seeded player is not in the field"]
+  const expected = drawOrder(c.seed, c.order, c.seeded)
   if (expected.some((id, i) => c.order[i] !== id)) return ["draw_mismatch", "the order does not follow from the seed"]
 
   s.draw = { seed: c.seed, seeded: c.seeded, order: c.order, event: r.id, at: r.created_at }
@@ -469,12 +518,13 @@ function submit(s: TournamentState, r: BlueLineRecord<"tournament.result">): Pro
     at: r.created_at,
     winner: c.winner,
     score: c.score,
+    ...(c.walkover ? { walkover: c.walkover } : {}),
     ...(c.match ? { match: c.match } : {}),
     ...(c.result ? { result: c.result } : {}),
   }
   slot.submissions.push(submission)
   if (byOrganizer || s.settings.approval === "board") {
-    slot.approved = { event: r.id, winner: c.winner, score: c.score, at: r.created_at, corrected: false }
+    slot.approved = { event: r.id, winner: c.winner, score: c.score, ...(c.walkover ? { walkover: c.walkover } : {}), at: r.created_at, corrected: false }
     slot.head = r.id
   }
   return null

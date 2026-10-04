@@ -2,7 +2,7 @@
   "family": "badges",
   "description": "NIP-58 definitions and awards checked by checkBadgeAward (lib/protocol/badges.ts).",
   "generator": "tests/support/make-vectors.ts",
-  "format": "Events are signed (BIP-340, zero aux randomness) with keys derived as sha256('blueline-vector:' + name). Expected outcomes are written by hand from docs/protocol.",
+  "format": "Events are signed (BIP-340, zero aux randomness) with keys derived as sha256('blueline-vector:' + name). Content keys, nonces and NIP-44 nonces are fixed. Expected outcomes are written by hand from docs/protocol.",
   "context": {
     "mayIssue": [
       ["tournament", "30ea7d98843f538222d42251f73341398c8de40f041acb4b9df77d37ebbc4795", "b3f4e9a11c2f790c41ec159f9bed16000a7c52340c680892a7e71281ed69e969"]

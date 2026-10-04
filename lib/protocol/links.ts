@@ -12,18 +12,20 @@ import { HEX32, HEX64 } from "./tags.ts"
 //   #pair=P1.<one-time pubkey>.<session id>.<expiry>.<relays>
 //   #board=B1.<one-time pubkey>.<session id>.<expiry>.<relays>
 //   #watch=W1.<match id>.<match key secret or empty>.<relays>
-//   #club=C1.<club id>.<invite id>.<invite token>.<club key secret>.<relays>  (invite parts may be empty)
+//   #club=C1.<club id>.<invite event id>.<invite token>.<relays>   (invite parts may be empty)
 //   #tournament=T1.<tournament id>.<relays>
 //   #p=U1.<pubkey>.<relays>
 //
 // 32- and 16-byte values are base64url without padding, the expiry is unix seconds in base 36,
 // relays are comma-separated with "wss://" left out. Relays come last because hosts contain dots.
+// The secrets a link may carry (match key of a private match, invite token) are bearer secrets:
+// whoever has the link can watch, or join and read the invite's preview (docs/protocol/privacy.md).
 
 export type LinkPayload =
   | { type: "pair"; pubkey: string; sid: string; expires: number; relays: string[] }
   | { type: "board"; pubkey: string; sid: string; expires: number; relays: string[] }
   | { type: "watch"; match: string; key?: string; relays: string[] }
-  | { type: "club"; club: string; invite?: string; token?: string; secret?: string; relays: string[] }
+  | { type: "club"; club: string; invite?: string; token?: string; relays: string[] }
   | { type: "tournament"; tournament: string; relays: string[] }
   | { type: "profile"; pubkey: string; relays: string[] }
 
@@ -32,7 +34,7 @@ export type LinkType = LinkPayload["type"]
 const PREFIX: Record<LinkType, string> = { pair: "P1", board: "B1", watch: "W1", club: "C1", tournament: "T1", profile: "U1" }
 const FRAGMENT_KEY: Record<LinkType, string> = { pair: "pair", board: "board", watch: "watch", club: "club", tournament: "tournament", profile: "p" }
 // Fields before the relays, per type.
-const FIELDS: Record<LinkType, number> = { pair: 3, board: 3, watch: 2, club: 4, tournament: 1, profile: 1 }
+const FIELDS: Record<LinkType, number> = { pair: 3, board: 3, watch: 2, club: 3, tournament: 1, profile: 1 }
 
 export const MAX_LINK_RELAYS = 4
 
@@ -98,7 +100,7 @@ export function encodeLinkPayload(p: LinkPayload): string {
       break
     case "club":
       if ((p.invite === undefined) !== (p.token === undefined)) throw bad("invite id and token go together")
-      fields = [b64(p.club, 32), opt(p.invite, 16), opt(p.token, 16), opt(p.secret, 32)]
+      fields = [b64(p.club, 32), opt(p.invite, 32), opt(p.token, 16)]
       break
     case "tournament":
       fields = [b64(p.tournament, 32)]
@@ -136,11 +138,10 @@ export function decodeLinkPayload<T extends LinkType>(expected: T, text: string)
       break
     }
     case "club": {
-      const invite = unopt(fields[1], 16)
+      const invite = unopt(fields[1], 32)
       const token = unopt(fields[2], 16)
-      const secret = unopt(fields[3], 32)
       if ((invite === undefined) !== (token === undefined)) throw bad("invite id and token go together")
-      payload = { type: "club", club: unb64(fields[0], 32), ...(invite ? { invite } : {}), ...(token ? { token } : {}), ...(secret ? { secret } : {}), relays }
+      payload = { type: "club", club: unb64(fields[0], 32), ...(invite ? { invite } : {}), ...(token ? { token } : {}), relays }
       break
     }
     case "tournament":

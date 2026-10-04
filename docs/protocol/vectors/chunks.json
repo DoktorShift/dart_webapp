@@ -2,7 +2,7 @@
   "family": "chunks",
   "description": "Hash-chained pieces (lib/protocol/chunks.ts).",
   "generator": "tests/support/make-vectors.ts",
-  "format": "Events are signed (BIP-340, zero aux randomness) with keys derived as sha256('blueline-vector:' + name). Expected outcomes are written by hand from docs/protocol.",
+  "format": "Events are signed (BIP-340, zero aux randomness) with keys derived as sha256('blueline-vector:' + name). Content keys, nonces and NIP-44 nonces are fixed. Expected outcomes are written by hand from docs/protocol.",
   "data": "1555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555.ääääääääääääääääääää",
   "budget": 40,
   "head": "4b49a2172a1336f1ec48036d79e2a2c0bafab7f8c172e5339bae72b16a03be31",

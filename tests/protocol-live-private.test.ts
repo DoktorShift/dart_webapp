@@ -1,5 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
+import { createHash } from "node:crypto"
 import { xchacha20poly1305 } from "@noble/ciphers/chacha"
 import { finalizeEvent, generateSecretKey, getPublicKey } from "nostr-core"
 import { applyThrow, newMatchState, replay, tagThrow } from "../lib/game/engine.ts"
@@ -18,7 +19,7 @@ import {
   recordSlot,
   splitRecord,
 } from "../lib/protocol/private.ts"
-import { buildRecord, parseRecord, sealTemplate } from "../lib/protocol/records.ts"
+import { buildRecord, encryptForLinkKey, parseRecord } from "../lib/protocol/records.ts"
 import { signedEventBytes } from "../lib/protocol/tags.ts"
 import { decodeThrows } from "../lib/protocol/throws.ts"
 import { drawOrder, seedCommitment } from "../lib/protocol/tournament.ts"
@@ -72,9 +73,9 @@ test("a long match's snapshot stays inside the budget, also encrypted", () => {
   const content = liveContent({ state, throws: log, sv: 1, n: 999, status: "playing", auth: session })
   const t = buildRecord("match.live", content, { created_at: NOW, root: session.id, d: session.id })
   assert.ok(signedEventBytes(t) <= MAX_EVENT_BYTES)
-  // NIP-44 adds about a third; the sealed event still fits.
-  const sealed = sealTemplate(t, getPublicKey(generateSecretKey()), "x".repeat(Math.ceil((t.content.length * 4) / 3) + 200))
-  assert.ok(signedEventBytes(sealed) <= MAX_EVENT_BYTES)
+  // NIP-44 adds about a third; the encrypted event of a private match still fits.
+  const encrypted = encryptForLinkKey(t, getPublicKey(generateSecretKey()), "x".repeat(Math.ceil((t.content.length * 4) / 3) + 200))
+  assert.ok(signedEventBytes(encrypted) <= MAX_EVENT_BYTES)
   const e = finalizeEvent(t, host)
   assert.equal(parseRecord(e, { now: NOW }).status, "ok")
 })
@@ -118,13 +119,19 @@ test("private records: large data splits into chained parts and joins back", () 
 })
 
 test("draw order: seeded players first, the rest by the seed, reproducible", () => {
-  const seed = "9".repeat(64)
+  const seed = "9".repeat(32)
   const field = ["a".repeat(64), "b".repeat(64), "c".repeat(32), "d".repeat(64)]
   const once = drawOrder(seed, field)
   assert.deepEqual(drawOrder(seed, [...field].reverse()), once)
-  assert.notDeepEqual(drawOrder("8".repeat(64), field), once)
+  assert.notDeepEqual(drawOrder("8".repeat(32), field), once)
   const seeded = drawOrder(seed, field, ["d".repeat(64), "x".repeat(64)])
   assert.equal(seeded[0], "d".repeat(64))
   assert.equal(seeded.length, 4)
-  assert.equal(seedCommitment(seed).length, 64)
+  // The tournament engine's derivations (lib/tournaments/draw.ts), recomputed independently.
+  const sha = (text: string) => createHash("sha256").update(text).digest("hex")
+  assert.equal(seedCommitment(seed), sha(`blueline-seed-v1\n${seed}`))
+  assert.deepEqual(
+    once,
+    [...field].sort((a, b) => (sha(`blueline-draw-v1\n${seed}\n${a}`) < sha(`blueline-draw-v1\n${seed}\n${b}`) ? -1 : 1)),
+  )
 })

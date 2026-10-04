@@ -14,7 +14,7 @@ const samples: LinkPayload[] = [
   { type: "watch", match: K, relays: ["wss://nos.lol"] },
   { type: "watch", match: K, key: "3".repeat(64), relays: [] },
   { type: "club", club: K, relays: ["wss://nos.lol"] },
-  { type: "club", club: K, invite: S, token: "4".repeat(32), secret: "5".repeat(64), relays: ["wss://nostr.oxtr.dev/path"] },
+  { type: "club", club: K, invite: "5".repeat(64), token: "4".repeat(32), relays: ["wss://nostr.oxtr.dev/path"] },
   { type: "tournament", tournament: K, relays: ["wss://nos.lol"] },
   { type: "profile", pubkey: K, relays: [] },
 ]
@@ -30,6 +30,8 @@ test("every link type round-trips through its fragment", () => {
 test("links stay short enough for a comfortable QR code", () => {
   const pair = linkFragment(samples[0])
   assert.ok(pair.length < 140, `${pair.length} characters`)
+  const invite = linkFragment({ type: "club", club: K, invite: K, token: S, relays: ["wss://nos.lol", "wss://relay.primal.net"] })
+  assert.ok(invite.length < 160, `${invite.length} characters`)
   assert.match(pair, /^#pair=P1\.[A-Za-z0-9_-]{43}\.[A-Za-z0-9_-]{22}\.[0-9a-z]+\.nos\.lol,relay\.primal\.net$/)
 })
 
@@ -54,7 +56,9 @@ test("damaged or oversized payloads are refused", () => {
   assert.throws(() => decodeLinkPayload("pair", "P1.only"), /invalid_content/)
   assert.throws(() => decodeLinkPayload("pair", pair.replace(/nos\.lol/, "bad relay")), /invalid_content/)
   assert.throws(() => encodeLinkPayload({ ...samples[0], relays: ["wss://a", "wss://b", "wss://c", "wss://d", "wss://e"] } as LinkPayload), /invalid_content/)
-  assert.throws(() => encodeLinkPayload({ type: "club", club: K, invite: S, relays: [] }), /invalid_content/)
+  assert.throws(() => encodeLinkPayload({ type: "club", club: K, invite: K, relays: [] }), /invalid_content/)
+  // The invite is named by its event id (32 bytes), never by a short id.
+  assert.throws(() => encodeLinkPayload({ type: "club", club: K, invite: S, token: S, relays: [] }), /invalid_content/)
   assert.throws(() => encodeLinkPayload({ type: "watch", match: "xyz", relays: [] }), /invalid_content/)
   assert.throws(() => parseLinkFragment("#pair=%E0%A4%A"), /invalid_content/)
 })

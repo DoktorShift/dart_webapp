@@ -1,7 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
-import { nip44 } from "nostr-core"
 import { reduceClub } from "../lib/protocol/club-state.ts"
 import { reduceMatch } from "../lib/protocol/match-state.ts"
 import type { SignedEvent } from "../lib/protocol/tags.ts"
@@ -26,15 +25,12 @@ function shuffled<T>(items: T[], seed: number): T[] {
   return out
 }
 
-// Decryption is the slow part (one ECDH per event); each event is decrypted once.
-const decrypted = new Map<string, string>()
-const open = (file: Vector, c: Vector) =>
-  c.open && c.groupKey
-    ? (e: SignedEvent) => {
-        if (!decrypted.has(e.id)) decrypted.set(e.id, nip44.decrypt(e.content, nip44.getConversationKey(Uint8Array.from(Buffer.from(file.keys[c.groupKey].secret, "hex")), e.pubkey)))
-        return decrypted.get(e.id) as string
-      }
-    : undefined
+// The plaintexts the case's reader can open (tests/protocol-vectors.test.ts checks that the
+// reader really opens exactly these); replay itself never decrypts.
+const open = (c: Vector) => (c.reader || c.linkKey ? (e: SignedEvent) => (c.reader && !readable(c).has(e.id) ? null : (c.plaintexts[e.id] ?? null)) : undefined)
+
+// Sealed records the reader cannot open stay closed, as in the vector's expectation.
+const readable = (c: Vector) => new Set<string>(Object.keys(c.plaintexts).filter((id) => !(c.expect.unapplied ?? []).some((u: { id: string; why: string }) => u.id === id && u.why === "sealed")))
 
 // The rejected and unapplied lists come out in replay order too, so a plain comparison works.
 const snapshot = (result: { state: unknown }) => JSON.stringify(result.state)
@@ -47,7 +43,7 @@ for (const [family, reduce] of [
   test(`${family}: any arrival order and duplicates give the same state`, () => {
     const file = load(family)
     for (const c of file.cases) {
-      const opts = { now: c.now, open: open(file, c), ...(c.dependents ? { dependents: (slot: string) => c.dependents[slot] ?? [] } : {}) }
+      const opts = { now: c.now, open: open(c), ...(c.dependents ? { dependents: (slot: string) => c.dependents[slot] ?? [] } : {}) }
       const reference = snapshot(reduce(c.events, c.root, opts))
       for (let seed = 1; seed <= 12; seed++) {
         assert.equal(snapshot(reduce(shuffled(c.events, seed), c.root, opts)), reference, `${c.name}, shuffle ${seed}`)
@@ -60,15 +56,15 @@ for (const [family, reduce] of [
 test("events of another object are refused as wrong_root", () => {
   const file = load("club")
   const a = file.cases[0]
-  const b = file.cases.find((x: Vector) => x.root !== a.root)
-  const result = reduceClub([...a.events, ...b.events], a.root, { now: a.now, open: open(file, a) })
+  const b = file.cases.find((x: Vector) => x.root !== a.root && !x.expect.problem)
+  const result = reduceClub([...a.events, ...b.events], a.root, { now: a.now, open: open(a) })
   assert.ok(result.state)
   const own = new Set(a.events.map((e: SignedEvent) => e.id))
   const foreign = new Set(b.events.map((e: SignedEvent) => e.id).filter((id: string) => !own.has(id)))
   const refused = result.state.log.rejected.filter((r) => foreign.has(r.id))
   assert.equal(refused.length, foreign.size)
   assert.ok(refused.every((r) => r.reason === "wrong_root"))
-  assert.equal(snapshot({ state: { ...result.state, log: null } }), snapshot({ state: { ...reduceClub(a.events, a.root, { now: a.now, open: open(file, a) }).state, log: null } }))
+  assert.equal(snapshot({ state: { ...result.state, log: null } }), snapshot({ state: { ...reduceClub(a.events, a.root, { now: a.now, open: open(a) }).state, log: null } }))
 })
 
 test("without its founding there is no state, and the reason is told", () => {

@@ -4,7 +4,8 @@
   "$defs": {
     "match.session": {
       "description": "Founds a match (sv 1) or hands it to a new writer",
-      "kind": 1501,
+      "kind": 1180,
+      "encryption": "link",
       "type": "object",
       "properties": {
         "sv": {
@@ -182,7 +183,8 @@
     },
     "match.result": {
       "description": "Final result with throws or a reference to the log",
-      "kind": 1501,
+      "kind": 1180,
+      "encryption": "link",
       "type": "object",
       "properties": {
         "sv": {
@@ -361,7 +363,8 @@
     },
     "match.log": {
       "description": "One piece of a long throw log (chunks.ts)",
-      "kind": 1501,
+      "kind": 1180,
+      "encryption": "link",
       "type": "object",
       "properties": {
         "set": {
@@ -397,7 +400,8 @@
     },
     "match.confirm": {
       "description": "A player confirms or disputes one exact result",
-      "kind": 1501,
+      "kind": 1180,
+      "encryption": "link",
       "type": "object",
       "properties": {
         "result": {
@@ -426,7 +430,8 @@
     },
     "match.live": {
       "description": "Live state of a match",
-      "kind": 31501,
+      "kind": 31180,
+      "encryption": "link",
       "type": "object",
       "properties": {
         "sv": {

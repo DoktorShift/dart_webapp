@@ -4,7 +4,8 @@
   "$defs": {
     "payment.request": {
       "description": "Payment request to a fellow player; only ever inside a NIP-59 gift wrap",
-      "kind": 1501,
+      "kind": 1180,
+      "encryption": "none",
       "type": "object",
       "properties": {
         "amount": {
