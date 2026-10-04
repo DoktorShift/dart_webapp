@@ -42,6 +42,28 @@ export interface Rumor {
   content: string
 }
 
+// Errors that tell something about the signer, not about the data: declined, no answer, out of
+// reach, not supported. They pass through unchanged, because a declined prompt or a timeout
+// taken for "this data is under another key" could lead a caller to replace the data key and
+// lose every record encrypted under the old one. What counts as undecryptable: SignerError
+// "failed" (a local key that can't decrypt, ../signers.ts) and plain errors of unwrapped signers.
+// A remote signer answers a failed decryption and a refusal alike with an error message, so its
+// errors always pass through: the safe side.
+export function isSignerFailure(error: unknown): boolean {
+  const { name, code } = (error ?? {}) as { name?: unknown; code?: unknown }
+  return (name === "SignerError" && code !== "failed") || name === "Nip46RequestError"
+}
+
+// Runs a decryption through the signer; failures of the data become CryptoError("undecryptable").
+async function decryptOr<T>(message: string, action: () => Promise<T>): Promise<T> {
+  try {
+    return await action()
+  } catch (error) {
+    if (error instanceof CryptoError || isSignerFailure(error)) throw error
+    throw new CryptoError("undecryptable", message)
+  }
+}
+
 const nip44Of = (signer: Signer) => {
   if (!signer.nip44) throw new CryptoError("no-nip44", "this signer can't encrypt (NIP-44)")
   return signer.nip44
@@ -104,28 +126,19 @@ const isEventLike = (value: unknown): value is NostrEvent => {
 }
 
 // Opens a gift wrap addressed to the signer. Returns the rumor and its real author. Throws
-// CryptoError: "forged" when a signature, the author link or the rumor id doesn't hold.
+// CryptoError: "forged" when a signature, the author link or the rumor id doesn't hold,
+// "undecryptable" when it isn't for this key; signer failures pass through (isSignerFailure).
 export async function unwrapWithSigner(wrap: NostrEvent, signer: Signer): Promise<{ rumor: Rumor; sender: string }> {
   const core = await loadCore()
   const nip44 = nip44Of(signer)
   if (wrap.kind !== GIFT_WRAP_KIND && wrap.kind !== EPHEMERAL_GIFT_WRAP_KIND) throw new CryptoError("malformed", `kind ${wrap.kind} is no gift wrap`)
   if (!core.verifyEventSignature(wrap)) throw new CryptoError("forged", "the wrap's signature is not valid")
-  let sealText: string
-  try {
-    sealText = await nip44.decrypt(wrap.pubkey, wrap.content)
-  } catch {
-    throw new CryptoError("undecryptable", "not addressed to this key")
-  }
+  const sealText = await decryptOr("not addressed to this key", () => nip44.decrypt(wrap.pubkey, wrap.content))
   const seal = parseJson(sealText)
   if (!isEventLike(seal) || typeof seal.sig !== "string" || seal.kind !== SEAL_KIND) throw new CryptoError("malformed", "no seal inside")
   if (seal.tags.length > 0) throw new CryptoError("malformed", "a seal has no tags")
   if (!core.verifyEventSignature(seal)) throw new CryptoError("forged", "the seal's signature is not valid")
-  let rumorText: string
-  try {
-    rumorText = await nip44.decrypt(seal.pubkey, seal.content)
-  } catch {
-    throw new CryptoError("undecryptable", "the seal can't be opened")
-  }
+  const rumorText = await decryptOr("the seal can't be opened", () => nip44.decrypt(seal.pubkey, seal.content))
   const rumor = parseJson(rumorText)
   if (!isEventLike(rumor)) throw new CryptoError("malformed", "no rumor inside")
   if (rumor.pubkey !== seal.pubkey) throw new CryptoError("forged", "the rumor claims another author than the seal")
@@ -194,14 +207,13 @@ export async function wrapDataKey(dataKey: Uint8Array, signer: Signer): Promise<
   return nip44Of(signer).encrypt(await signer.getPublicKey(), bytesToHex(dataKey))
 }
 
+// Throws CryptoError "undecryptable" only when the wrapped key really doesn't open with this
+// signer's key; a declined or unanswered request throws the signer's error instead (see
+// isSignerFailure), and must never be taken as a reason to create a new data key.
 export async function unwrapDataKey(wrapped: string, signer: Signer): Promise<Uint8Array> {
-  let hex: string
-  try {
-    hex = await nip44Of(signer).decrypt(await signer.getPublicKey(), wrapped)
-  } catch (error) {
-    if (error instanceof CryptoError) throw error
-    throw new CryptoError("undecryptable", "the data key can't be unwrapped with this signer")
-  }
+  const nip44 = nip44Of(signer)
+  const pubkey = await signer.getPublicKey()
+  const hex = await decryptOr("the data key can't be unwrapped with this signer", () => nip44.decrypt(pubkey, wrapped))
   if (!/^[0-9a-f]{64}$/.test(hex)) throw new CryptoError("malformed", "no data key inside")
   return hexToBytes(hex)
 }

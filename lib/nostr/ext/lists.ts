@@ -9,12 +9,14 @@
 // Unknown tags are always kept.
 import { createdAt } from "../time.ts"
 import { normalizeRelayUrl } from "../relays.ts"
+import { isSignerFailure } from "./crypto.ts"
 import type { EventTemplate, NostrEvent, Signer } from "../types.ts"
 
 // "none": no private part. "decrypted": read. "undecryptable": there is a private part this
-// signer can't read (other key, damaged, refused). "no-key": there is one, but no signer able to
-// decrypt was given.
-export type PrivateStatus = "none" | "decrypted" | "undecryptable" | "no-key"
+// signer can't read (other key, damaged). "unavailable": the signer didn't decrypt it this time
+// (declined, no answer, out of reach); asking again may work. "no-key": there is one, but no
+// signer able to decrypt was given.
+export type PrivateStatus = "none" | "decrypted" | "undecryptable" | "unavailable" | "no-key"
 
 export interface SafeList {
   kind: number
@@ -53,20 +55,27 @@ export async function parseListSafe(event: NostrEvent, signer?: Signer | null): 
   const legacy = event.content.includes("?iv=")
   const decrypt = legacy ? signer?.nip04?.decrypt : signer?.nip44?.decrypt
   if (!signer || !decrypt) return { ...base, privateTags: [], privateStatus: "no-key" }
+  const unread = (error: unknown): SafeList => ({ ...base, privateTags: [], privateStatus: isSignerFailure(error) ? "unavailable" : "undecryptable" })
   let pubkey: string
   try {
     pubkey = await signer.getPublicKey()
-  } catch {
-    return { ...base, privateTags: [], privateStatus: "no-key" }
+  } catch (error) {
+    return isSignerFailure(error) ? unread(error) : { ...base, privateTags: [], privateStatus: "no-key" }
   }
   if (pubkey !== event.pubkey) return { ...base, privateTags: [], privateStatus: "no-key" }
+  let plaintext: string
   try {
-    const tags: unknown = JSON.parse(await decrypt(event.pubkey, event.content))
-    if (!isTagList(tags)) return { ...base, privateTags: [], privateStatus: "undecryptable" }
-    return { ...base, privateTags: tags, privateStatus: "decrypted" }
-  } catch {
-    return { ...base, privateTags: [], privateStatus: "undecryptable" }
+    plaintext = await decrypt(event.pubkey, event.content)
+  } catch (error) {
+    return unread(error)
   }
+  try {
+    const tags: unknown = JSON.parse(plaintext)
+    if (isTagList(tags)) return { ...base, privateTags: tags, privateStatus: "decrypted" }
+  } catch {
+    // Not JSON: damaged.
+  }
+  return { ...base, privateTags: [], privateStatus: "undecryptable" }
 }
 
 export interface ListDraft {
@@ -85,7 +94,7 @@ export interface ListDraft {
 // Builds the event template for a list. Private items are NIP-44 encrypted to the author.
 export async function buildListTemplate(draft: ListDraft): Promise<EventTemplate> {
   const { base, signer } = draft
-  if (base && (base.privateStatus === "undecryptable" || base.privateStatus === "no-key")) {
+  if (base && (base.privateStatus === "undecryptable" || base.privateStatus === "unavailable" || base.privateStatus === "no-key")) {
     throw new ListError("private-unreadable", "the list has private entries that couldn't be read; writing would erase them")
   }
   const privateTags = draft.privateTags ?? base?.privateTags ?? []
@@ -145,12 +154,20 @@ export function parseRelayListSafe(event: NostrEvent): SafeRelayList {
   return { relays: [...relays.values()], invalid, otherTags }
 }
 
-// The kind 10002 template for a relay list; unknown tags from the previous version stay.
-export function buildRelayListTemplate(relays: readonly RelayEntry[], base?: { list: SafeRelayList; event: NostrEvent }): EventTemplate {
+// The kind 10002 template for a relay list. Everything of the previous version that isn't in
+// `relays` stays: unknown tags, and "r" entries this app can't use (a ws:// relay in someone's
+// home network or on Tor, an unknown marker) but another client wrote on purpose. Pass
+// dropUnusable only when the person chose to remove those.
+export function buildRelayListTemplate(
+  relays: readonly RelayEntry[],
+  base?: { list: SafeRelayList; event: NostrEvent },
+  options: { dropUnusable?: boolean } = {},
+): EventTemplate {
   const rTags = relays
     .filter((relay) => relay.read || relay.write)
     .map((relay) => (relay.read && relay.write ? ["r", relay.url] : ["r", relay.url, relay.read ? "read" : "write"]))
-  return { kind: 10002, tags: [...rTags, ...(base?.list.otherTags ?? [])], content: "", created_at: createdAt(base?.event.created_at) }
+  const unusable = options.dropUnusable ? [] : (base?.list.invalid ?? []).map((tag) => [...tag])
+  return { kind: 10002, tags: [...rTags, ...unusable, ...(base?.list.otherTags ?? [])], content: "", created_at: createdAt(base?.event.created_at) }
 }
 
 // --- NIP-58 profile badges -------------------------------------------------------------------

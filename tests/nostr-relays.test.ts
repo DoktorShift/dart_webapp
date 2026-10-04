@@ -47,6 +47,15 @@ test("operators: nos.lol and nostr.mom are one operator; unknown relays group by
   assert.notEqual(operatorOf("ws://localhost:1"), operatorOf("ws://localhost:2"))
 })
 
+test("operators: every relay of a known operator counts once, whatever the subdomain", () => {
+  assert.equal(countOperators(["wss://relay.primal.net", "wss://cache2.primal.net"]), 1)
+  assert.equal(countOperators(["wss://nostr-01.yakihonne.com", "wss://nostr-02.yakihonne.com"]), 1)
+  assert.equal(isPublished(["wss://relay.primal.net", "wss://cache2.primal.net"]), false)
+  assert.equal(operatorOf("wss://relay.nostr.mom"), operatorOf("wss://nos.lol"))
+  delete process.env.NEXT_PUBLIC_BLUELINE_RELAYS
+  assert.equal(countOperators(profileRelays()), 5)
+})
+
 test("published: two confirmations from different operators, not two from one", () => {
   assert.equal(isPublished(["wss://nos.lol"]), false)
   assert.equal(isPublished(["wss://nos.lol", "wss://nostr.mom"]), false)

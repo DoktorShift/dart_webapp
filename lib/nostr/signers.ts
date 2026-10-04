@@ -6,27 +6,31 @@
 // Errors are SignerError with a code the interface can act on:
 // - "rejected": the user or the signer said no.
 // - "unknown": no answer in time. The signer may still have done it; never treat as refused.
-// - "mismatch": the result is not what was asked for (other key, changed event, bad signature).
+// - "mismatch": the result is not what was asked for (other key, changed event, bad signature,
+//   a party answering a QR code that can't prove the key it names).
 // - "unavailable": the signer can't be reached (no extension, no relay).
 // - "unsupported": the signer lacks the capability (for example NIP-44 in an extension).
+// - "failed": the signer tried and couldn't, for a reason in the data: a local key that can't
+//   decrypt something (another key's, or damaged). Only the local signer can tell this apart;
+//   extensions and remote signers report it like a refusal.
 // - "invalid": unusable input (a malformed bunker link).
-// - "auth-url": the remote signer wants a confirmation on its web page first (see url).
+// A remote signer that wants a confirmation on its web page doesn't fail: onAuthUrl gets the
+// page and the request stays pending.
 import { bytesToHex } from "@noble/hashes/utils.js"
 import { createRelayClient, type RelayClient } from "./client.ts"
 import { loadCore } from "./core.ts"
-import { createClientUri, Nip46RequestError, resume, waitForSigner, type Nip46Session, type Nip46Signer, type Nip46Transport } from "./ext/nostrconnect.ts"
+import { connectToBunker, createClientUri, Nip46RequestError, resume, waitForSigner, type Nip46Session, type Nip46Signer, type Nip46Transport } from "./ext/nostrconnect.ts"
+import { mergeRelays } from "./relays.ts"
 import type { EventTemplate, NostrEvent, Signer, VerifiedEvent } from "./types.ts"
 
-export type SignerErrorCode = "rejected" | "unknown" | "mismatch" | "unavailable" | "unsupported" | "invalid" | "auth-url"
+export type SignerErrorCode = "rejected" | "unknown" | "mismatch" | "unavailable" | "unsupported" | "failed" | "invalid"
 
 export class SignerError extends Error {
   code: SignerErrorCode
-  url: string | undefined
-  constructor(code: SignerErrorCode, message: string, url?: string) {
+  constructor(code: SignerErrorCode, message: string) {
     super(message)
     this.name = "SignerError"
     this.code = code
-    this.url = url
   }
 }
 
@@ -117,11 +121,35 @@ export function verifyingSigner(inner: Signer, expectedPubkey: string, capabilit
   return signer
 }
 
+// Nobody declines for a local key: when it can't encrypt or decrypt, the data (or the other
+// key) is the problem, and callers must be able to tell that from a refusal.
+function failedOnError(methods: Signer["nip44"]): Signer["nip44"] {
+  if (!methods) return undefined
+  const run = async (action: () => Promise<string>) => {
+    try {
+      return await action()
+    } catch (error) {
+      throw new SignerError("failed", error instanceof Error ? error.message : String(error))
+    }
+  }
+  return {
+    encrypt: (pubkey, plaintext) => run(() => methods.encrypt(pubkey, plaintext)),
+    decrypt: (pubkey, ciphertext) => run(() => methods.decrypt(pubkey, ciphertext)),
+  }
+}
+
 // A signer for a key kept by the app itself (a local profile).
 export async function createLocalSigner(secretKey: Uint8Array): Promise<Signer> {
   if (!(secretKey instanceof Uint8Array) || secretKey.length !== 32) throw new SignerError("invalid", "a secret key has 32 bytes")
   const core = await loadCore()
-  return verifyingSigner(core.createSecretKeySigner(secretKey), core.getPublicKey(secretKey))
+  const inner = core.createSecretKeySigner(secretKey)
+  const local: Signer = {
+    getPublicKey: () => inner.getPublicKey(),
+    signEvent: (template) => inner.signEvent(template),
+    nip44: failedOnError(inner.nip44),
+    nip04: failedOnError(inner.nip04),
+  }
+  return verifyingSigner(local, core.getPublicKey(secretKey))
 }
 
 // Round trip through the signer's NIP-44 (encrypt to self, decrypt). Needs approval in some
@@ -209,22 +237,12 @@ export function resumeNip46(session: Nip46Session, options: Nip46Options = {}): 
   return { signer: verifyingSigner(remote, session.userPubkey), pubkey: session.userPubkey, session: remote.session, remote }
 }
 
-// What NostrConnect's errors mean. It wraps handshake failures as "Failed to connect to any
-// relay: <cause>" and turns an auth_url answer into an error carrying the URL (NC-05).
-function bunkerError(error: unknown): SignerError {
-  const name = (error as { name?: unknown })?.name
-  const message = error instanceof Error ? error.message : String(error)
-  const cause = message.replace(/^Failed to connect to any relay:\s*/, "")
-  if (/^https?:\/\//.test(cause)) return new SignerError("auth-url", "the signer asks for a confirmation on its page; confirm there, then connect again", cause)
-  if (name === "Nip46TimeoutError" || (/timed out/.test(cause) && !/connection timed out/.test(cause))) return new SignerError("unknown", cause)
-  if (/connection (failed|timed out)|no relays provided/.test(cause)) return new SignerError("unavailable", cause)
-  return new SignerError("rejected", cause)
-}
-
-// Connects a bunker:// link pasted by the user. nostr-core's NostrConnect performs the handshake;
-// the session then continues on the resumable signer from ext/nostrconnect.ts, because the
-// handshake's secret is single-use and NostrConnect can't resume (NC-05).
-export async function connectBunker(uri: string, options: Nip46Options & { clientSecretKey?: Uint8Array } = {}): Promise<Nip46Connection> {
+// Connects a bunker:// link pasted by the user. The handshake runs on the resumable signer from
+// ext/nostrconnect.ts, not on nostr-core's NostrConnect (NC-05): that one sends outdated connect
+// parameters, tries one relay at a time and turns an auth_url into an error, so a signer that
+// asks for a confirmation could never be connected. Here the connect request stays pending while
+// the user confirms (onAuthUrl), and the session continues on the same client key.
+export async function connectBunker(uri: string, options: Nip46Options & { perms?: string[]; clientSecretKey?: Uint8Array } = {}): Promise<Nip46Connection> {
   const core = await loadCore()
   if (!uri.trim().startsWith("bunker://")) throw new SignerError("invalid", "not a bunker:// link")
   let parsed: ReturnType<typeof core.parseConnectionURI>
@@ -234,22 +252,10 @@ export async function connectBunker(uri: string, options: Nip46Options & { clien
     throw new SignerError("invalid", error instanceof Error ? error.message : "malformed link")
   }
   if (!isHexKey(parsed.remotePubkey)) throw new SignerError("invalid", "the link has no valid signer key")
-  const clientSecretKey = options.clientSecretKey ?? core.generateSecretKey()
-  const connection = new core.NostrConnect({ remotePubkey: parsed.remotePubkey, relayUrls: parsed.relayUrls, secret: parsed.secret, secretKey: clientSecretKey, encryption: "nip44" })
-  connection.timeout = options.timeoutMs ?? 60_000
-  connection.handshakeTimeout = options.timeoutMs ?? 60_000
-  let userPubkey: string
-  try {
-    await connection.connect()
-    userPubkey = await connection.getPublicKey()
-  } catch (error) {
-    throw bunkerError(error)
-  } finally {
-    connection.close()
-  }
-  if (!isHexKey(userPubkey)) throw new SignerError("mismatch", "the signer returned no valid public key")
-  const session: Nip46Session = { clientSecretKey: bytesToHex(clientSecretKey), remoteSignerPubkey: parsed.remotePubkey, userPubkey, relays: parsed.relayUrls }
-  return resumeNip46(session, options)
+  if (mergeRelays(parsed.relayUrls).length === 0) throw new SignerError("invalid", "the link names no usable relay")
+  const target = { remoteSignerPubkey: parsed.remotePubkey, relays: parsed.relayUrls, secret: parsed.secret, perms: options.perms, clientSecretKey: options.clientSecretKey }
+  const { session, signer: remote } = await call(() => connectToBunker(target, { ...options, transport: options.transport ?? nip46Transport() }))
+  return { signer: verifyingSigner(remote, session.userPubkey), pubkey: session.userPubkey, session, remote }
 }
 
 export interface NostrConnectStart {

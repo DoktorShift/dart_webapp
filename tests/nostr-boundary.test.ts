@@ -24,7 +24,12 @@ function files(dir: string): string[] {
   })
 }
 
-const sources = SOURCES.flatMap((dir) => files(join(ROOT, dir))).map((path) => ({ path: relative(ROOT, path), text: readFileSync(path, "utf8") }))
+// Code only: comments may quote an import (runtime.ts explains why it avoids `import("nostr-core")`).
+// String literals are matched first so a "//" inside one (a relay URL) isn't taken for a comment.
+const withoutComments = (text: string) =>
+  text.replace(/("(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'|`(?:\\.|[^`\\])*`)|\/\/[^\n]*|\/\*[\s\S]*?\*\//g, (_match, literal?: string) => literal ?? "")
+
+const sources = SOURCES.flatMap((dir) => files(join(ROOT, dir))).map((path) => ({ path: relative(ROOT, path), text: withoutComments(readFileSync(path, "utf8")) }))
 
 // Static import/export statements naming nostr-core (possibly spanning lines), and whether they
 // are type-only.
@@ -32,6 +37,12 @@ const staticImports = (text: string) =>
   [...text.matchAll(/\b(import|export)\s+(type\s+)?(?:[^;'"]*?\bfrom\s+)?["']nostr-core(?:\/[^"']*)?["']/g)].map((match) => ({ statement: match[0], typeOnly: !!match[2] }))
 
 const dynamicImports = (text: string) => [...text.matchAll(/(?<!typeof\s)\bimport\(\s*["']nostr-core(?:\/[^"']*)?["']\s*\)/g)].map((match) => match[0])
+
+test("the check reads code, not comments", () => {
+  const sample = 'const a = "wss://r.example" // import("nostr-core")\n/* import("nostr-core") */ await import("nostr-core")'
+  assert.deepEqual(dynamicImports(withoutComments(sample)), ['import("nostr-core")'])
+  assert.match(withoutComments(sample), /"wss:\/\/r\.example"/)
+})
 
 test("only lib/nostr/ names nostr-core at all; everything else uses lib/nostr/types.ts", () => {
   const outside = sources.filter(({ path }) => !path.startsWith("lib/nostr/") && /["']nostr-core(\/[^"']*)?["']/.test(text(path)))

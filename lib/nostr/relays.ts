@@ -10,27 +10,27 @@ export type RelayRole = "profile" | "general"
 
 interface CatalogEntry {
   url: string
-  // Relays run by the same people count as one copy: an outage or a policy change hits both.
-  operator: string
   roles: readonly RelayRole[]
 }
 
+// Five operators: no two of these count as the same copy (see operatorOf).
 const CATALOG: readonly CatalogEntry[] = [
-  { url: "wss://nos.lol", operator: "nos.lol", roles: ["profile", "general"] },
-  { url: "wss://relay.primal.net", operator: "primal", roles: ["profile", "general"] },
-  { url: "wss://nostr-01.yakihonne.com", operator: "yakihonne", roles: ["profile", "general"] },
-  { url: "wss://nostr.oxtr.dev", operator: "oxtr", roles: ["profile", "general"] },
-  { url: "wss://purplepag.es", operator: "purplepages", roles: ["profile"] },
+  { url: "wss://nos.lol", roles: ["profile", "general"] },
+  { url: "wss://relay.primal.net", roles: ["profile", "general"] },
+  { url: "wss://nostr-01.yakihonne.com", roles: ["profile", "general"] },
+  { url: "wss://nostr.oxtr.dev", roles: ["profile", "general"] },
+  { url: "wss://purplepag.es", roles: ["profile"] },
 ]
 
-// Known operators of relays outside the default set, so a player's own relay list doesn't count
-// two relays of one operator as two independent copies.
+// Relays run by the same people count as one copy: an outage or a policy change hits both.
+// Keyed by registrable domain, so every relay of an operator (relay.primal.net, cache2.primal.net)
+// maps to the same name. nos.lol and nostr.mom are run by the same people.
 const KNOWN_OPERATORS: Record<string, string> = {
   "nos.lol": "nos.lol",
   "nostr.mom": "nos.lol",
-  "relay.primal.net": "primal",
-  "nostr-01.yakihonne.com": "yakihonne",
-  "nostr.oxtr.dev": "oxtr",
+  "primal.net": "primal",
+  "yakihonne.com": "yakihonne",
+  "oxtr.dev": "oxtr",
   "purplepag.es": "purplepages",
 }
 
@@ -92,16 +92,16 @@ export function defaultRelays(role: RelayRole): string[] {
 export const profileRelays = () => defaultRelays("profile")
 export const generalRelays = () => defaultRelays("general")
 
-// Which operator runs a relay. Unknown public relays are grouped by their registrable domain
-// (approximated by the last two host labels), local and IP relays by host and port.
+// Which operator runs a relay: a known operator by its domain, otherwise the registrable domain
+// itself (approximated by the last two host labels, which errs towards counting fewer operators,
+// e.g. for .co.uk). Local and IP relays count by host and port.
 export function operatorOf(url: string): string {
   const normalized = normalizeRelayUrl(url)
   if (!normalized) return url
-  const host = new URL(normalized).host
-  const hostname = new URL(normalized).hostname
-  if (KNOWN_OPERATORS[hostname]) return KNOWN_OPERATORS[hostname]
+  const { host, hostname } = new URL(normalized)
   if (isLocalHost(hostname) || /^[\d.]+$/.test(hostname) || hostname.startsWith("[")) return host
-  return hostname.split(".").slice(-2).join(".")
+  const domain = hostname.split(".").slice(-2).join(".")
+  return KNOWN_OPERATORS[domain] ?? domain
 }
 
 // How many independent operators the given relays represent.

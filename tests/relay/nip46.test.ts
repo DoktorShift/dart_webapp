@@ -1,7 +1,8 @@
 // Remote signing against nak's NIP-46 bunker on a local relay. Run: npm run test:relay
-// - bunker:// (signer-initiated): nostr-core's NostrConnect does the handshake, the session
-//   continues on the resumable signer, a reload resumes without a new connect.
-// - nostrconnect:// (client-initiated): the app's link handed to "nak bunker connect".
+// - bunker:// (signer-initiated): connect with today's parameters on the resumable signer, a
+//   reload resumes without a new connect.
+// - nostrconnect:// (client-initiated): the app's link handed to "nak bunker connect"; the
+//   bunker proves the user key by signing the challenge.
 import { after, before, test } from "node:test"
 import assert from "node:assert/strict"
 import { loadCore, type Core } from "../../lib/nostr/core.ts"
@@ -34,8 +35,10 @@ after(async () => {
 })
 
 test("bunker://: connect, sign (verified), encrypt; a reload resumes without a second connect", async () => {
-  const connection = await connectBunker(bunker.uri, { transport: transport(), timeoutMs: 10_000 })
+  const connection = await connectBunker(bunker.uri, { transport: transport(), timeoutMs: 10_000, perms: ["sign_event:1180", "nip44_encrypt", "nip44_decrypt"] })
   assert.equal(connection.pubkey, bunker.pubkey)
+  // connect went out as NIP-46 names it today: signer key, secret, permissions.
+  assert.match(bunker.output(), new RegExp(`"method": "connect",\\s*"params": \\[\\s*"${bunker.pubkey}",\\s*"[^"]+",\\s*"sign_event:1180,nip44_encrypt,nip44_decrypt"`))
   assert.equal(connection.session.remoteSignerPubkey, bunker.pubkey)
   const event = await connection.signer.signEvent({ kind: 1180, content: "Ergebnis 3:1", tags: [["L", "blueline"]], created_at: now() })
   assert.equal(event.pubkey, bunker.pubkey)

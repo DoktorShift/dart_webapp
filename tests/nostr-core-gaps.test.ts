@@ -9,7 +9,7 @@ import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { bytesToHex, hexToBytes } from "@noble/hashes/utils.js"
 import * as core from "nostr-core"
-import { finalizeEvent, generateSecretKey, getPowDifficulty, getPublicKey, minePow, nip44, Nip07Signer, NWC, parseConnectionURI, RelayPool } from "nostr-core"
+import { finalizeEvent, generateSecretKey, getPowDifficulty, getPublicKey, minePow, nip44, Nip07Signer, NostrConnect, NWC, parseConnectionURI, RelayPool } from "nostr-core"
 import { createRelayClient, type RelayClient } from "../lib/nostr/client.ts"
 import type { NostrEvent } from "../lib/nostr/types.ts"
 import { FakeNetwork } from "./support/fake-relay.ts"
@@ -30,6 +30,40 @@ test("NC-04: a nostrconnect:// link's host (the client key) is read as the signe
   assert.equal(parsed.remotePubkey, client)
   // Nothing creates such a link or waits for the signer's answer.
   assert.equal(Object.keys(core).some((name) => /clienturi|nostrconnecturi|waitforsigner/i.test(name)), false)
+})
+
+test("NC-05: NostrConnect sends outdated connect parameters and turns auth_url into an error, so a confirming signer never connects (ext/nostrconnect.ts connectToBunker)", async () => {
+  const network = new FakeNetwork()
+  network.add("wss://bunker.example")
+  const bunkerKey = generateSecretKey()
+  const bunkerPubkey = getPublicKey(bunkerKey)
+  const service = createRelayClient({ websocket: network.WebSocket })
+  clients.push(service)
+  const connects: { client: string; params: string[] }[] = []
+  service.subscribe([{ kinds: [24133], "#p": [bunkerPubkey] }], ["wss://bunker.example"], {
+    onevent: (event: NostrEvent) => {
+      const conversation = nip44.getConversationKey(bunkerKey, event.pubkey)
+      const request = JSON.parse(nip44.decrypt(event.content, conversation))
+      if (request.method !== "connect") return
+      connects.push({ client: event.pubkey, params: request.params })
+      const content = nip44.encrypt(JSON.stringify({ id: request.id, result: "auth_url", error: "https://bunker.example/confirm" }), conversation)
+      void service.publish(finalizeEvent({ kind: 24133, content, tags: [["p", event.pubkey]], created_at: Math.floor(Date.now() / 1000) }, bunkerKey), ["wss://bunker.example"])
+    },
+  })
+  await wait(50)
+  const original = globalThis.WebSocket
+  globalThis.WebSocket = network.WebSocket
+  const clientKey = generateSecretKey()
+  const connection = new NostrConnect({ remotePubkey: bunkerPubkey, relayUrls: ["wss://bunker.example"], secret: "abc123", secretKey: clientKey, encryption: "nip44" })
+  connection.handshakeTimeout = 2000
+  try {
+    await assert.rejects(connection.connect(), /https:\/\/bunker\.example\/confirm/)
+  } finally {
+    connection.close()
+    globalThis.WebSocket = original
+  }
+  // NIP-46 names the remote signer's key first, then the secret and the permissions.
+  assert.deepEqual(connects, [{ client: getPublicKey(clientKey), params: [getPublicKey(clientKey), "abc123"] }])
 })
 
 test("NC-06, NC-07: no NIP-49 and no NIP-55 (ext/nip49.ts, ext/nip55.ts)", () => {
@@ -130,4 +164,5 @@ test("NC-22: Nip07Signer passes through whatever the extension returns, even an 
 // - NC-15 validateBadgeAward accepts any issuer: tests/nostr-validate.test.ts
 // - NC-16 parseRelayList throws on one bad URL: tests/nostr-lists.test.ts
 // - PR-06 unwrap doesn't check the rumor id: tests/nostr-crypto.test.ts
-// - NC-05 bunker secret single-use, no resume: tests/relay/nip46.test.ts
+// - NC-05 bunker secret single-use, no resume: tests/relay/nip46.test.ts; the handshake that
+//   stays pending through auth_url: tests/nostr-nip46.test.ts

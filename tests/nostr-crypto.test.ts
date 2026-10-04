@@ -15,6 +15,8 @@ import {
   unwrapWithSigner,
   wrapDataKey,
 } from "../lib/nostr/ext/crypto.ts"
+import { Nip46RequestError } from "../lib/nostr/ext/nostrconnect.ts"
+import { createLocalSigner, SignerError } from "../lib/nostr/signers.ts"
 import type { EventTemplate, NostrEvent, Signer } from "../lib/nostr/types.ts"
 // nostr-core directly: its raw-key NIP-59 helpers are the reference the signer variants must match.
 import { createSeal, unwrap } from "nostr-core"
@@ -144,6 +146,30 @@ test("data key: wrapped once for the profile itself; only that profile's signer 
   // It's plain NIP-44 to self: nostr-core's primitives read it too.
   const conversation = core.nip44.getConversationKey(aliceKey, core.getPublicKey(aliceKey))
   assert.equal(core.nip44.decrypt(wrapped, conversation), bytesToHex(key))
+})
+
+test("data key and gift wraps: a declined, unanswered or unreachable signer is reported as such, not as undecryptable", async () => {
+  const key = generateDataKey()
+  const wrapped = await wrapDataKey(key, alice)
+  const { wrap } = await giftWrapWithSigner(request(), alice, core.getPublicKey(bobKey))
+  const failing = (error: Error): Signer => ({
+    getPublicKey: alice.getPublicKey,
+    signEvent: alice.signEvent,
+    nip44: {
+      encrypt: alice.nip44!.encrypt,
+      decrypt: async () => {
+        throw error
+      },
+    },
+  })
+  for (const error of [new SignerError("rejected", "declined"), new SignerError("unknown", "no answer"), new SignerError("unavailable", "no relay"), new Nip46RequestError("timeout", "no answer")]) {
+    await assert.rejects(unwrapDataKey(wrapped, failing(error)), (thrown) => thrown === error, `${error.name} ${error.code}`)
+    await assert.rejects(unwrapWithSigner(wrap, failing(error)), (thrown) => thrown === error, `${error.name} ${error.code}`)
+  }
+  // The local signer can't decline: a data key wrapped for another key is undecryptable.
+  assert.equal(await codeOf(unwrapDataKey(await wrapDataKey(key, bob), await createLocalSigner(aliceKey))), "undecryptable")
+  assert.equal(await codeOf(unwrapWithSigner(wrap, await createLocalSigner(aliceKey))), "undecryptable")
+  assert.equal(bytesToHex(await unwrapDataKey(wrapped, await createLocalSigner(aliceKey))), bytesToHex(key))
 })
 
 test("opaque d tag: HMAC-SHA256(data key, record id) in hex, same on every device", () => {

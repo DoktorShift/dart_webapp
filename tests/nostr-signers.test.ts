@@ -119,6 +119,11 @@ test("createLocalSigner: signs verified events and encrypts; refuses keys of the
   assert.equal(await signer.nip44!.decrypt(alicePub, await signer.nip44!.encrypt(alicePub, "geheim")), "geheim")
   assert.equal(await probeNip44(signer, alicePub), true)
   assert.equal(await codeOf(createLocalSigner(new Uint8Array(16))), "invalid")
+  // Nobody can decline for a local key: what it can't decrypt fails as "failed", not "rejected".
+  const forMallory = await core.createSecretKeySigner(mallory).nip44!.encrypt(core.getPublicKey(mallory), "nicht für Alice")
+  assert.equal(await codeOf(signer.nip44!.decrypt(alicePub, forMallory)), "failed")
+  assert.equal(await codeOf(signer.nip44!.decrypt(alicePub, "kein Chiffrat")), "failed")
+  assert.equal(await codeOf(signer.nip04!.decrypt(alicePub, "kein Chiffrat")), "failed")
 })
 
 test("probeNip44: false when the signer can't encrypt or decrypts to something else", async () => {

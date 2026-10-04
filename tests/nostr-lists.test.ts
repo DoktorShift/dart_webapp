@@ -10,6 +10,7 @@ import {
   parseProfileBadges,
   parseRelayListSafe,
 } from "../lib/nostr/ext/lists.ts"
+import { createLocalSigner, SignerError } from "../lib/nostr/signers.ts"
 import type { NostrEvent, Signer } from "../lib/nostr/types.ts"
 // nostr-core directly: these tests show its gaps next to the safe variants.
 import { createListTemplate, parseList, parseRelayList } from "nostr-core"
@@ -47,6 +48,29 @@ test("NIP-51: private items have an explicit status — decrypted, none, no-key,
   assert.equal((await parseListSafe(await aliceList("not encrypted at all"), alice)).privateStatus, "undecryptable")
   const notTags = await alice.nip44!.encrypt(alicePub, JSON.stringify({ hello: "world" }))
   assert.equal((await parseListSafe(await aliceList(notTags), alice)).privateStatus, "undecryptable")
+})
+
+test("NIP-51: a declined or unanswered decryption is \"unavailable\", never \"undecryptable\", and blocks writing", async () => {
+  const event = await aliceList()
+  const failing = (error: Error): Signer => ({
+    getPublicKey: async () => alicePub,
+    signEvent: alice.signEvent,
+    nip44: {
+      encrypt: alice.nip44!.encrypt,
+      decrypt: async () => {
+        throw error
+      },
+    },
+  })
+  for (const code of ["unknown", "rejected", "unavailable"] as const) {
+    const read = await parseListSafe(event, failing(new SignerError(code, "test")))
+    assert.equal(read.privateStatus, "unavailable", code)
+    await assert.rejects(buildListTemplate({ kind: 30000, publicTags: read.publicTags, base: read, signer: alice }), (error: ListError) => error.code === "private-unreadable")
+  }
+  const silentKey: Signer = { ...alice, getPublicKey: async () => Promise.reject(new SignerError("unknown", "no answer")) }
+  assert.equal((await parseListSafe(event, silentKey)).privateStatus, "unavailable")
+  // The app's own local signer can't decline: content it can't open is undecryptable.
+  assert.equal((await parseListSafe(await aliceList("not encrypted at all"), await createLocalSigner(aliceKey))).privateStatus, "undecryptable")
 })
 
 test("NIP-51: nostr-core 1.0.4 shows unreadable private items as an empty list (the gap this closes)", async () => {
@@ -98,6 +122,9 @@ test("NIP-65: bad entries are skipped and reported, duplicates merge, other tags
         ["r", "wss://odd.example", "sometimes"],
         ["r", "wss://nostr.oxtr.dev", "write"],
         ["r", "wss://nostr-01.yakihonne.com", ""],
+        // Usable for their owner's other clients, not for this app: kept when writing back.
+        ["r", "ws://192.168.1.20:7777"],
+        ["r", "ws://abcdefghijklmnop.onion", "read"],
         ["alt", "relay list"],
       ],
     },
@@ -112,10 +139,19 @@ test("NIP-65: bad entries are skipped and reported, duplicates merge, other tags
     // An empty marker, as some clients write it, means both.
     { url: "wss://nostr-01.yakihonne.com", read: true, write: true },
   ])
-  assert.deepEqual(list.invalid, [["r", "not a url"], ["r", "wss://odd.example", "sometimes"]])
+  const unusable = [["r", "not a url"], ["r", "wss://odd.example", "sometimes"], ["r", "ws://192.168.1.20:7777"], ["r", "ws://abcdefghijklmnop.onion", "read"]]
+  assert.deepEqual(list.invalid, unusable)
   assert.deepEqual(list.otherTags, [["alt", "relay list"]])
   const template = buildRelayListTemplate(list.relays, { list, event })
-  assert.deepEqual(template.tags, [["r", "wss://nos.lol"], ["r", "wss://relay.primal.net"], ["r", "wss://nostr.oxtr.dev", "write"], ["r", "wss://nostr-01.yakihonne.com"], ["alt", "relay list"]])
+  assert.deepEqual(template.tags, [["r", "wss://nos.lol"], ["r", "wss://relay.primal.net"], ["r", "wss://nostr.oxtr.dev", "write"], ["r", "wss://nostr-01.yakihonne.com"], ...unusable, ["alt", "relay list"]])
+  // Read, edit (one relay removed), write, read again: nothing else is lost.
+  const edited = buildRelayListTemplate(list.relays.slice(1), { list, event })
+  const reread = parseRelayListSafe(core.finalizeEvent(edited, aliceKey))
+  assert.deepEqual(reread.relays.map((relay) => relay.url), ["wss://relay.primal.net", "wss://nostr.oxtr.dev", "wss://nostr-01.yakihonne.com"])
+  assert.deepEqual(reread.invalid, unusable)
+  assert.deepEqual(reread.otherTags, [["alt", "relay list"]])
+  // Only on request are they dropped.
+  assert.deepEqual(buildRelayListTemplate(list.relays, { list, event }, { dropUnusable: true }).tags.filter((tag) => tag[0] === "r").length, 4)
 })
 
 test("NIP-58 profile badges: pairs in order from 10008 and legacy 30008; badge sets and unknown tags survive", () => {
