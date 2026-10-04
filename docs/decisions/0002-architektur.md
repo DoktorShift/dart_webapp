@@ -66,8 +66,8 @@ signOut(options: { keepLocalData: boolean }): Promise<void>
 
 | Rolle | Standard | Verwendung |
 | --- | --- | --- |
-| Profil | `wss://nos.lol`, `wss://relay.primal.net`, `wss://nostr-01.yakihonne.com`, `wss://nostr.oxtr.dev`, `wss://purplepag.es` | Kind 0, 10002, NIP-51-Listen, 10008 |
-| Allgemein | die ersten vier | BlueLine-Events, private Datensätze, Live-Spiele, Auszeichnungen |
+| Profil | `wss://nos.lol`, `wss://relay.primal.net`, `wss://nostr-01.yakihonne.com`, `wss://nostr.oxtr.dev`, `wss://purplepag.es` | Kind 0, 10002, 10008 (purplepag.es nimmt nur 0, 3 und 10000er-Listen an) |
+| Allgemein | die ersten vier | BlueLine-Events, private Datensätze, NIP-51-Sets (30000er), Live-Spiele, Auszeichnungen |
 
 - „Veröffentlicht“ ab zwei bestätigten Relays verschiedener Betreiber; vollständig verteilt erst bei allen Zielen. Fehlende Kopien werden beim Öffnen der App erneut gesendet.
 - Bestätigt heißt: `OK true` des Relays. Ein Abfrageergebnis ohne Antwort eines Relays ist „unbekannt“, nie „leer“.
@@ -83,7 +83,7 @@ Eine Kind-Nummer je Bereich, Typ als NIP-32-Label. Geprüft am 4. Oktober 2026 g
 | **1501** | regulär | Unveränderliche Datensätze: Gründungen, Änderungen, Anfragen, Ergebnisse, Bestätigungen |
 | **31501** | adressierbar | Aktuelle Zustände mit `d`: Live-Spielstand, Statistikkarte |
 | **21501** | flüchtig | Kopplungs- und Board-Handshake-Nachrichten |
-| 78 / 30078 | NIP-78 | Private, verschlüsselte Datensätze des Profils (Historie als 78; Datenschlüssel und kleine Listen als 30078 mit nicht sprechendem `d`) |
+| 30078 | NIP-78 | Private, verschlüsselte Datensätze des Profils, je Datensatz ein nicht sprechendes `d` = HMAC(Datenschlüssel, Datensatz-ID). Kind 78 wird nicht verwendet, weil nos.lol und Primal es am 4. Oktober 2026 nicht auslieferten. |
 | 1059 | NIP-59 | Verpackte Zahlungsanfragen an Mitspieler |
 
 Pflicht-Tags für 1501/31501: `["L","blueline"]`, `["l","<typ>","blueline"]`, `["v","1"]`. Bezug auf ein Wurzelobjekt (Club, Turnier, Match) mit `["e","<id der Gründung>"]`. Club- und Turnier-IDs sind die Event-IDs ihrer Gründung (bleiben bei Eigentümerwechsel gleich). Typen und Inhalte stehen in `docs/protocol/`.
