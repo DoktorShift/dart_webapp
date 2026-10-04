@@ -176,10 +176,11 @@ export interface MatchView {
   walkover: WalkoverReason | "withdrawn" | "bye" | null
   board: string | null
   // The entered record no longer fits the players the bracket now puts here (a result before
-  // was corrected). The record stays as entered until the organizer decides; nothing after
-  // this match moves on from it.
+  // was corrected), or the winner of the deciding match has withdrawn since. The record stays as
+  // entered until the organizer decides; nothing after this match moves on from it, and there is
+  // no champion while any match is affected.
   affected: boolean
-  // Players the record was entered for; differs from the slots when affected.
+  // Players the record was entered for; differs from the slots when a correction moved others in.
   recorded: [string, string] | null
 }
 

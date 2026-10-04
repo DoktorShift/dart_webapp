@@ -352,6 +352,12 @@ function compute(t: Tournament): TournamentView {
     }
     const record = records[i]
     const d = decide(scratch, a, b, record, inactive)
+    // Nobody wins a tournament after leaving it. The winner of the deciding match can only have
+    // withdrawn since while a correction had that match marked (a complete tournament refuses
+    // withdrawals). It then waits for the organizer like any affected match: play it again,
+    // correct it, or take the withdrawal back.
+    if (record && !d.affected && typeof d.winner === "string" && gone.has(d.winner) && decides(t, spec, d.winner === a))
+      put(d, d.state, null, null, null, null, true)
     winners[i] = d.affected ? null : d.winner
     losers[i] = d.affected ? null : d.loser
     const format = spec.final ? final : normal
@@ -390,7 +396,9 @@ function compute(t: Tournament): TournamentView {
 
   const standings: Standings[] =
     t.format === "roundRobin" ? [table(null, ids)] : t.format === "groups" ? t.groups.map((g) => tables().get(g.label)!) : []
-  const champion = championOf(t, matches, match, standings)
+  // No winner while a match waits for the organizer's decision after a correction (a reset that
+  // was played and no longer fits, for example).
+  const champion = matches.some((m) => m.affected) ? null : championOf(t, matches, match, standings)
   const placements = placementsOf(t, plan, matches, standings, champion)
   const placed = new Set(placements.map((p) => p.participant))
   const status: Record<string, ParticipantStatus> = {}
@@ -436,6 +444,11 @@ function sameView(v: MatchView, a: Occupant, b: Occupant, d: Decision, format: M
     v.format.setsToWin === format.setsToWin
   )
 }
+
+// Whether the winner of this match wins the tournament: the knockout final, the reset, and the
+// grand final when the winners' bracket player won it or there is no reset.
+const decides = (t: Tournament, spec: MatchSpec, firstSlotWon: boolean) =>
+  spec.reset || (spec.final && (spec.bracket === "main" || !t.grandFinalReset || firstSlotWon))
 
 function championOf(t: Tournament, matches: MatchView[], match: (id: string) => MatchView | undefined, standings: Standings[]): string | null {
   if (t.format === "roundRobin") {
@@ -547,13 +560,19 @@ const players = (m: MatchView): [string, string] | null => {
 }
 
 // A result or walkover can be entered for a match with two known players that is ready, live,
-// decided (a correction) or affected (the result of the new pairing).
+// decided (a correction) or affected (the result of the new pairing). A player who withdrew plays
+// no more: their match can only take a correction of what was entered for these same two players
+// before (a result or walkover, not just a start). Otherwise a withdrawn or disqualified player
+// could be entered as the winner of the matches their withdrawal gives away.
 function enterable(t: Tournament, id: string): { m: MatchView; pair: [string, string] } {
   const m = find(t, id)
   const pair = players(m)
   const open = m.affected || m.state === "ready" || m.state === "live" || m.state === "finished" || (m.state === "walkover" && m.walkover !== "bye")
-  if (!open || !pair) fail("notReady", `${id} has no two players to enter a result for`)
-  return { m, pair: pair! }
+  if (!open || !pair) return fail("notReady", `${id} has no two players to enter a result for`)
+  const record = t.records[id]
+  const enteredBefore = record !== undefined && record.state !== "live" && record.players[0] === pair[0] && record.players[1] === pair[1]
+  if (!enteredBefore && pair.some((p) => t.withdrawals[p])) fail("notReady", `a player of ${id} has withdrawn`)
+  return { m, pair }
 }
 
 function busyElsewhere(t: Tournament, id: string, pair: [string, string]) {
@@ -594,13 +613,15 @@ const withRecord = (t: Tournament, id: string, record: MatchRecord | null): Tour
   return { ...t, records }
 }
 
-// Starts a ready match, optionally on a board.
+// Starts a ready match on `board`, or without one on the board it was called to. Either way the
+// board must be free.
 export function startMatch(t: Tournament, id: string, board?: string): Tournament {
   const m = find(t, id)
   const pair = players(m)
   if (m.state !== "ready" || !pair) return fail("notReady", `${id} is not ready`)
   busyElsewhere(t, id, pair)
-  const boards = board === undefined ? t.boards : withBoard(t, id, board)
+  const on = board ?? t.boards[id]
+  const boards = on === undefined ? t.boards : withBoard(t, id, on)
   return { ...withRecord(t, id, { state: "live", players: pair }), boards }
 }
 
@@ -648,11 +669,19 @@ export function recordWalkover(t: Tournament, id: string, winner: string, reason
 }
 
 // Takes back what was entered for a match: a start, a result or a walkover. Used for an affected
-// match that is to be played again with its new players.
+// match that is to be played again with its new players. A taken-back start keeps its board
+// (nobody else can take a board while its match is live). A result or walkover only kept its
+// board as the place where it was played, and that board may serve another match by now, so the
+// match goes back without one.
 export function resetMatch(t: Tournament, id: string): Tournament {
   find(t, id)
-  if (!t.records[id]) return fail("noRecord", `nothing entered for ${id}`)
-  return withRecord(t, id, null)
+  const record = t.records[id]
+  if (!record) return fail("noRecord", `nothing entered for ${id}`)
+  const reset = withRecord(t, id, null)
+  if (record.state === "live" || t.boards[id] === undefined) return reset
+  const boards = { ...t.boards }
+  delete boards[id]
+  return { ...reset, boards }
 }
 
 // Withdrawal or disqualification after the draw. Results already played stay; every match of the
@@ -671,9 +700,10 @@ export function withdraw(t: Tournament, participant: string, kind: WithdrawalKin
   return { ...t, withdrawals: { ...t.withdrawals, [participant]: { kind, ...(afterGroup && { afterGroup: true as const }) } } }
 }
 
-// Takes a withdrawal back.
+// Takes a withdrawal back; like a withdrawal, not once the tournament is complete.
 export function reinstate(t: Tournament, participant: string): Tournament {
   if (!t.withdrawals[participant]) return fail("notWithdrawn", `${participant} is not withdrawn`)
+  if (resolveTournament(t).complete) return fail("tournamentComplete", "the tournament is complete")
   const withdrawals = { ...t.withdrawals }
   delete withdrawals[participant]
   return { ...t, withdrawals }

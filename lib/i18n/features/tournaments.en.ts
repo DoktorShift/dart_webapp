@@ -41,7 +41,7 @@ export const tournamentsEn: Messages["tournaments"] = {
     sets: "Sets won minus sets lost, only when playing in sets",
     legDifference: "Legs won minus legs lost",
     legsWon: "More legs won",
-    headToHead: "Wins in the matches among the players who are level",
+    headToHead: "Wins in the matches among the players who are level; anyone still level is compared again among themselves only",
     lot: "A lot that was fixed at the draw",
   },
   state: {

@@ -466,6 +466,26 @@ test("double elimination: without reset one grand final decides", () => {
   assert.deepEqual(places(t), { p3: "1", p1: "2", p2: "3", p4: "4" })
 })
 
+test("double elimination: no champion while a played reset waits after a grand final correction", () => {
+  let t = win(win(fourToGrandFinal(), "GF", "p3"), "GF2", "p3")
+  assert.equal(view(t).champion, "p3")
+  // The grand final is corrected: p1 won it, so the reset was not needed, but it was played.
+  t = win(t, "GF", "p1")
+  const reset = match(t, "GF2")
+  assert.deepEqual([reset.state, reset.affected], ["finished", true])
+  assert.equal(view(t).champion, null)
+  assert.equal(view(t).complete, false)
+  assert.equal(view(t).status.p1, "active")
+  // p3 has lost twice now, so second place is fixed; first is not, while GF2 waits.
+  assert.deepEqual(places(t), { p3: "2", p2: "3", p4: "4" })
+  // The organizer takes the reset back: it is not needed, the tournament is complete.
+  t = resetMatch(t, "GF2")
+  assert.equal(match(t, "GF2").state, "void")
+  assert.equal(view(t).champion, "p1")
+  assert.equal(view(t).complete, true)
+  assert.deepEqual(places(t), { p1: "1", p3: "2", p2: "3", p4: "4" })
+})
+
 test("double elimination: a no-show loses one match and plays on in the losers' bracket", () => {
   let t = make("double", 4)
   t = recordWalkover(t, "W1-1", "p1", "noShow")
@@ -617,6 +637,31 @@ test("round robin table: the lot from the draw seed decides a circular tie", () 
     view(t).standings[0].rows.map((r) => r.decidedBy),
     [null, "lot", "lot", "points"],
   )
+})
+
+test("round robin table: head-to-head step by step — whoever is still level is compared again among themselves", () => {
+  // p1–p4: 4 points and 8:8 legs each; p5: 4 points and 7:7, fewer legs won. Wins among p1–p4:
+  // p1 2 (p2, p3), p2 2 (p3, p4), p3 1 (p4), p4 1 (p1). The first step splits {p1, p2} from
+  // {p3, p4}; the second compares each pair alone, so their direct match decides: p1 beat p2, p3
+  // beat p4. The lot never decides, whatever the draw seed.
+  const results: Record<string, [number, number]> = {
+    "p1-p2": [3, 2],
+    "p1-p3": [3, 0],
+    "p1-p4": [1, 3],
+    "p2-p3": [3, 2],
+    "p2-p4": [3, 0],
+    "p3-p4": [3, 2],
+    "p1-p5": [1, 3],
+    "p2-p5": [0, 3],
+    "p3-p5": [3, 0],
+    "p4-p5": [3, 1],
+  }
+  for (const seed of ["s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8"])
+    assert.deepEqual(
+      table(enter(make("roundRobin", 5, { seed }), results)),
+      ["p1 4P 8:8 -", "p2 4P 8:8 headToHead", "p3 4P 8:8 headToHead", "p4 4P 8:8 headToHead", "p5 4P 7:7 legsWon"],
+      seed,
+    )
 })
 
 test("round robin table: set difference comes before leg difference", () => {
@@ -1017,8 +1062,62 @@ test("withdrawal after the group stage: the group place stays, the knockout matc
   assert.equal(view(t).champion, "p3")
   assert.deepEqual(places(t), { p3: "1", p1: "2", p2: "3-4", p4: "3-4", p5: "5-6", p6: "5-6", p7: "7-8", p8: "7-8" })
   assert.equal(view(t).status.p1, "withdrawn")
-  // After the end nobody can withdraw or be disqualified any more.
+  // After the end nobody can withdraw or be disqualified any more, and no withdrawal can be taken
+  // back (that would reopen the final).
   throwsCode(() => withdraw(t, "p3", "disqualified"), "tournamentComplete")
+  throwsCode(() => reinstate(t, "p1"), "tournamentComplete")
+  // The knockout match a withdrawn player gave away takes no result either.
+  const open = win(withdraw(win(groupStage(), "K1-1", "p1"), "p1", "withdrawn"), "K1-2", "p3")
+  throwsCode(() => win(open, "K2-1", "p1"), "notReady")
+})
+
+test("a withdrawn or disqualified player cannot be entered as the winner of the matches the withdrawal gives away", () => {
+  const t = withdraw(make("single", 4), "p4", "disqualified")
+  const before = JSON.stringify(t)
+  throwsCode(() => recordResult(t, "K1-1", { legs: [0, 3] }), "notReady")
+  throwsCode(() => recordResult(t, "K1-1", { legs: [3, 0] }), "notReady")
+  throwsCode(() => recordWalkover(t, "K1-1", "p4", "noShow"), "notReady")
+  assert.equal(JSON.stringify(t), before)
+  assert.deepEqual([match(t, "K1-1").state, match(t, "K1-1").winner], ["walkover", "p1"])
+  // Withdrawn during a match: the live match is lost. If it was in fact played to the end, the
+  // result goes in after taking the withdrawal back, and the withdrawal follows.
+  let live = withdraw(startMatch(make("single", 4), "K1-2"), "p3", "withdrawn")
+  throwsCode(() => win(live, "K1-2", "p3"), "notReady")
+  live = withdraw(win(reinstate(live, "p3"), "K1-2", "p3"), "p3", "withdrawn")
+  assert.deepEqual([match(live, "K1-2").state, match(live, "K1-2").winner], ["finished", "p3"])
+  // A result entered before the withdrawal can still be corrected, either way.
+  let played = withdraw(win(make("single", 4), "K1-1", "p1"), "p1", "withdrawn")
+  played = win(played, "K1-1", "p4")
+  assert.deepEqual(who(played, "K2-1"), ["p4", null])
+  played = win(played, "K1-1", "p1", 2)
+  assert.deepEqual(match(played, "K1-1").score, { legs: [3, 2] })
+  assert.deepEqual(who(played, "K2-1"), ["p1", null])
+})
+
+test("nobody wins the tournament after withdrawing: a final won before waits for the organizer", () => {
+  // The final was played; a correction marked it; meanwhile p1 was disqualified; then the
+  // correction was taken back, so the final fits again with p1 as its winner.
+  let t = win(win(win(make("single", 4), "K1-1", "p1"), "K1-2", "p2"), "K2-1", "p1")
+  t = win(t, "K1-2", "p3")
+  assert.equal(match(t, "K2-1").affected, true)
+  t = withdraw(t, "p1", "disqualified")
+  t = win(t, "K1-2", "p2")
+  const final = match(t, "K2-1")
+  assert.deepEqual([final.state, final.affected, final.winner], ["finished", true, null])
+  assert.deepEqual(final.recorded, ["p1", "p2"])
+  assert.equal(view(t).champion, null)
+  assert.equal(view(t).complete, false)
+  assert.equal(view(t).status.p1, "disqualified")
+  assert.equal(view(t).status.p2, "active")
+  assert.deepEqual(nextMatch(view(t), "p2"), { match: final, state: "waiting" })
+  // The organizer decides: play it again, which p2 wins by walkover …
+  const again = resetMatch(t, "K2-1")
+  assert.deepEqual([match(again, "K2-1").state, match(again, "K2-1").walkover, view(again).champion], ["walkover", "withdrawn", "p2"])
+  assert.deepEqual(places(again), { p2: "1", p3: "2-3", p4: "2-3" })
+  // … or correct the final …
+  assert.equal(view(win(t, "K2-1", "p2")).champion, "p2")
+  // … or take the disqualification back.
+  assert.equal(view(reinstate(t, "p1")).champion, "p1")
 })
 
 test("a withdrawn player has no next match, also where the opponent is not known yet", () => {
@@ -1098,6 +1197,44 @@ test("boards: a called match that has to wait again after a correction gives its
   assert.equal(match(moved, "L2-1").state, "ready")
   assert.equal(match(moved, "L2-1").board, null)
   assert.equal(moved.boards["L2-1"], undefined)
+})
+
+test("boards: a result taken back gives up the board it was played on, a start taken back keeps it", () => {
+  // Plain undo: R1-1 was played on B1, B1 moved on to R1-2, then R1-1 is taken back.
+  let t = make("roundRobin", 4)
+  t = win(startMatch(t, "R1-1", "B1"), "R1-1", "p1")
+  t = startMatch(t, "R1-2", "B1")
+  t = resetMatch(t, "R1-1")
+  assert.deepEqual([match(t, "R1-1").state, match(t, "R1-1").board], ["ready", null])
+  // Started without a board it gets none, not a second match on B1.
+  t = startMatch(t, "R1-1")
+  const onB1 = (x: Tournament) => view(x).matches.filter((m) => m.board === "B1" && (m.state === "ready" || m.state === "live")).map((m) => m.id)
+  assert.deepEqual(onB1(t), ["R1-2"])
+  assert.equal(match(t, "R1-1").board, null)
+
+  // Correction, then reset: the semi-final K2-1 was played on B1, B1 moved on to K1-3, then K1-2 is
+  // corrected and the organizer has K2-1 played again.
+  let k = make("single", 8)
+  k = win(startMatch(k, "K1-1", "B1"), "K1-1", "p1")
+  k = win(startMatch(k, "K1-2", "B2"), "K1-2", "p4")
+  k = win(startMatch(k, "K2-1", "B1"), "K2-1", "p1")
+  k = startMatch(k, "K1-3", "B1")
+  k = win(k, "K1-2", "p5")
+  assert.deepEqual([match(k, "K2-1").affected, match(k, "K2-1").board], [true, "B1"])
+  k = resetMatch(k, "K2-1")
+  assert.deepEqual([match(k, "K2-1").state, match(k, "K2-1").board], ["ready", null])
+  assert.deepEqual(onB1(k), ["K1-3"])
+  assert.deepEqual(freeBoards(view(k), ["B1", "B2"]), ["B2"])
+  throwsCode(() => startMatch(k, "K2-1", "B1"), "boardBusy")
+  k = startMatch(k, "K2-1", "B2")
+  // A start taken back keeps its board: nobody else could take it while the match was live.
+  const undone = resetMatch(k, "K2-1")
+  assert.deepEqual([match(undone, "K2-1").state, match(undone, "K2-1").board], ["ready", "B2"])
+
+  // Damaged stored data with a stale board: starting without a board refuses instead of putting a
+  // second match on B1.
+  const busy = startMatch(make("roundRobin", 4), "R1-2", "B1")
+  throwsCode(() => startMatch({ ...busy, boards: { ...busy.boards, "R1-1": "B1" } }, "R1-1"), "boardBusy")
 })
 
 test("boards: 128 players and 16 boards are all used, nobody twice", () => {
@@ -1320,6 +1457,77 @@ test("property: reusing the last state gives exactly what a fresh computation gi
       assert.equal(strip(t), strip(structuredClone(t)), `${format} step ${step}`)
     }
   }
+})
+
+test("property: a board never serves two ready or live matches, also after resets and corrections", () => {
+  const rand = random(17)
+  const pick = <T>(list: T[]) => list[Math.floor(rand() * list.length)]
+  const boards = ["B1", "B2", "B3"]
+  const cases: [TournamentFormat, number, Partial<TournamentSetup>][] = [
+    ["single", 11, {}],
+    ["double", 9, {}],
+    ["groups", 10, { groups: { count: 2, advance: 2 } }],
+    ["roundRobin", 6, {}],
+  ]
+  let resets = 0
+  for (const [format, n, extra] of cases) {
+    for (let run = 0; run < 8; run++) {
+      let t = make(format, n, { ...extra, seeded: 0, seed: `boards-${run}` })
+      for (let step = 0; step < 250; step++) {
+        const v = view(t)
+        const live = v.matches.filter((m) => m.state === "live" && !m.affected)
+        const called = v.matches.filter((m) => m.state === "ready" && m.board !== null)
+        const entered = v.matches.filter((m) => t.records[m.id])
+        const finished = v.matches.filter((m) => m.state === "finished" && !m.affected)
+        const r = rand()
+        try {
+          if (r < 0.3) for (const s of suggestBoards(v, boards)) t = rand() < 0.5 ? startMatch(t, s.match, s.board) : assignBoard(t, s.match, s.board)
+          else if (r < 0.45 && called.length) t = startMatch(t, pick(called).id)
+          else if (r < 0.75 && live.length) {
+            const m = pick(live)
+            t = win(t, m.id, coin(rand)(m))
+          } else if (r < 0.88 && entered.length) {
+            t = resetMatch(t, pick(entered).id)
+            resets++
+          } else if (finished.length) {
+            const c = pick(finished)
+            t = win(t, c.id, c.loser!)
+          }
+        } catch (e) {
+          // A called match whose player is playing elsewhere by now may not start; nothing else
+          // may be refused here (a board the view shows as this match's is free).
+          if (!(e instanceof TournamentError) || e.code !== "playerBusy") throw e
+        }
+        const used = view(t).matches.filter((m) => m.board !== null && (m.state === "ready" || m.state === "live")).map((m) => m.board)
+        assert.equal(new Set(used).size, used.length, `${format} run ${run} step ${step}: ${used.join(" ")}`)
+      }
+    }
+  }
+  assert.ok(resets > 100, `only ${resets} resets`)
+})
+
+test("property: the lot only orders players whom head-to-head cannot separate", () => {
+  // One leg per match, so leg difference and legs won follow the points and ties are common.
+  const rand = random(3)
+  const seen = new Set<string>()
+  for (let run = 0; run < 80; run++) {
+    const n = 4 + (run % 6)
+    let t = make("roundRobin", n, { rules: { legsToWin: 1 }, doubleRoundRobin: run % 3 === 0, seed: `lot-${run}` })
+    for (const m of view(t).matches) t = recordResult(t, m.id, { legs: rand() < 0.5 ? [1, 0] : [0, 1] })
+    const v = view(t)
+    const rows = v.standings[0].rows
+    rows.forEach((r) => seen.add(r.decidedBy ?? "-"))
+    // Every run of rows the lot ordered: among exactly these players, everyone has the same number
+    // of wins, so no further head-to-head step could separate them.
+    for (let start = 0, i = 1; i <= rows.length; i++) {
+      if (i < rows.length && rows[i].decidedBy === "lot") continue
+      const tied = new Map(rows.slice(start, i).map((r) => [r.participant, 0]))
+      for (const m of v.matches) if (tied.has(m.slots[0].participant!) && tied.has(m.slots[1].participant!)) tied.set(m.winner!, tied.get(m.winner!)! + 1)
+      assert.equal(new Set(tied.values()).size, 1, `run ${run}: ${[...tied].join(" ")} ordered by lot`)
+      start = i
+    }
+  }
+  assert.ok(seen.has("lot") && seen.has("headToHead"), "ties of both kinds occurred")
 })
 
 // --- Load: 128 participants, 16 boards ------------------------------------------------------

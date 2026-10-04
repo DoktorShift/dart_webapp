@@ -6,7 +6,7 @@ import type { MatchView, StandingRow, Standings, Tiebreak } from "./types.ts"
 //   2. set difference (only when the matches are played in sets)
 //   3. leg difference
 //   4. legs won
-//   5. head-to-head: wins in the matches among the players still level
+//   5. head-to-head: wins in the matches among the players still level, step by step
 //   6. lot from the draw seed (lotKey), fixed before the first dart
 // Withdrawn and disqualified players are listed after everyone still playing. A walkover counts
 // as a win for the opponent without legs; when both sides forfeit, both get a loss.
@@ -19,6 +19,13 @@ interface TableOptions {
 }
 
 type Row = Omit<StandingRow, "rank" | "decidedBy">
+
+// A decided match between two players level on criteria 1–4.
+interface Game {
+  a: string
+  b: string
+  winner: string
+}
 
 const decided = (m: MatchView) => m.state === "finished" || m.state === "walkover"
 
@@ -76,33 +83,46 @@ export function computeStandings(members: string[], matches: MatchView[], option
   }
   const sorted = [...rows.values()].sort((a, b) => compare(a, b) || byLot(a, b))
 
-  // Players level on 1–4 are ordered by head-to-head (wins in the matches among them), then by
-  // lot. One pass over the matches counts head-to-head wins for every level group at once.
-  const level = new Map<string, number>()
-  for (let i = 0, group = 0; i < sorted.length; i++) {
-    if (i > 0 && compare(sorted[i - 1], sorted[i]) !== 0) group++
-    level.set(sorted[i].participant, group)
-  }
-  const h2h = new Map(members.map((p) => [p, 0]))
+  // Players level on 1–4 are ordered by head-to-head, step by step: wins in the matches among
+  // them; whoever is still level is compared again on the matches among just themselves (for two
+  // players, their direct match). The lot decides only where a step separates nobody. Head-to-head
+  // reads only the decided matches between players level on 1–4, collected in one pass.
+  const levels: Row[][] = []
+  const levelOf = new Map<string, number>()
+  sorted.forEach((row, i) => {
+    if (i === 0 || compare(sorted[i - 1], row) !== 0) levels.push([])
+    levels[levels.length - 1].push(row)
+    levelOf.set(row.participant, levels.length - 1)
+  })
+  const games: Game[] = []
   for (const m of matches) {
     if (!decided(m) || m.affected || m.winner === null) continue
     const a = m.slots[0].participant
     const b = m.slots[1].participant
-    if (a !== null && b !== null && level.get(a) !== undefined && level.get(a) === level.get(b)) h2h.set(m.winner, h2h.get(m.winner)! + 1)
+    if (a !== null && b !== null && levelOf.has(a) && levelOf.get(a) === levelOf.get(b)) games.push({ a, b, winner: m.winner })
   }
-  const ordered = sorted
-    .sort((a, b) => level.get(a.participant)! - level.get(b.participant)! || h2h.get(b.participant)! - h2h.get(a.participant)! || byLot(a, b))
-    .map((row) => ({ row, h2h: h2h.get(row.participant)! }))
+  // Rows level so far (in lot order) → runs of rows only the lot orders, best run first.
+  const byHeadToHead = (level: Row[], among: Game[]): Row[][] => {
+    if (level.length === 1) return [level]
+    const wins = new Map(level.map((r) => [r.participant, 0]))
+    const inside = among.filter((g) => wins.has(g.a) && wins.has(g.b))
+    for (const g of inside) wins.set(g.winner, wins.get(g.winner)! + 1)
+    const steps = [...new Set(wins.values())].sort((x, y) => y - x)
+    if (steps.length === 1) return [level]
+    return steps.flatMap((w) => byHeadToHead(level.filter((r) => wins.get(r.participant) === w), inside))
+  }
+  const runs = levels.flatMap((level) => byHeadToHead(level, games))
+  const ordered = runs.flatMap((run, i) => run.map((row) => ({ row, run: i })))
 
   return {
     group: options.group,
     complete,
-    rows: ordered.map(({ row, h2h }, i): StandingRow => {
+    rows: ordered.map(({ row, run }, i): StandingRow => {
       let decidedBy: Tiebreak | null = null
       if (i > 0 && !row.inactive) {
         const above = ordered[i - 1]
         const differs = criteria.find(([, value]) => value(above.row) !== value(row))
-        decidedBy = differs ? differs[0] : above.h2h !== h2h ? "headToHead" : "lot"
+        decidedBy = differs ? differs[0] : above.run !== run ? "headToHead" : "lot"
       }
       return { ...row, rank: i + 1, decidedBy }
     }),

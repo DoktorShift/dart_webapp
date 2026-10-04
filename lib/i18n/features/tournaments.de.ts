@@ -49,7 +49,7 @@ export const tournamentsDe = {
     sets: "Gewonnene minus verlorene Sätze, nur wenn in Sätzen gespielt wird",
     legDifference: "Gewonnene minus verlorene Legs",
     legsWon: "Mehr gewonnene Legs",
-    headToHead: "Siege in den Spielen der Gleichstehenden untereinander",
+    headToHead: "Siege in den Spielen der Gleichstehenden untereinander; wer danach noch gleich steht, wird erneut nur unter sich verglichen",
     lot: "Ein Los, das schon bei der Auslosung feststand",
   },
   state: {
