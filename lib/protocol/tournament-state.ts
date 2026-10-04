@@ -89,6 +89,8 @@ export interface TournamentState {
   boards: Record<string, Board>
   slots: Record<string, SlotState>
   offer: { event: string; to: string; at: number } | null
+  // Who finished the tournament: the issuer of its badges (mayIssueTournamentBadge).
+  finished: { event: string; by: string; at: number } | null
   heads: { core: string; organizer: string }
   log: ReplayLog
 }
@@ -144,6 +146,7 @@ export function reduceTournament(events: readonly unknown[], tournamentId: strin
     boards: {},
     slots: {},
     offer: null,
+    finished: null,
     heads: { core: founding.id, organizer: founding.id },
     log,
   }
@@ -165,6 +168,10 @@ export function reduceTournament(events: readonly unknown[], tournamentId: strin
 const admittedCount = (s: TournamentState) => Object.values(s.participants).filter((p) => p.status === "registered").length
 const hasRoom = (s: TournamentState) => admittedCount(s) < s.settings.capacity
 const headOf = (s: TournamentState, subject: { head: string } | undefined) => subject?.head ?? s.id
+
+// Who may award the tournament's badges (badges.ts mayIssue): the organizer who finished it.
+// Awards stay valid when the organization changes hands later (research PR-09).
+export const mayIssueTournamentBadge = (state: TournamentState, pubkey: string) => state.finished?.by === pubkey
 
 // The waiting list in the organizer's order.
 export const waitingList = (s: TournamentState) =>
@@ -209,6 +216,7 @@ function apply(s: TournamentState, r: AnyRecord, opts: TournamentOptions): Probl
       if (!NEXT_PHASE[s.phase].includes(c.phase)) return ["phase_invalid", `${s.phase} cannot go to ${c.phase}`]
       if (c.phase === "checkin" && !s.settings.checkIn) return ["phase_invalid", "this tournament has no check-in"]
       s.phase = c.phase
+      if (c.phase === "finished") s.finished = { event: r.id, by: r.pubkey, at: r.created_at }
       s.heads.core = r.id
       return null
     }

@@ -6,6 +6,7 @@ import { buildRecord, encryptForLinkKey, parseRecord, sealRecord } from "../lib/
 import type { ContentOf } from "../lib/protocol/records.ts"
 import { ProtocolError } from "../lib/protocol/reasons.ts"
 import { signedEventBytes } from "../lib/protocol/tags.ts"
+import { profileBadgesTemplate, readProfileBadges } from "../lib/protocol/badges.ts"
 
 const sk = generateSecretKey()
 const otherKey = getPublicKey(generateSecretKey())
@@ -170,4 +171,16 @@ test("payment requests never travel as plain records", () => {
 test("size is measured as the signed event a relay receives", () => {
   const t = buildRecord("club.leave", {}, { created_at: NOW, root: ROOT })
   assert.equal(signedEventBytes(t), JSON.stringify(sign(t)).length)
+})
+
+test("profile badge choice: written as 10008, the former 30008 still read", () => {
+  const address = `30009:${otherKey}:blueline:self:first-180:v1`
+  const award = "e".repeat(64)
+  const t = profileBadgesTemplate([{ address, award }], NOW)
+  assert.equal(t.kind, 10008)
+  assert.deepEqual(readProfileBadges(sign(t)), [{ address, award }])
+  const legacy = sign({ kind: 30008, created_at: NOW, content: "", tags: [["d", "profile_badges"], ["a", address], ["e", award], ["a", "nonsense"], ["e", award]] })
+  assert.deepEqual(readProfileBadges(legacy), [{ address, award }])
+  assert.equal(readProfileBadges(sign({ kind: 30008, created_at: NOW, content: "", tags: [["d", "other"]] })), null)
+  assert.equal(reason(() => profileBadgesTemplate([{ address: "x", award }], NOW)), "invalid_content")
 })

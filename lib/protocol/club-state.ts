@@ -166,6 +166,13 @@ export function clubRoleAt(state: ClubState, pubkey: string, at: number): ClubRo
   return role
 }
 
+// Who may award the club's badges (badges.ts mayIssue): its owner or an admin at the time of
+// the award.
+export const mayIssueClubBadge = (state: ClubState, pubkey: string, at: number) => {
+  const role = clubRoleAt(state, pubkey, at)
+  return role === "owner" || role === "admin"
+}
+
 interface Context {
   tokens: Record<string, string>
   datedAt: Map<string, number>

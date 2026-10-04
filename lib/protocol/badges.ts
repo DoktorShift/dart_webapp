@@ -1,5 +1,5 @@
 import type { EventTemplate } from "../nostr/types.ts"
-import { FORMAT_VERSION, KIND_BADGE_AWARD, KIND_BADGE_DEFINITION, LABEL_NAMESPACE, MAX_EVENT_BYTES } from "./kinds.ts"
+import { FORMAT_VERSION, KIND_BADGE_AWARD, KIND_BADGE_DEFINITION, KIND_PROFILE_BADGES, LABEL_NAMESPACE, MAX_EVENT_BYTES } from "./kinds.ts"
 import type { Reason } from "./reasons.ts"
 import { ProtocolError } from "./reasons.ts"
 import { utf8Length } from "./schema.ts"
@@ -180,4 +180,47 @@ export function dedupeAwards<T extends { award: SignedEvent; key: string }>(awar
   const firstByKey = new Map<string, T>()
   for (const a of [...awards].sort((x, y) => byReplayOrder(x.award, y.award))) if (!firstByKey.has(a.key)) firstByKey.set(a.key, a)
   return [...firstByKey.values()]
+}
+
+// ---- Profile choice (NIP-58 kind 10008; the former kind 30008 with d=profile_badges is read) --
+
+// Kind of the former profile choice, read but never written (PLAN.md, "Auszeichnungen").
+export const KIND_PROFILE_BADGES_LEGACY = 30008
+
+export interface ProfileBadge {
+  // 30009:<issuer>:<d> of the definition.
+  address: string
+  // Id of the kind 8 award.
+  award: string
+}
+
+const ADDRESS = /^30009:[0-9a-f]{64}:[^\s]{1,200}$/
+
+// The profile's choice, in its order. Pairs of ["a", address] and ["e", award]; badges of other
+// apps are kept as they are, so writing back after reading loses nothing.
+export function profileBadgesTemplate(badges: readonly ProfileBadge[], created_at: number): EventTemplate {
+  const tags: string[][] = []
+  for (const b of badges) {
+    if (!ADDRESS.test(b.address) || !HEX64.test(b.award)) throw new ProtocolError("invalid_content", "badge address or award id")
+    tags.push(["a", b.address], ["e", b.award])
+  }
+  const template = { kind: KIND_PROFILE_BADGES, created_at, tags, content: "" }
+  if (signedEventBytes(template) > MAX_EVENT_BYTES) throw new ProtocolError("too_large", "too many badges in one profile choice")
+  return template
+}
+
+// Reads a 10008 choice, or a former 30008 one with d=profile_badges; anything else is null.
+export function readProfileBadges(event: SignedEvent): ProfileBadge[] | null {
+  const legacy = event.kind === KIND_PROFILE_BADGES_LEGACY && tagValue(event.tags, "d") === "profile_badges"
+  if (event.kind !== KIND_PROFILE_BADGES && !legacy) return null
+  const out: ProfileBadge[] = []
+  let address: string | undefined
+  for (const t of event.tags) {
+    if (t[0] === "a") address = ADDRESS.test(t[1] ?? "") ? t[1] : undefined
+    else if (t[0] === "e" && address !== undefined) {
+      if (HEX64.test(t[1] ?? "")) out.push({ address, award: t[1] })
+      address = undefined
+    }
+  }
+  return out
 }

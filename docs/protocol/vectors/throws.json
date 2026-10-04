@@ -116,6 +116,117 @@
       "encoded": "1775.525.7y-"
     },
     {
+      "description": "Recorded P0.05 game with a correction in the app (Ben's second dart 19 corrected to 5), as stored",
+      "config": {
+        "modeId": "301",
+        "modeName": "301",
+        "type": "x01",
+        "startScore": 301,
+        "doubleIn": false,
+        "doubleOut": true,
+        "cutThroat": false,
+        "bullFinish": false,
+        "legsToWin": 1,
+        "setsToWin": 1,
+        "startRule": "alternate",
+        "players": [
+          {
+            "id": "pmutfbb3y0",
+            "name": "Anna"
+          },
+          {
+            "id": "pmutfbb3y1",
+            "name": "Ben"
+          }
+        ]
+      },
+      "log": [
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 20,
+            "multiplier": 3
+          },
+          "visit": 0,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 20,
+            "multiplier": 3
+          },
+          "visit": 0,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 20,
+            "multiplier": 1
+          },
+          "visit": 0,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 20,
+            "multiplier": 1
+          },
+          "visit": 1,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 5,
+            "multiplier": 1
+          },
+          "visit": 1,
+          "leg": 0,
+          "edited": true
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 20,
+            "multiplier": 1
+          },
+          "visit": 1,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 20,
+            "multiplier": 3
+          },
+          "visit": 2,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 17,
+            "multiplier": 3
+          },
+          "visit": 2,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 25,
+            "multiplier": 2
+          },
+          "visit": 2,
+          "leg": 0
+        }
+      ],
+      "encoded": "1775.5!M5.7y-"
+    },
+    {
       "description": "Two legs, the first dart corrected (edited, leg result kept), no-score, a visit total and a turn",
       "config": {
         "modeId": "501",

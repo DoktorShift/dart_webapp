@@ -1485,6 +1485,10 @@ function family(name: string, description: string, build: () => Record<string, u
 function throwVectors() {
   const storage = JSON.parse(readFileSync(`${ROOT}docs/implementation/evidence/P0.01/storage-finished.json`, "utf8"))
   const recorded = JSON.parse(storage["dart-scorer.current-match.v1"]) as { config: ReturnType<typeof config>; throws: Throw[] }
+  // Played in the production build with a correction through the app's own correction flow
+  // (docs/implementation/evidence/P0.05/scripts/capture-corrected-log.mjs).
+  const correctedStorage = JSON.parse(readFileSync(`${ROOT}docs/implementation/evidence/P0.05/storage-corrected.json`, "utf8"))
+  const correctedInApp = JSON.parse(correctedStorage["dart-scorer.current-match.v1"]) as { config: ReturnType<typeof config>; throws: Throw[] }
   const c = config({ startScore: 301, legsToWin: 2 })
   const leg1 = [dart(20, 3), dart(20, 3), dart(20, 3), ...miss3(), dart(20, 3), dart(11, 3), dart(14, 2)]
   const leg2 = [dart(20), { kind: "noScore" } as Throw, { kind: "visit", total: 60, darts: 3, atDouble: 1 } as Throw, { kind: "turn", player: 0 } as Throw]
@@ -1495,6 +1499,7 @@ function throwVectors() {
   const corrected = plan.keepResult ? plan.keepResult.throws : plan.rescored
   const logs = [
     { description: "Recorded P0.01 game (Anna vs Ben, 301), as stored by the app", config: recorded.config, log: recorded.throws },
+    { description: "Recorded P0.05 game with a correction in the app (Ben's second dart 19 corrected to 5), as stored", config: correctedInApp.config, log: correctedInApp.throws },
     { description: "Two legs, the first dart corrected (edited, leg result kept), no-score, a visit total and a turn", config: c, log: JSON.parse(JSON.stringify(corrected)) as Throw[] },
     { description: "Log saved before throws were tagged", config: config(), log: [dart(20), dart(25, 2), dart(0)] },
   ]

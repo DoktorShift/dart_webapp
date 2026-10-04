@@ -27,6 +27,18 @@ test("the recorded P0.01 game (Anna vs Ben, 301) round-trips and replays to the 
   assert.equal(replay(match.config, decodeThrows(text)).winner, 0)
 })
 
+test("a game corrected in the app (P0.05 recording) round-trips and replays to the same result", () => {
+  const storage = JSON.parse(readFileSync(new URL("../docs/implementation/evidence/P0.05/storage-corrected.json", import.meta.url), "utf8"))
+  const match = JSON.parse(storage["dart-scorer.current-match.v1"])
+  assert.ok(match.throws.some((t: Throw) => t.edited))
+  const text = roundTrips(match.config, match.throws)
+  // T20 T20 20 | 20 !5 20 | T20 T17 Bull: the corrected dart keeps its mark.
+  assert.equal(text, "1775.5!M5.7y-")
+  const s = replay(match.config, decodeThrows(text))
+  assert.equal(s.winner, 0)
+  assert.equal(s.scores[1], 256)
+})
+
 test("one character per dart, one per visit change", () => {
   const c = config({ startScore: 301 })
   const log = play(c, [dart(20, 3), dart(20, 3), dart(20), dart(20), dart(19), dart(20), dart(20, 3), dart(17, 3), dart(25, 2)])
