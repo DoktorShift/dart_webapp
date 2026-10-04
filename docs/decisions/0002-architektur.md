@@ -70,37 +70,37 @@ signOut(options: { keepLocalData: boolean }): Promise<void>
 | Allgemein | die ersten vier | BlueLine-Events, private Datensätze, NIP-51-Sets (30000er), Live-Spiele, Auszeichnungen |
 
 - „Veröffentlicht“ ab zwei bestätigten Relays verschiedener Betreiber; vollständig verteilt erst bei allen Zielen. Fehlende Kopien werden beim Öffnen der App erneut gesendet.
-- Bestätigt heißt: `OK true` des Relays. Ein Abfrageergebnis ohne Antwort eines Relays ist „unbekannt“, nie „leer“.
+- Bestätigt heißt: `OK true` des Relays. Private Datensätze und das Passkey-Paket gelten erst als gesichert, wenn sie über eine neue Verbindung wieder gelesen wurden (Prüfung beim Selbstheilen). Ein Abfrageergebnis ohne Antwort eines Relays ist „unbekannt“, nie „leer“.
 - Für Tests und Vorschauen ersetzt die Build-Variable `NEXT_PUBLIC_BLUELINE_RELAYS` (kommagetrennt) alle Standardrelays, etwa durch `ws://localhost:10547` von `nak serve`. Sie enthält keine Geheimnisse.
 - Für NWC gelten ausschließlich die Relays der Wallet-Verbindung.
 
 ## 6 BlueLine-Events
 
-Eine Kind-Nummer je Bereich, Typ als NIP-32-Label. Geprüft am 4. Oktober 2026 gegen das Kind-Register und die NIP-Übersicht: frei.
+Eine Kind-Nummer je Bereich, Typ als NIP-32-Label. Geprüft am 4. Oktober 2026 gegen das Kind-Register, die NIP-Übersicht und offene NIP-Pull-Requests: frei. (Der erste Entwurf 1501/31501/21501 kollidierte mit dem offenen Vorschlag NIP-101g „Golf Events“, PR #2272, und wurde ersetzt; 180 ist die Höchstpunktzahl einer Aufnahme.)
 
 | Kind | Bereich | Verwendung |
 | --- | --- | --- |
-| **1501** | regulär | Unveränderliche Datensätze: Gründungen, Änderungen, Anfragen, Ergebnisse, Bestätigungen |
-| **31501** | adressierbar | Aktuelle Zustände mit `d`: Live-Spielstand, Statistikkarte |
-| **21501** | flüchtig | Kopplungs- und Board-Handshake-Nachrichten |
+| **1180** | regulär | Unveränderliche Datensätze: Gründungen, Änderungen, Anfragen, Ergebnisse, Bestätigungen |
+| **31180** | adressierbar | Aktuelle Zustände mit `d`: Live-Spielstand, Statistikkarte |
+| **21180** | flüchtig | Kopplungs- und Board-Handshake-Nachrichten |
 | 30078 | NIP-78 | Private, verschlüsselte Datensätze des Profils, je Datensatz ein nicht sprechendes `d` = HMAC(Datenschlüssel, Datensatz-ID). Kind 78 wird nicht verwendet, weil nos.lol und Primal es am 4. Oktober 2026 nicht auslieferten. |
 | 1059 | NIP-59 | Verpackte Zahlungsanfragen an Mitspieler |
 
-Pflicht-Tags für 1501/31501: `["L","blueline"]`, `["l","<typ>","blueline"]`, `["v","1"]`. Bezug auf ein Wurzelobjekt (Club, Turnier, Match) mit `["e","<id der Gründung>"]`. Club- und Turnier-IDs sind die Event-IDs ihrer Gründung (bleiben bei Eigentümerwechsel gleich). Typen und Inhalte stehen in `docs/protocol/`.
+Pflicht-Tags für 1180/31180: `["L","blueline"]`, `["l","<typ>","blueline"]`, `["v","1"]`. Bezug auf ein Wurzelobjekt (Club, Turnier, Match) mit `["e","<id der Gründung>"]`. Club- und Turnier-IDs sind die Event-IDs ihrer Gründung (bleiben bei Eigentümerwechsel gleich). Typen und Inhalte stehen in `docs/protocol/`.
 
 **Zustand durch Abspielen:** Club- und Turnierzustand ergibt sich deterministisch aus Gründung und allen gültigen Änderungen, sortiert nach `created_at`, dann `id`. Jede Änderung wird beim Abspielen gegen die Rechte des Autors zu diesem Zeitpunkt geprüft; ungültige werden ignoriert und in der Diagnose angezeigt.
 
-**Geschlossene Clubs:** Ein zufälliges Club-Schlüsselpaar. Inhalte werden mit NIP-44 vom Autor an den Club-Pubkey verschlüsselt, sodass jedes Mitglied mit dem Club-Geheimnis lesen kann. Einladungslinks tragen das Geheimnis im Fragment. Beim Entfernen eines Mitglieds erzeugt der Eigentümer einen neuen Club-Schlüssel und verpackt ihn mit NIP-44 einzeln für jedes verbleibende Mitglied. Bereits gelesene Inhalte bleiben beim entfernten Mitglied; das wird nicht anders dargestellt.
+**Geschlossene Clubs:** Jedes vertrauliche Objekt (Mitgliederliste, Einladungen, Ergebnisse, Termine) wird mit einem eigenen zufälligen Inhaltsschlüssel (XChaCha20-Poly1305) verschlüsselt; dieser Schlüssel wird für jedes aktuelle Mitglied einzeln mit NIP-44 verpackt und im selben Event mitgeliefert (PLAN.md Zeile 352: pro Objekt zufällige Inhaltsschlüssel, geprüfte Bausteine). Es gibt kein gemeinsames Club-Geheimnis. Ein entferntes Mitglied bekommt neue Objekte einfach nicht mehr verpackt; Bereits gelesenes bleibt bei ihm, das wird nicht anders dargestellt. Neue Mitglieder lesen den jeweils aktuellen Zustand, den ein Verantwortlicher für alle Mitglieder neu verpackt veröffentlicht, sobald sein Gerät online ist. Die Vorschau vor dem Beitritt (Name, Beschreibung, Veranstalter, nächster Termin) steckt verschlüsselt im Einladungslink. Das Verfahren wird vor der Veröffentlichung extern geprüft (Nutzerhandlung).
 
-**Einladungen:** Ein Admin veröffentlicht `invite.create` mit dem Hash eines zufälligen Tokens, maximaler Nutzung und Ablaufzeit. Der Beitretende beweist den Besitz mit `HMAC(token, eigener pubkey)`. Beim Abspielen werden die ersten gültigen Nutzungen bis zum Limit aufgenommen; so funktioniert ein Beitritt ohne dass ein Admin online sein muss. Ohne Einladung wartet eine Anfrage auf Bestätigung.
+**Einladungen:** Zwei Arten. Ein **Gruppenlink** (bis zu seinem Ablauf oder Widerruf beliebig oft nutzbar) nimmt Beitretende sofort auf, die den Besitz des Tokens mit `HMAC(token, eigener pubkey)` beweisen; so klappt der Beitritt, ohne dass ein Admin online ist. Eine **persönliche Einladung** (einmalig) und jede Anfrage ohne Einladung gelten erst, wenn ein Admin sie bestätigt; bis dahin zeigt die App „Deine Anfrage wartet auf Bestätigung“. Kapazität, Ablauf und Reihenfolge entscheidet damit die berechtigte Rolle, nie ein vom Beitretenden gesetzter `created_at` (Entscheidung 0001, Punkt 10).
 
-**Live-Spiele:** Das Board erzeugt pro Spiel einen Sitzungsschlüssel und veröffentlicht nach jeder Aufnahme den adressierbaren Spielstand (31501, `d` = Match-ID, steigende Version, kompakte Würfe). Private Spiele verschlüsseln den Inhalt mit einem Spielschlüssel aus dem Link-Fragment. Spieler verbinden sich über einen Board-QR, der nie einen Profilschlüssel überträgt.
+**Live-Spiele:** Das Board erzeugt pro Spiel einen Sitzungsschlüssel und veröffentlicht nach jeder Aufnahme den adressierbaren Spielstand (31180, `d` = Match-ID, steigende Version, kompakte Würfe). Private Spiele verschlüsseln den Inhalt mit einem Spielschlüssel aus dem Link-Fragment. Spieler verbinden sich über einen Board-QR, der nie einen Profilschlüssel überträgt.
 
 **Auszeichnungen:** NIP-58 mit 30009 (Definition), 8 (Vergabe), 10008 (Profilauswahl, Altformat 30008 lesbar). Aussteller ist der Veranstalter oder, gekennzeichnet „Selbst erreicht“, der Spieler. Prüfung: Signaturen, Vergabe-Autor gleich Definitions-Autor, Empfänger im `p`-Tag, deterministischer Anlass-Tag gegen Doppelte.
 
 ## 7 Kopplung, Sicherung, Wiederherstellung
 
-- **Kopplung:** Das neue Gerät zeigt einen QR beziehungsweise Link `/#pair=<einmaliger Pubkey>.<Sitzungs-ID>.<Ablauf>.<Relays>` und alternativ einen 12-stelligen Code (60 Bit). Das vorhandene Gerät öffnet „Eigenes Gerät hinzufügen“ (nie über den allgemeinen Scanner), tauscht verschlüsselte flüchtige Nachrichten (21501, NIP-44 zwischen Einmalschlüsseln) aus, beide Geräte zeigen dieselbe aus beiden Schlüsseln berechnete Prüfkennung, und erst nach Bestätigung wird das Profilpaket übertragen. Das neue Gerät bestätigt die Entschlüsselung; erst dann erscheint „Dein Profil ist dabei.“ Wiederholung bis Bestätigung oder Ablauf (10 Minuten).
+- **Kopplung:** Das neue Gerät zeigt einen QR beziehungsweise Link `/#pair=<einmaliger Pubkey>.<Sitzungs-ID>.<Ablauf>.<Relays>` und alternativ einen 12-stelligen Code aus 32 Zeichen (Crockford-Base32, 60 Bit). Das vorhandene Gerät öffnet „Eigenes Gerät hinzufügen“ (nie über den allgemeinen Scanner), tauscht verschlüsselte flüchtige Nachrichten (21180, NIP-44 zwischen Einmalschlüsseln) aus, beide Geräte zeigen dieselbe aus beiden Schlüsseln berechnete Prüfkennung, und erst nach Bestätigung wird das Profilpaket übertragen. Das neue Gerät bestätigt die Entschlüsselung; erst dann erscheint „Dein Profil ist dabei.“ Wiederholung bis Bestätigung oder Ablauf (10 Minuten).
 - **Sicherungsdatei:** JSON `blueline-sicherung.json` mit NIP-49-`ncryptsec` (log_n 16, im Web Worker), Datenschlüssel und Relays, verschlüsselt mit einem erzeugten starken Kennwort. „Gesichert“ erst nach erfolgreicher Probe-Entschlüsselung.
 - **Passkey:** Nur wenn PRF beim Anlegen und beim sofortigen erneuten Abrufen funktioniert. Aus dem PRF-Wert werden per HKDF ein Locator-Schlüssel und ein Verschlüsselungsschlüssel abgeleitet; das Paket liegt als 30078 (`d=blueline-backup-v1`, signiert vom Locator) auf den allgemeinen Relays.
 - Externe Profile sichern ihren Hauptschlüssel im Signer; BlueLine sichert nur App-Daten.
