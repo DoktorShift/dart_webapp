@@ -22,7 +22,7 @@ Die generischen Bausteine, die der Plan braucht und nostr-core 1.0.4 nicht oder 
 | Baustein | Datei | Inhalt |
 | --- | --- | --- |
 | NIP-49 | `lib/nostr/ext/nip49.ts`, `nip49.worker.ts`, `nip49.offthread.ts` | `encrypt`/`decrypt` (scrypt, XChaCha20-Poly1305, NFKC, Schlüsselsicherheits-Byte, log_n 1 bis 20), asynchrone Varianten, Web Worker mit Rückfallweg, `inspect` |
-| NIP-46 nostrconnect:// | `lib/nostr/ext/nostrconnect.ts` | `createClientUri`, `waitForSigner` mit Geheimnisprüfung, `Nip46Signer` über Kind 24133 mit NIP-44 auf allen Relays, `auth_url` hält die Anfrage offen, ping, switch_relays (alte Abos bleiben bis zur Antwort offener Anfragen), logout, `resume` ohne erneutes `connect` |
+| NIP-46 nostrconnect:// und bunker:// | `lib/nostr/ext/nostrconnect.ts` | `createClientUri`, `waitForSigner` mit Geheimnisprüfung und Schlüsselnachweis (signierte Challenge, Art 22242), `connectToBunker` mit aktuellen `connect`-Parametern auf allen Relays, `Nip46Signer` über Kind 24133 mit NIP-44 auf allen Relays, `auth_url` hält die Anfrage offen (nur https), ping, switch_relays (nur nutzbare Relays; alte Abos bleiben bis zur Antwort offener Anfragen), logout, `resume` ohne erneutes `connect` |
 | NIP-55 | `lib/nostr/ext/nip55.ts` | `buildSignerUrl` für `get_public_key` und `sign_event`, Rückgabe-URL mit Fragment, `parseCallback` inklusive `Signer1`+gzip über `DecompressionStream`, `matchPending` mit Anfrage-ID und Höchstalter, geprüfte Ergebnisse; keine Entschlüsselung |
 | Signer-basierte Verschlüsselung | `lib/nostr/ext/crypto.ts` | `sealWithSigner`, `giftWrapWithSigner` (1059 und 21059), `unwrapWithSigner` mit Rumor-ID-Prüfung; Datenschlüssel-Umschlag (Version 1); `wrapDataKey`/`unwrapDataKey`; `opaqueDTag` = HMAC-SHA256(Datenschlüssel, Datensatz-ID) |
 | Prüfung | `lib/nostr/ext/validate.ts` | `validateBadgeAward` (NIP-58 streng), `validateZapReceipt` (NIP-57 Anhang F), `checkInvoice` (BOLT11 über `decodeBolt11`) |
@@ -37,17 +37,22 @@ Nicht dazu: NWC-Korrekturen (P7b), Relay-Client (P0.03/P3a.02), die eigentlichen
 | Offizieller NIP-49-Testvektor, NFKC-Beispiel der Spec, Umlaut komponiert gegen zerlegt | Gleiches Ergebnis wie die Spec und wie nak | `nostr-nip49`, `relay/interop` |
 | Falsches Kennwort, beschädigte Daten, log_n über 20 | `wrong-password`, `malformed`, `unsupported` | `nostr-nip49` |
 | nostrconnect-Antwort mit falschem Geheimnis | Ignoriert, die richtige verbindet | `nostr-nip46` |
-| `auth_url` | Anfrage bleibt offen, Rückruf mit URL, Abschluss auf derselben ID | `nostr-nip46` |
+| nostrconnect-Antwort mit dem richtigen Geheimnis, aber fremdem Schlüssel (QR-Code mitgelesen) | Schlüsselnachweis schlägt fehl, Partei fällt heraus, der echte Signer verbindet; nichts Privates geht an die fremde Partei | `nostr-nip46` |
+| `auth_url` | Anfrage bleibt offen, Rückruf mit URL, Abschluss auf derselben ID; auch beim bunker://-`connect` | `nostr-nip46` |
+| `auth_url` mit `javascript:`, `data:` oder http im Internet | Kein Rückruf, Anfrage schlägt mit `invalid` fehl | `nostr-nip46` |
+| switch_relays nennt nur unbrauchbare Relays | Sitzung bleibt, nichts wird gespeichert | `nostr-nip46` |
 | Signer wechselt Relays während einer offenen Anfrage | Antwort kommt trotzdem an | `nostr-nip46` |
 | NIP-55-Antwort zu alt, fremde ID, anderer Schlüssel, verändertes Event | Abgelehnt | `nostr-nip55` |
 | Gift Wrap mit falscher Rumor-ID, fremdem Autor, ungültigen Signaturen | `forged` | `nostr-crypto` |
 | Umschlag mit falschem Schlüssel oder für einen anderen Datensatz | `undecryptable` | `nostr-crypto` |
+| Signer lehnt das Entpacken des Datenschlüssels oder eines Gift Wraps ab, antwortet nicht oder ist nicht erreichbar | Der Signer-Fehler kommt unverändert an, nie `undecryptable` | `nostr-crypto` |
 | Vergabe durch Fremde, falscher Empfänger, falsche Definition | Abgelehnt (nostr-core nimmt die Fälschung an) | `nostr-validate` |
 | Zap-Beleg von fremdem Schlüssel, falscher Betrag, Hash, Empfänger, LNURL | Abgelehnt (nostr-core nimmt die Fälschung an) | `nostr-validate` |
 | Rechnung abgelaufen, kurz vor Ablauf, ohne Betrag | Abgelehnt | `nostr-validate` |
-| Private Listeneinträge nicht lesbar | Status `undecryptable`/`no-key`, Schreiben verweigert | `nostr-lists` |
+| Private Listeneinträge nicht lesbar | Status `undecryptable`/`unavailable`/`no-key`, Schreiben verweigert | `nostr-lists` |
 | Liste nur öffentlich geändert | Private Einträge bleiben | `nostr-lists` |
 | 10002 mit ungültiger URL oder leerem Marker | Eintrag übersprungen und gemeldet beziehungsweise als lesen und schreiben gewertet | `nostr-lists` |
+| 10002 mit ws://-Relay im Heimnetz oder über Tor, dann bearbeitet und geschrieben | Eintrag bleibt unverändert erhalten | `nostr-lists` |
 
 ## Abschlussnachweise
 
@@ -63,10 +68,10 @@ Nicht dazu: NWC-Korrekturen (P7b), Relay-Client (P0.03/P3a.02), die eigentlichen
 | --- | --- |
 | Branch | `wave1/nostr` |
 | Basiscommit | `fd4e6c51639f1721bd5e1f01619eeaf6f2f22da5` |
-| Prüfcommit | Der Commit, der diese Karte einführt |
+| Prüfcommit | Erste Fassung `623540e`; Prüfrunde 1: der Commit, der diesen Absatz ändert |
 | nostr-core-Version | 1.0.4; Ergänzungen in `lib/nostr/ext/` |
-| Ausgeführte Prüfungen | Wie [P0.03](P0.03.md): `npm test` 129 von 129, `npm run test:relay` 15 von 15, Browserprüfung von NIP-49 im Worker (Chromium 153, WebKit 26.6) |
-| Nicht ausgeführte Prüfungen | NIP-55 mit echtem Amber (Anhängen an ein Fragment, Rückkehr in die PWA), NIP-46 mit Amber, nsec.app und Clave, NIP-49-Laufzeit auf Telefonen |
+| Ausgeführte Prüfungen | Wie [P0.03](P0.03.md): `npm test` 139 von 139 (die erste Fassung meldete fälschlich 129 von 129), `npm run test:relay` 15 von 15, Browserprüfung von NIP-49 im Worker (Chromium 153, WebKit 26.6) |
+| Nicht ausgeführte Prüfungen | NIP-55 mit echtem Amber (Anhängen an ein Fragment, Rückkehr in die PWA), NIP-46 mit Amber, nsec.app und Clave (darunter: Schlüsselnachweis ohne zusätzliche Rückfrage, `auth_url` beim `connect`), NIP-49-Laufzeit auf Telefonen |
 | Verbleibende Einschränkungen | Noch nicht in nostr-core. Das Planziel „in nostr-core liefern“ ist erst mit Veröffentlichung und fester Version erfüllt. |
 
 ## Nächster Schritt
