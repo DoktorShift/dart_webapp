@@ -1,0 +1,581 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BlueLine club record content",
+  "$defs": {
+    "club.found": {
+      "description": "Founds a club; its id is the club id",
+      "kind": 1501,
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60,
+          "pattern": "^\\S(.*\\S)?$",
+          "description": "Name, trimmed"
+        },
+        "about": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Plain text, never HTML"
+        },
+        "picture": {
+          "type": "string",
+          "maxLength": 512,
+          "pattern": "^https:\\/\\/[^\\s\"<>\\\\]+$",
+          "description": "https URL"
+        },
+        "visibility": {
+          "enum": ["closed", "public"],
+          "description": "closed: content encrypted to the club key"
+        },
+        "key": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Club key (group pubkey). Its secret travels only in invite links and key wraps"
+        },
+        "capacity": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 200
+        }
+      },
+      "required": ["name", "visibility", "key"],
+      "additionalProperties": true
+    },
+    "club.update": {
+      "description": "Changes name, description, picture, visibility, capacity or archive state",
+      "kind": 1501,
+      "type": "object",
+      "properties": {
+        "prev": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Expected predecessor: last change of this subject, or the founding"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60,
+          "pattern": "^\\S(.*\\S)?$",
+          "description": "Name, trimmed"
+        },
+        "about": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Plain text, never HTML"
+        },
+        "picture": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 512,
+              "pattern": "^https:\\/\\/[^\\s\"<>\\\\]+$",
+              "description": "https URL"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "visibility": {
+          "enum": ["closed", "public"]
+        },
+        "capacity": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 2,
+              "maximum": 200
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "archived": {
+          "type": "boolean"
+        }
+      },
+      "required": ["prev"],
+      "additionalProperties": true
+    },
+    "club.invite": {
+      "description": "Creates an invite with limited uses and expiry",
+      "kind": 1501,
+      "type": "object",
+      "properties": {
+        "invite": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "128-bit object id, lowercase hex"
+        },
+        "token": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "Invite token (secret of the link)"
+        },
+        "maxUses": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200
+        },
+        "expires": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        }
+      },
+      "required": ["invite", "token", "maxUses", "expires"],
+      "additionalProperties": true
+    },
+    "club.invite.revoke": {
+      "description": "Ends an invite",
+      "kind": 1501,
+      "type": "object",
+      "properties": {
+        "invite": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "128-bit object id, lowercase hex"
+        }
+      },
+      "required": ["invite"],
+      "additionalProperties": true
+    },
+    "club.join": {
+      "description": "Joins with an invite proof, or asks to join",
+      "kind": 1501,
+      "type": "object",
+      "properties": {
+        "invite": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "128-bit object id, lowercase hex"
+        },
+        "proof": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "HMAC-SHA256(token, joiner pubkey), see invite.ts"
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 280,
+          "description": "Plain text, never HTML"
+        }
+      },
+      "required": [],
+      "additionalProperties": true
+    },
+    "club.accept": {
+      "description": "Accepts a waiting join request",
+      "kind": 1501,
+      "type": "object",
+      "properties": {
+        "request": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "club.join event id"
+        },
+        "member": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Pubkey, lowercase hex"
+        },
+        "wrap": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024,
+          "description": "NIP-44 payload: the club secret for one member"
+        }
+      },
+      "required": ["request", "member"],
+      "additionalProperties": true
+    },
+    "club.decline": {
+      "description": "Declines a waiting join request",
+      "kind": 1501,
+      "type": "object",
+      "properties": {
+        "request": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 280,
+          "description": "Plain text, never HTML"
+        }
+      },
+      "required": ["request"],
+      "additionalProperties": true
+    },
+    "club.leave": {
+      "description": "A member leaves",
+      "kind": 1501,
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string",
+          "maxLength": 280,
+          "description": "Plain text, never HTML"
+        }
+      },
+      "required": [],
+      "additionalProperties": true
+    },
+    "club.remove": {
+      "description": "Removes a member",
+      "kind": 1501,
+      "type": "object",
+      "properties": {
+        "member": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Pubkey, lowercase hex"
+        },
+        "prev": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Expected predecessor: last change of this subject, or the founding"
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 280,
+          "description": "Plain text, never HTML"
+        }
+      },
+      "required": ["member", "prev"],
+      "additionalProperties": true
+    },
+    "club.role": {
+      "description": "Gives a member a role",
+      "kind": 1501,
+      "type": "object",
+      "properties": {
+        "member": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Pubkey, lowercase hex"
+        },
+        "role": {
+          "enum": ["admin", "director", "member"]
+        },
+        "prev": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Expected predecessor: last change of this subject, or the founding"
+        }
+      },
+      "required": ["member", "role", "prev"],
+      "additionalProperties": true
+    },
+    "club.owner.offer": {
+      "description": "Owner offers ownership to a member",
+      "kind": 1501,
+      "type": "object",
+      "properties": {
+        "to": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Pubkey, lowercase hex"
+        },
+        "prev": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Expected predecessor: last change of this subject, or the founding"
+        }
+      },
+      "required": ["to", "prev"],
+      "additionalProperties": true
+    },
+    "club.owner.cancel": {
+      "description": "Owner withdraws the open offer",
+      "kind": 1501,
+      "type": "object",
+      "properties": {
+        "offer": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": ["offer"],
+      "additionalProperties": true
+    },
+    "club.owner.accept": {
+      "description": "The offered member takes over ownership",
+      "kind": 1501,
+      "type": "object",
+      "properties": {
+        "offer": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": ["offer"],
+      "additionalProperties": true
+    },
+    "club.key": {
+      "description": "Rotates the club key; wraps carry the new secret to each remaining member",
+      "kind": 1501,
+      "type": "object",
+      "properties": {
+        "epoch": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100000
+        },
+        "key": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "New club key"
+        },
+        "wraps": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024,
+            "description": "NIP-44 payload: the club secret for one member"
+          },
+          "maxItems": 200
+        }
+      },
+      "required": ["epoch", "key", "wraps"],
+      "additionalProperties": true
+    },
+    "club.season": {
+      "description": "Sets up a season with rules version 1",
+      "kind": 1501,
+      "type": "object",
+      "properties": {
+        "season": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "128-bit object id, lowercase hex"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60,
+          "pattern": "^\\S(.*\\S)?$",
+          "description": "Name, trimmed"
+        },
+        "starts": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "ends": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "rules": {
+          "type": "object",
+          "properties": {
+            "modes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 16,
+                "pattern": "^[a-z0-9]{1,16}$"
+              },
+              "minItems": 1,
+              "maxItems": 6,
+              "uniqueItems": true,
+              "description": "Game modes that count"
+            },
+            "points": {
+              "type": "object",
+              "properties": {
+                "win": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10
+                },
+                "draw": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10
+                },
+                "loss": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10
+                }
+              },
+              "required": ["win", "draw", "loss"],
+              "additionalProperties": true
+            },
+            "confirmations": {
+              "enum": ["none", "opponent", "all"],
+              "description": "Player confirmations a result needs to count"
+            },
+            "minGames": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000,
+              "description": "Games needed to be ranked"
+            },
+            "tiebreak": {
+              "type": "array",
+              "items": {
+                "enum": ["wins", "legDifference", "headToHead", "average"]
+              },
+              "maxItems": 4,
+              "uniqueItems": true
+            }
+          },
+          "required": ["modes", "points", "confirmations", "minGames", "tiebreak"],
+          "additionalProperties": true
+        }
+      },
+      "required": ["season", "name", "starts", "rules"],
+      "additionalProperties": true
+    },
+    "club.season.rules": {
+      "description": "New rules version for a season; after its start only with a reason",
+      "kind": 1501,
+      "type": "object",
+      "properties": {
+        "season": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "128-bit object id, lowercase hex"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 1000
+        },
+        "rules": {
+          "type": "object",
+          "properties": {
+            "modes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 16,
+                "pattern": "^[a-z0-9]{1,16}$"
+              },
+              "minItems": 1,
+              "maxItems": 6,
+              "uniqueItems": true,
+              "description": "Game modes that count"
+            },
+            "points": {
+              "type": "object",
+              "properties": {
+                "win": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10
+                },
+                "draw": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10
+                },
+                "loss": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10
+                }
+              },
+              "required": ["win", "draw", "loss"],
+              "additionalProperties": true
+            },
+            "confirmations": {
+              "enum": ["none", "opponent", "all"],
+              "description": "Player confirmations a result needs to count"
+            },
+            "minGames": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000,
+              "description": "Games needed to be ranked"
+            },
+            "tiebreak": {
+              "type": "array",
+              "items": {
+                "enum": ["wins", "legDifference", "headToHead", "average"]
+              },
+              "maxItems": 4,
+              "uniqueItems": true
+            }
+          },
+          "required": ["modes", "points", "confirmations", "minGames", "tiebreak"],
+          "additionalProperties": true
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 280,
+          "description": "Plain text, never HTML"
+        }
+      },
+      "required": ["season", "version", "rules"],
+      "additionalProperties": true
+    },
+    "club.season.end": {
+      "description": "Ends a season",
+      "kind": 1501,
+      "type": "object",
+      "properties": {
+        "season": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "128-bit object id, lowercase hex"
+        }
+      },
+      "required": ["season"],
+      "additionalProperties": true
+    }
+  }
+}

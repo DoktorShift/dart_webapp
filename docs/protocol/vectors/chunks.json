@@ -1,0 +1,48 @@
+{
+  "family": "chunks",
+  "description": "Hash-chained pieces (lib/protocol/chunks.ts).",
+  "generator": "tests/support/make-vectors.ts",
+  "format": "Events are signed (BIP-340, zero aux randomness) with keys derived as sha256('blueline-vector:' + name). Expected outcomes are written by hand from docs/protocol.",
+  "data": "1555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555.ääääääääääääääääääää",
+  "budget": 40,
+  "head": "4b49a2172a1336f1ec48036d79e2a2c0bafab7f8c172e5339bae72b16a03be31",
+  "bytes": 192,
+  "chunks": [
+    {
+      "set": "4b49a2172a1336f1ec48036d79e2a2c0bafab7f8c172e5339bae72b16a03be31",
+      "seq": 0,
+      "total": 5,
+      "prev": "0000000000000000000000000000000000000000000000000000000000000000",
+      "data": "1555555555555555555555555555555555555555"
+    },
+    {
+      "set": "4b49a2172a1336f1ec48036d79e2a2c0bafab7f8c172e5339bae72b16a03be31",
+      "seq": 1,
+      "total": 5,
+      "prev": "89f4e59eccbe1fd55c966c83fe43133b6a0dfc7c093423e5bc6af330f1bbd25f",
+      "data": "5555555555555555555555555555555555555555"
+    },
+    {
+      "set": "4b49a2172a1336f1ec48036d79e2a2c0bafab7f8c172e5339bae72b16a03be31",
+      "seq": 2,
+      "total": 5,
+      "prev": "73cfa2521a549ee4dda098767fe685b20c5d6d108b469194ae6f3b427c020d42",
+      "data": "5555555555555555555555555555555555555555"
+    },
+    {
+      "set": "4b49a2172a1336f1ec48036d79e2a2c0bafab7f8c172e5339bae72b16a03be31",
+      "seq": 3,
+      "total": 5,
+      "prev": "232fb6254ec84f8c09b65a248d264ab8daf742c3849f8d04e61169829fdaf932",
+      "data": "5555555555555555555555555555555.ääää"
+    },
+    {
+      "set": "4b49a2172a1336f1ec48036d79e2a2c0bafab7f8c172e5339bae72b16a03be31",
+      "seq": 4,
+      "total": 5,
+      "prev": "caa8e99396e92ff654d3ce677740a86dd80a9f75fb74a0940ad8d68b386aee69",
+      "data": "ääääääääääääääää"
+    }
+  ],
+  "keys": {}
+}

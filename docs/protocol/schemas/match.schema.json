@@ -1,0 +1,596 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BlueLine match record content",
+  "$defs": {
+    "match.session": {
+      "description": "Founds a match (sv 1) or hands it to a new writer",
+      "kind": 1501,
+      "type": "object",
+      "properties": {
+        "sv": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
+          "description": "Session version, +1 on every handover"
+        },
+        "session": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Writer session key"
+        },
+        "from": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "until": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "prev": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Previous match.session event id (sv > 1)"
+        },
+        "agreement": {
+          "type": "object",
+          "properties": {
+            "engine": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "description": "Scoring rules version (ENGINE_VERSION)"
+            },
+            "rules": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "enum": ["x01", "cricket", "clock"]
+                },
+                "modeId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 16,
+                  "pattern": "^[a-z0-9]{1,16}$",
+                  "description": "Game mode id, e.g. 501, cricket"
+                },
+                "startScore": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10001,
+                  "description": "X01 start score (other games carry what the app set)"
+                },
+                "doubleIn": {
+                  "type": "boolean"
+                },
+                "doubleOut": {
+                  "type": "boolean"
+                },
+                "cutThroat": {
+                  "type": "boolean"
+                },
+                "bullFinish": {
+                  "type": "boolean"
+                },
+                "legsToWin": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 11
+                },
+                "setsToWin": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 7,
+                  "description": "1 means the match is played in legs only"
+                },
+                "startRule": {
+                  "enum": ["alternate", "loser"]
+                }
+              },
+              "required": ["type", "modeId", "startScore", "doubleIn", "doubleOut", "cutThroat", "bullFinish", "legsToWin", "setsToWin", "startRule"],
+              "additionalProperties": true,
+              "description": "Scoring rules (lib/game/types.ts MatchConfig without players and names)"
+            },
+            "seats": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "alias": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 40,
+                    "pattern": "^\\S(.*\\S)?$",
+                    "description": "Public display alias, trimmed"
+                  },
+                  "pubkey": {
+                    "type": "string",
+                    "minLength": 64,
+                    "maxLength": 64,
+                    "pattern": "^[0-9a-f]{64}$",
+                    "description": "Profile of the player in this seat, only when the player joined with it"
+                  }
+                },
+                "required": ["alias"],
+                "additionalProperties": true
+              },
+              "minItems": 1,
+              "maxItems": 6
+            },
+            "visibility": {
+              "enum": ["public", "private"],
+              "description": "private: content encrypted with the match key from the link"
+            },
+            "tournament": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 64,
+                  "maxLength": 64,
+                  "pattern": "^[0-9a-f]{64}$",
+                  "description": "Tournament id"
+                },
+                "slot": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$",
+                  "description": "Match slot named by the tournament engine"
+                }
+              },
+              "required": ["id", "slot"],
+              "additionalProperties": true
+            },
+            "club": {
+              "type": "string",
+              "minLength": 64,
+              "maxLength": 64,
+              "pattern": "^[0-9a-f]{64}$",
+              "description": "Club id"
+            },
+            "stake": {
+              "type": "object",
+              "properties": {
+                "msat": {
+                  "type": "integer",
+                  "minimum": 1000,
+                  "maximum": 100000000000,
+                  "description": "Whole sats, written as msat"
+                },
+                "note": {
+                  "type": "string",
+                  "maxLength": 140,
+                  "description": "Plain text, never HTML"
+                }
+              },
+              "required": ["msat"],
+              "additionalProperties": true
+            }
+          },
+          "required": ["engine", "rules", "seats", "visibility"],
+          "additionalProperties": true
+        }
+      },
+      "required": ["sv", "session", "from", "until"],
+      "additionalProperties": true
+    },
+    "match.result": {
+      "description": "Final result with throws or a reference to the log",
+      "kind": 1501,
+      "type": "object",
+      "properties": {
+        "sv": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "status": {
+          "enum": ["finished", "abandoned", "void"]
+        },
+        "winner": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 5
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "legs": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 999
+          },
+          "minItems": 1,
+          "maxItems": 6,
+          "description": "Legs won per seat"
+        },
+        "sets": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 99
+          },
+          "minItems": 1,
+          "maxItems": 6
+        },
+        "stats": {
+          "type": "object",
+          "properties": {
+            "darts": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000
+              },
+              "minItems": 1,
+              "maxItems": 6
+            },
+            "points": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10000000
+              },
+              "minItems": 1,
+              "maxItems": 6
+            }
+          },
+          "required": ["darts", "points"],
+          "additionalProperties": true
+        },
+        "throws": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20000,
+          "pattern": "^1",
+          "description": "Compact throw log (throws.ts)"
+        },
+        "log": {
+          "type": "object",
+          "properties": {
+            "head": {
+              "type": "string",
+              "minLength": 64,
+              "maxLength": 64,
+              "pattern": "^[0-9a-f]{64}$",
+              "description": "Head of the match.log chain"
+            },
+            "total": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50000000
+            }
+          },
+          "required": ["head", "total", "bytes"],
+          "additionalProperties": true
+        },
+        "finishedAt": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "replaces": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "The result this one corrects or voids"
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 280,
+          "description": "Plain text, never HTML"
+        },
+        "auth": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 64,
+              "maxLength": 64,
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "pubkey": {
+              "type": "string",
+              "minLength": 64,
+              "maxLength": 64,
+              "pattern": "^[0-9a-f]{64}$",
+              "description": "Pubkey, lowercase hex"
+            },
+            "created_at": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            "kind": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "maxLength": 1024
+                },
+                "minItems": 1,
+                "maxItems": 16
+              },
+              "maxItems": 32
+            },
+            "content": {
+              "type": "string",
+              "maxLength": 8192
+            },
+            "sig": {
+              "type": "string",
+              "minLength": 128,
+              "maxLength": 128,
+              "pattern": "^[0-9a-f]{128}$",
+              "description": "Schnorr signature"
+            }
+          },
+          "required": ["id", "pubkey", "created_at", "kind", "tags", "content", "sig"],
+          "additionalProperties": true
+        }
+      },
+      "required": ["sv", "status", "winner", "legs", "finishedAt"],
+      "additionalProperties": true
+    },
+    "match.log": {
+      "description": "One piece of a long throw log (chunks.ts)",
+      "kind": 1501,
+      "type": "object",
+      "properties": {
+        "set": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "seq": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 999
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "prev": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "data": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20000
+        }
+      },
+      "required": ["set", "seq", "total", "prev", "data"],
+      "additionalProperties": true
+    },
+    "match.confirm": {
+      "description": "A player confirms or disputes one exact result",
+      "kind": 1501,
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "match.result event id"
+        },
+        "verdict": {
+          "enum": ["confirm", "dispute"]
+        },
+        "seat": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 280,
+          "description": "Plain text, never HTML"
+        }
+      },
+      "required": ["result", "verdict", "seat"],
+      "additionalProperties": true
+    },
+    "match.live": {
+      "description": "Live state of a match",
+      "kind": 31501,
+      "type": "object",
+      "properties": {
+        "sv": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
+          "description": "Session version of the writer"
+        },
+        "n": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000000,
+          "description": "Snapshot counter; continues across handovers"
+        },
+        "status": {
+          "enum": ["playing", "paused", "finished", "abandoned"]
+        },
+        "throws": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16000,
+          "pattern": "^1",
+          "description": "Compact throw log (throws.ts)"
+        },
+        "from": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000,
+          "description": "Index of the first throw in `throws`; 0 = complete"
+        },
+        "standing": {
+          "type": "object",
+          "properties": {
+            "leg": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 999,
+              "description": "Leg number in the match, from 0"
+            },
+            "set": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 99
+            },
+            "current": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 5,
+              "description": "Seat to throw"
+            },
+            "scores": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": -100000,
+                "maximum": 100000
+              },
+              "minItems": 1,
+              "maxItems": 6,
+              "description": "X01 remaining, cricket points, clock progress"
+            },
+            "legs": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 999
+              },
+              "minItems": 1,
+              "maxItems": 6,
+              "description": "Legs won in the current set (in the match without sets)"
+            },
+            "sets": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 99
+              },
+              "minItems": 1,
+              "maxItems": 6
+            },
+            "active": {
+              "type": "array",
+              "items": {
+                "type": "boolean"
+              },
+              "minItems": 1,
+              "maxItems": 6,
+              "description": "false for players who left"
+            },
+            "winner": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 5
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": ["leg", "current", "scores", "legs", "winner"],
+          "additionalProperties": true
+        },
+        "auth": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 64,
+              "maxLength": 64,
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "pubkey": {
+              "type": "string",
+              "minLength": 64,
+              "maxLength": 64,
+              "pattern": "^[0-9a-f]{64}$",
+              "description": "Pubkey, lowercase hex"
+            },
+            "created_at": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            "kind": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "maxLength": 1024
+                },
+                "minItems": 1,
+                "maxItems": 16
+              },
+              "maxItems": 32
+            },
+            "content": {
+              "type": "string",
+              "maxLength": 8192
+            },
+            "sig": {
+              "type": "string",
+              "minLength": 128,
+              "maxLength": 128,
+              "pattern": "^[0-9a-f]{128}$",
+              "description": "Schnorr signature"
+            }
+          },
+          "required": ["id", "pubkey", "created_at", "kind", "tags", "content", "sig"],
+          "additionalProperties": true
+        }
+      },
+      "required": ["sv", "n", "status", "throws", "from", "standing", "auth"],
+      "additionalProperties": true
+    }
+  }
+}

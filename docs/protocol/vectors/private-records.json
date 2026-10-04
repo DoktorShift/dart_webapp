@@ -1,0 +1,61 @@
+{
+  "family": "private-records",
+  "description": "Private record slots, data key slot and envelope (lib/protocol/private.ts).",
+  "generator": "tests/support/make-vectors.ts",
+  "format": "Events are signed (BIP-340, zero aux randomness) with keys derived as sha256('blueline-vector:' + name). Expected outcomes are written by hand from docs/protocol.",
+  "dataKey": "8e65cb303c5fc154a7f0d84cee22d0d88270259aeb700ca22dd7fb054a9f32cc",
+  "records": [
+    {
+      "id": "match:7d1c0b6c2f0a4c4b",
+      "slot": "256d1a4a74271285cc69b6c7769ae7a9ac2d92e2854710ec8c85a373ce617964"
+    },
+    {
+      "id": "players",
+      "slot": "1b43f09c7e78b8306728e25e8b525eb36848ba1253eb650a93006d47248fb9c4"
+    },
+    {
+      "id": "players#1",
+      "slot": "bd44a895741b2610b4240330249f174616e9acef5ed4dee8c24da55eb486fbb0"
+    }
+  ],
+  "dataKeySlot": {
+    "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
+    "slot": "2e555ebef2fa5a6e6f995d669e597e27ba70be26bb1d4666e6c52281918342d5"
+  },
+  "envelope": {
+    "nonce": "506fcab98a234ecaf0e84d175f68f2ec25b3bddc25edd83c",
+    "ciphertext": "0814f6c8967e28b78e22ae48195fb3e5bddef383080d64c39e85efdc3c760f5f",
+    "content": "AVBvyrmKI07K8OhNF19o8uwls73cJe3YPAgU9siWfii3jiKuSBlfs+W93vODCA1kw56F79w8dg9f"
+  },
+  "events": {
+    "valid": {
+      "id": "690c9c70c1b63e3c9b1875fda731ee0f2e60550254084af2452296b47fd5ac38",
+      "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
+      "created_at": 1760000700,
+      "kind": 30078,
+      "tags": [
+        ["d", "256d1a4a74271285cc69b6c7769ae7a9ac2d92e2854710ec8c85a373ce617964"]
+      ],
+      "content": "AVBvyrmKI07K8OhNF19o8uwls73cJe3YPAgU9siWfii3jiKuSBlfs+W93vODCA1kw56F79w8dg9f",
+      "sig": "2140a3b42b97e589e6682364af5f3b2a8bcae47f2394f4b69b8af38fdb0ab669a725a991b3ac13d1d8059b2aab3be0ece8283ed03d1db369cb5698dffb7d9504"
+    },
+    "labelled": {
+      "id": "83beef8c735499c367ba86bd6f29c4544d83d783da1cefb6cf8eb8624078f724",
+      "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
+      "created_at": 1760000701,
+      "kind": 30078,
+      "tags": [
+        ["d", "256d1a4a74271285cc69b6c7769ae7a9ac2d92e2854710ec8c85a373ce617964"],
+        ["l", "match", "blueline"]
+      ],
+      "content": "AVBvyrmKI07K8OhNF19o8uwls73cJe3YPAgU9siWfii3jiKuSBlfs+W93vODCA1kw56F79w8dg9f",
+      "sig": "98fa82b3ca688145c1c06d8f0af45df9dd5f15694ba3d5638c63121d7ee1f1501fc4d6e750fd66e554eee12a45de6ab965a8e8d892b760a26661fc4fe7b9f2e2"
+    }
+  },
+  "keys": {
+    "p1": {
+      "secret": "5f376707328cb0702d59a27465f39f418af2e6d728638ec9416ffc415b55aa31",
+      "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0"
+    }
+  }
+}

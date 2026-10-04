@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BlueLine private record plaintexts (kind 30078)",
+  "$defs": {
+    "record": {
+      "type": "object",
+      "properties": {
+        "v": {
+          "enum": [1]
+        },
+        "type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[a-z][a-z0-9.-]*$",
+          "description": "match, players, settings, clubs, devices, badges, payments, …"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "pattern": "^[A-Za-z0-9_.:-]+$"
+        },
+        "rev": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647
+        },
+        "device": {
+          "type": "string",
+          "minLength": 16,
+          "maxLength": 16,
+          "pattern": "^[0-9a-f]{16}$",
+          "description": "Device id"
+        },
+        "at": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "deleted": {
+          "enum": [1]
+        },
+        "data": {
+          "type": "object",
+          "description": "Any JSON object up to 20000 bytes"
+        },
+        "parts": {
+          "type": "object",
+          "properties": {
+            "head": {
+              "type": "string",
+              "minLength": 64,
+              "maxLength": 64,
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "total": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000
+            },
+            "bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200000000
+            }
+          },
+          "required": ["head", "total", "bytes"],
+          "additionalProperties": true
+        }
+      },
+      "required": ["v", "type", "id", "rev", "device", "at"],
+      "additionalProperties": true
+    },
+    "part": {
+      "type": "object",
+      "properties": {
+        "v": {
+          "enum": [1]
+        },
+        "of": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "pattern": "^[A-Za-z0-9_.:-]+$"
+        },
+        "set": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "seq": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9999
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "prev": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "data": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20000
+        }
+      },
+      "required": ["v", "of", "set", "seq", "total", "prev", "data"],
+      "additionalProperties": true
+    },
+    "dataKey": {
+      "type": "object",
+      "properties": {
+        "v": {
+          "enum": [1]
+        },
+        "key": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "The profile's data key"
+        },
+        "created": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        }
+      },
+      "required": ["v", "key", "created"],
+      "additionalProperties": true
+    }
+  }
+}

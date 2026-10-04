@@ -1,0 +1,2299 @@
+{
+  "family": "club",
+  "description": "Club founding and changes, replayed by reduceClub (lib/protocol/club-state.ts).",
+  "generator": "tests/support/make-vectors.ts",
+  "format": "Events are signed (BIP-340, zero aux randomness) with keys derived as sha256('blueline-vector:' + name). Expected outcomes are written by hand from docs/protocol.",
+  "cases": [
+    {
+      "name": "invite-join",
+      "description": "A closed club (founding and invite encrypted to the club key). Two people join with the invite's proof.",
+      "now": 1760100000,
+      "root": "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640",
+      "groupKey": "club",
+      "open": true,
+      "events": [
+        {
+          "id": "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000000,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.found", "blueline"],
+            ["v", "1"],
+            ["alt", "BlueLine Darts club.found"],
+            ["enc", "nip44", "3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5"]
+          ],
+          "content": "Ai4tczJ5F+VaL54qeJLmsO3XHu5XWUmP/8dyFQAc28BQCOWwZRvEGEnq60ACmJ1kgAC8BIPDtfTVqYW6waTThxDgVRXng5LjC2XL3k/QsqGcZpEV1py1kjUiMSOLlBOCyj6bceskP/3401MGnM0u32+9ceTM56M60GfSsMBPMb5s5y2RYaNl566zKHSsIV9nYz5UkvcoRRkzGNDOZnnODt2OJ4/+aqkjhpmMKBg+VzvY6vYwuf7/LCXoKgPe/IgDT0/s",
+          "sig": "19239e1629534a989d4039dba5b7cc10bd4f513d7e7268a4860d914c88f326a36a0460e5d2654273c75407643bdf2f3cf6bc9d887cd55deaecd6328928b4e1d0"
+        },
+        {
+          "id": "0ddaeb10db63afb87ea5a95f3a06a44900197114eef0495ef533b4262210b45b",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000010,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.invite", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.invite"],
+            ["enc", "nip44", "3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5"]
+          ],
+          "content": "AqKv4aSuZSgzSbYJ10ZgLbL47ceYc37OZuYWfr5dLnlTjsCtleIUR7/JM8XMjazcyY/vbgmg/myhIZ4oF3kACYvOgx+IQAmXO7zRs8GCgWKMFv08E/zGc+kwekbZyh6rXXhxDQUbbK8xJzZ8pNHtJMbToEFtzTYRJkdQP2Ffjzr99UnKYjNgba1KukzdTIGbBuwWwO2o+ryIbnQv4s712+7RgL79aQGXJdoxCuzBT3IF4oECy6gjZkbb1TvxbFehY9y5",
+          "sig": "f9ebce7a6faa329aae85d9b428f16793c899852f76ecb02372c8f7c3f18bb32201e18da3b8e0dd0f791ee5ac7d610717fe9e547d0ddb4a446f52a25b629a1f05"
+        },
+        {
+          "id": "c6b39e9d66bd81ccb7c8b9cf0e49646fd0ad9e55da238696240c3d6bcfb931fb",
+          "pubkey": "48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d",
+          "created_at": 1760000020,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.join", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.join"]
+          ],
+          "content": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"proof\":\"f14694782a39f3205cbabe239f01e9371fe3de8cf26f5d8a086cbad7d55eb825\"}",
+          "sig": "89740b6d9e89ed1c14bc5dc52d1527e8d1b7ee8c95e1a97f54e3af736c008b64b03f0a1a38853cbad6fb0b99adca705d28957f555f75f66f5630458969aca157"
+        },
+        {
+          "id": "64e8889e5a297ff0634ef4a78026bf64177c2aef4be1f2851a6b10524fce60a1",
+          "pubkey": "b400d330df264198a54d0f21847e5c3de7d470529c9e8f99cd1acf0bb256433b",
+          "created_at": 1760000030,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.join", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.join"]
+          ],
+          "content": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"proof\":\"9579ea93730b325d1c1c951ad3668011194aba455117a3546a644e0501f1efaa\"}",
+          "sig": "88ab63534209c93f333ec3a98552f7f24911b19fdebd9d1fa51d813c67c471bd3de2e5352011966c909364aeabff547f34c3aed487d839cb57e6bc2c81002f26"
+        }
+      ],
+      "plaintexts": {
+        "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640": "{\"name\":\"Dartfreunde Nord\",\"visibility\":\"closed\",\"key\":\"3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5\"}",
+        "0ddaeb10db63afb87ea5a95f3a06a44900197114eef0495ef533b4262210b45b": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"token\":\"1f7f9485c7c897e7959aab95e044464f\",\"maxUses\":2,\"expires\":1760086400}"
+      },
+      "labels": {
+        "found": "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640",
+        "invite": "0ddaeb10db63afb87ea5a95f3a06a44900197114eef0495ef533b4262210b45b",
+        "join-alice": "c6b39e9d66bd81ccb7c8b9cf0e49646fd0ad9e55da238696240c3d6bcfb931fb",
+        "join-bob": "64e8889e5a297ff0634ef4a78026bf64177c2aef4be1f2851a6b10524fce60a1"
+      },
+      "expect": {
+        "applied": ["9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640", "0ddaeb10db63afb87ea5a95f3a06a44900197114eef0495ef533b4262210b45b", "c6b39e9d66bd81ccb7c8b9cf0e49646fd0ad9e55da238696240c3d6bcfb931fb", "64e8889e5a297ff0634ef4a78026bf64177c2aef4be1f2851a6b10524fce60a1"],
+        "rejected": [],
+        "state": {
+          "owner": "owner",
+          "members": {
+            "owner": "owner",
+            "alice": "member",
+            "bob": "member"
+          },
+          "inviteUses": {
+            "9819bd250f62d43c82f0d0e2003f494f": 2
+          }
+        }
+      }
+    },
+    {
+      "name": "replayed-invite",
+      "description": "Mallory copies Alice's proof into her own join: worthless for another key. Alice's join arrives twice and counts once.",
+      "now": 1760100000,
+      "root": "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640",
+      "groupKey": "club",
+      "open": true,
+      "events": [
+        {
+          "id": "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000000,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.found", "blueline"],
+            ["v", "1"],
+            ["alt", "BlueLine Darts club.found"],
+            ["enc", "nip44", "3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5"]
+          ],
+          "content": "Ai4tczJ5F+VaL54qeJLmsO3XHu5XWUmP/8dyFQAc28BQCOWwZRvEGEnq60ACmJ1kgAC8BIPDtfTVqYW6waTThxDgVRXng5LjC2XL3k/QsqGcZpEV1py1kjUiMSOLlBOCyj6bceskP/3401MGnM0u32+9ceTM56M60GfSsMBPMb5s5y2RYaNl566zKHSsIV9nYz5UkvcoRRkzGNDOZnnODt2OJ4/+aqkjhpmMKBg+VzvY6vYwuf7/LCXoKgPe/IgDT0/s",
+          "sig": "19239e1629534a989d4039dba5b7cc10bd4f513d7e7268a4860d914c88f326a36a0460e5d2654273c75407643bdf2f3cf6bc9d887cd55deaecd6328928b4e1d0"
+        },
+        {
+          "id": "7190ef5e6dc7caec6b509ea9337b9adfd5694fab04c02b99218493ebe28fa14c",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000010,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.invite", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.invite"],
+            ["enc", "nip44", "3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5"]
+          ],
+          "content": "Age6/AIUP7whry9VSTtL6lbmUHfJkFjy+eOM3QaQfFDElFsaQ9JRSornPDU6dE+sCEpGpyZRrlEuiFnXIExjOntUvn3bMCnJh7yUDmDqetzDxTnYY8B909/G5x7amh/NOYgBEPjugB4xCHwheSvuanEHPJkxD6cM6CpzSouzkoOPMQ0EZyTpe3jFI464jTXIwNVvOahRm86c/NzkLqoHxCqv4K2+Kl99dtUEtoNnE3IbflfXgRvIXO7BoimrPHkEE0ct",
+          "sig": "3f318da47e7cea5c6b95590e4d1b27df42a3b75703d41a618021c248a4c337be3a6d5fa3338470a0ec5e36698bad5c9ffcf3f65c4305e97ae9ffba75cf0b00e1"
+        },
+        {
+          "id": "c6b39e9d66bd81ccb7c8b9cf0e49646fd0ad9e55da238696240c3d6bcfb931fb",
+          "pubkey": "48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d",
+          "created_at": 1760000020,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.join", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.join"]
+          ],
+          "content": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"proof\":\"f14694782a39f3205cbabe239f01e9371fe3de8cf26f5d8a086cbad7d55eb825\"}",
+          "sig": "89740b6d9e89ed1c14bc5dc52d1527e8d1b7ee8c95e1a97f54e3af736c008b64b03f0a1a38853cbad6fb0b99adca705d28957f555f75f66f5630458969aca157"
+        },
+        {
+          "id": "c6b39e9d66bd81ccb7c8b9cf0e49646fd0ad9e55da238696240c3d6bcfb931fb",
+          "pubkey": "48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d",
+          "created_at": 1760000020,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.join", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.join"]
+          ],
+          "content": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"proof\":\"f14694782a39f3205cbabe239f01e9371fe3de8cf26f5d8a086cbad7d55eb825\"}",
+          "sig": "89740b6d9e89ed1c14bc5dc52d1527e8d1b7ee8c95e1a97f54e3af736c008b64b03f0a1a38853cbad6fb0b99adca705d28957f555f75f66f5630458969aca157"
+        },
+        {
+          "id": "fff2827d5331590ac2e613e33a044afe3d442bc40bae824f1411ca90725921ce",
+          "pubkey": "c1e16b2f3158d52908cf590f78527436ec5b2a5f79832834d5ff81ad47321978",
+          "created_at": 1760000030,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.join", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.join"]
+          ],
+          "content": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"proof\":\"f14694782a39f3205cbabe239f01e9371fe3de8cf26f5d8a086cbad7d55eb825\"}",
+          "sig": "d6b6e1a7a0ef909507f8a61cf6d7943de3f6f692ab4fc4ef09c2d9150443683b259dfc1f7720e45fc02461d7d445fa46fe93ac3581a51da32ddddcee16e6ae89"
+        }
+      ],
+      "plaintexts": {
+        "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640": "{\"name\":\"Dartfreunde Nord\",\"visibility\":\"closed\",\"key\":\"3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5\"}",
+        "7190ef5e6dc7caec6b509ea9337b9adfd5694fab04c02b99218493ebe28fa14c": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"token\":\"1f7f9485c7c897e7959aab95e044464f\",\"maxUses\":5,\"expires\":1760086400}"
+      },
+      "labels": {
+        "found": "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640",
+        "invite": "7190ef5e6dc7caec6b509ea9337b9adfd5694fab04c02b99218493ebe28fa14c",
+        "join-alice": "c6b39e9d66bd81ccb7c8b9cf0e49646fd0ad9e55da238696240c3d6bcfb931fb",
+        "join-mallory": "fff2827d5331590ac2e613e33a044afe3d442bc40bae824f1411ca90725921ce"
+      },
+      "expect": {
+        "applied": ["9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640", "7190ef5e6dc7caec6b509ea9337b9adfd5694fab04c02b99218493ebe28fa14c", "c6b39e9d66bd81ccb7c8b9cf0e49646fd0ad9e55da238696240c3d6bcfb931fb"],
+        "rejected": [
+          {
+            "id": "fff2827d5331590ac2e613e33a044afe3d442bc40bae824f1411ca90725921ce",
+            "label": "join-mallory",
+            "reason": "invite_proof_invalid"
+          }
+        ],
+        "state": {
+          "members": {
+            "owner": "owner",
+            "alice": "member"
+          },
+          "inviteUses": {
+            "9819bd250f62d43c82f0d0e2003f494f": 1
+          }
+        }
+      }
+    },
+    {
+      "name": "invite-race",
+      "description": "Single-use invites: the earlier join (created_at, then id) takes the place, the other is refused. Dave and Erin join the second invite in the same second; the lower event id wins.",
+      "now": 1760100000,
+      "root": "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640",
+      "groupKey": "club",
+      "open": true,
+      "events": [
+        {
+          "id": "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000000,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.found", "blueline"],
+            ["v", "1"],
+            ["alt", "BlueLine Darts club.found"],
+            ["enc", "nip44", "3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5"]
+          ],
+          "content": "Ai4tczJ5F+VaL54qeJLmsO3XHu5XWUmP/8dyFQAc28BQCOWwZRvEGEnq60ACmJ1kgAC8BIPDtfTVqYW6waTThxDgVRXng5LjC2XL3k/QsqGcZpEV1py1kjUiMSOLlBOCyj6bceskP/3401MGnM0u32+9ceTM56M60GfSsMBPMb5s5y2RYaNl566zKHSsIV9nYz5UkvcoRRkzGNDOZnnODt2OJ4/+aqkjhpmMKBg+VzvY6vYwuf7/LCXoKgPe/IgDT0/s",
+          "sig": "19239e1629534a989d4039dba5b7cc10bd4f513d7e7268a4860d914c88f326a36a0460e5d2654273c75407643bdf2f3cf6bc9d887cd55deaecd6328928b4e1d0"
+        },
+        {
+          "id": "f55391c8297eae63dae31a09d7c0b5f19ca4b9830d30104d9154f8179ff3e0ee",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000010,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.invite", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.invite"],
+            ["enc", "nip44", "3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5"]
+          ],
+          "content": "AitiNp8rYxTx+ndu0/1CCGWtlJqiyBdHqDfqgXCjYExe7bJARPi8XmeG1G4Q6hlSWtsa1gIKLy5bNF+tqRIbcNPq4YDN4uLF1vIkdR/Up0iSL3FJ6hgX+83sJsorDDL3yhI0CFaabw8SMQjFJmzJAwXCUS42l3HW6so/Sw0++goSjMWPSLyHuR+yZfOJ6Dm/Eh/fVHVEEyJkRkT6Cbpi0eekb8zVSOjC+QMXfKu805N/Z+Q9BhatbSYj5ilNKXKvRQz7",
+          "sig": "74b0d1c85590999253eb4f8805f9407b73eeafc0ed87d913f1dc96ca9c6a7d49be0cfbcfd1844b9e447616e0b8d5d07d72d6110b344c63915e5dd17cdac4d0bb"
+        },
+        {
+          "id": "64e8889e5a297ff0634ef4a78026bf64177c2aef4be1f2851a6b10524fce60a1",
+          "pubkey": "b400d330df264198a54d0f21847e5c3de7d470529c9e8f99cd1acf0bb256433b",
+          "created_at": 1760000030,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.join", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.join"]
+          ],
+          "content": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"proof\":\"9579ea93730b325d1c1c951ad3668011194aba455117a3546a644e0501f1efaa\"}",
+          "sig": "88ab63534209c93f333ec3a98552f7f24911b19fdebd9d1fa51d813c67c471bd3de2e5352011966c909364aeabff547f34c3aed487d839cb57e6bc2c81002f26"
+        },
+        {
+          "id": "c5d0d39dc231227d0c82f9fdb9913796e8953f85279ae2474d1db32a5c5c968b",
+          "pubkey": "7f1ebf9a8a76a7b7919206de7043f063fdbba4c57b8635927fc723a5ca3bbf57",
+          "created_at": 1760000025,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.join", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.join"]
+          ],
+          "content": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"proof\":\"ad439a08e7f93488de5757a5486c1f43082575340b3c51646d9e5145fa07e3d3\"}",
+          "sig": "9c50d3a5cc903fee41031b7c4d17e1310b5f66753bdf88f060ffdc721ddaaef53bdbee7b3cffd196ed8e6843c223fe0c11900edd77fa751a33abd3fc74bc07f5"
+        },
+        {
+          "id": "157ea3f30935b0a3ceb4e247b3a9a36fcfd9cd37a1e36d762f45d1cafd896e5f",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000040,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.invite", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.invite"],
+            ["enc", "nip44", "3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5"]
+          ],
+          "content": "At8RuWqCesSklMGCfLinHC/y9OeH1CnD9TemtlkmmiGpD3AFJQXf89Us69jBby1CuPiF+9t0VvxAVn+dxzQOB9uTGdFlgGw/SzXI6P0YTicouZjlfvcjtcyyGS1P1ExTy0HWI5lAM29xud7427lS/SENuCji6iCBgEDujG5KYrZPJzub1IPcOZyo2g+1v/R44q27c3DQumUJe+liq0gwoHIvFnSPYnChU1EPG4LGA8C4vK5UvwxPSrnIcuLTAlz1h+4V",
+          "sig": "aa2de0b6b5f36c548b8a7bda273ae16ede528e62629f1e4c447d85ec2a7180ca697db659dbad468a38cb486ba1be962c9e065fa88d911feecf5c6bd4fc50210d"
+        },
+        {
+          "id": "3e98c0a5ae05f57d76755b29132eb2b5738cd764fc0eca9f11d390d8ebb1ed0c",
+          "pubkey": "291aa554290b9cc595b9156925240bacc1d99e69f89507da132e0ae3f5ef099b",
+          "created_at": 1760000050,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.join", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.join"]
+          ],
+          "content": "{\"invite\":\"602b9a8129d626f1ba06ba655dc2861c\",\"proof\":\"c09c5a502356f1bb677d4cb49a6edbdaa4a4049f6704a37faa48586ff8cc29dc\"}",
+          "sig": "b57edfd7ebeeb77340d173c7f481ff08d81325a1dca3ef3610b6a9d0e6f4f70e484afadaea73e4aa430c7e6d260ee27bccefc017032d7da5c97bc665d1eb2559"
+        },
+        {
+          "id": "ee452223fc540d3d36f26aba5e540d02c4101e7211b98d6c12cc73bbf9b8a05e",
+          "pubkey": "85c27be7474b0af82a1f36f69671ab9b0dc0a995236183e72d86df6e89b8c407",
+          "created_at": 1760000050,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.join", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.join"]
+          ],
+          "content": "{\"invite\":\"602b9a8129d626f1ba06ba655dc2861c\",\"proof\":\"e52000c6b8fa8b7fc3915aee4972c747855e4476ddb61bd3de1deb88d03af178\"}",
+          "sig": "72421b068137aeb2ef1ca3738f2255f3b1690e75ebf73b2407f3481851a1222fed6dfa8fbb1012a01ca4aa7899b99b3d1326cd7870f71aa19eaa2bd6c5d83a42"
+        }
+      ],
+      "plaintexts": {
+        "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640": "{\"name\":\"Dartfreunde Nord\",\"visibility\":\"closed\",\"key\":\"3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5\"}",
+        "f55391c8297eae63dae31a09d7c0b5f19ca4b9830d30104d9154f8179ff3e0ee": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"token\":\"1f7f9485c7c897e7959aab95e044464f\",\"maxUses\":1,\"expires\":1760086400}",
+        "157ea3f30935b0a3ceb4e247b3a9a36fcfd9cd37a1e36d762f45d1cafd896e5f": "{\"invite\":\"602b9a8129d626f1ba06ba655dc2861c\",\"token\":\"e1605eae8f73d2a4d4f13b8506dde37c\",\"maxUses\":1,\"expires\":1760086400}"
+      },
+      "labels": {
+        "found": "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640",
+        "invite": "f55391c8297eae63dae31a09d7c0b5f19ca4b9830d30104d9154f8179ff3e0ee",
+        "join-bob": "64e8889e5a297ff0634ef4a78026bf64177c2aef4be1f2851a6b10524fce60a1",
+        "join-carol": "c5d0d39dc231227d0c82f9fdb9913796e8953f85279ae2474d1db32a5c5c968b",
+        "invite-2": "157ea3f30935b0a3ceb4e247b3a9a36fcfd9cd37a1e36d762f45d1cafd896e5f",
+        "join-dave": "3e98c0a5ae05f57d76755b29132eb2b5738cd764fc0eca9f11d390d8ebb1ed0c",
+        "join-erin": "ee452223fc540d3d36f26aba5e540d02c4101e7211b98d6c12cc73bbf9b8a05e"
+      },
+      "expect": {
+        "applied": ["9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640", "f55391c8297eae63dae31a09d7c0b5f19ca4b9830d30104d9154f8179ff3e0ee", "c5d0d39dc231227d0c82f9fdb9913796e8953f85279ae2474d1db32a5c5c968b", "157ea3f30935b0a3ceb4e247b3a9a36fcfd9cd37a1e36d762f45d1cafd896e5f", "3e98c0a5ae05f57d76755b29132eb2b5738cd764fc0eca9f11d390d8ebb1ed0c"],
+        "rejected": [
+          {
+            "id": "64e8889e5a297ff0634ef4a78026bf64177c2aef4be1f2851a6b10524fce60a1",
+            "label": "join-bob",
+            "reason": "invite_exhausted"
+          },
+          {
+            "id": "ee452223fc540d3d36f26aba5e540d02c4101e7211b98d6c12cc73bbf9b8a05e",
+            "label": "join-erin",
+            "reason": "invite_exhausted"
+          }
+        ],
+        "state": {
+          "members": {
+            "owner": "owner",
+            "carol": "member",
+            "dave": "member"
+          }
+        }
+      }
+    },
+    {
+      "name": "expired-and-revoked-invite",
+      "description": "A join after the invite's expiry, and one after the invite was ended.",
+      "now": 1760100000,
+      "root": "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640",
+      "groupKey": "club",
+      "open": true,
+      "events": [
+        {
+          "id": "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000000,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.found", "blueline"],
+            ["v", "1"],
+            ["alt", "BlueLine Darts club.found"],
+            ["enc", "nip44", "3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5"]
+          ],
+          "content": "Ai4tczJ5F+VaL54qeJLmsO3XHu5XWUmP/8dyFQAc28BQCOWwZRvEGEnq60ACmJ1kgAC8BIPDtfTVqYW6waTThxDgVRXng5LjC2XL3k/QsqGcZpEV1py1kjUiMSOLlBOCyj6bceskP/3401MGnM0u32+9ceTM56M60GfSsMBPMb5s5y2RYaNl566zKHSsIV9nYz5UkvcoRRkzGNDOZnnODt2OJ4/+aqkjhpmMKBg+VzvY6vYwuf7/LCXoKgPe/IgDT0/s",
+          "sig": "19239e1629534a989d4039dba5b7cc10bd4f513d7e7268a4860d914c88f326a36a0460e5d2654273c75407643bdf2f3cf6bc9d887cd55deaecd6328928b4e1d0"
+        },
+        {
+          "id": "6912a88ee9ff0a6a579aa9f861fd85f2c815aab7a98a3f9f8b67a74b03af2915",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000010,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.invite", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.invite"],
+            ["enc", "nip44", "3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5"]
+          ],
+          "content": "AsfLd92SD6bgTMvLFx+z9dPIFD7tbhPQmlXFj5BVRRPy5o6DtDxAmnXkgygjTZ/fPoCWFUvZr9iwT9AUvuvnDacAK8H3baOL+ef4H9wvHHHYjMXKW4WS5l9HsSgnbhgnYofn6CQlE5O+JqYzUu0bFctfc4oPiK9Ha0RrZywNghlKiBXU/FLB4PPELW7fueySndTXo98JesLnqOg3W8c9stgaCnpkhGrsJUgaJmzGJxoO51wbkjoI9snMkQd5J6vZfZfC",
+          "sig": "8451f766773ab72942068713f8cca0a703228b363e240704ad1f77f9067727292a5ae29464de3e4e092a057b3235a86d79fb1af7fd039d27cac523d442e53991"
+        },
+        {
+          "id": "3b025304e8ba6f51bb7638a48af2e3983fa0f36ca31f3b3b4d8f88e6957e3955",
+          "pubkey": "48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d",
+          "created_at": 1760000200,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.join", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.join"]
+          ],
+          "content": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"proof\":\"f14694782a39f3205cbabe239f01e9371fe3de8cf26f5d8a086cbad7d55eb825\"}",
+          "sig": "714d813a669bb791bb76ce8b7a9b32a3098d320280b682c7d7564299a339faf7ffd7ad6223fea1b7dcc5383ab736f9f4db424d6389db9a33f4dc424d9733abbf"
+        },
+        {
+          "id": "1e7c7cb61c57d9d6c2fe912bad61970241e1069743e713c9b264f1fe2849a3d3",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000300,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.invite", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.invite"],
+            ["enc", "nip44", "3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5"]
+          ],
+          "content": "Ao0ilTspXDclXpm9AOJMnQ6oowvWOeofKHvpBxpSY2rH3U0PaskxXbF4HeYrR55QUt3UwmLvnHhjbhd+TL+Zj+duf9igB1lvTBXyp5aLsnuxBFtB53Oq1LWaK6lWqPl4633kwebMTpMllwNtUyGqHEfOu/axsUh0i3q+buO/cV/HHQbrhG4yT3VLEYOl3zVTJ2BMj21KjGsu1aqP/wmIHxGBOtTr1f1eWXsS2cx3OuGl4W90EubbHPjvdcn3TWu/SKAA",
+          "sig": "052e72d684854a50d4ebfa22cdaff99d7b0e9a7d64cf33f217389e29b941b673bbcb522fd9b0f9a0bf431b6b584b7819654ed98e3603034f359351b34134e0ef"
+        },
+        {
+          "id": "1dc7732f509f4708981fce2e45a378e15e7756da684c98e40382aa4163f770da",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000310,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.invite.revoke", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.invite.revoke"]
+          ],
+          "content": "{\"invite\":\"602b9a8129d626f1ba06ba655dc2861c\"}",
+          "sig": "ea671d0ffbed2d298c7995f2952b3d7874feaa41b875360e5f03196632334048e5a59093f6cf533cc541ca33422f21e531ef0d8863b591533d795b67232eb00b"
+        },
+        {
+          "id": "39ace3f36c419d2e0a9353a467737c661e8a89ef5383c71c3d6fc20dc1681faa",
+          "pubkey": "b400d330df264198a54d0f21847e5c3de7d470529c9e8f99cd1acf0bb256433b",
+          "created_at": 1760000320,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.join", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.join"]
+          ],
+          "content": "{\"invite\":\"602b9a8129d626f1ba06ba655dc2861c\",\"proof\":\"e60da42614b91dd67afec39388e1d9468862ae764a63c2b450f88038a4bddcc4\"}",
+          "sig": "53c56826a54e8f9df9b237d764048a73d33fe0c4509234fb6e4d2c517abbbb2afaa2331c87cd1b5e941a2f1c0457b8df772fcecb5ed5ae1651bd6925c9098744"
+        }
+      ],
+      "plaintexts": {
+        "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640": "{\"name\":\"Dartfreunde Nord\",\"visibility\":\"closed\",\"key\":\"3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5\"}",
+        "6912a88ee9ff0a6a579aa9f861fd85f2c815aab7a98a3f9f8b67a74b03af2915": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"token\":\"1f7f9485c7c897e7959aab95e044464f\",\"maxUses\":5,\"expires\":1760000100}",
+        "1e7c7cb61c57d9d6c2fe912bad61970241e1069743e713c9b264f1fe2849a3d3": "{\"invite\":\"602b9a8129d626f1ba06ba655dc2861c\",\"token\":\"e1605eae8f73d2a4d4f13b8506dde37c\",\"maxUses\":5,\"expires\":1760086400}"
+      },
+      "labels": {
+        "found": "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640",
+        "invite": "6912a88ee9ff0a6a579aa9f861fd85f2c815aab7a98a3f9f8b67a74b03af2915",
+        "join-alice": "3b025304e8ba6f51bb7638a48af2e3983fa0f36ca31f3b3b4d8f88e6957e3955",
+        "invite-2": "1e7c7cb61c57d9d6c2fe912bad61970241e1069743e713c9b264f1fe2849a3d3",
+        "revoke": "1dc7732f509f4708981fce2e45a378e15e7756da684c98e40382aa4163f770da",
+        "join-bob": "39ace3f36c419d2e0a9353a467737c661e8a89ef5383c71c3d6fc20dc1681faa"
+      },
+      "expect": {
+        "applied": ["9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640", "6912a88ee9ff0a6a579aa9f861fd85f2c815aab7a98a3f9f8b67a74b03af2915", "1e7c7cb61c57d9d6c2fe912bad61970241e1069743e713c9b264f1fe2849a3d3", "1dc7732f509f4708981fce2e45a378e15e7756da684c98e40382aa4163f770da"],
+        "rejected": [
+          {
+            "id": "3b025304e8ba6f51bb7638a48af2e3983fa0f36ca31f3b3b4d8f88e6957e3955",
+            "label": "join-alice",
+            "reason": "invite_expired"
+          },
+          {
+            "id": "39ace3f36c419d2e0a9353a467737c661e8a89ef5383c71c3d6fc20dc1681faa",
+            "label": "join-bob",
+            "reason": "invite_revoked"
+          }
+        ],
+        "state": {
+          "members": {
+            "owner": "owner"
+          }
+        }
+      }
+    },
+    {
+      "name": "over-capacity",
+      "description": "A club for two: the third valid join is refused.",
+      "now": 1760100000,
+      "root": "f319bc401835268dbeca9853b5326b279ea7865b01f3cbac907ca73ed2ea35c5",
+      "groupKey": "club",
+      "open": true,
+      "events": [
+        {
+          "id": "f319bc401835268dbeca9853b5326b279ea7865b01f3cbac907ca73ed2ea35c5",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000000,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.found", "blueline"],
+            ["v", "1"],
+            ["alt", "BlueLine Darts club.found"],
+            ["enc", "nip44", "3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5"]
+          ],
+          "content": "Ana17XOT9qnL6/y4wSX8XKzq3XVCD2Xbcu9zTjZQMptSCmAdrg104O9XhRd/XFclE47zxfi5p8XswWLh2H1/m1GyzLTKGKlTG0prVWavwwS37laTcyAVMEls/g0giJnN1g2p+TMGq8Fvp1l5vZRRieaJkRMhpA8bR3+THOEx70q1MOa5PQYUu6QNLKiqCsjeRX+NFggTrpUh6gLvvpdW+4B6NqctGGuHlGu80U5BThJtfjdMuEW04tz1X57AKyTle7Ba48M34HXOf6xhypI80Ufc/xxyDLJFHaKpT0nwaE8MrAQ=",
+          "sig": "866a2e2db3a90eb08ec75a1fdb82afb63f1ec239c369c918aa148c292efde0bb27063b5ef98ecfbed3386409c2ff0c8ee5db99de21f23fceb60463aba75289f6"
+        },
+        {
+          "id": "5f3dca220fab248d85763a328a308c351e0eb2ad756e5968bfbbd6d5ad8281ce",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000010,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.invite", "blueline"],
+            ["v", "1"],
+            ["e", "f319bc401835268dbeca9853b5326b279ea7865b01f3cbac907ca73ed2ea35c5"],
+            ["alt", "BlueLine Darts club.invite"],
+            ["enc", "nip44", "3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5"]
+          ],
+          "content": "Age6/AIUP7whry9VSTtL6lbmUHfJkFjy+eOM3QaQfFDElFsaQ9JRSornPDU6dE+sCEpGpyZRrlEuiFnXIExjOntUvn3bMCnJh7yUDmDqetzDxTnYY8B909/G5x7amh/NOYgBEPjugB4xCHwheSvuanEHPJkxD6cM6CpzSouzkoOPMQ0EZyTpe3jFI464jTXIwNVvOahRm86c/NzkLqoHxCqv4K2+Kl99dtUEtoNnE3IbflfXgRvIXO7BoimrPHkEE0ct",
+          "sig": "d64da44fb11d7078012018342705b8c0c2e5b5522391ee7683f9c3d30c63c21b0a3c435818e0e48f1d9bfa1b1e18a2c7e8782f6c5500e814adde6dbc756eb3af"
+        },
+        {
+          "id": "630c6293f4e9d5d810a9fdcaa5b016ea3d9a864a4fe8e838b41b628dc1e86e5f",
+          "pubkey": "48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d",
+          "created_at": 1760000020,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.join", "blueline"],
+            ["v", "1"],
+            ["e", "f319bc401835268dbeca9853b5326b279ea7865b01f3cbac907ca73ed2ea35c5"],
+            ["alt", "BlueLine Darts club.join"]
+          ],
+          "content": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"proof\":\"f14694782a39f3205cbabe239f01e9371fe3de8cf26f5d8a086cbad7d55eb825\"}",
+          "sig": "d5b5f6bf7dfa423c66126b233f76b9679ef6e28613e9d9dc9f9ff09ce63042b5bc825c953293d23d4a53103fd526b895c1929b3a9355d3c20594eebbfb1ab2c1"
+        },
+        {
+          "id": "3d4ec57acdb3434304615b8e5b7adeeef60846a8ff19b6f3c133b75a54188620",
+          "pubkey": "b400d330df264198a54d0f21847e5c3de7d470529c9e8f99cd1acf0bb256433b",
+          "created_at": 1760000030,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.join", "blueline"],
+            ["v", "1"],
+            ["e", "f319bc401835268dbeca9853b5326b279ea7865b01f3cbac907ca73ed2ea35c5"],
+            ["alt", "BlueLine Darts club.join"]
+          ],
+          "content": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"proof\":\"9579ea93730b325d1c1c951ad3668011194aba455117a3546a644e0501f1efaa\"}",
+          "sig": "b8ef37c8de1058d7b85ec7c94ff2e5301c9e65b345c6958ee3043fe4a8cccdb2b9cf915d298b2ae42c4b9e4b8ac0e24c90e8b25c26455e5db184f002ed4ad661"
+        }
+      ],
+      "plaintexts": {
+        "f319bc401835268dbeca9853b5326b279ea7865b01f3cbac907ca73ed2ea35c5": "{\"name\":\"Dartfreunde Nord\",\"visibility\":\"closed\",\"key\":\"3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5\",\"capacity\":2}",
+        "5f3dca220fab248d85763a328a308c351e0eb2ad756e5968bfbbd6d5ad8281ce": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"token\":\"1f7f9485c7c897e7959aab95e044464f\",\"maxUses\":5,\"expires\":1760086400}"
+      },
+      "labels": {
+        "found": "f319bc401835268dbeca9853b5326b279ea7865b01f3cbac907ca73ed2ea35c5",
+        "invite": "5f3dca220fab248d85763a328a308c351e0eb2ad756e5968bfbbd6d5ad8281ce",
+        "join-alice": "630c6293f4e9d5d810a9fdcaa5b016ea3d9a864a4fe8e838b41b628dc1e86e5f",
+        "join-bob": "3d4ec57acdb3434304615b8e5b7adeeef60846a8ff19b6f3c133b75a54188620"
+      },
+      "expect": {
+        "applied": ["f319bc401835268dbeca9853b5326b279ea7865b01f3cbac907ca73ed2ea35c5", "5f3dca220fab248d85763a328a308c351e0eb2ad756e5968bfbbd6d5ad8281ce", "630c6293f4e9d5d810a9fdcaa5b016ea3d9a864a4fe8e838b41b628dc1e86e5f"],
+        "rejected": [
+          {
+            "id": "3d4ec57acdb3434304615b8e5b7adeeef60846a8ff19b6f3c133b75a54188620",
+            "label": "join-bob",
+            "reason": "club_full"
+          }
+        ],
+        "state": {
+          "members": {
+            "owner": "owner",
+            "alice": "member"
+          }
+        }
+      }
+    },
+    {
+      "name": "roles",
+      "description": "Who may do what: the owner appoints an admin, the admin appoints a director and removes a member; a director may not invite, a member may not give roles, an admin may not appoint admins or remove the owner.",
+      "now": 1760100000,
+      "root": "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640",
+      "groupKey": "club",
+      "open": true,
+      "events": [
+        {
+          "id": "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000000,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.found", "blueline"],
+            ["v", "1"],
+            ["alt", "BlueLine Darts club.found"],
+            ["enc", "nip44", "3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5"]
+          ],
+          "content": "Ai4tczJ5F+VaL54qeJLmsO3XHu5XWUmP/8dyFQAc28BQCOWwZRvEGEnq60ACmJ1kgAC8BIPDtfTVqYW6waTThxDgVRXng5LjC2XL3k/QsqGcZpEV1py1kjUiMSOLlBOCyj6bceskP/3401MGnM0u32+9ceTM56M60GfSsMBPMb5s5y2RYaNl566zKHSsIV9nYz5UkvcoRRkzGNDOZnnODt2OJ4/+aqkjhpmMKBg+VzvY6vYwuf7/LCXoKgPe/IgDT0/s",
+          "sig": "19239e1629534a989d4039dba5b7cc10bd4f513d7e7268a4860d914c88f326a36a0460e5d2654273c75407643bdf2f3cf6bc9d887cd55deaecd6328928b4e1d0"
+        },
+        {
+          "id": "7190ef5e6dc7caec6b509ea9337b9adfd5694fab04c02b99218493ebe28fa14c",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000010,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.invite", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.invite"],
+            ["enc", "nip44", "3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5"]
+          ],
+          "content": "Age6/AIUP7whry9VSTtL6lbmUHfJkFjy+eOM3QaQfFDElFsaQ9JRSornPDU6dE+sCEpGpyZRrlEuiFnXIExjOntUvn3bMCnJh7yUDmDqetzDxTnYY8B909/G5x7amh/NOYgBEPjugB4xCHwheSvuanEHPJkxD6cM6CpzSouzkoOPMQ0EZyTpe3jFI464jTXIwNVvOahRm86c/NzkLqoHxCqv4K2+Kl99dtUEtoNnE3IbflfXgRvIXO7BoimrPHkEE0ct",
+          "sig": "3f318da47e7cea5c6b95590e4d1b27df42a3b75703d41a618021c248a4c337be3a6d5fa3338470a0ec5e36698bad5c9ffcf3f65c4305e97ae9ffba75cf0b00e1"
+        },
+        {
+          "id": "a1e90fe33b4c869dc968496095435dd280a1dbbb8e20968a1babed474403f8d5",
+          "pubkey": "515b512834a4548d6c376880fb4dc22102810998c13a7442787695e7a4748b01",
+          "created_at": 1760000020,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.join", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.join"]
+          ],
+          "content": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"proof\":\"f79afcace163616682c20a8cf956796ee225149be7bf39c5a7f96ce9e16aeb7b\"}",
+          "sig": "0cb9042713d18dcf3b3fd32e9dbdb725bc6d04c456b04d3141ff43505e32de207858225d777897a68f6e334b5e2c2b86ccf65fc945780e9674e8a9af8c306a12"
+        },
+        {
+          "id": "ad081f0ede4dbb9f8aa2f99fce541b90a9688cbe0a21b79992a9defca0ecb9fa",
+          "pubkey": "48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d",
+          "created_at": 1760000021,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.join", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.join"]
+          ],
+          "content": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"proof\":\"f14694782a39f3205cbabe239f01e9371fe3de8cf26f5d8a086cbad7d55eb825\"}",
+          "sig": "7718902c07a4e70d0b213d2f35366644a7e01d6b2fb12fdf5e17904394d1f65b25f8d43129f63908b1453885bf341ec1edd749e829f18c2baf383fb1a7ddb443"
+        },
+        {
+          "id": "862e1845b95f02c8666905ecdb8ad4d09323d6cb809e5658ed76504692c22e2f",
+          "pubkey": "b400d330df264198a54d0f21847e5c3de7d470529c9e8f99cd1acf0bb256433b",
+          "created_at": 1760000022,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.join", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.join"]
+          ],
+          "content": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"proof\":\"9579ea93730b325d1c1c951ad3668011194aba455117a3546a644e0501f1efaa\"}",
+          "sig": "cd44638b5ac9154bba236bd2a0995ba612786e18fd7b10869b89178e5af51bf104c9b26561b9bd0ec6abc3c456ee9cea7aa22e0ac8816fd65c900280edcf9d03"
+        },
+        {
+          "id": "dcb8983d6fd012033263b2c3ca3863f7e2ded61f8127761106412afeaa8455b7",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000030,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.role", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.role"]
+          ],
+          "content": "{\"member\":\"515b512834a4548d6c376880fb4dc22102810998c13a7442787695e7a4748b01\",\"role\":\"admin\",\"prev\":\"a1e90fe33b4c869dc968496095435dd280a1dbbb8e20968a1babed474403f8d5\"}",
+          "sig": "9c128c999b97d002295b9ea501638c233007b2afda5a374fb08949e90ad9fc338617bf6f4f8cfbd5f920ceb39f6d233a905bc84c094cff84d6d430cc6dd097b7"
+        },
+        {
+          "id": "e65e900f0482ae22e4b73cb5a19c05bb46623df57a668d1c4e7008d3cbe2ef69",
+          "pubkey": "515b512834a4548d6c376880fb4dc22102810998c13a7442787695e7a4748b01",
+          "created_at": 1760000040,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.role", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.role"]
+          ],
+          "content": "{\"member\":\"48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d\",\"role\":\"director\",\"prev\":\"ad081f0ede4dbb9f8aa2f99fce541b90a9688cbe0a21b79992a9defca0ecb9fa\"}",
+          "sig": "0e4b6cf33ebfa477a9656c9eb174de50e98539b20f1b14da5ef9e5334cd1e45283080d6015ff2ec29bdc53a49a2b447a32183213c7b3f3243df43421779b0946"
+        },
+        {
+          "id": "0ef973e700060235e0239e11b3653091ca2dacb735fc5ec2a94d3a7866ca384a",
+          "pubkey": "48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d",
+          "created_at": 1760000050,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.invite", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.invite"],
+            ["enc", "nip44", "3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5"]
+          ],
+          "content": "AgrzdKRhJMWMcj8ISUetDqfSE66q+7oa2Z0O1PqFd9DyAIjMAriAO4XmVU1l9kFB8/vrbVfbH77ytnicJg+RKdh14lsPtntKXG65uYRifNYcwimR30jtO/OQVG5I5mEViR/ApjfHdprMRHoxzUnTRXJOG3JGseatKj7bY1c/vYBEUq004st3E5IUowVcOAYoyGg3La4h/xrp8/G25UF9QWlS7VC2FZzp4xKyvHCdmrWIU86X7zmsZflWyMtXCayolDMJ",
+          "sig": "64479621072f909e2e12cde8a74502483d31588f361c4132972ee3f4046055d44f1d8fae2deeaecdb84c8838080a55c506022274cf7089b3541f0416f9e86781"
+        },
+        {
+          "id": "f52e3857c2cc1c43f9b6d16573eae5d6d3b91f74ecb38d83b311539080197f89",
+          "pubkey": "b400d330df264198a54d0f21847e5c3de7d470529c9e8f99cd1acf0bb256433b",
+          "created_at": 1760000060,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.role", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.role"]
+          ],
+          "content": "{\"member\":\"48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d\",\"role\":\"member\",\"prev\":\"e65e900f0482ae22e4b73cb5a19c05bb46623df57a668d1c4e7008d3cbe2ef69\"}",
+          "sig": "03c597cea3c7f6b3ce4677c04a6c3a04d7863e0a7d308014f5c04d5a84c77ef41b711c385346ff2ef4e049e4744cb7ec3f44ee9d1b6354b3adb3328fb8ea93f2"
+        },
+        {
+          "id": "d0325d68ca670cdcbb52f48ee981282d462afa127b194e0100301d7ca42ad7a1",
+          "pubkey": "515b512834a4548d6c376880fb4dc22102810998c13a7442787695e7a4748b01",
+          "created_at": 1760000070,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.role", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.role"]
+          ],
+          "content": "{\"member\":\"b400d330df264198a54d0f21847e5c3de7d470529c9e8f99cd1acf0bb256433b\",\"role\":\"admin\",\"prev\":\"862e1845b95f02c8666905ecdb8ad4d09323d6cb809e5658ed76504692c22e2f\"}",
+          "sig": "e8d6edd4b11b07409f48eb61f701b152e9e90d912855dd119ca4b79e9b129397dd26cd714a671e9cc1b0ef09ea31fbe9061ce772df3f59c0e0e12c8c7200bc15"
+        },
+        {
+          "id": "b76bb5658e360aa425a50f130a087dead1880db60f7e85268f4cad0c7472cb09",
+          "pubkey": "515b512834a4548d6c376880fb4dc22102810998c13a7442787695e7a4748b01",
+          "created_at": 1760000080,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.remove", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.remove"]
+          ],
+          "content": "{\"member\":\"6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78\",\"prev\":\"9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640\"}",
+          "sig": "13f4f02991958dcf7018370f8240577ea2a25f4bcf5d53fb94df2fcf10b0cee706d2cc4e869c50500eb72eb497ee852f5598ecefa4f954acc71fc3fe5228d6b4"
+        },
+        {
+          "id": "b3814ede6c027fbff28a9ac52275d72feb7af914c32fc3cbd3c3eff82edf3fff",
+          "pubkey": "515b512834a4548d6c376880fb4dc22102810998c13a7442787695e7a4748b01",
+          "created_at": 1760000090,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.remove", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.remove"]
+          ],
+          "content": "{\"member\":\"b400d330df264198a54d0f21847e5c3de7d470529c9e8f99cd1acf0bb256433b\",\"prev\":\"862e1845b95f02c8666905ecdb8ad4d09323d6cb809e5658ed76504692c22e2f\",\"reason\":\"Auf eigenen Wunsch\"}",
+          "sig": "e980fc793781c99ebace6ef74ad0cb2d9457612fcd06f37606f2f4aae04a6bb8e9538b0e9c23133011bc20e55ac0e717caa865ca17d5383a9795d65d43b8ab64"
+        }
+      ],
+      "plaintexts": {
+        "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640": "{\"name\":\"Dartfreunde Nord\",\"visibility\":\"closed\",\"key\":\"3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5\"}",
+        "7190ef5e6dc7caec6b509ea9337b9adfd5694fab04c02b99218493ebe28fa14c": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"token\":\"1f7f9485c7c897e7959aab95e044464f\",\"maxUses\":5,\"expires\":1760086400}",
+        "0ef973e700060235e0239e11b3653091ca2dacb735fc5ec2a94d3a7866ca384a": "{\"invite\":\"602b9a8129d626f1ba06ba655dc2861c\",\"token\":\"e1605eae8f73d2a4d4f13b8506dde37c\",\"maxUses\":5,\"expires\":1760086400}"
+      },
+      "labels": {
+        "found": "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640",
+        "invite": "7190ef5e6dc7caec6b509ea9337b9adfd5694fab04c02b99218493ebe28fa14c",
+        "join-admin": "a1e90fe33b4c869dc968496095435dd280a1dbbb8e20968a1babed474403f8d5",
+        "join-alice": "ad081f0ede4dbb9f8aa2f99fce541b90a9688cbe0a21b79992a9defca0ecb9fa",
+        "join-bob": "862e1845b95f02c8666905ecdb8ad4d09323d6cb809e5658ed76504692c22e2f",
+        "make-admin": "dcb8983d6fd012033263b2c3ca3863f7e2ded61f8127761106412afeaa8455b7",
+        "make-director": "e65e900f0482ae22e4b73cb5a19c05bb46623df57a668d1c4e7008d3cbe2ef69",
+        "director-invites": "0ef973e700060235e0239e11b3653091ca2dacb735fc5ec2a94d3a7866ca384a",
+        "member-gives-role": "f52e3857c2cc1c43f9b6d16573eae5d6d3b91f74ecb38d83b311539080197f89",
+        "admin-appoints-admin": "d0325d68ca670cdcbb52f48ee981282d462afa127b194e0100301d7ca42ad7a1",
+        "admin-removes-owner": "b76bb5658e360aa425a50f130a087dead1880db60f7e85268f4cad0c7472cb09",
+        "admin-removes-bob": "b3814ede6c027fbff28a9ac52275d72feb7af914c32fc3cbd3c3eff82edf3fff"
+      },
+      "expect": {
+        "applied": ["9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640", "7190ef5e6dc7caec6b509ea9337b9adfd5694fab04c02b99218493ebe28fa14c", "a1e90fe33b4c869dc968496095435dd280a1dbbb8e20968a1babed474403f8d5", "ad081f0ede4dbb9f8aa2f99fce541b90a9688cbe0a21b79992a9defca0ecb9fa", "862e1845b95f02c8666905ecdb8ad4d09323d6cb809e5658ed76504692c22e2f", "dcb8983d6fd012033263b2c3ca3863f7e2ded61f8127761106412afeaa8455b7", "e65e900f0482ae22e4b73cb5a19c05bb46623df57a668d1c4e7008d3cbe2ef69", "b3814ede6c027fbff28a9ac52275d72feb7af914c32fc3cbd3c3eff82edf3fff"],
+        "rejected": [
+          {
+            "id": "0ef973e700060235e0239e11b3653091ca2dacb735fc5ec2a94d3a7866ca384a",
+            "label": "director-invites",
+            "reason": "not_authorized"
+          },
+          {
+            "id": "f52e3857c2cc1c43f9b6d16573eae5d6d3b91f74ecb38d83b311539080197f89",
+            "label": "member-gives-role",
+            "reason": "not_authorized"
+          },
+          {
+            "id": "d0325d68ca670cdcbb52f48ee981282d462afa127b194e0100301d7ca42ad7a1",
+            "label": "admin-appoints-admin",
+            "reason": "not_authorized"
+          },
+          {
+            "id": "b76bb5658e360aa425a50f130a087dead1880db60f7e85268f4cad0c7472cb09",
+            "label": "admin-removes-owner",
+            "reason": "not_authorized"
+          }
+        ],
+        "state": {
+          "members": {
+            "owner": "owner",
+            "admin": "admin",
+            "alice": "director"
+          },
+          "former": {
+            "bob": "removed"
+          }
+        }
+      }
+    },
+    {
+      "name": "requests",
+      "description": "Joining without an invite waits for the leadership: Dave is accepted, Carol declined; accepting a gone request and asking twice are refused.",
+      "now": 1760100000,
+      "root": "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640",
+      "groupKey": "club",
+      "open": true,
+      "events": [
+        {
+          "id": "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000000,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.found", "blueline"],
+            ["v", "1"],
+            ["alt", "BlueLine Darts club.found"],
+            ["enc", "nip44", "3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5"]
+          ],
+          "content": "Ai4tczJ5F+VaL54qeJLmsO3XHu5XWUmP/8dyFQAc28BQCOWwZRvEGEnq60ACmJ1kgAC8BIPDtfTVqYW6waTThxDgVRXng5LjC2XL3k/QsqGcZpEV1py1kjUiMSOLlBOCyj6bceskP/3401MGnM0u32+9ceTM56M60GfSsMBPMb5s5y2RYaNl566zKHSsIV9nYz5UkvcoRRkzGNDOZnnODt2OJ4/+aqkjhpmMKBg+VzvY6vYwuf7/LCXoKgPe/IgDT0/s",
+          "sig": "19239e1629534a989d4039dba5b7cc10bd4f513d7e7268a4860d914c88f326a36a0460e5d2654273c75407643bdf2f3cf6bc9d887cd55deaecd6328928b4e1d0"
+        },
+        {
+          "id": "1edd2172ec56c5f7edf02b4ce3b2af7cbcc588a429e79713b8eafeeb7eaba5d5",
+          "pubkey": "291aa554290b9cc595b9156925240bacc1d99e69f89507da132e0ae3f5ef099b",
+          "created_at": 1760000010,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.join", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.join"]
+          ],
+          "content": "{\"message\":\"Ich spiele dienstags mit.\"}",
+          "sig": "45f154f24eac65d1ece235f39dbe204d1a8cbd3efbd826303c110cf0eb1fac947b152d801fed95b67dbb4e432baa86821ab174403ca0ee89dc4ff7227484b278"
+        },
+        {
+          "id": "23cc81f3c2b02a720d2479fb50e4ff8a43f4f5ad30689b5981a32ed1c3a07f31",
+          "pubkey": "7f1ebf9a8a76a7b7919206de7043f063fdbba4c57b8635927fc723a5ca3bbf57",
+          "created_at": 1760000011,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.join", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.join"]
+          ],
+          "content": "{}",
+          "sig": "813419d3d3e623da0fce6898e7127d8b2ae0654610a3d424e00aa96f7cf4f6cf005078c02cf3912b3de7f1d6f2eab5fbf55f0549e1406d397154c32ca2114196"
+        },
+        {
+          "id": "15b10db7cb060c805087e27ee76c5f197b5a934cb850144ac6ea923d6b776c19",
+          "pubkey": "7f1ebf9a8a76a7b7919206de7043f063fdbba4c57b8635927fc723a5ca3bbf57",
+          "created_at": 1760000012,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.join", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.join"]
+          ],
+          "content": "{}",
+          "sig": "ca823e99e879137f622a1bd2bb8b098db0978c448bb618076b458df9fe36fabb59697487be9c8b2ac24c9286521b2a0b2de229993cb1efd86e6ab360044a637e"
+        },
+        {
+          "id": "faad620ce54dd9b2a81bb1350509efb8ba67c1f90b54c6fb20b31f16e677589b",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000020,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.accept", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.accept"]
+          ],
+          "content": "{\"request\":\"1edd2172ec56c5f7edf02b4ce3b2af7cbcc588a429e79713b8eafeeb7eaba5d5\",\"member\":\"291aa554290b9cc595b9156925240bacc1d99e69f89507da132e0ae3f5ef099b\"}",
+          "sig": "00a7a540f7676f6618ed293fcf16a982f63ed0aab4eaf8ce8fb0132acfe9dfddd7eedb9f2513fbca884c6cf6f8632b53a1bb5bd7654e1daa2889b546eedf732b"
+        },
+        {
+          "id": "9664c881e33d07920aadc4e7bba81cd7d86aba2f8d06b47007f3d43f958182f2",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000030,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.decline", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.decline"]
+          ],
+          "content": "{\"request\":\"23cc81f3c2b02a720d2479fb50e4ff8a43f4f5ad30689b5981a32ed1c3a07f31\"}",
+          "sig": "791734c1bf47d7414b0270e135aa7c193838a3831b44a515c44337d201ef33b2cacfdc564ec096a234d6c3c4a68c45b19d7a7e4404a2cfacceeaf82e08d2ee07"
+        },
+        {
+          "id": "0f486cefb6c6caf99a3c9fc4415375d2e41090028a7fd1bac465dc026444ef49",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000040,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.accept", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.accept"]
+          ],
+          "content": "{\"request\":\"23cc81f3c2b02a720d2479fb50e4ff8a43f4f5ad30689b5981a32ed1c3a07f31\",\"member\":\"7f1ebf9a8a76a7b7919206de7043f063fdbba4c57b8635927fc723a5ca3bbf57\"}",
+          "sig": "6e95d699916056071a8640260b267de7a35ceacdac37d6a83021570bccf5b03c38983af7e4216799a4c410c53b3885a5bf977304115d250fd9f005aeca85c0cb"
+        },
+        {
+          "id": "b04ef1f2be73a6f4eb06f8a552ad44a8fa657f016f098304ee8e17336c3c8d1f",
+          "pubkey": "291aa554290b9cc595b9156925240bacc1d99e69f89507da132e0ae3f5ef099b",
+          "created_at": 1760000050,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.join", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.join"]
+          ],
+          "content": "{}",
+          "sig": "d01ceab4055a67034973e072b22156ef7fcec0fb77aba92bf345a14782e0fadebd4b8001cbab664cba4c65bbdf8ed945c15b6121b29bf1ec4fb0917096b9524f"
+        },
+        {
+          "id": "cfa5b5c908789b262605edafefb7fb00150bc8117dfb787068c28f95014ab398",
+          "pubkey": "c1e16b2f3158d52908cf590f78527436ec5b2a5f79832834d5ff81ad47321978",
+          "created_at": 1760000060,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.accept", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.accept"]
+          ],
+          "content": "{\"request\":\"1edd2172ec56c5f7edf02b4ce3b2af7cbcc588a429e79713b8eafeeb7eaba5d5\",\"member\":\"291aa554290b9cc595b9156925240bacc1d99e69f89507da132e0ae3f5ef099b\"}",
+          "sig": "0f18f8fb6fd4d0663873bad0533c77e0ddd01e5f1e06716644b8054cdd4efae86158e13f754a148c2955f47e2652dbfe9e57a7527287747be8d356f3a687b102"
+        }
+      ],
+      "plaintexts": {
+        "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640": "{\"name\":\"Dartfreunde Nord\",\"visibility\":\"closed\",\"key\":\"3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5\"}"
+      },
+      "labels": {
+        "found": "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640",
+        "ask-dave": "1edd2172ec56c5f7edf02b4ce3b2af7cbcc588a429e79713b8eafeeb7eaba5d5",
+        "ask-carol": "23cc81f3c2b02a720d2479fb50e4ff8a43f4f5ad30689b5981a32ed1c3a07f31",
+        "ask-carol-again": "15b10db7cb060c805087e27ee76c5f197b5a934cb850144ac6ea923d6b776c19",
+        "accept-dave": "faad620ce54dd9b2a81bb1350509efb8ba67c1f90b54c6fb20b31f16e677589b",
+        "decline-carol": "9664c881e33d07920aadc4e7bba81cd7d86aba2f8d06b47007f3d43f958182f2",
+        "accept-carol": "0f486cefb6c6caf99a3c9fc4415375d2e41090028a7fd1bac465dc026444ef49",
+        "ask-dave-again": "b04ef1f2be73a6f4eb06f8a552ad44a8fa657f016f098304ee8e17336c3c8d1f",
+        "outsider-accepts": "cfa5b5c908789b262605edafefb7fb00150bc8117dfb787068c28f95014ab398"
+      },
+      "expect": {
+        "applied": ["9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640", "1edd2172ec56c5f7edf02b4ce3b2af7cbcc588a429e79713b8eafeeb7eaba5d5", "23cc81f3c2b02a720d2479fb50e4ff8a43f4f5ad30689b5981a32ed1c3a07f31", "faad620ce54dd9b2a81bb1350509efb8ba67c1f90b54c6fb20b31f16e677589b", "9664c881e33d07920aadc4e7bba81cd7d86aba2f8d06b47007f3d43f958182f2"],
+        "rejected": [
+          {
+            "id": "15b10db7cb060c805087e27ee76c5f197b5a934cb850144ac6ea923d6b776c19",
+            "label": "ask-carol-again",
+            "reason": "duplicate"
+          },
+          {
+            "id": "0f486cefb6c6caf99a3c9fc4415375d2e41090028a7fd1bac465dc026444ef49",
+            "label": "accept-carol",
+            "reason": "request_unknown"
+          },
+          {
+            "id": "b04ef1f2be73a6f4eb06f8a552ad44a8fa657f016f098304ee8e17336c3c8d1f",
+            "label": "ask-dave-again",
+            "reason": "already_member"
+          },
+          {
+            "id": "cfa5b5c908789b262605edafefb7fb00150bc8117dfb787068c28f95014ab398",
+            "label": "outsider-accepts",
+            "reason": "not_authorized"
+          }
+        ],
+        "state": {
+          "members": {
+            "owner": "owner",
+            "dave": "member"
+          },
+          "requests": []
+        }
+      }
+    },
+    {
+      "name": "role-conflict",
+      "description": "Owner and admin change Alice's role from the same base. The later one is a visible conflict; the admin resolves it on the new base.",
+      "now": 1760100000,
+      "root": "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640",
+      "groupKey": "club",
+      "open": true,
+      "events": [
+        {
+          "id": "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000000,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.found", "blueline"],
+            ["v", "1"],
+            ["alt", "BlueLine Darts club.found"],
+            ["enc", "nip44", "3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5"]
+          ],
+          "content": "Ai4tczJ5F+VaL54qeJLmsO3XHu5XWUmP/8dyFQAc28BQCOWwZRvEGEnq60ACmJ1kgAC8BIPDtfTVqYW6waTThxDgVRXng5LjC2XL3k/QsqGcZpEV1py1kjUiMSOLlBOCyj6bceskP/3401MGnM0u32+9ceTM56M60GfSsMBPMb5s5y2RYaNl566zKHSsIV9nYz5UkvcoRRkzGNDOZnnODt2OJ4/+aqkjhpmMKBg+VzvY6vYwuf7/LCXoKgPe/IgDT0/s",
+          "sig": "19239e1629534a989d4039dba5b7cc10bd4f513d7e7268a4860d914c88f326a36a0460e5d2654273c75407643bdf2f3cf6bc9d887cd55deaecd6328928b4e1d0"
+        },
+        {
+          "id": "7190ef5e6dc7caec6b509ea9337b9adfd5694fab04c02b99218493ebe28fa14c",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000010,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.invite", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.invite"],
+            ["enc", "nip44", "3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5"]
+          ],
+          "content": "Age6/AIUP7whry9VSTtL6lbmUHfJkFjy+eOM3QaQfFDElFsaQ9JRSornPDU6dE+sCEpGpyZRrlEuiFnXIExjOntUvn3bMCnJh7yUDmDqetzDxTnYY8B909/G5x7amh/NOYgBEPjugB4xCHwheSvuanEHPJkxD6cM6CpzSouzkoOPMQ0EZyTpe3jFI464jTXIwNVvOahRm86c/NzkLqoHxCqv4K2+Kl99dtUEtoNnE3IbflfXgRvIXO7BoimrPHkEE0ct",
+          "sig": "3f318da47e7cea5c6b95590e4d1b27df42a3b75703d41a618021c248a4c337be3a6d5fa3338470a0ec5e36698bad5c9ffcf3f65c4305e97ae9ffba75cf0b00e1"
+        },
+        {
+          "id": "a1e90fe33b4c869dc968496095435dd280a1dbbb8e20968a1babed474403f8d5",
+          "pubkey": "515b512834a4548d6c376880fb4dc22102810998c13a7442787695e7a4748b01",
+          "created_at": 1760000020,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.join", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.join"]
+          ],
+          "content": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"proof\":\"f79afcace163616682c20a8cf956796ee225149be7bf39c5a7f96ce9e16aeb7b\"}",
+          "sig": "0cb9042713d18dcf3b3fd32e9dbdb725bc6d04c456b04d3141ff43505e32de207858225d777897a68f6e334b5e2c2b86ccf65fc945780e9674e8a9af8c306a12"
+        },
+        {
+          "id": "ad081f0ede4dbb9f8aa2f99fce541b90a9688cbe0a21b79992a9defca0ecb9fa",
+          "pubkey": "48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d",
+          "created_at": 1760000021,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.join", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.join"]
+          ],
+          "content": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"proof\":\"f14694782a39f3205cbabe239f01e9371fe3de8cf26f5d8a086cbad7d55eb825\"}",
+          "sig": "7718902c07a4e70d0b213d2f35366644a7e01d6b2fb12fdf5e17904394d1f65b25f8d43129f63908b1453885bf341ec1edd749e829f18c2baf383fb1a7ddb443"
+        },
+        {
+          "id": "dcb8983d6fd012033263b2c3ca3863f7e2ded61f8127761106412afeaa8455b7",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000030,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.role", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.role"]
+          ],
+          "content": "{\"member\":\"515b512834a4548d6c376880fb4dc22102810998c13a7442787695e7a4748b01\",\"role\":\"admin\",\"prev\":\"a1e90fe33b4c869dc968496095435dd280a1dbbb8e20968a1babed474403f8d5\"}",
+          "sig": "9c128c999b97d002295b9ea501638c233007b2afda5a374fb08949e90ad9fc338617bf6f4f8cfbd5f920ceb39f6d233a905bc84c094cff84d6d430cc6dd097b7"
+        },
+        {
+          "id": "3506b9a8ba226ab919e3f85e4291991b9d43155585ec25260b24ea6fda10c805",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000050,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.role", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.role"]
+          ],
+          "content": "{\"member\":\"48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d\",\"role\":\"director\",\"prev\":\"ad081f0ede4dbb9f8aa2f99fce541b90a9688cbe0a21b79992a9defca0ecb9fa\"}",
+          "sig": "019404764366ec77224afbb3ef91b066c9e68886645b76b23b18edf3942bc77799ebc1a23b12286556a7fedbdb6e7842b2f383964319b38cd44506ce9ae76856"
+        },
+        {
+          "id": "2f5b989f2204aaa31ac0abe46206dabc3f13309c1ad26dc29dc52e6703ecff2c",
+          "pubkey": "515b512834a4548d6c376880fb4dc22102810998c13a7442787695e7a4748b01",
+          "created_at": 1760000051,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.role", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.role"]
+          ],
+          "content": "{\"member\":\"48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d\",\"role\":\"member\",\"prev\":\"ad081f0ede4dbb9f8aa2f99fce541b90a9688cbe0a21b79992a9defca0ecb9fa\"}",
+          "sig": "9b01300c59c8bc9c132524f77a53c6f7195f9e4cf10b87b01385b0562d833ee75b7d74631c19b20721887b6f5dd71a99da513c81ff976a3848cbfaac26f13b0f"
+        },
+        {
+          "id": "d71121b6f1213becff446aeb8c87a348f8216207cc038c03668c706fe81fa7da",
+          "pubkey": "515b512834a4548d6c376880fb4dc22102810998c13a7442787695e7a4748b01",
+          "created_at": 1760000060,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.role", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.role"]
+          ],
+          "content": "{\"member\":\"48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d\",\"role\":\"member\",\"prev\":\"3506b9a8ba226ab919e3f85e4291991b9d43155585ec25260b24ea6fda10c805\"}",
+          "sig": "b1481535f03be90fd7f3ec9c9cc4f71f3d0d4ed91756894122d17aac4b192705ec4aecbdb3c72020498678a1f2b8b9c9489c54d4fc834574adbf55b84a6ffdab"
+        }
+      ],
+      "plaintexts": {
+        "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640": "{\"name\":\"Dartfreunde Nord\",\"visibility\":\"closed\",\"key\":\"3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5\"}",
+        "7190ef5e6dc7caec6b509ea9337b9adfd5694fab04c02b99218493ebe28fa14c": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"token\":\"1f7f9485c7c897e7959aab95e044464f\",\"maxUses\":5,\"expires\":1760086400}"
+      },
+      "labels": {
+        "found": "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640",
+        "invite": "7190ef5e6dc7caec6b509ea9337b9adfd5694fab04c02b99218493ebe28fa14c",
+        "join-admin": "a1e90fe33b4c869dc968496095435dd280a1dbbb8e20968a1babed474403f8d5",
+        "join-alice": "ad081f0ede4dbb9f8aa2f99fce541b90a9688cbe0a21b79992a9defca0ecb9fa",
+        "make-admin": "dcb8983d6fd012033263b2c3ca3863f7e2ded61f8127761106412afeaa8455b7",
+        "owner-sets": "3506b9a8ba226ab919e3f85e4291991b9d43155585ec25260b24ea6fda10c805",
+        "admin-sets": "2f5b989f2204aaa31ac0abe46206dabc3f13309c1ad26dc29dc52e6703ecff2c",
+        "admin-resolves": "d71121b6f1213becff446aeb8c87a348f8216207cc038c03668c706fe81fa7da"
+      },
+      "expect": {
+        "applied": ["9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640", "7190ef5e6dc7caec6b509ea9337b9adfd5694fab04c02b99218493ebe28fa14c", "a1e90fe33b4c869dc968496095435dd280a1dbbb8e20968a1babed474403f8d5", "ad081f0ede4dbb9f8aa2f99fce541b90a9688cbe0a21b79992a9defca0ecb9fa", "dcb8983d6fd012033263b2c3ca3863f7e2ded61f8127761106412afeaa8455b7", "3506b9a8ba226ab919e3f85e4291991b9d43155585ec25260b24ea6fda10c805", "d71121b6f1213becff446aeb8c87a348f8216207cc038c03668c706fe81fa7da"],
+        "rejected": [
+          {
+            "id": "2f5b989f2204aaa31ac0abe46206dabc3f13309c1ad26dc29dc52e6703ecff2c",
+            "label": "admin-sets",
+            "reason": "stale_predecessor"
+          }
+        ],
+        "state": {
+          "members": {
+            "owner": "owner",
+            "admin": "admin",
+            "alice": "member"
+          }
+        }
+      }
+    },
+    {
+      "name": "owner-transfer",
+      "description": "Ownership changes only by offer and acceptance of the offered member. Afterwards the former owner is an admin and loses owner rights.",
+      "now": 1760100000,
+      "root": "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640",
+      "groupKey": "club",
+      "open": true,
+      "events": [
+        {
+          "id": "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000000,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.found", "blueline"],
+            ["v", "1"],
+            ["alt", "BlueLine Darts club.found"],
+            ["enc", "nip44", "3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5"]
+          ],
+          "content": "Ai4tczJ5F+VaL54qeJLmsO3XHu5XWUmP/8dyFQAc28BQCOWwZRvEGEnq60ACmJ1kgAC8BIPDtfTVqYW6waTThxDgVRXng5LjC2XL3k/QsqGcZpEV1py1kjUiMSOLlBOCyj6bceskP/3401MGnM0u32+9ceTM56M60GfSsMBPMb5s5y2RYaNl566zKHSsIV9nYz5UkvcoRRkzGNDOZnnODt2OJ4/+aqkjhpmMKBg+VzvY6vYwuf7/LCXoKgPe/IgDT0/s",
+          "sig": "19239e1629534a989d4039dba5b7cc10bd4f513d7e7268a4860d914c88f326a36a0460e5d2654273c75407643bdf2f3cf6bc9d887cd55deaecd6328928b4e1d0"
+        },
+        {
+          "id": "7190ef5e6dc7caec6b509ea9337b9adfd5694fab04c02b99218493ebe28fa14c",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000010,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.invite", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.invite"],
+            ["enc", "nip44", "3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5"]
+          ],
+          "content": "Age6/AIUP7whry9VSTtL6lbmUHfJkFjy+eOM3QaQfFDElFsaQ9JRSornPDU6dE+sCEpGpyZRrlEuiFnXIExjOntUvn3bMCnJh7yUDmDqetzDxTnYY8B909/G5x7amh/NOYgBEPjugB4xCHwheSvuanEHPJkxD6cM6CpzSouzkoOPMQ0EZyTpe3jFI464jTXIwNVvOahRm86c/NzkLqoHxCqv4K2+Kl99dtUEtoNnE3IbflfXgRvIXO7BoimrPHkEE0ct",
+          "sig": "3f318da47e7cea5c6b95590e4d1b27df42a3b75703d41a618021c248a4c337be3a6d5fa3338470a0ec5e36698bad5c9ffcf3f65c4305e97ae9ffba75cf0b00e1"
+        },
+        {
+          "id": "c6b39e9d66bd81ccb7c8b9cf0e49646fd0ad9e55da238696240c3d6bcfb931fb",
+          "pubkey": "48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d",
+          "created_at": 1760000020,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.join", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.join"]
+          ],
+          "content": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"proof\":\"f14694782a39f3205cbabe239f01e9371fe3de8cf26f5d8a086cbad7d55eb825\"}",
+          "sig": "89740b6d9e89ed1c14bc5dc52d1527e8d1b7ee8c95e1a97f54e3af736c008b64b03f0a1a38853cbad6fb0b99adca705d28957f555f75f66f5630458969aca157"
+        },
+        {
+          "id": "1c21119a3c21785a2e848b6e89645e1fbc3e02ab142990a67e68eb202431297a",
+          "pubkey": "b400d330df264198a54d0f21847e5c3de7d470529c9e8f99cd1acf0bb256433b",
+          "created_at": 1760000021,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.join", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.join"]
+          ],
+          "content": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"proof\":\"9579ea93730b325d1c1c951ad3668011194aba455117a3546a644e0501f1efaa\"}",
+          "sig": "d4fb867976dec630fcf1296954b098c0eeedb6672b02f8b39ab73a4c72e826975223648d0d7f0f564be7e3e5b7904910e941dd0041281f5007f36b25cc73fe4b"
+        },
+        {
+          "id": "02ab17ef99865dab5ade4e33c424f3b28af4086f95ef21ee4aeb0f5e6639b991",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000030,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.owner.offer", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.owner.offer"]
+          ],
+          "content": "{\"to\":\"48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d\",\"prev\":\"9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640\"}",
+          "sig": "76c9e13cd65a570cb4f612527852d46175bf72f6e779be28a167b7a93a0593037c2e332a73a4ebd71ce4898f6933fca1e0cb2ddc06cca7887f4bbe4db845f670"
+        },
+        {
+          "id": "4164deef63666323c48e3e602a24e268cf74a68dbe4f9771ef9bde2e41146f71",
+          "pubkey": "b400d330df264198a54d0f21847e5c3de7d470529c9e8f99cd1acf0bb256433b",
+          "created_at": 1760000040,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.owner.accept", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.owner.accept"]
+          ],
+          "content": "{\"offer\":\"02ab17ef99865dab5ade4e33c424f3b28af4086f95ef21ee4aeb0f5e6639b991\"}",
+          "sig": "41fdf6ad4a81f7cae31b63900bde26f0161e9685f77d68e15b1c88fab007cf0b2db6e5d582b0f839361eca3e4077db8cdb4c90c63f7d93dc73964e32dc4e5b48"
+        },
+        {
+          "id": "065f461c3418dc0846d08a9acbf50704ccb48c854b5e6a5578b873187974044d",
+          "pubkey": "48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d",
+          "created_at": 1760000050,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.owner.accept", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.owner.accept"]
+          ],
+          "content": "{\"offer\":\"02ab17ef99865dab5ade4e33c424f3b28af4086f95ef21ee4aeb0f5e6639b991\"}",
+          "sig": "c896597eef955605116da5c559ee62c011215ee1abeb3079dfdfc22bf4b34090eaaa8c39bef63a346e2d04beb8455ae6790f1a252b947f2a98341801ea673e40"
+        },
+        {
+          "id": "2787cedcc003946ea7c9595674f8c0a5844d2d775cf29a24613e1e737ba36c27",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000060,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.key", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.key"]
+          ],
+          "content": "{\"epoch\":1,\"key\":\"83ff902410d2c639fa362e1e73a02d87f7091cc9ca66465237f940a6ece6e344\",\"wraps\":[]}",
+          "sig": "fe29bbf41e23880716a4f3058638618eca70112332670182ffa2e3d6caef801fe2dff6277930b81393ad0aedadb0970f572ccff37f2a902bbc06b6ccce55246b"
+        },
+        {
+          "id": "2df9b51d3e5bb3886b759c6b3b31634c5dcfe6f9cf963406700bb9a6eb05b113",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000070,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.owner.offer", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.owner.offer"]
+          ],
+          "content": "{\"to\":\"b400d330df264198a54d0f21847e5c3de7d470529c9e8f99cd1acf0bb256433b\",\"prev\":\"065f461c3418dc0846d08a9acbf50704ccb48c854b5e6a5578b873187974044d\"}",
+          "sig": "d3ef728f402c14359fceccf87b2f7e747598ea274d1836593adc3693cc45216ea233ce9173e38cd771dd0f216f1702e3432e12c41511e68c4dfebf1298edc5e9"
+        },
+        {
+          "id": "04bda3ddcaf427869583cfb5aec6fe72c470de700e04cc22daf139958f4b1c51",
+          "pubkey": "48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d",
+          "created_at": 1760000080,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.key", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.key"]
+          ],
+          "content": "{\"epoch\":1,\"key\":\"83ff902410d2c639fa362e1e73a02d87f7091cc9ca66465237f940a6ece6e344\",\"wraps\":[\"AsXLqtp+GHDnv+weIkc+iP5Q8lEi9lINLQ8tKybckyxAmmKj5lTC3jRMfrkyH6ooX+ZFpqWcDVS3RGofkK91hvDpvUY1OqQfvFS3D+VepTkTADRwbbR6M5FkdKheOBTIkVsjXFlNRoQsWxcCuoCuLkTSB9Sfv+rs2MRCin/ikCWpOQA=\",\"AmypB+0ozo/HUHP2tsN/5Dpj7NOe7FhPEjhQn+ZQjXHxDKSyhhZNlmFY3C+37qj01m4Ph3qMiAsH+QMCXGUZQ/UWDpjekBx1a+huqit9a0vArdH7MQhMsNun5KGnzG4+bPodGAhJB8mjTmpSWttLjvZmB+HSscm52w+ix8p60p9gtDw=\"]}",
+          "sig": "d04467fae3c0c34aa248debe1e5df25d254a04396d30ede6fe004e85038b1caa189823411da9f276a02638b38bd857076b481a4149cd0fc1ad1a49a7a868d8aa"
+        }
+      ],
+      "plaintexts": {
+        "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640": "{\"name\":\"Dartfreunde Nord\",\"visibility\":\"closed\",\"key\":\"3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5\"}",
+        "7190ef5e6dc7caec6b509ea9337b9adfd5694fab04c02b99218493ebe28fa14c": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"token\":\"1f7f9485c7c897e7959aab95e044464f\",\"maxUses\":5,\"expires\":1760086400}"
+      },
+      "labels": {
+        "found": "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640",
+        "invite": "7190ef5e6dc7caec6b509ea9337b9adfd5694fab04c02b99218493ebe28fa14c",
+        "join-alice": "c6b39e9d66bd81ccb7c8b9cf0e49646fd0ad9e55da238696240c3d6bcfb931fb",
+        "join-bob": "1c21119a3c21785a2e848b6e89645e1fbc3e02ab142990a67e68eb202431297a",
+        "offer": "02ab17ef99865dab5ade4e33c424f3b28af4086f95ef21ee4aeb0f5e6639b991",
+        "bob-accepts": "4164deef63666323c48e3e602a24e268cf74a68dbe4f9771ef9bde2e41146f71",
+        "alice-accepts": "065f461c3418dc0846d08a9acbf50704ccb48c854b5e6a5578b873187974044d",
+        "old-owner-rotates": "2787cedcc003946ea7c9595674f8c0a5844d2d775cf29a24613e1e737ba36c27",
+        "old-owner-offers": "2df9b51d3e5bb3886b759c6b3b31634c5dcfe6f9cf963406700bb9a6eb05b113",
+        "new-owner-rotates": "04bda3ddcaf427869583cfb5aec6fe72c470de700e04cc22daf139958f4b1c51"
+      },
+      "expect": {
+        "applied": ["9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640", "7190ef5e6dc7caec6b509ea9337b9adfd5694fab04c02b99218493ebe28fa14c", "c6b39e9d66bd81ccb7c8b9cf0e49646fd0ad9e55da238696240c3d6bcfb931fb", "1c21119a3c21785a2e848b6e89645e1fbc3e02ab142990a67e68eb202431297a", "02ab17ef99865dab5ade4e33c424f3b28af4086f95ef21ee4aeb0f5e6639b991", "065f461c3418dc0846d08a9acbf50704ccb48c854b5e6a5578b873187974044d", "04bda3ddcaf427869583cfb5aec6fe72c470de700e04cc22daf139958f4b1c51"],
+        "rejected": [
+          {
+            "id": "4164deef63666323c48e3e602a24e268cf74a68dbe4f9771ef9bde2e41146f71",
+            "label": "bob-accepts",
+            "reason": "not_authorized"
+          },
+          {
+            "id": "2787cedcc003946ea7c9595674f8c0a5844d2d775cf29a24613e1e737ba36c27",
+            "label": "old-owner-rotates",
+            "reason": "not_authorized"
+          },
+          {
+            "id": "2df9b51d3e5bb3886b759c6b3b31634c5dcfe6f9cf963406700bb9a6eb05b113",
+            "label": "old-owner-offers",
+            "reason": "not_authorized"
+          }
+        ],
+        "state": {
+          "owner": "alice",
+          "members": {
+            "owner": "admin",
+            "alice": "owner",
+            "bob": "member"
+          },
+          "keyEpoch": 1
+        }
+      }
+    },
+    {
+      "name": "leave-and-rejoin",
+      "description": "The owner cannot leave; a member leaves once. A removed member cannot come back with an invite made before the removal, but can with a new one.",
+      "now": 1760100000,
+      "root": "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640",
+      "groupKey": "club",
+      "open": true,
+      "events": [
+        {
+          "id": "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000000,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.found", "blueline"],
+            ["v", "1"],
+            ["alt", "BlueLine Darts club.found"],
+            ["enc", "nip44", "3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5"]
+          ],
+          "content": "Ai4tczJ5F+VaL54qeJLmsO3XHu5XWUmP/8dyFQAc28BQCOWwZRvEGEnq60ACmJ1kgAC8BIPDtfTVqYW6waTThxDgVRXng5LjC2XL3k/QsqGcZpEV1py1kjUiMSOLlBOCyj6bceskP/3401MGnM0u32+9ceTM56M60GfSsMBPMb5s5y2RYaNl566zKHSsIV9nYz5UkvcoRRkzGNDOZnnODt2OJ4/+aqkjhpmMKBg+VzvY6vYwuf7/LCXoKgPe/IgDT0/s",
+          "sig": "19239e1629534a989d4039dba5b7cc10bd4f513d7e7268a4860d914c88f326a36a0460e5d2654273c75407643bdf2f3cf6bc9d887cd55deaecd6328928b4e1d0"
+        },
+        {
+          "id": "7190ef5e6dc7caec6b509ea9337b9adfd5694fab04c02b99218493ebe28fa14c",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000010,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.invite", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.invite"],
+            ["enc", "nip44", "3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5"]
+          ],
+          "content": "Age6/AIUP7whry9VSTtL6lbmUHfJkFjy+eOM3QaQfFDElFsaQ9JRSornPDU6dE+sCEpGpyZRrlEuiFnXIExjOntUvn3bMCnJh7yUDmDqetzDxTnYY8B909/G5x7amh/NOYgBEPjugB4xCHwheSvuanEHPJkxD6cM6CpzSouzkoOPMQ0EZyTpe3jFI464jTXIwNVvOahRm86c/NzkLqoHxCqv4K2+Kl99dtUEtoNnE3IbflfXgRvIXO7BoimrPHkEE0ct",
+          "sig": "3f318da47e7cea5c6b95590e4d1b27df42a3b75703d41a618021c248a4c337be3a6d5fa3338470a0ec5e36698bad5c9ffcf3f65c4305e97ae9ffba75cf0b00e1"
+        },
+        {
+          "id": "c6b39e9d66bd81ccb7c8b9cf0e49646fd0ad9e55da238696240c3d6bcfb931fb",
+          "pubkey": "48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d",
+          "created_at": 1760000020,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.join", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.join"]
+          ],
+          "content": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"proof\":\"f14694782a39f3205cbabe239f01e9371fe3de8cf26f5d8a086cbad7d55eb825\"}",
+          "sig": "89740b6d9e89ed1c14bc5dc52d1527e8d1b7ee8c95e1a97f54e3af736c008b64b03f0a1a38853cbad6fb0b99adca705d28957f555f75f66f5630458969aca157"
+        },
+        {
+          "id": "1c21119a3c21785a2e848b6e89645e1fbc3e02ab142990a67e68eb202431297a",
+          "pubkey": "b400d330df264198a54d0f21847e5c3de7d470529c9e8f99cd1acf0bb256433b",
+          "created_at": 1760000021,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.join", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.join"]
+          ],
+          "content": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"proof\":\"9579ea93730b325d1c1c951ad3668011194aba455117a3546a644e0501f1efaa\"}",
+          "sig": "d4fb867976dec630fcf1296954b098c0eeedb6672b02f8b39ab73a4c72e826975223648d0d7f0f564be7e3e5b7904910e941dd0041281f5007f36b25cc73fe4b"
+        },
+        {
+          "id": "ae15c8b39bfd8f18e05a31b4bb5905816ffe302ddd9e95a5ecc1b5eeb257b7be",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000030,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.leave", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.leave"]
+          ],
+          "content": "{}",
+          "sig": "8af68870d15ba6826370c4edd932192cf875e9b2b654f8861f9709ba21f681e65856afcaa6370b934705fa472ddfcbb0f55f0d9d5f201956e46fdf33d75b2086"
+        },
+        {
+          "id": "bb7bcf0d77a45dea29c720193c530e9a7b1e078e8b2fdffa5f7fbd8aa55fdb9b",
+          "pubkey": "b400d330df264198a54d0f21847e5c3de7d470529c9e8f99cd1acf0bb256433b",
+          "created_at": 1760000031,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.leave", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.leave"]
+          ],
+          "content": "{}",
+          "sig": "c0c5ec853f50df641ba3f3e6cb7343b78d06082a6114949f4466fa18d1c34e6b25f98a9326e3ab730af6ee96f3c682a63511f30acbe7bfd0b641f9833ca4e936"
+        },
+        {
+          "id": "ec06447a0881a9405cb32f937404a0cd1b6ac44c97a3450b286b4d88b7d5606a",
+          "pubkey": "b400d330df264198a54d0f21847e5c3de7d470529c9e8f99cd1acf0bb256433b",
+          "created_at": 1760000032,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.leave", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.leave"]
+          ],
+          "content": "{}",
+          "sig": "ba02b722a9df3105fc0003be63bbb02de85544bb42a314ae1a3018083542c7b7ce1a915948f54a8c945fef3fb78801a40bdf71290d53f6f1afcf56d70d78b4e9"
+        },
+        {
+          "id": "5eb8c9bd3964d2b8b696827ce9159c0d69572c582c3d64227fe302b7eddf3048",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000040,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.remove", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.remove"]
+          ],
+          "content": "{\"member\":\"48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d\",\"prev\":\"c6b39e9d66bd81ccb7c8b9cf0e49646fd0ad9e55da238696240c3d6bcfb931fb\"}",
+          "sig": "0362c232d821816040c02dc27dd19f0a7d57022d9b067bc0b0d35ca0d930ee9ff4943efd92e0f2a65977a65dc35daa985e35f99db36185544d4747b251202d9e"
+        },
+        {
+          "id": "70657cb93d5f5a8a264cc06ed18f12badb1de15b9a4e96f3af8c3501bb7f9edd",
+          "pubkey": "48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d",
+          "created_at": 1760000050,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.join", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.join"]
+          ],
+          "content": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"proof\":\"f14694782a39f3205cbabe239f01e9371fe3de8cf26f5d8a086cbad7d55eb825\"}",
+          "sig": "afbac91958f952c7b96c6469d03a22c87bdb70bc41fce0f587632dc2b2011ced79632f89a5f607485df84b7a3cb2bcf77407fdca8a132ba6a085a99fd15e7552"
+        },
+        {
+          "id": "b2a8f0c056c993c5bfd300651eee36f0e9c03607b7107ef2f575f96307680ed4",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000060,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.invite", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.invite"],
+            ["enc", "nip44", "3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5"]
+          ],
+          "content": "Ao0ilTspXDclXpm9AOJMnQ6oowvWOeofKHvpBxpSY2rH3U0PaskxXbF4HeYrR55QUt3UwmLvnHhjbhd+TL+Zj+duf9igB1lvTBXyp5aLsnuxBFtB53Oq1LWaK6lWqPl4633kwebMTpMllwNtUyGqHEfOu/axsUh0i3q+buO/cV/HHQbrhG4yT3VLEYOl3zVTJ2BMj21KjGsu1aqP/wmIHxGBOtTr1f1eWXsS2cx3OuGl4W90EubbHPjvdcn3TWu/SKAA",
+          "sig": "20500bc465f6f045bb5bbb70b74c2067ef86dee4db7ba4dd8c4d21bbdc6360261e9c66f7400c14cb794d823e2b5da6e801bf9cf96a868c210ada85dfa10e2d56"
+        },
+        {
+          "id": "0bbfe483662baf9e73f34e00faf72a62badc5eea50ebeb4278fb2e6da93323a5",
+          "pubkey": "48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d",
+          "created_at": 1760000070,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.join", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.join"]
+          ],
+          "content": "{\"invite\":\"602b9a8129d626f1ba06ba655dc2861c\",\"proof\":\"78fa3b173c02a5e4a043ba9e2510de0abda6dc65e913e9253653264ba00c957b\"}",
+          "sig": "6389300054a27af7be32bd9503c44a0f45201b1c1ed55ad60844ce44bcc4b02c2fd36bd24734b4ce31b54d747900e692aa301861ddcad8a574a0bbedc910e717"
+        },
+        {
+          "id": "0c2e88443e42f95b00efa1d8eec9e7bdce5afc75a22144a4a50e6ca8b6de3f7c",
+          "pubkey": "b400d330df264198a54d0f21847e5c3de7d470529c9e8f99cd1acf0bb256433b",
+          "created_at": 1760000080,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.join", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.join"]
+          ],
+          "content": "{\"invite\":\"602b9a8129d626f1ba06ba655dc2861c\",\"proof\":\"e60da42614b91dd67afec39388e1d9468862ae764a63c2b450f88038a4bddcc4\"}",
+          "sig": "84751eabcdec9c732b5c668afd7e962cc9076afbac884e6ec43de4e2d5941fdb6899840bbb000bbbb46fa8e9159897e504264c3aa038f3f8c38f1f2936e9fb65"
+        }
+      ],
+      "plaintexts": {
+        "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640": "{\"name\":\"Dartfreunde Nord\",\"visibility\":\"closed\",\"key\":\"3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5\"}",
+        "7190ef5e6dc7caec6b509ea9337b9adfd5694fab04c02b99218493ebe28fa14c": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"token\":\"1f7f9485c7c897e7959aab95e044464f\",\"maxUses\":5,\"expires\":1760086400}",
+        "b2a8f0c056c993c5bfd300651eee36f0e9c03607b7107ef2f575f96307680ed4": "{\"invite\":\"602b9a8129d626f1ba06ba655dc2861c\",\"token\":\"e1605eae8f73d2a4d4f13b8506dde37c\",\"maxUses\":5,\"expires\":1760086400}"
+      },
+      "labels": {
+        "found": "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640",
+        "invite": "7190ef5e6dc7caec6b509ea9337b9adfd5694fab04c02b99218493ebe28fa14c",
+        "join-alice": "c6b39e9d66bd81ccb7c8b9cf0e49646fd0ad9e55da238696240c3d6bcfb931fb",
+        "join-bob": "1c21119a3c21785a2e848b6e89645e1fbc3e02ab142990a67e68eb202431297a",
+        "owner-leaves": "ae15c8b39bfd8f18e05a31b4bb5905816ffe302ddd9e95a5ecc1b5eeb257b7be",
+        "bob-leaves": "bb7bcf0d77a45dea29c720193c530e9a7b1e078e8b2fdffa5f7fbd8aa55fdb9b",
+        "bob-leaves-again": "ec06447a0881a9405cb32f937404a0cd1b6ac44c97a3450b286b4d88b7d5606a",
+        "remove-alice": "5eb8c9bd3964d2b8b696827ce9159c0d69572c582c3d64227fe302b7eddf3048",
+        "alice-old-invite": "70657cb93d5f5a8a264cc06ed18f12badb1de15b9a4e96f3af8c3501bb7f9edd",
+        "invite-2": "b2a8f0c056c993c5bfd300651eee36f0e9c03607b7107ef2f575f96307680ed4",
+        "alice-new-invite": "0bbfe483662baf9e73f34e00faf72a62badc5eea50ebeb4278fb2e6da93323a5",
+        "bob-returns": "0c2e88443e42f95b00efa1d8eec9e7bdce5afc75a22144a4a50e6ca8b6de3f7c"
+      },
+      "expect": {
+        "applied": ["9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640", "7190ef5e6dc7caec6b509ea9337b9adfd5694fab04c02b99218493ebe28fa14c", "c6b39e9d66bd81ccb7c8b9cf0e49646fd0ad9e55da238696240c3d6bcfb931fb", "1c21119a3c21785a2e848b6e89645e1fbc3e02ab142990a67e68eb202431297a", "bb7bcf0d77a45dea29c720193c530e9a7b1e078e8b2fdffa5f7fbd8aa55fdb9b", "5eb8c9bd3964d2b8b696827ce9159c0d69572c582c3d64227fe302b7eddf3048", "b2a8f0c056c993c5bfd300651eee36f0e9c03607b7107ef2f575f96307680ed4", "0bbfe483662baf9e73f34e00faf72a62badc5eea50ebeb4278fb2e6da93323a5", "0c2e88443e42f95b00efa1d8eec9e7bdce5afc75a22144a4a50e6ca8b6de3f7c"],
+        "rejected": [
+          {
+            "id": "ae15c8b39bfd8f18e05a31b4bb5905816ffe302ddd9e95a5ecc1b5eeb257b7be",
+            "label": "owner-leaves",
+            "reason": "owner_cannot_leave"
+          },
+          {
+            "id": "ec06447a0881a9405cb32f937404a0cd1b6ac44c97a3450b286b4d88b7d5606a",
+            "label": "bob-leaves-again",
+            "reason": "not_member"
+          },
+          {
+            "id": "70657cb93d5f5a8a264cc06ed18f12badb1de15b9a4e96f3af8c3501bb7f9edd",
+            "label": "alice-old-invite",
+            "reason": "removed_requires_new_invite"
+          }
+        ],
+        "state": {
+          "members": {
+            "owner": "owner",
+            "alice": "member",
+            "bob": "member"
+          }
+        }
+      }
+    },
+    {
+      "name": "key-rotation",
+      "description": "Only the owner rotates the club key, one epoch at a time.",
+      "now": 1760100000,
+      "root": "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640",
+      "groupKey": "club",
+      "open": true,
+      "events": [
+        {
+          "id": "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000000,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.found", "blueline"],
+            ["v", "1"],
+            ["alt", "BlueLine Darts club.found"],
+            ["enc", "nip44", "3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5"]
+          ],
+          "content": "Ai4tczJ5F+VaL54qeJLmsO3XHu5XWUmP/8dyFQAc28BQCOWwZRvEGEnq60ACmJ1kgAC8BIPDtfTVqYW6waTThxDgVRXng5LjC2XL3k/QsqGcZpEV1py1kjUiMSOLlBOCyj6bceskP/3401MGnM0u32+9ceTM56M60GfSsMBPMb5s5y2RYaNl566zKHSsIV9nYz5UkvcoRRkzGNDOZnnODt2OJ4/+aqkjhpmMKBg+VzvY6vYwuf7/LCXoKgPe/IgDT0/s",
+          "sig": "19239e1629534a989d4039dba5b7cc10bd4f513d7e7268a4860d914c88f326a36a0460e5d2654273c75407643bdf2f3cf6bc9d887cd55deaecd6328928b4e1d0"
+        },
+        {
+          "id": "7190ef5e6dc7caec6b509ea9337b9adfd5694fab04c02b99218493ebe28fa14c",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000010,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.invite", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.invite"],
+            ["enc", "nip44", "3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5"]
+          ],
+          "content": "Age6/AIUP7whry9VSTtL6lbmUHfJkFjy+eOM3QaQfFDElFsaQ9JRSornPDU6dE+sCEpGpyZRrlEuiFnXIExjOntUvn3bMCnJh7yUDmDqetzDxTnYY8B909/G5x7amh/NOYgBEPjugB4xCHwheSvuanEHPJkxD6cM6CpzSouzkoOPMQ0EZyTpe3jFI464jTXIwNVvOahRm86c/NzkLqoHxCqv4K2+Kl99dtUEtoNnE3IbflfXgRvIXO7BoimrPHkEE0ct",
+          "sig": "3f318da47e7cea5c6b95590e4d1b27df42a3b75703d41a618021c248a4c337be3a6d5fa3338470a0ec5e36698bad5c9ffcf3f65c4305e97ae9ffba75cf0b00e1"
+        },
+        {
+          "id": "a1e90fe33b4c869dc968496095435dd280a1dbbb8e20968a1babed474403f8d5",
+          "pubkey": "515b512834a4548d6c376880fb4dc22102810998c13a7442787695e7a4748b01",
+          "created_at": 1760000020,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.join", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.join"]
+          ],
+          "content": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"proof\":\"f79afcace163616682c20a8cf956796ee225149be7bf39c5a7f96ce9e16aeb7b\"}",
+          "sig": "0cb9042713d18dcf3b3fd32e9dbdb725bc6d04c456b04d3141ff43505e32de207858225d777897a68f6e334b5e2c2b86ccf65fc945780e9674e8a9af8c306a12"
+        },
+        {
+          "id": "dcb8983d6fd012033263b2c3ca3863f7e2ded61f8127761106412afeaa8455b7",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000030,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.role", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.role"]
+          ],
+          "content": "{\"member\":\"515b512834a4548d6c376880fb4dc22102810998c13a7442787695e7a4748b01\",\"role\":\"admin\",\"prev\":\"a1e90fe33b4c869dc968496095435dd280a1dbbb8e20968a1babed474403f8d5\"}",
+          "sig": "9c128c999b97d002295b9ea501638c233007b2afda5a374fb08949e90ad9fc338617bf6f4f8cfbd5f920ceb39f6d233a905bc84c094cff84d6d430cc6dd097b7"
+        },
+        {
+          "id": "adf6fb657886e340c2e472bcab00e8efd569266a25e4282992151f9f21c29176",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000040,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.key", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.key"]
+          ],
+          "content": "{\"epoch\":1,\"key\":\"83ff902410d2c639fa362e1e73a02d87f7091cc9ca66465237f940a6ece6e344\",\"wraps\":[\"Ajhw9xVatNFVqfP7Q0K5wTm9IzalJdTlRTJ9AStAgmqWmco2jplEN/Jl//2WYWLE07dUIGje/9repu/vpm2WtNX6R4wCwTXPmVbTifgs1Ln62t26elmQaJ4/J++rN+4tl5xfmAk32pL0Bz9A+eh7KGhyGhglDP7bEvF46QyEKHLuBqA=\"]}",
+          "sig": "9e17e6fb00cb0d694b1f67f3118b6b63c16e9cbeb0998c681b3ae6b5aa1c5b7b625f20f10bf73e5e5cecf55b47c7d92a99d91bcaf14f67938310f1cc729476c2"
+        },
+        {
+          "id": "42a994a3cc51b76dc6ab10481d11d36a327ab3571ac9ee615bcc905c09c4f636",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000050,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.key", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.key"]
+          ],
+          "content": "{\"epoch\":3,\"key\":\"0642ce622555ad19c53c9efbe94da2a3375987cd67f9aa64d74b1ccdbf0781b7\",\"wraps\":[]}",
+          "sig": "7ecca9c8eff928780e88ae4cddc91f130cce78098495c86bae1225b3e6dcc49eea30f0eea2db73dc728fc06c791c9b076ce6cebd08ab8be3a63b2ea27131012d"
+        },
+        {
+          "id": "2c3903a483c2511324c2a3468f73738079abcf85e5c2b0c7d6f982fe2c521fdc",
+          "pubkey": "515b512834a4548d6c376880fb4dc22102810998c13a7442787695e7a4748b01",
+          "created_at": 1760000060,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.key", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.key"]
+          ],
+          "content": "{\"epoch\":2,\"key\":\"0642ce622555ad19c53c9efbe94da2a3375987cd67f9aa64d74b1ccdbf0781b7\",\"wraps\":[]}",
+          "sig": "6a15aa4d99c445c9f3d4021e6441a806dc45b3101c8cd81869c16c750979488a5dd7f90c06b8ba84776b035e592f7adf3648586acf99ddc10b3d6f2b05dfbac1"
+        }
+      ],
+      "plaintexts": {
+        "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640": "{\"name\":\"Dartfreunde Nord\",\"visibility\":\"closed\",\"key\":\"3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5\"}",
+        "7190ef5e6dc7caec6b509ea9337b9adfd5694fab04c02b99218493ebe28fa14c": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"token\":\"1f7f9485c7c897e7959aab95e044464f\",\"maxUses\":5,\"expires\":1760086400}"
+      },
+      "labels": {
+        "found": "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640",
+        "invite": "7190ef5e6dc7caec6b509ea9337b9adfd5694fab04c02b99218493ebe28fa14c",
+        "join-admin": "a1e90fe33b4c869dc968496095435dd280a1dbbb8e20968a1babed474403f8d5",
+        "make-admin": "dcb8983d6fd012033263b2c3ca3863f7e2ded61f8127761106412afeaa8455b7",
+        "rotate-1": "adf6fb657886e340c2e472bcab00e8efd569266a25e4282992151f9f21c29176",
+        "rotate-skip": "42a994a3cc51b76dc6ab10481d11d36a327ab3571ac9ee615bcc905c09c4f636",
+        "admin-rotates": "2c3903a483c2511324c2a3468f73738079abcf85e5c2b0c7d6f982fe2c521fdc"
+      },
+      "expect": {
+        "applied": ["9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640", "7190ef5e6dc7caec6b509ea9337b9adfd5694fab04c02b99218493ebe28fa14c", "a1e90fe33b4c869dc968496095435dd280a1dbbb8e20968a1babed474403f8d5", "dcb8983d6fd012033263b2c3ca3863f7e2ded61f8127761106412afeaa8455b7", "adf6fb657886e340c2e472bcab00e8efd569266a25e4282992151f9f21c29176"],
+        "rejected": [
+          {
+            "id": "42a994a3cc51b76dc6ab10481d11d36a327ab3571ac9ee615bcc905c09c4f636",
+            "label": "rotate-skip",
+            "reason": "epoch_mismatch"
+          },
+          {
+            "id": "2c3903a483c2511324c2a3468f73738079abcf85e5c2b0c7d6f982fe2c521fdc",
+            "label": "admin-rotates",
+            "reason": "not_authorized"
+          }
+        ],
+        "state": {
+          "keyEpoch": 1,
+          "key": "83ff902410d2c639fa362e1e73a02d87f7091cc9ca66465237f940a6ece6e344"
+        }
+      }
+    },
+    {
+      "name": "season-rules",
+      "description": "Season rules are versioned: free changes before the start, after it only with a visible reason, one version at a time, none after the end.",
+      "now": 1760100000,
+      "root": "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640",
+      "groupKey": "club",
+      "open": true,
+      "events": [
+        {
+          "id": "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000000,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.found", "blueline"],
+            ["v", "1"],
+            ["alt", "BlueLine Darts club.found"],
+            ["enc", "nip44", "3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5"]
+          ],
+          "content": "Ai4tczJ5F+VaL54qeJLmsO3XHu5XWUmP/8dyFQAc28BQCOWwZRvEGEnq60ACmJ1kgAC8BIPDtfTVqYW6waTThxDgVRXng5LjC2XL3k/QsqGcZpEV1py1kjUiMSOLlBOCyj6bceskP/3401MGnM0u32+9ceTM56M60GfSsMBPMb5s5y2RYaNl566zKHSsIV9nYz5UkvcoRRkzGNDOZnnODt2OJ4/+aqkjhpmMKBg+VzvY6vYwuf7/LCXoKgPe/IgDT0/s",
+          "sig": "19239e1629534a989d4039dba5b7cc10bd4f513d7e7268a4860d914c88f326a36a0460e5d2654273c75407643bdf2f3cf6bc9d887cd55deaecd6328928b4e1d0"
+        },
+        {
+          "id": "80f2dd03ce2b4d9dfac6717e851de088ca8b06e09549ff8bc606b220a5798d74",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000001,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.invite", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.invite"],
+            ["enc", "nip44", "3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5"]
+          ],
+          "content": "Age6/AIUP7whry9VSTtL6lbmUHfJkFjy+eOM3QaQfFDElFsaQ9JRSornPDU6dE+sCEpGpyZRrlEuiFnXIExjOntUvn3bMCnJh7yUDmDqetzDxTnYY8B909/G5x7amh/NOYgBEPjugB4xCHwheSvuanEHPJkxD6cM6CpzSouzkoOPMQ0EZyTpe3jFI464jTXIwNVvOahRm86c/NzkLqoHxCqv4K2+Kl99dtUEtoNnE3IbflfXgRvIXO7BoimrPHkEE0ct",
+          "sig": "be7cb60f5b0801a1ce5154a9d7449c0b33fe82a15e936c59d34fab06dcd0719029ba4c7f7eb0e7e8b5e7319d68de45237a28a7c668284e7b205824aba25bea42"
+        },
+        {
+          "id": "8ef56bdeb46718d2000c18c3081e54d31bfe6cc4d0586c8146f2debde878bb80",
+          "pubkey": "48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d",
+          "created_at": 1760000002,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.join", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.join"]
+          ],
+          "content": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"proof\":\"f14694782a39f3205cbabe239f01e9371fe3de8cf26f5d8a086cbad7d55eb825\"}",
+          "sig": "93f13bc55f17e7318f2c6581b6d3a0900f519057cfac2aa196854a744fbdc55bddf328dc9308fc4d35211d00fd05da091352dd67eef2837538d06820377a3614"
+        },
+        {
+          "id": "d0aaf499e2b4cfea17db0a2c0cffefd25e489f6542e7575a224079fc4a6095eb",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000010,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.season", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.season"]
+          ],
+          "content": "{\"season\":\"f01b1b31fce93d420a87e8ebc6e09769\",\"name\":\"Herbst 2025\",\"starts\":1760001000,\"rules\":{\"modes\":[\"501\"],\"points\":{\"win\":2,\"draw\":1,\"loss\":0},\"confirmations\":\"opponent\",\"minGames\":5,\"tiebreak\":[\"wins\",\"legDifference\"]}}",
+          "sig": "8c9ac58ba4dbcfcea29ebef176cc3f3a442069814869efc782e445616af2d94f669acacb2e84cbabfaa01131b6efe1c30d8bad71965d4ede4e2c69bce7031868"
+        },
+        {
+          "id": "3357ab3500ee45c36d2d6d23c8f22cc453e744b5d6941a191a1ff648150cccf5",
+          "pubkey": "48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d",
+          "created_at": 1760000011,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.season", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.season"]
+          ],
+          "content": "{\"season\":\"f4b95231d4b585de2085afb7b0647e65\",\"name\":\"Eigene Saison\",\"starts\":1760001000,\"rules\":{\"modes\":[\"501\"],\"points\":{\"win\":2,\"draw\":1,\"loss\":0},\"confirmations\":\"opponent\",\"minGames\":5,\"tiebreak\":[\"wins\",\"legDifference\"]}}",
+          "sig": "db174d4ecb0865beba68733bf6fb539ef2365cfa5c38187343aca73e12710a7b67b4835dd30f3ac76a3d4c39a4a90535c58124092f390e4c4f0a8ea48499a5f7"
+        },
+        {
+          "id": "a65d1084cfcafdbd9cb0180e0482e86a6cf9539cbdb3c342fd4b4fb4d5be8c28",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000020,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.season.rules", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.season.rules"]
+          ],
+          "content": "{\"season\":\"f01b1b31fce93d420a87e8ebc6e09769\",\"version\":2,\"rules\":{\"modes\":[\"501\"],\"points\":{\"win\":2,\"draw\":1,\"loss\":0},\"confirmations\":\"opponent\",\"minGames\":3,\"tiebreak\":[\"wins\",\"legDifference\"]}}",
+          "sig": "ee085fba1db2471d3731383b90b89c33b06171e5d6371ef0a66d86845a09e638b4e7bccf9f510ef977d660f080cef7874e54fed8fe0239e3252d23154ac0797c"
+        },
+        {
+          "id": "344a8e3137e7c0e5c43354ce3acf4593ededcfb19c71cd2119b12bb4001cd279",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760001100,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.season.rules", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.season.rules"]
+          ],
+          "content": "{\"season\":\"f01b1b31fce93d420a87e8ebc6e09769\",\"version\":3,\"rules\":{\"modes\":[\"501\"],\"points\":{\"win\":2,\"draw\":1,\"loss\":0},\"confirmations\":\"opponent\",\"minGames\":1,\"tiebreak\":[\"wins\",\"legDifference\"]}}",
+          "sig": "676b243b6071aa42b14575c7710d49cecd732e9157a17a2442e917a650d9d0014a5c223e575c5a89da0d6358e99c494f25b5e85e4c304443bf0f357795ddb044"
+        },
+        {
+          "id": "708da1a70a0b063c8b9aa9705f5b8c63941cb7f6b2bd74361a291532c33cdb86",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760001110,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.season.rules", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.season.rules"]
+          ],
+          "content": "{\"season\":\"f01b1b31fce93d420a87e8ebc6e09769\",\"version\":3,\"rules\":{\"modes\":[\"501\"],\"points\":{\"win\":2,\"draw\":1,\"loss\":0},\"confirmations\":\"opponent\",\"minGames\":1,\"tiebreak\":[\"wins\",\"legDifference\"]},\"reason\":\"Beschluss Clubabend 14.10.\"}",
+          "sig": "a491f8c175961af4d95e4709cf169f9ef0d8d68830538b5852cd8656ff1dec1a2608987a17b63681a0cd486eb1f83770c1d5e4cbadfe8f3ffe8361cdd64be4e0"
+        },
+        {
+          "id": "886977759578d16b0070b9e14baed46ad545e88e6007a08bbe1558c865d0b4f4",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760001120,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.season.rules", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.season.rules"]
+          ],
+          "content": "{\"season\":\"f01b1b31fce93d420a87e8ebc6e09769\",\"version\":5,\"rules\":{\"modes\":[\"501\"],\"points\":{\"win\":2,\"draw\":1,\"loss\":0},\"confirmations\":\"opponent\",\"minGames\":5,\"tiebreak\":[\"wins\",\"legDifference\"]},\"reason\":\"Sprung\"}",
+          "sig": "48f9999ae3089c8534ef02ae327ef827ab7401831b279cacaa15f3187998d63235e97df16b336afc0a19af38f2533c5ccfa1f4d7fe191fb77af04483a1a10fba"
+        },
+        {
+          "id": "fc86afbf25ab611850fee21e616707e42f562ced337fe02624057b15d2bd937f",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760001200,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.season.end", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.season.end"]
+          ],
+          "content": "{\"season\":\"f01b1b31fce93d420a87e8ebc6e09769\"}",
+          "sig": "850bb9b689755a62aa7f6da4a765e89ea1cd2e58d808d05b1f747bd08ca4c107c2dcc626e93b67d688d1d3914a04c827197ade8cfc06bbf37090ee8e411910c2"
+        },
+        {
+          "id": "b054bb7eeded432df25326f517969230c06b589e7b82a83bee8efab0390d1705",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760001300,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.season.rules", "blueline"],
+            ["v", "1"],
+            ["e", "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640"],
+            ["alt", "BlueLine Darts club.season.rules"]
+          ],
+          "content": "{\"season\":\"f01b1b31fce93d420a87e8ebc6e09769\",\"version\":4,\"rules\":{\"modes\":[\"501\"],\"points\":{\"win\":2,\"draw\":1,\"loss\":0},\"confirmations\":\"opponent\",\"minGames\":5,\"tiebreak\":[\"wins\",\"legDifference\"]},\"reason\":\"Zu spät\"}",
+          "sig": "73a130ba38c1671af308b8535a68156c2e05727f88b693985cece8702498bab496ed87e0044eb7e74fd9ad2cbd8dd94cbee398cb2c7a31ed51a1d5339ea157f8"
+        }
+      ],
+      "plaintexts": {
+        "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640": "{\"name\":\"Dartfreunde Nord\",\"visibility\":\"closed\",\"key\":\"3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5\"}",
+        "80f2dd03ce2b4d9dfac6717e851de088ca8b06e09549ff8bc606b220a5798d74": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"token\":\"1f7f9485c7c897e7959aab95e044464f\",\"maxUses\":5,\"expires\":1760086400}"
+      },
+      "labels": {
+        "found": "9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640",
+        "invite": "80f2dd03ce2b4d9dfac6717e851de088ca8b06e09549ff8bc606b220a5798d74",
+        "join-alice": "8ef56bdeb46718d2000c18c3081e54d31bfe6cc4d0586c8146f2debde878bb80",
+        "season": "d0aaf499e2b4cfea17db0a2c0cffefd25e489f6542e7575a224079fc4a6095eb",
+        "member-season": "3357ab3500ee45c36d2d6d23c8f22cc453e744b5d6941a191a1ff648150cccf5",
+        "v2-before": "a65d1084cfcafdbd9cb0180e0482e86a6cf9539cbdb3c342fd4b4fb4d5be8c28",
+        "v3-silent": "344a8e3137e7c0e5c43354ce3acf4593ededcfb19c71cd2119b12bb4001cd279",
+        "v3-reason": "708da1a70a0b063c8b9aa9705f5b8c63941cb7f6b2bd74361a291532c33cdb86",
+        "v5-skip": "886977759578d16b0070b9e14baed46ad545e88e6007a08bbe1558c865d0b4f4",
+        "end": "fc86afbf25ab611850fee21e616707e42f562ced337fe02624057b15d2bd937f",
+        "after-end": "b054bb7eeded432df25326f517969230c06b589e7b82a83bee8efab0390d1705"
+      },
+      "expect": {
+        "applied": ["9daecc202580b5439153aa75d4ddd37fb31d00c97d28347320d99aa1daa2d640", "80f2dd03ce2b4d9dfac6717e851de088ca8b06e09549ff8bc606b220a5798d74", "8ef56bdeb46718d2000c18c3081e54d31bfe6cc4d0586c8146f2debde878bb80", "d0aaf499e2b4cfea17db0a2c0cffefd25e489f6542e7575a224079fc4a6095eb", "a65d1084cfcafdbd9cb0180e0482e86a6cf9539cbdb3c342fd4b4fb4d5be8c28", "708da1a70a0b063c8b9aa9705f5b8c63941cb7f6b2bd74361a291532c33cdb86", "fc86afbf25ab611850fee21e616707e42f562ced337fe02624057b15d2bd937f"],
+        "rejected": [
+          {
+            "id": "3357ab3500ee45c36d2d6d23c8f22cc453e744b5d6941a191a1ff648150cccf5",
+            "label": "member-season",
+            "reason": "not_authorized"
+          },
+          {
+            "id": "344a8e3137e7c0e5c43354ce3acf4593ededcfb19c71cd2119b12bb4001cd279",
+            "label": "v3-silent",
+            "reason": "rules_change_needs_reason"
+          },
+          {
+            "id": "886977759578d16b0070b9e14baed46ad545e88e6007a08bbe1558c865d0b4f4",
+            "label": "v5-skip",
+            "reason": "season_version_mismatch"
+          },
+          {
+            "id": "b054bb7eeded432df25326f517969230c06b589e7b82a83bee8efab0390d1705",
+            "label": "after-end",
+            "reason": "season_ended"
+          }
+        ],
+        "state": {
+          "seasons": {
+            "f01b1b31fce93d420a87e8ebc6e09769": {
+              "versions": 3,
+              "ended": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "unknown-version-and-time",
+      "description": "A change in a newer format version is kept, not executed. A record dated more than 15 minutes ahead of the reader's clock and one dated before the founding are refused.",
+      "now": 1760005000,
+      "root": "9e4b395cac8d9fe9da38425528a3e6358d71e391f46f0ef1c5d282ca1638fea1",
+      "groupKey": "club",
+      "open": true,
+      "events": [
+        {
+          "id": "9e4b395cac8d9fe9da38425528a3e6358d71e391f46f0ef1c5d282ca1638fea1",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760001000,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.found", "blueline"],
+            ["v", "1"],
+            ["alt", "BlueLine Darts club.found"],
+            ["enc", "nip44", "3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5"]
+          ],
+          "content": "Ai4tczJ5F+VaL54qeJLmsO3XHu5XWUmP/8dyFQAc28BQCOWwZRvEGEnq60ACmJ1kgAC8BIPDtfTVqYW6waTThxDgVRXng5LjC2XL3k/QsqGcZpEV1py1kjUiMSOLlBOCyj6bceskP/3401MGnM0u32+9ceTM56M60GfSsMBPMb5s5y2RYaNl566zKHSsIV9nYz5UkvcoRRkzGNDOZnnODt2OJ4/+aqkjhpmMKBg+VzvY6vYwuf7/LCXoKgPe/IgDT0/s",
+          "sig": "42de2b98314031aada2f3272cd6efca1df1e78d7991f9bb6696b0f3409bc3e36892b847ea43c2527a8929b297d4c133fcd9d330be7bc7f754497d5933c0856c8"
+        },
+        {
+          "id": "2222ac4d69400c9cf4b13d331f37e84462bc7f00ea3113a3f6039c89d1761c5a",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760001010,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.update", "blueline"],
+            ["v", "2"],
+            ["e", "9e4b395cac8d9fe9da38425528a3e6358d71e391f46f0ef1c5d282ca1638fea1"],
+            ["alt", "BlueLine Darts club.update"]
+          ],
+          "content": "{\"prev\":\"9e4b395cac8d9fe9da38425528a3e6358d71e391f46f0ef1c5d282ca1638fea1\",\"name\":\"Version 2\"}",
+          "sig": "d6a31de00b2f3b35a2a0a133dfd52b17d5df2fda8a7d9da6e81f6d3bf367001b523a6a610b98466ca2a63b5a72e0e7d1b26b5605a92848da728964703b3b7e2d"
+        },
+        {
+          "id": "25c14eb2b68fcbe80463a8ca8dda6c084345e9b1c3153b30561164c50ca746d0",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760001020,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.update", "blueline"],
+            ["v", "1"],
+            ["e", "9e4b395cac8d9fe9da38425528a3e6358d71e391f46f0ef1c5d282ca1638fea1"],
+            ["alt", "BlueLine Darts club.update"]
+          ],
+          "content": "{\"prev\":\"9e4b395cac8d9fe9da38425528a3e6358d71e391f46f0ef1c5d282ca1638fea1\",\"name\":\"Dartfreunde Nord e.V.\"}",
+          "sig": "7ef87f6ede9cb096682792c137eadc00bcfb68a6162002e52009a604e379ce60368fbb5ccdf03a569dbbee284939a29543dfe43a56a104d80762f55fa9ec859b"
+        },
+        {
+          "id": "4de847b7cfcf340ed51710200e66dff673e50f7a491e6375a223cf9ec4d583bb",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760005901,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.update", "blueline"],
+            ["v", "1"],
+            ["e", "9e4b395cac8d9fe9da38425528a3e6358d71e391f46f0ef1c5d282ca1638fea1"],
+            ["alt", "BlueLine Darts club.update"]
+          ],
+          "content": "{\"prev\":\"25c14eb2b68fcbe80463a8ca8dda6c084345e9b1c3153b30561164c50ca746d0\",\"about\":\"Aus der Zukunft\"}",
+          "sig": "990ce43259995a766693fb3c28873d2fd3393efdad343f183152f8fe0b30f214a4a1ded1570e6a6f5edc5e2c89535d0539f92ed3bca007964fbe32a354ac775d"
+        },
+        {
+          "id": "26133495ff447035864aaf5ce6ea54b24c106bd903275fc79470994ba716a1f2",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000900,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.update", "blueline"],
+            ["v", "1"],
+            ["e", "9e4b395cac8d9fe9da38425528a3e6358d71e391f46f0ef1c5d282ca1638fea1"],
+            ["alt", "BlueLine Darts club.update"]
+          ],
+          "content": "{\"prev\":\"9e4b395cac8d9fe9da38425528a3e6358d71e391f46f0ef1c5d282ca1638fea1\",\"about\":\"Vor der Gründung\"}",
+          "sig": "9e81d0a38bb621c2c24b721f82485ce95ba77ee43781ae338518956cde4b181ccbc0e4e2e951c1ebbb57a04c635d22b22019e67c64a4d6ffb65a7b0eb231b415"
+        }
+      ],
+      "plaintexts": {
+        "9e4b395cac8d9fe9da38425528a3e6358d71e391f46f0ef1c5d282ca1638fea1": "{\"name\":\"Dartfreunde Nord\",\"visibility\":\"closed\",\"key\":\"3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5\"}"
+      },
+      "labels": {
+        "found": "9e4b395cac8d9fe9da38425528a3e6358d71e391f46f0ef1c5d282ca1638fea1",
+        "update-v2": "2222ac4d69400c9cf4b13d331f37e84462bc7f00ea3113a3f6039c89d1761c5a",
+        "update-v1": "25c14eb2b68fcbe80463a8ca8dda6c084345e9b1c3153b30561164c50ca746d0",
+        "future": "4de847b7cfcf340ed51710200e66dff673e50f7a491e6375a223cf9ec4d583bb",
+        "too-early": "26133495ff447035864aaf5ce6ea54b24c106bd903275fc79470994ba716a1f2"
+      },
+      "expect": {
+        "applied": ["9e4b395cac8d9fe9da38425528a3e6358d71e391f46f0ef1c5d282ca1638fea1", "25c14eb2b68fcbe80463a8ca8dda6c084345e9b1c3153b30561164c50ca746d0"],
+        "rejected": [
+          {
+            "id": "4de847b7cfcf340ed51710200e66dff673e50f7a491e6375a223cf9ec4d583bb",
+            "label": "future",
+            "reason": "future_timestamp"
+          },
+          {
+            "id": "26133495ff447035864aaf5ce6ea54b24c106bd903275fc79470994ba716a1f2",
+            "label": "too-early",
+            "reason": "before_founding"
+          }
+        ],
+        "unapplied": [
+          {
+            "id": "2222ac4d69400c9cf4b13d331f37e84462bc7f00ea3113a3f6039c89d1761c5a",
+            "label": "update-v2",
+            "why": "unknown"
+          }
+        ],
+        "state": {
+          "name": "Dartfreunde Nord e.V."
+        }
+      }
+    },
+    {
+      "name": "reader-without-club-key",
+      "description": "A public club read by an outsider: invites are always encrypted, so a join with an invite waits like a request until the leadership accepts it.",
+      "now": 1760100000,
+      "root": "921080e1e171a6d3140dd3890b69793cbb92370be21285b7b3c9374dffb8ff15",
+      "open": false,
+      "events": [
+        {
+          "id": "921080e1e171a6d3140dd3890b69793cbb92370be21285b7b3c9374dffb8ff15",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000000,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.found", "blueline"],
+            ["v", "1"],
+            ["alt", "BlueLine Darts club.found"]
+          ],
+          "content": "{\"name\":\"Dartfreunde Nord\",\"visibility\":\"public\",\"key\":\"3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5\"}",
+          "sig": "57743fb036d1d26b84a934f3229e9933103ef8523bfc9e25f8194e23f0b0da8b2e18e565772d87bf9bc2ad69557db343c7288fd09717a4df605f1f94c0ea12bc"
+        },
+        {
+          "id": "520fb85a6a5d8a62532d2857140e02610daf11e582164bc572836fccda3eaba1",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000010,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.invite", "blueline"],
+            ["v", "1"],
+            ["e", "921080e1e171a6d3140dd3890b69793cbb92370be21285b7b3c9374dffb8ff15"],
+            ["alt", "BlueLine Darts club.invite"],
+            ["enc", "nip44", "3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5"]
+          ],
+          "content": "Age6/AIUP7whry9VSTtL6lbmUHfJkFjy+eOM3QaQfFDElFsaQ9JRSornPDU6dE+sCEpGpyZRrlEuiFnXIExjOntUvn3bMCnJh7yUDmDqetzDxTnYY8B909/G5x7amh/NOYgBEPjugB4xCHwheSvuanEHPJkxD6cM6CpzSouzkoOPMQ0EZyTpe3jFI464jTXIwNVvOahRm86c/NzkLqoHxCqv4K2+Kl99dtUEtoNnE3IbflfXgRvIXO7BoimrPHkEE0ct",
+          "sig": "abdc1db7bced29276b5f630683b9da466ac6ee28a11d81bfc5d218f5c416c7aa9a4b7a6e488f78d691ce8e3098e2928f2da063bcf0e2b3b5f83884be490c93af"
+        },
+        {
+          "id": "33eea05802cbea032d8d590f543db0a1f630163154f1e5eea1cf956df735e0e7",
+          "pubkey": "48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d",
+          "created_at": 1760000020,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.join", "blueline"],
+            ["v", "1"],
+            ["e", "921080e1e171a6d3140dd3890b69793cbb92370be21285b7b3c9374dffb8ff15"],
+            ["alt", "BlueLine Darts club.join"]
+          ],
+          "content": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"proof\":\"f14694782a39f3205cbabe239f01e9371fe3de8cf26f5d8a086cbad7d55eb825\"}",
+          "sig": "024553c50dc6ac4f60e5349529f77ce403149b12d41fe1cf8a92b607db873414a8f6b54be5e732c60b88f63709396fe8f0636c092a54b7cb1a1815423bea58c3"
+        },
+        {
+          "id": "dcdc3bec94d1105ef9da74aad08b860ea1e1709d1888b046a2596fc5b8bfe243",
+          "pubkey": "b400d330df264198a54d0f21847e5c3de7d470529c9e8f99cd1acf0bb256433b",
+          "created_at": 1760000021,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.join", "blueline"],
+            ["v", "1"],
+            ["e", "921080e1e171a6d3140dd3890b69793cbb92370be21285b7b3c9374dffb8ff15"],
+            ["alt", "BlueLine Darts club.join"]
+          ],
+          "content": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"proof\":\"9579ea93730b325d1c1c951ad3668011194aba455117a3546a644e0501f1efaa\"}",
+          "sig": "723a4fb4b23d9458583db37ccd3666d44056417bbddedd79c8a580343e3025b201ac5b40880556a63e8de94c60b8d7a48104f02afaecbcad06ee0bdc3579ef18"
+        },
+        {
+          "id": "8d9b86cf52a5542ae4e3b33fce8b345017be2ef7e733c58c43770991e1a4968d",
+          "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+          "created_at": 1760000030,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "club.accept", "blueline"],
+            ["v", "1"],
+            ["e", "921080e1e171a6d3140dd3890b69793cbb92370be21285b7b3c9374dffb8ff15"],
+            ["alt", "BlueLine Darts club.accept"]
+          ],
+          "content": "{\"request\":\"33eea05802cbea032d8d590f543db0a1f630163154f1e5eea1cf956df735e0e7\",\"member\":\"48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d\"}",
+          "sig": "90d2844698b7ac0930f4bbf7a2f47ced9f191ea477fb834ca658bcf7d138bc096799a3c43d900103718ac793873ec747b51fdce1dad44de44cf89b22ef3bb14d"
+        }
+      ],
+      "plaintexts": {
+        "520fb85a6a5d8a62532d2857140e02610daf11e582164bc572836fccda3eaba1": "{\"invite\":\"9819bd250f62d43c82f0d0e2003f494f\",\"token\":\"1f7f9485c7c897e7959aab95e044464f\",\"maxUses\":5,\"expires\":1760086400}"
+      },
+      "labels": {
+        "found": "921080e1e171a6d3140dd3890b69793cbb92370be21285b7b3c9374dffb8ff15",
+        "invite": "520fb85a6a5d8a62532d2857140e02610daf11e582164bc572836fccda3eaba1",
+        "join-alice": "33eea05802cbea032d8d590f543db0a1f630163154f1e5eea1cf956df735e0e7",
+        "join-bob": "dcdc3bec94d1105ef9da74aad08b860ea1e1709d1888b046a2596fc5b8bfe243",
+        "accept-alice": "8d9b86cf52a5542ae4e3b33fce8b345017be2ef7e733c58c43770991e1a4968d"
+      },
+      "expect": {
+        "applied": ["921080e1e171a6d3140dd3890b69793cbb92370be21285b7b3c9374dffb8ff15", "33eea05802cbea032d8d590f543db0a1f630163154f1e5eea1cf956df735e0e7", "dcdc3bec94d1105ef9da74aad08b860ea1e1709d1888b046a2596fc5b8bfe243", "8d9b86cf52a5542ae4e3b33fce8b345017be2ef7e733c58c43770991e1a4968d"],
+        "rejected": [],
+        "unapplied": [
+          {
+            "id": "520fb85a6a5d8a62532d2857140e02610daf11e582164bc572836fccda3eaba1",
+            "label": "invite",
+            "why": "sealed"
+          }
+        ],
+        "state": {
+          "members": {
+            "owner": "owner",
+            "alice": "member"
+          },
+          "requests": ["bob"]
+        }
+      }
+    }
+  ],
+  "keys": {
+    "admin": {
+      "secret": "3bd9cbb494a80ef9e71ad9b759e8ea7de1845e1815682a403abcd3a77086da8c",
+      "pubkey": "515b512834a4548d6c376880fb4dc22102810998c13a7442787695e7a4748b01"
+    },
+    "alice": {
+      "secret": "ac04e577214a1ba612043d1b6cd926e95abc564ed740775fdce4045c45f14334",
+      "pubkey": "48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d"
+    },
+    "bob": {
+      "secret": "68e1dcdb8a89dbca9f33af4bd9db167d305e056cc5824ae4171bcd26c13ec42a",
+      "pubkey": "b400d330df264198a54d0f21847e5c3de7d470529c9e8f99cd1acf0bb256433b"
+    },
+    "carol": {
+      "secret": "c685dba03fddd8f9f9a62ca84ee8ada5e0eba159c3ddc5cad9af5d82c4dd7ab0",
+      "pubkey": "7f1ebf9a8a76a7b7919206de7043f063fdbba4c57b8635927fc723a5ca3bbf57"
+    },
+    "club": {
+      "secret": "4bb44da19ec9bd0d31c6545402d557dc97efb3545b1a35a6559eddc3c23aa08d",
+      "pubkey": "3fa2f14658cde9472cacdb91a9156c0889de3d8e28708fa93e11e179d35eb2d5"
+    },
+    "club-2": {
+      "secret": "c492d367457cbce9e05ec36cbebd9606fd3a243d7b651a0418bbbd08de557007",
+      "pubkey": "83ff902410d2c639fa362e1e73a02d87f7091cc9ca66465237f940a6ece6e344"
+    },
+    "club-3": {
+      "secret": "808dfc3116d259584649dea047fa6c331a393ebe7c30f07a67dc8b82ce70904d",
+      "pubkey": "0642ce622555ad19c53c9efbe94da2a3375987cd67f9aa64d74b1ccdbf0781b7"
+    },
+    "dave": {
+      "secret": "2723ad863cf417f2110d1d9964be36c2f69c02ef813862fb68bd5636a9f26418",
+      "pubkey": "291aa554290b9cc595b9156925240bacc1d99e69f89507da132e0ae3f5ef099b"
+    },
+    "erin": {
+      "secret": "d6eb992b95033827783538a29287d3d035d0eb1dc2c082974944c16116e1cfb5",
+      "pubkey": "85c27be7474b0af82a1f36f69671ab9b0dc0a995236183e72d86df6e89b8c407"
+    },
+    "mallory": {
+      "secret": "9be7c2943089a10a5b83ebbd95d0634afa644ee232db8397c3d5be8d260979c0",
+      "pubkey": "c1e16b2f3158d52908cf590f78527436ec5b2a5f79832834d5ff81ad47321978"
+    },
+    "owner": {
+      "secret": "34bf5f26a6087cd17ced618e07528939b60d3e97dff4f6de832edaf3e8eaac7d",
+      "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78"
+    }
+  }
+}

@@ -1,0 +1,190 @@
+import type { EventTemplate } from "../nostr/types.ts"
+import { CLUB_TYPES } from "./club.ts"
+import type { RecordSpec } from "./common.ts"
+import { FORMAT_VERSION, KIND_RECORD, KIND_STATE, MAX_EVENT_BYTES, MAX_FUTURE_SKEW_SECONDS, MAX_SEALED_PLAINTEXT_BYTES } from "./kinds.ts"
+import { LIVE_TYPES } from "./live.ts"
+import { MATCH_TYPES } from "./match.ts"
+import { PAYMENT_TYPES } from "./payment.ts"
+import type { Reason } from "./reasons.ts"
+import { ProtocolError } from "./reasons.ts"
+import type { Infer } from "./schema.ts"
+import { SchemaError, utf8Length } from "./schema.ts"
+import type { SignedEvent } from "./tags.ts"
+import {
+  HEX64,
+  hasMalformedSeal,
+  isSignedEventShape,
+  oversizedTag,
+  readLabels,
+  recordTags,
+  sealTag,
+  sealedTo,
+  signedEventBytes,
+  tagValue,
+  tagValues,
+} from "./tags.ts"
+import { TOURNAMENT_TYPES } from "./tournament.ts"
+
+// Every BlueLine record type (kinds 1501 and 31501), its content schema, and the two generic
+// operations on them: build an unsigned template (never an invalid one) and parse a received
+// event into a typed record (or say exactly why not). Signatures are checked by lib/nostr
+// before parsing; authority is checked by the state reducers after it.
+
+export const RECORD_TYPES = { ...CLUB_TYPES, ...TOURNAMENT_TYPES, ...MATCH_TYPES, ...LIVE_TYPES, ...PAYMENT_TYPES }
+export type RecordType = keyof typeof RECORD_TYPES
+export type ContentOf<T extends RecordType> = Infer<(typeof RECORD_TYPES)[T]["schema"]>
+
+const specOf = (type: string): RecordSpec | undefined => (RECORD_TYPES as Record<string, RecordSpec>)[type]
+export const isRecordType = (type: string): type is RecordType => specOf(type) !== undefined
+
+export interface BlueLineRecord<T extends RecordType = RecordType> {
+  type: T
+  content: ContentOf<T>
+  id: string
+  pubkey: string
+  created_at: number
+  kind: number
+  // The club, tournament or match this record belongs to; its own id for a founding.
+  root: string
+  d: string | null
+  // Group key the content was encrypted to, null for plaintext.
+  sealedTo: string | null
+  event: SignedEvent
+}
+
+// A record narrowed by its type: `if (r.type === "club.join") r.content.invite …`
+export type AnyRecord = { [T in RecordType]: BlueLineRecord<T> }[RecordType]
+
+export type ParseResult =
+  | { status: "ok"; record: AnyRecord }
+  // A newer type or format version: kept and shown, never executed (docs/protocol/kinds.md).
+  | { status: "unknown"; event: SignedEvent; type: string; version: string }
+  // Encrypted to a group key this reader does not hold (or did not pass the plaintext).
+  | { status: "sealed"; event: SignedEvent; type: RecordType; to: string }
+  | { status: "invalid"; event: SignedEvent; reason: Reason; detail: string; type?: string }
+
+const rootRule = (spec: RecordSpec, content: unknown): "self" | "required" => {
+  if (spec.root !== "session") return spec.root
+  return (content as { sv?: number }).sv === 1 ? "self" : "required"
+}
+
+// Cross-field rules a schema cannot see because they involve tags or encryption.
+function envelopeProblem(type: string, content: unknown, sealed: boolean): string | null {
+  if (type === "match.session") {
+    const a = (content as { agreement?: { visibility: string; stake?: unknown } }).agreement
+    if (a && a.visibility === "private" && !sealed) return "a private match is encrypted"
+    if (a && a.stake !== undefined && (a.visibility !== "private" || !sealed)) return "stake_requires_private"
+  }
+  return null
+}
+
+export function buildRecord<T extends RecordType>(
+  type: T,
+  content: ContentOf<T>,
+  opts: { created_at: number; root?: string; d?: string; relay?: string },
+): EventTemplate {
+  const spec = specOf(type) as RecordSpec
+  let checked: unknown
+  try {
+    checked = spec.schema.check(content, "")
+  } catch (e) {
+    throw new ProtocolError("invalid_content", e instanceof SchemaError ? e.message : String(e))
+  }
+  const rule = rootRule(spec, checked)
+  if (rule === "self" && opts.root !== undefined) throw new ProtocolError("invalid_tags", `${type} founds its object and has no root`)
+  if (rule === "required" && (opts.root === undefined || !HEX64.test(opts.root))) throw new ProtocolError("invalid_tags", `${type} needs its root id`)
+  if (spec.d && opts.d === undefined) throw new ProtocolError("invalid_tags", `${type} needs a d tag`)
+  if (type === "match.live" && opts.d !== opts.root) throw new ProtocolError("invalid_tags", "the live snapshot's d is its match id")
+  if (type === "match.session") {
+    const a = (checked as { agreement?: { visibility: string; stake?: unknown } }).agreement
+    // Built in the clear first; a private agreement must go through sealTemplate before signing.
+    if (a?.stake !== undefined && a.visibility !== "private") throw new ProtocolError("stake_requires_private", "a stake is only written into a private match")
+  }
+  const template = {
+    kind: spec.kind,
+    created_at: opts.created_at,
+    tags: recordTags(type, { root: opts.root, d: spec.d ? opts.d : undefined, relay: opts.relay }),
+    content: JSON.stringify(checked),
+  }
+  const tag = oversizedTag(template.tags)
+  if (tag) throw new ProtocolError("tag_too_long", `tag ${tag}`)
+  if (signedEventBytes(template) > MAX_EVENT_BYTES) throw new ProtocolError("too_large", `${type} exceeds ${MAX_EVENT_BYTES} bytes`)
+  return template
+}
+
+// Replaces the plaintext content with its NIP-44 encryption to a group key (club, match) and
+// marks it. Encrypting is lib/nostr's job; this only checks that the type may be sealed and
+// that the result still fits.
+export function sealTemplate(template: EventTemplate, groupPubkey: string, ciphertext: string): EventTemplate {
+  const labels = readLabels(template.tags)
+  const spec = labels ? specOf(labels.type) : undefined
+  if (!labels || !spec) throw new ProtocolError("not_blueline", "not a BlueLine record")
+  if (spec.sealed === "never") throw new ProtocolError("invalid_tags", `${labels.type} is never encrypted`)
+  if (!HEX64.test(groupPubkey)) throw new ProtocolError("invalid_tags", "group key is not a pubkey")
+  if (utf8Length(template.content) > MAX_SEALED_PLAINTEXT_BYTES) throw new ProtocolError("too_large", "plaintext too large to encrypt")
+  const sealed = { ...template, tags: [...template.tags.filter((t) => t[0] !== "enc"), sealTag(groupPubkey)], content: ciphertext }
+  if (signedEventBytes(sealed) > MAX_EVENT_BYTES) throw new ProtocolError("too_large", "encrypted event exceeds the budget")
+  return sealed
+}
+
+export const mustBeSealed = (type: RecordType) => specOf(type)?.sealed === "required"
+
+// Parses a signed BlueLine record. `plaintext` is the decrypted content of a sealed record,
+// when the reader holds the group key.
+export function parseRecord(event: unknown, opts: { now?: number; plaintext?: string | null } = {}): ParseResult {
+  if (!isSignedEventShape(event)) {
+    return { status: "invalid", event: event as SignedEvent, reason: "invalid_event", detail: "not a signed event" }
+  }
+  const invalid = (reason: Reason, detail: string, type?: string): ParseResult => ({ status: "invalid", event, reason, detail, type })
+  const now = opts.now ?? Math.floor(Date.now() / 1000)
+
+  if (event.kind !== KIND_RECORD && event.kind !== KIND_STATE) return invalid("wrong_kind", `kind ${event.kind}`)
+  const labels = readLabels(event.tags)
+  if (!labels) return invalid("not_blueline", "BlueLine labels missing or repeated")
+  const { type, version } = labels
+  if (signedEventBytes(event) > MAX_EVENT_BYTES) return invalid("too_large", `over ${MAX_EVENT_BYTES} bytes`, type)
+  const longTag = oversizedTag(event.tags)
+  if (longTag) return invalid("tag_too_long", `tag ${longTag}`, type)
+  if (event.created_at > now + MAX_FUTURE_SKEW_SECONDS) return invalid("future_timestamp", `${event.created_at - now} s ahead`, type)
+
+  const spec = specOf(type)
+  if (!spec || version !== FORMAT_VERSION) return { status: "unknown", event, type, version }
+  if (event.kind !== spec.kind) return invalid("wrong_kind", `${type} is kind ${spec.kind}`, type)
+  if (type === "payment.request") return invalid("wrong_kind", "payment requests travel only gift-wrapped", type)
+
+  const roots = tagValues(event.tags, "e")
+  if (roots.length > 1) return invalid("invalid_tags", "more than one root", type)
+  if (roots.length === 1 && !HEX64.test(roots[0])) return invalid("invalid_tags", "root is not an event id", type)
+  const ds = tagValues(event.tags, "d")
+  if (spec.d && (ds.length !== 1 || !ds[0])) return invalid("invalid_tags", "d tag missing", type)
+
+  if (hasMalformedSeal(event.tags)) return invalid("invalid_tags", "malformed enc tag", type)
+  const to = sealedTo(event.tags)
+  if (to && spec.sealed === "never") return invalid("invalid_tags", `${type} is never encrypted`, type)
+  if (!to && spec.sealed === "required") return invalid("invalid_content", `${type} must be encrypted`, type)
+  if (to && (opts.plaintext === undefined || opts.plaintext === null)) {
+    if (spec.root === "self" && roots.length > 0) return invalid("invalid_tags", `${type} founds its object and has no root`, type)
+    if (spec.root === "required" && roots.length !== 1) return invalid("invalid_tags", "root missing", type)
+    return { status: "sealed", event, type: type as RecordType, to }
+  }
+
+  let content: unknown
+  try {
+    content = spec.schema.check(JSON.parse(to ? (opts.plaintext as string) : event.content), "")
+  } catch (e) {
+    return invalid("invalid_content", e instanceof SchemaError ? e.message : "content is not JSON", type)
+  }
+
+  const rule = rootRule(spec, content)
+  if (rule === "self" && roots.length > 0) return invalid("invalid_tags", `${type} founds its object and has no root`, type)
+  if (rule === "required" && roots.length !== 1) return invalid("invalid_tags", "root missing", type)
+  const root = rule === "self" ? event.id : roots[0]
+  const d = spec.d ? (tagValue(event.tags, "d") as string) : null
+  if (type === "match.live" && d !== root) return invalid("invalid_tags", "d differs from the match id", type)
+  const problem = envelopeProblem(type, content, to !== null)
+  if (problem === "stake_requires_private") return invalid("stake_requires_private", "a stake is only written into a private match", type)
+  if (problem) return invalid("invalid_content", problem, type)
+
+  const record = { type, content, id: event.id, pubkey: event.pubkey, created_at: event.created_at, kind: event.kind, root, d, sealedTo: to, event }
+  return { status: "ok", record: record as AnyRecord }
+}

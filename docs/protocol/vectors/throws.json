@@ -1,0 +1,301 @@
+{
+  "family": "throws",
+  "description": "Compact throw logs (lib/protocol/throws.ts): engine log as stored and its encoding.",
+  "generator": "tests/support/make-vectors.ts",
+  "format": "Events are signed (BIP-340, zero aux randomness) with keys derived as sha256('blueline-vector:' + name). Expected outcomes are written by hand from docs/protocol.",
+  "alphabet": "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-",
+  "cases": [
+    {
+      "description": "Recorded P0.01 game, 301",
+      "config": {
+        "modeId": "501",
+        "modeName": "501",
+        "type": "x01",
+        "startScore": 301,
+        "doubleOut": true,
+        "cutThroat": false,
+        "bullFinish": false,
+        "legsToWin": 1,
+        "players": [
+          {
+            "id": "a",
+            "name": "A"
+          },
+          {
+            "id": "b",
+            "name": "B"
+          }
+        ]
+      },
+      "log": [
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 20,
+            "multiplier": 3
+          },
+          "visit": 0,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 20,
+            "multiplier": 3
+          },
+          "visit": 0,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 20,
+            "multiplier": 3
+          },
+          "visit": 0,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 19,
+            "multiplier": 1
+          },
+          "visit": 1,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 19,
+            "multiplier": 1
+          },
+          "visit": 1,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 19,
+            "multiplier": 1
+          },
+          "visit": 1,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 20,
+            "multiplier": 3
+          },
+          "visit": 2,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 20,
+            "multiplier": 1
+          },
+          "visit": 2,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 5,
+            "multiplier": 1
+          },
+          "visit": 2,
+          "leg": 0
+        }
+      ],
+      "encoded": "1777.222.75M"
+    },
+    {
+      "description": "Two legs with an edited dart, a kept leg result, no-score, a visit total and a turn",
+      "config": {
+        "modeId": "501",
+        "modeName": "501",
+        "type": "x01",
+        "startScore": 301,
+        "doubleOut": true,
+        "cutThroat": false,
+        "bullFinish": false,
+        "legsToWin": 2,
+        "players": [
+          {
+            "id": "a",
+            "name": "A"
+          },
+          {
+            "id": "b",
+            "name": "B"
+          }
+        ]
+      },
+      "log": [
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 20,
+            "multiplier": 3
+          },
+          "visit": 0,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 19,
+            "multiplier": 3
+          },
+          "visit": 0,
+          "leg": 0,
+          "edited": true
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 20,
+            "multiplier": 3
+          },
+          "visit": 0,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 0,
+            "multiplier": 1
+          },
+          "visit": 1,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 0,
+            "multiplier": 1
+          },
+          "visit": 1,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 0,
+            "multiplier": 1
+          },
+          "visit": 1,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 20,
+            "multiplier": 3
+          },
+          "visit": 2,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 11,
+            "multiplier": 3
+          },
+          "visit": 2,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 14,
+            "multiplier": 2
+          },
+          "visit": 2,
+          "leg": 0,
+          "closesLeg": true
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 20,
+            "multiplier": 1
+          },
+          "visit": 3,
+          "leg": 1
+        },
+        {
+          "kind": "noScore",
+          "visit": 3,
+          "leg": 1
+        },
+        {
+          "kind": "visit",
+          "total": 60,
+          "darts": 3,
+          "atDouble": 1,
+          "visit": 4,
+          "leg": 1
+        },
+        {
+          "kind": "turn",
+          "player": 0,
+          "visit": 5,
+          "leg": 1
+        }
+      ],
+      "encoded": "17!47.888.7g#o/5*.(v60,3,1).(t0)"
+    },
+    {
+      "description": "Log saved before throws were tagged",
+      "config": {
+        "modeId": "501",
+        "modeName": "501",
+        "type": "x01",
+        "startScore": 501,
+        "doubleOut": true,
+        "cutThroat": false,
+        "bullFinish": false,
+        "legsToWin": 1,
+        "players": [
+          {
+            "id": "a",
+            "name": "A"
+          },
+          {
+            "id": "b",
+            "name": "B"
+          }
+        ]
+      },
+      "log": [
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 20,
+            "multiplier": 1
+          }
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 25,
+            "multiplier": 2
+          }
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 0,
+            "multiplier": 1
+          }
+        }
+      ],
+      "encoded": "1[,]5-8"
+    }
+  ],
+  "keys": {}
+}

@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BlueLine pairing messages (decrypted content of kind 21501)",
+  "$defs": {
+    "announce": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "enum": ["announce"]
+        },
+        "sid": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "Session id"
+        },
+        "exp": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "mac": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": ["t", "sid", "exp", "mac"],
+      "additionalProperties": false
+    },
+    "hello": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "enum": ["hello"]
+        },
+        "sid": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "Session id"
+        },
+        "device": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40,
+          "description": "Device name the other side shows"
+        },
+        "mac": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": ["t", "sid", "device"],
+      "additionalProperties": false
+    },
+    "accept": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "enum": ["accept"]
+        },
+        "sid": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "Session id"
+        },
+        "device": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40,
+          "description": "Device name the other side shows"
+        }
+      },
+      "required": ["t", "sid", "device"],
+      "additionalProperties": false
+    },
+    "package": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "enum": ["package"]
+        },
+        "sid": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "Session id"
+        },
+        "data": {
+          "type": "object",
+          "description": "Profile package (lib/devices)"
+        }
+      },
+      "required": ["t", "sid", "data"],
+      "additionalProperties": false
+    },
+    "ack": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "enum": ["ack"]
+        },
+        "sid": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "Session id"
+        },
+        "hash": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "sha256 of the package data as sent"
+        }
+      },
+      "required": ["t", "sid", "hash"],
+      "additionalProperties": false
+    },
+    "abort": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "enum": ["abort"]
+        },
+        "sid": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "Session id"
+        },
+        "reason": {
+          "enum": ["declined", "expired", "mismatch", "error"]
+        }
+      },
+      "required": ["t", "sid", "reason"],
+      "additionalProperties": false
+    }
+  }
+}

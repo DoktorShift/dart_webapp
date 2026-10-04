@@ -1,0 +1,33 @@
+{
+  "family": "invite",
+  "description": "Invite proofs: HMAC-SHA256(token, 'blueline-invite-v1:' + pubkey).",
+  "generator": "tests/support/make-vectors.ts",
+  "format": "Events are signed (BIP-340, zero aux randomness) with keys derived as sha256('blueline-vector:' + name). Expected outcomes are written by hand from docs/protocol.",
+  "cases": [
+    {
+      "token": "1f7f9485c7c897e7959aab95e044464f",
+      "pubkey": "48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d",
+      "proof": "f14694782a39f3205cbabe239f01e9371fe3de8cf26f5d8a086cbad7d55eb825"
+    },
+    {
+      "token": "1f7f9485c7c897e7959aab95e044464f",
+      "pubkey": "b400d330df264198a54d0f21847e5c3de7d470529c9e8f99cd1acf0bb256433b",
+      "proof": "9579ea93730b325d1c1c951ad3668011194aba455117a3546a644e0501f1efaa"
+    },
+    {
+      "token": "e1605eae8f73d2a4d4f13b8506dde37c",
+      "pubkey": "48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d",
+      "proof": "78fa3b173c02a5e4a043ba9e2510de0abda6dc65e913e9253653264ba00c957b"
+    }
+  ],
+  "keys": {
+    "alice": {
+      "secret": "ac04e577214a1ba612043d1b6cd926e95abc564ed740775fdce4045c45f14334",
+      "pubkey": "48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d"
+    },
+    "bob": {
+      "secret": "68e1dcdb8a89dbca9f33af4bd9db167d305e056cc5824ae4171bcd26c13ec42a",
+      "pubkey": "b400d330df264198a54d0f21847e5c3de7d470529c9e8f99cd1acf0bb256433b"
+    }
+  }
+}

@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BlueLine board join messages (decrypted content of kind 21501)",
+  "$defs": {
+    "join": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "enum": ["join"]
+        },
+        "sid": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "Session id of the board QR"
+        },
+        "seat": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 5,
+              "description": "Requested seat; null = any free seat"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "alias": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40,
+          "pattern": "^\\S(.*\\S)?$",
+          "description": "Public display alias, trimmed"
+        },
+        "confirm": {
+          "type": "boolean",
+          "description": "The player wants to confirm the result from the phone"
+        }
+      },
+      "required": ["t", "sid", "seat", "confirm"],
+      "additionalProperties": false
+    },
+    "seat": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "enum": ["seat"]
+        },
+        "sid": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "Session id of the board QR"
+        },
+        "seat": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5
+        },
+        "match": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Match id once the match has started"
+        }
+      },
+      "required": ["t", "sid", "seat"],
+      "additionalProperties": false
+    },
+    "decline": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "enum": ["decline"]
+        },
+        "sid": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "Session id of the board QR"
+        },
+        "reason": {
+          "enum": ["full", "taken", "expired", "declined"]
+        }
+      },
+      "required": ["t", "sid", "reason"],
+      "additionalProperties": false
+    },
+    "leave": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "enum": ["leave"]
+        },
+        "sid": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "Session id of the board QR"
+        }
+      },
+      "required": ["t", "sid"],
+      "additionalProperties": false
+    }
+  }
+}

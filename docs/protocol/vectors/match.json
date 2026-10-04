@@ -1,0 +1,828 @@
+{
+  "family": "match",
+  "description": "Match session authorization, live snapshots and results, replayed by reduceMatch (lib/protocol/match-state.ts).",
+  "generator": "tests/support/make-vectors.ts",
+  "format": "Events are signed (BIP-340, zero aux randomness) with keys derived as sha256('blueline-vector:' + name). Expected outcomes are written by hand from docs/protocol.",
+  "cases": [
+    {
+      "name": "session-handover",
+      "description": "The match moves to another device: session 2 replaces session 1. From the handover on, session 1's snapshots and results are refused.",
+      "now": 1760100000,
+      "root": "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24",
+      "open": true,
+      "events": [
+        {
+          "id": "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24",
+          "pubkey": "d073231b225699c406b4ada691fdea20c121fe84545e8e8b71c3e2d91d352352",
+          "created_at": 1760000000,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.session", "blueline"],
+            ["v", "1"],
+            ["alt", "BlueLine Darts match.session"]
+          ],
+          "content": "{\"sv\":1,\"session\":\"2e594645da039653d1a27edbb56c0e4a3693b68cf62345bc68f564fa5ed7c505\",\"from\":1760000000,\"until\":1760010800,\"agreement\":{\"engine\":1,\"rules\":{\"type\":\"x01\",\"modeId\":\"501\",\"startScore\":501,\"doubleIn\":false,\"doubleOut\":true,\"cutThroat\":false,\"bullFinish\":false,\"legsToWin\":1,\"setsToWin\":1,\"startRule\":\"alternate\"},\"seats\":[{\"alias\":\"Mia\",\"pubkey\":\"b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0\"},{\"alias\":\"Jonas\",\"pubkey\":\"a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6\"}],\"visibility\":\"public\"}}",
+          "sig": "2a0de1e5a82e14491eab472da1fd914b4280415addc734b89278148730e75df14e6eb886a71147e959cbcb726b25507c08ecfeb7d64a00add6b3f71a9d5ffeff"
+        },
+        {
+          "id": "a2d89d285864299154e1228eed4f7ded88a196b580f6c5c6f95bf8c5dff6cd5a",
+          "pubkey": "2e594645da039653d1a27edbb56c0e4a3693b68cf62345bc68f564fa5ed7c505",
+          "created_at": 1760000100,
+          "kind": 31501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.live", "blueline"],
+            ["v", "1"],
+            ["d", "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+            ["e", "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+            ["alt", "BlueLine Darts match.live"]
+          ],
+          "content": "{\"sv\":1,\"n\":1,\"status\":\"playing\",\"throws\":\"1777\",\"from\":0,\"standing\":{\"leg\":0,\"current\":1,\"scores\":[321,501],\"legs\":[0,0],\"winner\":null},\"auth\":{\"id\":\"87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24\",\"pubkey\":\"d073231b225699c406b4ada691fdea20c121fe84545e8e8b71c3e2d91d352352\",\"created_at\":1760000000,\"kind\":1501,\"tags\":[[\"L\",\"blueline\"],[\"l\",\"match.session\",\"blueline\"],[\"v\",\"1\"],[\"alt\",\"BlueLine Darts match.session\"]],\"content\":\"{\\\"sv\\\":1,\\\"session\\\":\\\"2e594645da039653d1a27edbb56c0e4a3693b68cf62345bc68f564fa5ed7c505\\\",\\\"from\\\":1760000000,\\\"until\\\":1760010800,\\\"agreement\\\":{\\\"engine\\\":1,\\\"rules\\\":{\\\"type\\\":\\\"x01\\\",\\\"modeId\\\":\\\"501\\\",\\\"startScore\\\":501,\\\"doubleIn\\\":false,\\\"doubleOut\\\":true,\\\"cutThroat\\\":false,\\\"bullFinish\\\":false,\\\"legsToWin\\\":1,\\\"setsToWin\\\":1,\\\"startRule\\\":\\\"alternate\\\"},\\\"seats\\\":[{\\\"alias\\\":\\\"Mia\\\",\\\"pubkey\\\":\\\"b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0\\\"},{\\\"alias\\\":\\\"Jonas\\\",\\\"pubkey\\\":\\\"a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6\\\"}],\\\"visibility\\\":\\\"public\\\"}}\",\"sig\":\"2a0de1e5a82e14491eab472da1fd914b4280415addc734b89278148730e75df14e6eb886a71147e959cbcb726b25507c08ecfeb7d64a00add6b3f71a9d5ffeff\"}}",
+          "sig": "c4ce7c9209add26546b0787b48963b9b61f5107b4c36f043e1bbd82c712c9bce55325f888e52bd503e5179760d5606a81b337bd376df46df194a30d9589539d4"
+        },
+        {
+          "id": "c1d58fbd515434103bfea8598c6acb9f83ba3dace4a2741e0c87d64d01d29591",
+          "pubkey": "d073231b225699c406b4ada691fdea20c121fe84545e8e8b71c3e2d91d352352",
+          "created_at": 1760000200,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.session", "blueline"],
+            ["v", "1"],
+            ["e", "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+            ["alt", "BlueLine Darts match.session"]
+          ],
+          "content": "{\"sv\":2,\"session\":\"420e2108da3b896463ff46c4b4a72b918e3b8633737dd4e35d03f46496a3c377\",\"from\":1760000200,\"until\":1760011000,\"prev\":\"87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24\"}",
+          "sig": "3f523719a562ce0a8ae7b57fee231bf71581aa27432f2c169ca1c86e508dd29b3b8b03bd1bfbf6d239a838b2b1de3389c2e8e7a9cd2e105b7f9c081bbe4ee737"
+        },
+        {
+          "id": "95bc28ba593bcc9ba8eb501b6827b199cf7c3335e81c29347ef4144877acc04f",
+          "pubkey": "420e2108da3b896463ff46c4b4a72b918e3b8633737dd4e35d03f46496a3c377",
+          "created_at": 1760000210,
+          "kind": 31501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.live", "blueline"],
+            ["v", "1"],
+            ["d", "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+            ["e", "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+            ["alt", "BlueLine Darts match.live"]
+          ],
+          "content": "{\"sv\":2,\"n\":2,\"status\":\"playing\",\"throws\":\"1777.222\",\"from\":0,\"standing\":{\"leg\":0,\"current\":0,\"scores\":[321,444],\"legs\":[0,0],\"winner\":null},\"auth\":{\"id\":\"c1d58fbd515434103bfea8598c6acb9f83ba3dace4a2741e0c87d64d01d29591\",\"pubkey\":\"d073231b225699c406b4ada691fdea20c121fe84545e8e8b71c3e2d91d352352\",\"created_at\":1760000200,\"kind\":1501,\"tags\":[[\"L\",\"blueline\"],[\"l\",\"match.session\",\"blueline\"],[\"v\",\"1\"],[\"e\",\"87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24\"],[\"alt\",\"BlueLine Darts match.session\"]],\"content\":\"{\\\"sv\\\":2,\\\"session\\\":\\\"420e2108da3b896463ff46c4b4a72b918e3b8633737dd4e35d03f46496a3c377\\\",\\\"from\\\":1760000200,\\\"until\\\":1760011000,\\\"prev\\\":\\\"87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24\\\"}\",\"sig\":\"3f523719a562ce0a8ae7b57fee231bf71581aa27432f2c169ca1c86e508dd29b3b8b03bd1bfbf6d239a838b2b1de3389c2e8e7a9cd2e105b7f9c081bbe4ee737\"}}",
+          "sig": "059da5f1a6f4b144a9d49919dbb140df3f2744ea7d2d81780dcfb81d76a84f8754cead060f33140afc351fcb8303c54484535ac7f6dd7eaa5a4ba65a21eaefbd"
+        },
+        {
+          "id": "489353d058dac9ca2e5b4e4ab666726288f2426c796c058e53932b377667ca35",
+          "pubkey": "2e594645da039653d1a27edbb56c0e4a3693b68cf62345bc68f564fa5ed7c505",
+          "created_at": 1760000220,
+          "kind": 31501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.live", "blueline"],
+            ["v", "1"],
+            ["d", "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+            ["e", "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+            ["alt", "BlueLine Darts match.live"]
+          ],
+          "content": "{\"sv\":1,\"n\":3,\"status\":\"playing\",\"throws\":\"1777.222.75M\",\"from\":0,\"standing\":{\"leg\":0,\"current\":1,\"scores\":[236,444],\"legs\":[0,0],\"winner\":null},\"auth\":{\"id\":\"87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24\",\"pubkey\":\"d073231b225699c406b4ada691fdea20c121fe84545e8e8b71c3e2d91d352352\",\"created_at\":1760000000,\"kind\":1501,\"tags\":[[\"L\",\"blueline\"],[\"l\",\"match.session\",\"blueline\"],[\"v\",\"1\"],[\"alt\",\"BlueLine Darts match.session\"]],\"content\":\"{\\\"sv\\\":1,\\\"session\\\":\\\"2e594645da039653d1a27edbb56c0e4a3693b68cf62345bc68f564fa5ed7c505\\\",\\\"from\\\":1760000000,\\\"until\\\":1760010800,\\\"agreement\\\":{\\\"engine\\\":1,\\\"rules\\\":{\\\"type\\\":\\\"x01\\\",\\\"modeId\\\":\\\"501\\\",\\\"startScore\\\":501,\\\"doubleIn\\\":false,\\\"doubleOut\\\":true,\\\"cutThroat\\\":false,\\\"bullFinish\\\":false,\\\"legsToWin\\\":1,\\\"setsToWin\\\":1,\\\"startRule\\\":\\\"alternate\\\"},\\\"seats\\\":[{\\\"alias\\\":\\\"Mia\\\",\\\"pubkey\\\":\\\"b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0\\\"},{\\\"alias\\\":\\\"Jonas\\\",\\\"pubkey\\\":\\\"a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6\\\"}],\\\"visibility\\\":\\\"public\\\"}}\",\"sig\":\"2a0de1e5a82e14491eab472da1fd914b4280415addc734b89278148730e75df14e6eb886a71147e959cbcb726b25507c08ecfeb7d64a00add6b3f71a9d5ffeff\"}}",
+          "sig": "556417c18eb40ded416c546044d17ef95adf039e259694e842e05ddabc4181d0a92510c21dfcc703210f4563346ed973cf1a8c99f14ff7cc95a86c6723798ca4"
+        },
+        {
+          "id": "13b9f5cb92447895164c8de6bb4ef3d5eae5b55f78e19bbef34a60993616e960",
+          "pubkey": "2e594645da039653d1a27edbb56c0e4a3693b68cf62345bc68f564fa5ed7c505",
+          "created_at": 1760000230,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.result", "blueline"],
+            ["v", "1"],
+            ["e", "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+            ["alt", "BlueLine Darts match.result"]
+          ],
+          "content": "{\"sv\":1,\"status\":\"finished\",\"winner\":0,\"legs\":[1,0],\"throws\":\"1777.222.75M\",\"finishedAt\":1760000230,\"auth\":{\"id\":\"87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24\",\"pubkey\":\"d073231b225699c406b4ada691fdea20c121fe84545e8e8b71c3e2d91d352352\",\"created_at\":1760000000,\"kind\":1501,\"tags\":[[\"L\",\"blueline\"],[\"l\",\"match.session\",\"blueline\"],[\"v\",\"1\"],[\"alt\",\"BlueLine Darts match.session\"]],\"content\":\"{\\\"sv\\\":1,\\\"session\\\":\\\"2e594645da039653d1a27edbb56c0e4a3693b68cf62345bc68f564fa5ed7c505\\\",\\\"from\\\":1760000000,\\\"until\\\":1760010800,\\\"agreement\\\":{\\\"engine\\\":1,\\\"rules\\\":{\\\"type\\\":\\\"x01\\\",\\\"modeId\\\":\\\"501\\\",\\\"startScore\\\":501,\\\"doubleIn\\\":false,\\\"doubleOut\\\":true,\\\"cutThroat\\\":false,\\\"bullFinish\\\":false,\\\"legsToWin\\\":1,\\\"setsToWin\\\":1,\\\"startRule\\\":\\\"alternate\\\"},\\\"seats\\\":[{\\\"alias\\\":\\\"Mia\\\",\\\"pubkey\\\":\\\"b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0\\\"},{\\\"alias\\\":\\\"Jonas\\\",\\\"pubkey\\\":\\\"a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6\\\"}],\\\"visibility\\\":\\\"public\\\"}}\",\"sig\":\"2a0de1e5a82e14491eab472da1fd914b4280415addc734b89278148730e75df14e6eb886a71147e959cbcb726b25507c08ecfeb7d64a00add6b3f71a9d5ffeff\"}}",
+          "sig": "f36ddbdf4c874ef186570a6894b48124a039b9101e9408d5f02938730142e7db96d27819988fbe8edd9bc099d7959a361236e9a70a43ed866778301ac93fd6a0"
+        },
+        {
+          "id": "27730373d9de3538f2bc1ce6062d1268361b4967d9d446db20fc520ae8d7d926",
+          "pubkey": "420e2108da3b896463ff46c4b4a72b918e3b8633737dd4e35d03f46496a3c377",
+          "created_at": 1760000240,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.result", "blueline"],
+            ["v", "1"],
+            ["e", "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+            ["alt", "BlueLine Darts match.result"]
+          ],
+          "content": "{\"sv\":2,\"status\":\"finished\",\"winner\":0,\"legs\":[1,0],\"throws\":\"1777.222.75M\",\"finishedAt\":1760000240,\"auth\":{\"id\":\"c1d58fbd515434103bfea8598c6acb9f83ba3dace4a2741e0c87d64d01d29591\",\"pubkey\":\"d073231b225699c406b4ada691fdea20c121fe84545e8e8b71c3e2d91d352352\",\"created_at\":1760000200,\"kind\":1501,\"tags\":[[\"L\",\"blueline\"],[\"l\",\"match.session\",\"blueline\"],[\"v\",\"1\"],[\"e\",\"87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24\"],[\"alt\",\"BlueLine Darts match.session\"]],\"content\":\"{\\\"sv\\\":2,\\\"session\\\":\\\"420e2108da3b896463ff46c4b4a72b918e3b8633737dd4e35d03f46496a3c377\\\",\\\"from\\\":1760000200,\\\"until\\\":1760011000,\\\"prev\\\":\\\"87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24\\\"}\",\"sig\":\"3f523719a562ce0a8ae7b57fee231bf71581aa27432f2c169ca1c86e508dd29b3b8b03bd1bfbf6d239a838b2b1de3389c2e8e7a9cd2e105b7f9c081bbe4ee737\"}}",
+          "sig": "c84a7bda559197159974a784d8fe294104aaa1974ff748a4376a5d652a1a77934d53d2f44b1cdd277796e39686b2dff3b93dca72ed4454765c6395a9ea08a9ad"
+        }
+      ],
+      "plaintexts": {},
+      "labels": {
+        "found": "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24",
+        "live-1": "a2d89d285864299154e1228eed4f7ded88a196b580f6c5c6f95bf8c5dff6cd5a",
+        "handover": "c1d58fbd515434103bfea8598c6acb9f83ba3dace4a2741e0c87d64d01d29591",
+        "live-2": "95bc28ba593bcc9ba8eb501b6827b199cf7c3335e81c29347ef4144877acc04f",
+        "live-old": "489353d058dac9ca2e5b4e4ab666726288f2426c796c058e53932b377667ca35",
+        "result-old": "13b9f5cb92447895164c8de6bb4ef3d5eae5b55f78e19bbef34a60993616e960",
+        "result": "27730373d9de3538f2bc1ce6062d1268361b4967d9d446db20fc520ae8d7d926"
+      },
+      "expect": {
+        "applied": ["87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24", "a2d89d285864299154e1228eed4f7ded88a196b580f6c5c6f95bf8c5dff6cd5a", "c1d58fbd515434103bfea8598c6acb9f83ba3dace4a2741e0c87d64d01d29591", "95bc28ba593bcc9ba8eb501b6827b199cf7c3335e81c29347ef4144877acc04f", "27730373d9de3538f2bc1ce6062d1268361b4967d9d446db20fc520ae8d7d926"],
+        "rejected": [
+          {
+            "id": "489353d058dac9ca2e5b4e4ab666726288f2426c796c058e53932b377667ca35",
+            "label": "live-old",
+            "reason": "session_superseded"
+          },
+          {
+            "id": "13b9f5cb92447895164c8de6bb4ef3d5eae5b55f78e19bbef34a60993616e960",
+            "label": "result-old",
+            "reason": "session_superseded"
+          }
+        ],
+        "state": {
+          "sv": 2,
+          "writer": "session2",
+          "live": "live-2",
+          "result": "result"
+        }
+      }
+    },
+    {
+      "name": "forged-handover",
+      "description": "Only the match authority hands over, always to the next session on top of the current one; strangers cannot write.",
+      "now": 1760100000,
+      "root": "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24",
+      "open": true,
+      "events": [
+        {
+          "id": "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24",
+          "pubkey": "d073231b225699c406b4ada691fdea20c121fe84545e8e8b71c3e2d91d352352",
+          "created_at": 1760000000,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.session", "blueline"],
+            ["v", "1"],
+            ["alt", "BlueLine Darts match.session"]
+          ],
+          "content": "{\"sv\":1,\"session\":\"2e594645da039653d1a27edbb56c0e4a3693b68cf62345bc68f564fa5ed7c505\",\"from\":1760000000,\"until\":1760010800,\"agreement\":{\"engine\":1,\"rules\":{\"type\":\"x01\",\"modeId\":\"501\",\"startScore\":501,\"doubleIn\":false,\"doubleOut\":true,\"cutThroat\":false,\"bullFinish\":false,\"legsToWin\":1,\"setsToWin\":1,\"startRule\":\"alternate\"},\"seats\":[{\"alias\":\"Mia\",\"pubkey\":\"b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0\"},{\"alias\":\"Jonas\",\"pubkey\":\"a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6\"}],\"visibility\":\"public\"}}",
+          "sig": "2a0de1e5a82e14491eab472da1fd914b4280415addc734b89278148730e75df14e6eb886a71147e959cbcb726b25507c08ecfeb7d64a00add6b3f71a9d5ffeff"
+        },
+        {
+          "id": "854f96c1868126b93f4d016f45a0739882f39a861cf38fc0092254bdd0c53cf6",
+          "pubkey": "2e594645da039653d1a27edbb56c0e4a3693b68cf62345bc68f564fa5ed7c505",
+          "created_at": 1760000100,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.session", "blueline"],
+            ["v", "1"],
+            ["e", "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+            ["alt", "BlueLine Darts match.session"]
+          ],
+          "content": "{\"sv\":2,\"session\":\"420e2108da3b896463ff46c4b4a72b918e3b8633737dd4e35d03f46496a3c377\",\"from\":1760000100,\"until\":1760010900,\"prev\":\"87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24\"}",
+          "sig": "6de6255d647969e188f39c58a8b8f9d9c1376e785f832f53aab7de1aeffc8040f94292cdde2c06773004f2455a0d3759724fc60a4eaa14444349f2bd3f1fe8d8"
+        },
+        {
+          "id": "a806ee19952d81d9683a2ca703dda2e00f3e69fde9fa4aa02c0cc0e4d536cb74",
+          "pubkey": "d073231b225699c406b4ada691fdea20c121fe84545e8e8b71c3e2d91d352352",
+          "created_at": 1760000110,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.session", "blueline"],
+            ["v", "1"],
+            ["e", "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+            ["alt", "BlueLine Darts match.session"]
+          ],
+          "content": "{\"sv\":3,\"session\":\"420e2108da3b896463ff46c4b4a72b918e3b8633737dd4e35d03f46496a3c377\",\"from\":1760000110,\"until\":1760010910,\"prev\":\"87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24\"}",
+          "sig": "4cacb3246ed4d2451bb52ef560f9e0d652ee69b4d804a15bd154bdd08e32cbdbe01f4b5c1132967018343c063db59d28198a9f1068dd3a26f7cb6c27dc95f42f"
+        },
+        {
+          "id": "83556e3373dd97af612a669845d02ba102da0f1ef4d2809cd21760b74fa33b42",
+          "pubkey": "d073231b225699c406b4ada691fdea20c121fe84545e8e8b71c3e2d91d352352",
+          "created_at": 1760000120,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.session", "blueline"],
+            ["v", "1"],
+            ["e", "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+            ["alt", "BlueLine Darts match.session"]
+          ],
+          "content": "{\"sv\":2,\"session\":\"420e2108da3b896463ff46c4b4a72b918e3b8633737dd4e35d03f46496a3c377\",\"from\":1760000120,\"until\":1760010920,\"prev\":\"a659f18f23635fb19f4ed9fa83939ec1743c5d3de6221f7199404182c3683bb0\"}",
+          "sig": "951bbd9cbcad3376e2ab2ea8392f2b760f526f9ac06528ce419bab07b4f652f8abeaab64ad80964e13604f07679f0bc14f9b129cec61d2de57e9cb42618e10e5"
+        },
+        {
+          "id": "bad18063583d65d5501ad678b4f2a3a8f190537095044a15dce161ba89247d12",
+          "pubkey": "c1e16b2f3158d52908cf590f78527436ec5b2a5f79832834d5ff81ad47321978",
+          "created_at": 1760000130,
+          "kind": 31501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.live", "blueline"],
+            ["v", "1"],
+            ["d", "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+            ["e", "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+            ["alt", "BlueLine Darts match.live"]
+          ],
+          "content": "{\"sv\":1,\"n\":1,\"status\":\"playing\",\"throws\":\"1777\",\"from\":0,\"standing\":{\"leg\":0,\"current\":1,\"scores\":[321,501],\"legs\":[0,0],\"winner\":null},\"auth\":{\"id\":\"87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24\",\"pubkey\":\"d073231b225699c406b4ada691fdea20c121fe84545e8e8b71c3e2d91d352352\",\"created_at\":1760000000,\"kind\":1501,\"tags\":[[\"L\",\"blueline\"],[\"l\",\"match.session\",\"blueline\"],[\"v\",\"1\"],[\"alt\",\"BlueLine Darts match.session\"]],\"content\":\"{\\\"sv\\\":1,\\\"session\\\":\\\"2e594645da039653d1a27edbb56c0e4a3693b68cf62345bc68f564fa5ed7c505\\\",\\\"from\\\":1760000000,\\\"until\\\":1760010800,\\\"agreement\\\":{\\\"engine\\\":1,\\\"rules\\\":{\\\"type\\\":\\\"x01\\\",\\\"modeId\\\":\\\"501\\\",\\\"startScore\\\":501,\\\"doubleIn\\\":false,\\\"doubleOut\\\":true,\\\"cutThroat\\\":false,\\\"bullFinish\\\":false,\\\"legsToWin\\\":1,\\\"setsToWin\\\":1,\\\"startRule\\\":\\\"alternate\\\"},\\\"seats\\\":[{\\\"alias\\\":\\\"Mia\\\",\\\"pubkey\\\":\\\"b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0\\\"},{\\\"alias\\\":\\\"Jonas\\\",\\\"pubkey\\\":\\\"a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6\\\"}],\\\"visibility\\\":\\\"public\\\"}}\",\"sig\":\"2a0de1e5a82e14491eab472da1fd914b4280415addc734b89278148730e75df14e6eb886a71147e959cbcb726b25507c08ecfeb7d64a00add6b3f71a9d5ffeff\"}}",
+          "sig": "958733ceb0aaf37e1051c4acf82b64e4883fb319846ca1af70ce536ec66e859cc30a3e845ffbd90d2edcf745a8a64a3d20a280b3fdf307ba4507c5916660d8ca"
+        }
+      ],
+      "plaintexts": {},
+      "labels": {
+        "found": "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24",
+        "by-session": "854f96c1868126b93f4d016f45a0739882f39a861cf38fc0092254bdd0c53cf6",
+        "skip": "a806ee19952d81d9683a2ca703dda2e00f3e69fde9fa4aa02c0cc0e4d536cb74",
+        "wrong-prev": "83556e3373dd97af612a669845d02ba102da0f1ef4d2809cd21760b74fa33b42",
+        "stranger-live": "bad18063583d65d5501ad678b4f2a3a8f190537095044a15dce161ba89247d12"
+      },
+      "expect": {
+        "applied": ["87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+        "rejected": [
+          {
+            "id": "854f96c1868126b93f4d016f45a0739882f39a861cf38fc0092254bdd0c53cf6",
+            "label": "by-session",
+            "reason": "not_authorized"
+          },
+          {
+            "id": "a806ee19952d81d9683a2ca703dda2e00f3e69fde9fa4aa02c0cc0e4d536cb74",
+            "label": "skip",
+            "reason": "stale_predecessor"
+          },
+          {
+            "id": "83556e3373dd97af612a669845d02ba102da0f1ef4d2809cd21760b74fa33b42",
+            "label": "wrong-prev",
+            "reason": "stale_predecessor"
+          },
+          {
+            "id": "bad18063583d65d5501ad678b4f2a3a8f190537095044a15dce161ba89247d12",
+            "label": "stranger-live",
+            "reason": "not_authorized"
+          }
+        ],
+        "state": {
+          "sv": 1,
+          "writer": "session1"
+        }
+      }
+    },
+    {
+      "name": "session-window",
+      "description": "A session writes only inside its window, and a snapshot must carry its own session's authorization.",
+      "now": 1760100000,
+      "root": "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24",
+      "open": true,
+      "events": [
+        {
+          "id": "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24",
+          "pubkey": "d073231b225699c406b4ada691fdea20c121fe84545e8e8b71c3e2d91d352352",
+          "created_at": 1760000000,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.session", "blueline"],
+            ["v", "1"],
+            ["alt", "BlueLine Darts match.session"]
+          ],
+          "content": "{\"sv\":1,\"session\":\"2e594645da039653d1a27edbb56c0e4a3693b68cf62345bc68f564fa5ed7c505\",\"from\":1760000000,\"until\":1760010800,\"agreement\":{\"engine\":1,\"rules\":{\"type\":\"x01\",\"modeId\":\"501\",\"startScore\":501,\"doubleIn\":false,\"doubleOut\":true,\"cutThroat\":false,\"bullFinish\":false,\"legsToWin\":1,\"setsToWin\":1,\"startRule\":\"alternate\"},\"seats\":[{\"alias\":\"Mia\",\"pubkey\":\"b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0\"},{\"alias\":\"Jonas\",\"pubkey\":\"a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6\"}],\"visibility\":\"public\"}}",
+          "sig": "2a0de1e5a82e14491eab472da1fd914b4280415addc734b89278148730e75df14e6eb886a71147e959cbcb726b25507c08ecfeb7d64a00add6b3f71a9d5ffeff"
+        },
+        {
+          "id": "55ef7023d295dd79fc608d5d8c12b5b1deb4637d7b15dcde7389bef99a64e8fb",
+          "pubkey": "d073231b225699c406b4ada691fdea20c121fe84545e8e8b71c3e2d91d352352",
+          "created_at": 1760000100,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.session", "blueline"],
+            ["v", "1"],
+            ["e", "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+            ["alt", "BlueLine Darts match.session"]
+          ],
+          "content": "{\"sv\":2,\"session\":\"420e2108da3b896463ff46c4b4a72b918e3b8633737dd4e35d03f46496a3c377\",\"from\":1760000100,\"until\":1760010900,\"prev\":\"87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24\"}",
+          "sig": "3f77cc75ffc2cd20de0c78fed8c19f95594b1d9a3027f8a3ee60ce22b7be82a265683d683e2af74a18226449fa7cdf2f3091a685c50aa3a335268aee30becf33"
+        },
+        {
+          "id": "3870ff82dc85ded9d939a11794a73506cb5cc9c910c7359974521b8880c87f81",
+          "pubkey": "420e2108da3b896463ff46c4b4a72b918e3b8633737dd4e35d03f46496a3c377",
+          "created_at": 1760000110,
+          "kind": 31501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.live", "blueline"],
+            ["v", "1"],
+            ["d", "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+            ["e", "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+            ["alt", "BlueLine Darts match.live"]
+          ],
+          "content": "{\"sv\":2,\"n\":1,\"status\":\"playing\",\"throws\":\"1777\",\"from\":0,\"standing\":{\"leg\":0,\"current\":1,\"scores\":[321,501],\"legs\":[0,0],\"winner\":null},\"auth\":{\"id\":\"87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24\",\"pubkey\":\"d073231b225699c406b4ada691fdea20c121fe84545e8e8b71c3e2d91d352352\",\"created_at\":1760000000,\"kind\":1501,\"tags\":[[\"L\",\"blueline\"],[\"l\",\"match.session\",\"blueline\"],[\"v\",\"1\"],[\"alt\",\"BlueLine Darts match.session\"]],\"content\":\"{\\\"sv\\\":1,\\\"session\\\":\\\"2e594645da039653d1a27edbb56c0e4a3693b68cf62345bc68f564fa5ed7c505\\\",\\\"from\\\":1760000000,\\\"until\\\":1760010800,\\\"agreement\\\":{\\\"engine\\\":1,\\\"rules\\\":{\\\"type\\\":\\\"x01\\\",\\\"modeId\\\":\\\"501\\\",\\\"startScore\\\":501,\\\"doubleIn\\\":false,\\\"doubleOut\\\":true,\\\"cutThroat\\\":false,\\\"bullFinish\\\":false,\\\"legsToWin\\\":1,\\\"setsToWin\\\":1,\\\"startRule\\\":\\\"alternate\\\"},\\\"seats\\\":[{\\\"alias\\\":\\\"Mia\\\",\\\"pubkey\\\":\\\"b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0\\\"},{\\\"alias\\\":\\\"Jonas\\\",\\\"pubkey\\\":\\\"a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6\\\"}],\\\"visibility\\\":\\\"public\\\"}}\",\"sig\":\"2a0de1e5a82e14491eab472da1fd914b4280415addc734b89278148730e75df14e6eb886a71147e959cbcb726b25507c08ecfeb7d64a00add6b3f71a9d5ffeff\"}}",
+          "sig": "7e489c63f08bbe3a1b96e93c5e5d830b9b4ec89b20c0b4670b2d97dc06398e3efc3d4a8deaad88bc9d5539a7927eeb3150979b04ae9360793654af6ae9b802fd"
+        },
+        {
+          "id": "209bb574ebba3fdad6da88c673b1eebcba8cb6e9687b248aa1764c2cdf20e8e4",
+          "pubkey": "420e2108da3b896463ff46c4b4a72b918e3b8633737dd4e35d03f46496a3c377",
+          "created_at": 1760000120,
+          "kind": 31501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.live", "blueline"],
+            ["v", "1"],
+            ["d", "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+            ["e", "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+            ["alt", "BlueLine Darts match.live"]
+          ],
+          "content": "{\"sv\":2,\"n\":2,\"status\":\"playing\",\"throws\":\"1777.222\",\"from\":0,\"standing\":{\"leg\":0,\"current\":0,\"scores\":[321,444],\"legs\":[0,0],\"winner\":null},\"auth\":{\"id\":\"55ef7023d295dd79fc608d5d8c12b5b1deb4637d7b15dcde7389bef99a64e8fb\",\"pubkey\":\"d073231b225699c406b4ada691fdea20c121fe84545e8e8b71c3e2d91d352352\",\"created_at\":1760000100,\"kind\":1501,\"tags\":[[\"L\",\"blueline\"],[\"l\",\"match.session\",\"blueline\"],[\"v\",\"1\"],[\"e\",\"87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24\"],[\"alt\",\"BlueLine Darts match.session\"]],\"content\":\"{\\\"sv\\\":2,\\\"session\\\":\\\"420e2108da3b896463ff46c4b4a72b918e3b8633737dd4e35d03f46496a3c377\\\",\\\"from\\\":1760000100,\\\"until\\\":1760010900,\\\"prev\\\":\\\"87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24\\\"}\",\"sig\":\"3f77cc75ffc2cd20de0c78fed8c19f95594b1d9a3027f8a3ee60ce22b7be82a265683d683e2af74a18226449fa7cdf2f3091a685c50aa3a335268aee30becf33\"}}",
+          "sig": "d91b92c821d0d87f4551f832d0061e6936791a3bd90144ab102f2c7750f08a7be40f828d6ee25acde6ec09abfaa092cc72d1ccb15b1a784e3cbb2a8262060b5b"
+        },
+        {
+          "id": "3ee2ea8878de924610e8dfa33bed17674b6d2d2ad92d6f3383f419852e13f48c",
+          "pubkey": "420e2108da3b896463ff46c4b4a72b918e3b8633737dd4e35d03f46496a3c377",
+          "created_at": 1760010901,
+          "kind": 31501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.live", "blueline"],
+            ["v", "1"],
+            ["d", "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+            ["e", "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+            ["alt", "BlueLine Darts match.live"]
+          ],
+          "content": "{\"sv\":2,\"n\":3,\"status\":\"playing\",\"throws\":\"1777.222.75M\",\"from\":0,\"standing\":{\"leg\":0,\"current\":1,\"scores\":[236,444],\"legs\":[0,0],\"winner\":null},\"auth\":{\"id\":\"55ef7023d295dd79fc608d5d8c12b5b1deb4637d7b15dcde7389bef99a64e8fb\",\"pubkey\":\"d073231b225699c406b4ada691fdea20c121fe84545e8e8b71c3e2d91d352352\",\"created_at\":1760000100,\"kind\":1501,\"tags\":[[\"L\",\"blueline\"],[\"l\",\"match.session\",\"blueline\"],[\"v\",\"1\"],[\"e\",\"87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24\"],[\"alt\",\"BlueLine Darts match.session\"]],\"content\":\"{\\\"sv\\\":2,\\\"session\\\":\\\"420e2108da3b896463ff46c4b4a72b918e3b8633737dd4e35d03f46496a3c377\\\",\\\"from\\\":1760000100,\\\"until\\\":1760010900,\\\"prev\\\":\\\"87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24\\\"}\",\"sig\":\"3f77cc75ffc2cd20de0c78fed8c19f95594b1d9a3027f8a3ee60ce22b7be82a265683d683e2af74a18226449fa7cdf2f3091a685c50aa3a335268aee30becf33\"}}",
+          "sig": "b4d76004ff26ba8ea5b0c4b16c572c4c957d1e45af32b3a4c9915302317dc579be5f1f43a82d0508a26cc1765b551048506e659e1170d9d5cde005edd07c8e94"
+        }
+      ],
+      "plaintexts": {},
+      "labels": {
+        "found": "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24",
+        "handover": "55ef7023d295dd79fc608d5d8c12b5b1deb4637d7b15dcde7389bef99a64e8fb",
+        "wrong-auth": "3870ff82dc85ded9d939a11794a73506cb5cc9c910c7359974521b8880c87f81",
+        "live": "209bb574ebba3fdad6da88c673b1eebcba8cb6e9687b248aa1764c2cdf20e8e4",
+        "too-late": "3ee2ea8878de924610e8dfa33bed17674b6d2d2ad92d6f3383f419852e13f48c"
+      },
+      "expect": {
+        "applied": ["87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24", "55ef7023d295dd79fc608d5d8c12b5b1deb4637d7b15dcde7389bef99a64e8fb", "209bb574ebba3fdad6da88c673b1eebcba8cb6e9687b248aa1764c2cdf20e8e4"],
+        "rejected": [
+          {
+            "id": "3870ff82dc85ded9d939a11794a73506cb5cc9c910c7359974521b8880c87f81",
+            "label": "wrong-auth",
+            "reason": "session_mismatch"
+          },
+          {
+            "id": "3ee2ea8878de924610e8dfa33bed17674b6d2d2ad92d6f3383f419852e13f48c",
+            "label": "too-late",
+            "reason": "session_expired"
+          }
+        ],
+        "state": {
+          "live": "live"
+        }
+      }
+    },
+    {
+      "name": "confirm-and-correct",
+      "description": "Players confirm or dispute one exact result. A correction replaces it and its verdicts no longer count; only seated players give verdicts; a second result must name the one it replaces.",
+      "now": 1760100000,
+      "root": "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24",
+      "open": true,
+      "events": [
+        {
+          "id": "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24",
+          "pubkey": "d073231b225699c406b4ada691fdea20c121fe84545e8e8b71c3e2d91d352352",
+          "created_at": 1760000000,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.session", "blueline"],
+            ["v", "1"],
+            ["alt", "BlueLine Darts match.session"]
+          ],
+          "content": "{\"sv\":1,\"session\":\"2e594645da039653d1a27edbb56c0e4a3693b68cf62345bc68f564fa5ed7c505\",\"from\":1760000000,\"until\":1760010800,\"agreement\":{\"engine\":1,\"rules\":{\"type\":\"x01\",\"modeId\":\"501\",\"startScore\":501,\"doubleIn\":false,\"doubleOut\":true,\"cutThroat\":false,\"bullFinish\":false,\"legsToWin\":1,\"setsToWin\":1,\"startRule\":\"alternate\"},\"seats\":[{\"alias\":\"Mia\",\"pubkey\":\"b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0\"},{\"alias\":\"Jonas\",\"pubkey\":\"a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6\"}],\"visibility\":\"public\"}}",
+          "sig": "2a0de1e5a82e14491eab472da1fd914b4280415addc734b89278148730e75df14e6eb886a71147e959cbcb726b25507c08ecfeb7d64a00add6b3f71a9d5ffeff"
+        },
+        {
+          "id": "2f91459d54746cd1170627374a6480592c92c5ed8884882d3ad2c9763bc6962e",
+          "pubkey": "2e594645da039653d1a27edbb56c0e4a3693b68cf62345bc68f564fa5ed7c505",
+          "created_at": 1760000100,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.result", "blueline"],
+            ["v", "1"],
+            ["e", "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+            ["alt", "BlueLine Darts match.result"]
+          ],
+          "content": "{\"sv\":1,\"status\":\"finished\",\"winner\":0,\"legs\":[1,0],\"throws\":\"1777.222.75M\",\"finishedAt\":1760000100,\"auth\":{\"id\":\"87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24\",\"pubkey\":\"d073231b225699c406b4ada691fdea20c121fe84545e8e8b71c3e2d91d352352\",\"created_at\":1760000000,\"kind\":1501,\"tags\":[[\"L\",\"blueline\"],[\"l\",\"match.session\",\"blueline\"],[\"v\",\"1\"],[\"alt\",\"BlueLine Darts match.session\"]],\"content\":\"{\\\"sv\\\":1,\\\"session\\\":\\\"2e594645da039653d1a27edbb56c0e4a3693b68cf62345bc68f564fa5ed7c505\\\",\\\"from\\\":1760000000,\\\"until\\\":1760010800,\\\"agreement\\\":{\\\"engine\\\":1,\\\"rules\\\":{\\\"type\\\":\\\"x01\\\",\\\"modeId\\\":\\\"501\\\",\\\"startScore\\\":501,\\\"doubleIn\\\":false,\\\"doubleOut\\\":true,\\\"cutThroat\\\":false,\\\"bullFinish\\\":false,\\\"legsToWin\\\":1,\\\"setsToWin\\\":1,\\\"startRule\\\":\\\"alternate\\\"},\\\"seats\\\":[{\\\"alias\\\":\\\"Mia\\\",\\\"pubkey\\\":\\\"b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0\\\"},{\\\"alias\\\":\\\"Jonas\\\",\\\"pubkey\\\":\\\"a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6\\\"}],\\\"visibility\\\":\\\"public\\\"}}\",\"sig\":\"2a0de1e5a82e14491eab472da1fd914b4280415addc734b89278148730e75df14e6eb886a71147e959cbcb726b25507c08ecfeb7d64a00add6b3f71a9d5ffeff\"}}",
+          "sig": "229be04e81908aca3b966066b63b02a1316949dc0dbd9cf5853b6b7063788459b99cdfc3cacfe22cb1307cb9b70dff0fc07b33531f9fb60b74d38e03dc04ffc3"
+        },
+        {
+          "id": "024c818aa3dc0ca0b3151d647f7c3e6d6a00ad4216d9fcdc26b04be7f11cca1f",
+          "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
+          "created_at": 1760000110,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.confirm", "blueline"],
+            ["v", "1"],
+            ["e", "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+            ["alt", "BlueLine Darts match.confirm"]
+          ],
+          "content": "{\"result\":\"2f91459d54746cd1170627374a6480592c92c5ed8884882d3ad2c9763bc6962e\",\"verdict\":\"confirm\",\"seat\":0}",
+          "sig": "dc00d7480df7d53f67756ce596d78a993a2b4261e7868093c93eaac43fe2b69d37f1071a74cb46279c10d9666b480ee901286a0165b0820e1f10bbac551613a4"
+        },
+        {
+          "id": "c8656bc5e8ec6f31c9b4a8d82301bbed2a2598dc38c8ffd0f0936c7331962340",
+          "pubkey": "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6",
+          "created_at": 1760000111,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.confirm", "blueline"],
+            ["v", "1"],
+            ["e", "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+            ["alt", "BlueLine Darts match.confirm"]
+          ],
+          "content": "{\"result\":\"2f91459d54746cd1170627374a6480592c92c5ed8884882d3ad2c9763bc6962e\",\"verdict\":\"dispute\",\"seat\":1,\"reason\":\"Letzte Aufnahme war 45\"}",
+          "sig": "04fc832fa7eea13324aecd3bc374d0b7db19225a664b22ef2595ff16c5bf0045ee3f5a824ccf1bf084e10418288ea21832303671442b72d12d7f3b1aad71220b"
+        },
+        {
+          "id": "fbcbc81d0cae2be5c8b446b9a8b0ecd7cc0b3b570cc239087d9bec5294f23e36",
+          "pubkey": "c1e16b2f3158d52908cf590f78527436ec5b2a5f79832834d5ff81ad47321978",
+          "created_at": 1760000112,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.confirm", "blueline"],
+            ["v", "1"],
+            ["e", "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+            ["alt", "BlueLine Darts match.confirm"]
+          ],
+          "content": "{\"result\":\"2f91459d54746cd1170627374a6480592c92c5ed8884882d3ad2c9763bc6962e\",\"verdict\":\"confirm\",\"seat\":0}",
+          "sig": "158c4b99787ce1b6f368e66a743411fe2efaf8d70e839bdcda5f957d5d244fffcbec3dc7a703fd12eaec129c2ae4831e6d3fa7d6de83732e07da5fe67f7f9f8c"
+        },
+        {
+          "id": "7c104bf05cb4df9331ca231a84a26635a2c2a614d4747d573d1b4eca911ac2ff",
+          "pubkey": "d073231b225699c406b4ada691fdea20c121fe84545e8e8b71c3e2d91d352352",
+          "created_at": 1760000115,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.result", "blueline"],
+            ["v", "1"],
+            ["e", "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+            ["alt", "BlueLine Darts match.result"]
+          ],
+          "content": "{\"sv\":1,\"status\":\"finished\",\"winner\":0,\"legs\":[1,0],\"throws\":\"1777.222.75M\",\"finishedAt\":1760000115}",
+          "sig": "a5ae11ce7322ad6eb36881535129cce9e2169ee4b3a639c474c76011efa2dcf404bb57cfc77e2ed0f343212532d09f97d90f9f1a038fd2f34f14be49f8fa81bc"
+        },
+        {
+          "id": "100fc16b3b5d0a29eb0db03f78f11be77552176e83193cd92a1464ef6d45b59d",
+          "pubkey": "d073231b225699c406b4ada691fdea20c121fe84545e8e8b71c3e2d91d352352",
+          "created_at": 1760000120,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.result", "blueline"],
+            ["v", "1"],
+            ["e", "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+            ["alt", "BlueLine Darts match.result"]
+          ],
+          "content": "{\"sv\":1,\"status\":\"finished\",\"winner\":1,\"legs\":[0,1],\"throws\":\"1777.222.75M\",\"finishedAt\":1760000120,\"replaces\":\"2f91459d54746cd1170627374a6480592c92c5ed8884882d3ad2c9763bc6962e\",\"reason\":\"Aufnahme korrigiert\"}",
+          "sig": "5c797eaa2d2c8e9314283b9aad5af8634b0c30b1ac273baab645db2620f300d16bb477662b249b7e26a8614fc48fd0a46c4d577239917499d2a6b9f6c8a8c6d3"
+        },
+        {
+          "id": "ad4f55500b88d8ff69a4d0bf3c89a39b6402bb6c98ceaae4abf55c81da967f47",
+          "pubkey": "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6",
+          "created_at": 1760000130,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.confirm", "blueline"],
+            ["v", "1"],
+            ["e", "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+            ["alt", "BlueLine Darts match.confirm"]
+          ],
+          "content": "{\"result\":\"100fc16b3b5d0a29eb0db03f78f11be77552176e83193cd92a1464ef6d45b59d\",\"verdict\":\"confirm\",\"seat\":1}",
+          "sig": "a7fb801a7ae3300504e4438da7642700e9195bde3e75610ca7e5c12a8660123137755ad5c08c9ef730c87222b7651417c154764fcec2c3ee6e8b74e01a5bcff3"
+        }
+      ],
+      "plaintexts": {},
+      "labels": {
+        "found": "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24",
+        "result-1": "2f91459d54746cd1170627374a6480592c92c5ed8884882d3ad2c9763bc6962e",
+        "p1-confirms": "024c818aa3dc0ca0b3151d647f7c3e6d6a00ad4216d9fcdc26b04be7f11cca1f",
+        "p2-disputes": "c8656bc5e8ec6f31c9b4a8d82301bbed2a2598dc38c8ffd0f0936c7331962340",
+        "mallory-confirms": "fbcbc81d0cae2be5c8b446b9a8b0ecd7cc0b3b570cc239087d9bec5294f23e36",
+        "unlinked": "7c104bf05cb4df9331ca231a84a26635a2c2a614d4747d573d1b4eca911ac2ff",
+        "result-2": "100fc16b3b5d0a29eb0db03f78f11be77552176e83193cd92a1464ef6d45b59d",
+        "p2-confirms": "ad4f55500b88d8ff69a4d0bf3c89a39b6402bb6c98ceaae4abf55c81da967f47"
+      },
+      "expect": {
+        "applied": ["87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24", "2f91459d54746cd1170627374a6480592c92c5ed8884882d3ad2c9763bc6962e", "024c818aa3dc0ca0b3151d647f7c3e6d6a00ad4216d9fcdc26b04be7f11cca1f", "c8656bc5e8ec6f31c9b4a8d82301bbed2a2598dc38c8ffd0f0936c7331962340", "100fc16b3b5d0a29eb0db03f78f11be77552176e83193cd92a1464ef6d45b59d", "ad4f55500b88d8ff69a4d0bf3c89a39b6402bb6c98ceaae4abf55c81da967f47"],
+        "rejected": [
+          {
+            "id": "fbcbc81d0cae2be5c8b446b9a8b0ecd7cc0b3b570cc239087d9bec5294f23e36",
+            "label": "mallory-confirms",
+            "reason": "not_a_player"
+          },
+          {
+            "id": "7c104bf05cb4df9331ca231a84a26635a2c2a614d4747d573d1b4eca911ac2ff",
+            "label": "unlinked",
+            "reason": "stale_predecessor"
+          }
+        ],
+        "state": {
+          "result": "result-2",
+          "confirmations": {
+            "1": "confirm"
+          },
+          "stale": 2
+        }
+      }
+    },
+    {
+      "name": "public-stake",
+      "description": "A stake is only written into a private, encrypted match; a public founding with a stake is invalid, so no match exists.",
+      "now": 1760100000,
+      "root": "6c513e44919e0e591bf0b287e2e236677d652123eab31e06e459453f708b3493",
+      "open": true,
+      "events": [
+        {
+          "id": "6c513e44919e0e591bf0b287e2e236677d652123eab31e06e459453f708b3493",
+          "pubkey": "d073231b225699c406b4ada691fdea20c121fe84545e8e8b71c3e2d91d352352",
+          "created_at": 1760000000,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.session", "blueline"],
+            ["v", "1"],
+            ["alt", "BlueLine Darts match.session"]
+          ],
+          "content": "{\"sv\":1,\"session\":\"2e594645da039653d1a27edbb56c0e4a3693b68cf62345bc68f564fa5ed7c505\",\"from\":1760000000,\"until\":1760010800,\"agreement\":{\"engine\":1,\"rules\":{\"type\":\"x01\",\"modeId\":\"501\",\"startScore\":501,\"doubleIn\":false,\"doubleOut\":true,\"cutThroat\":false,\"bullFinish\":false,\"legsToWin\":1,\"setsToWin\":1,\"startRule\":\"alternate\"},\"seats\":[{\"alias\":\"Mia\",\"pubkey\":\"b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0\"},{\"alias\":\"Jonas\",\"pubkey\":\"a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6\"}],\"visibility\":\"public\",\"stake\":{\"msat\":500000}}}",
+          "sig": "446655465afdc37e63cb185ce12a2e046aeb4691235db62a665ab93d67241474627fd739330f6f5869d350c0a54f980ea9b771f4759094d66e06bfd3a37981a9"
+        }
+      ],
+      "plaintexts": {},
+      "labels": {
+        "found": "6c513e44919e0e591bf0b287e2e236677d652123eab31e06e459453f708b3493"
+      },
+      "expect": {
+        "problem": "invalid"
+      }
+    },
+    {
+      "name": "private-match",
+      "description": "A private match: founding and snapshots are encrypted to the match key from the link; the agreed stake is inside.",
+      "now": 1760100000,
+      "root": "8998a52dcda70d13f8368c7f7e5ec85cb6ec70cd61a545b1baf89f5c1aa68512",
+      "groupKey": "matchkey",
+      "open": true,
+      "events": [
+        {
+          "id": "8998a52dcda70d13f8368c7f7e5ec85cb6ec70cd61a545b1baf89f5c1aa68512",
+          "pubkey": "d073231b225699c406b4ada691fdea20c121fe84545e8e8b71c3e2d91d352352",
+          "created_at": 1760000000,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.session", "blueline"],
+            ["v", "1"],
+            ["alt", "BlueLine Darts match.session"],
+            ["enc", "nip44", "3a908ceddf7b64be138028bb48aa105acbb9e22b83ed7d869ea5391c7b0e067d"]
+          ],
+          "content": "AiF/6P/yRnAh4kW0Tz0WuH2ALMRTv5ehc+LqqVVfCQ2u40Jz6brleWayYYsvz5LIhiMtG4fvjtf/SUfs54/ZKHQduyy9/wpuP9uWyUaVXvJwpbYj3NO0DyGpIjuKLrVgdoUp9ToDyMfPCXn3y9HS5aAMsG5elov/7sA16XAGV8EsOvdH3+FbJ3DNpft5sZQwPQZzxKQWs+bwQXLUXWFfhQovwGQo6oIlEK+xkMYJ9hXbQwCFX4VAhoLwbYgbMNehcmLdyF/ExPHaHGIY/A/nMFoqNo0zBZ1B6Dyor5xyI8Vn4bEc2OjZPaVqqnfuNBTkG6ayR3Gs4xr0ngTF489OPsOJImgMB1BNrXqsu5ljXkdu6uCpiZsutDCL4v91pUPX8cC6Z6odBRjtms7Pu8OrNs7gA/nRXXWxpZn9JgIiBSV6cF8pl3wNTP5w6r5lVQr65ALhfSlYTpPbBNYLXFC8OAW9/74pd1lrIyQTxZVg8zCX/haAZx26VXbOiHxxU3xNbd6GqavhqhBjS7EvbD7EBtQLH+vWbg2rGEmlslQNj8v/v8BysYCcIR7+deDQNP1uuzrgn8RMzgWvhK9OTgj4osYEVCXfOVMHAfJcGYXFt2mDks4vMAurfxLu5Y8H9lWx+SbCmN7IOxgukiqMKrhIEHiPYx18ahJ8erQdhyVCKwhlSzXBJIBEUcCMHiwoTFUIuOl+0UniaLXfZIwg2KrfkCBrDtUg8RsCGuUl+TxUZwSN5DJKAJhDTe+Jx/IBVmdoM5nN6xibUOdqeGlS8/ns6okjlQ1SkcEgGPYkONY8OjsP2nikJgBTWXcZRx8tydrYz+PUjJOsGdx9W1rvlQOT7mBcJKVDRRHSKjiYhvzKDnhYapOKh3VKZGg0JI06+SlpGJpH/JlHrUQBMCjvZqy7bAIGzpCCgAxJeATv8J7h3Gv17e4=",
+          "sig": "37240a1fa9f9b63d21f15309436cd7a6ff4f4fae61815805b076f170e8b4bab7abe800c69f8754b3e9f5a9b0684615f9863bf8a40eb37429a86123d72d83acac"
+        },
+        {
+          "id": "6e4e4f0bade2866fbe0becb3da00e83a8dae388d4a8a94a99e7f2f3a725fa984",
+          "pubkey": "2e594645da039653d1a27edbb56c0e4a3693b68cf62345bc68f564fa5ed7c505",
+          "created_at": 1760000100,
+          "kind": 31501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.live", "blueline"],
+            ["v", "1"],
+            ["d", "8998a52dcda70d13f8368c7f7e5ec85cb6ec70cd61a545b1baf89f5c1aa68512"],
+            ["e", "8998a52dcda70d13f8368c7f7e5ec85cb6ec70cd61a545b1baf89f5c1aa68512"],
+            ["alt", "BlueLine Darts match.live"],
+            ["enc", "nip44", "3a908ceddf7b64be138028bb48aa105acbb9e22b83ed7d869ea5391c7b0e067d"]
+          ],
+          "content": "Ag0uirwS37Z/qSe1spNH2+yGIEJe9Jyu1lX9mXTXMt7uQTyXrS6xK2ikBwjexfQr+UNmJfv7SSAct84RPcrh3+ck7aW6jA+qvBdsbvM5l0EtRozH3Il5v9PRrV57sZ/ABS5YZQoJDeJfG2CEp7sDKxWHn9lWBIFBFzw1pYRofuyjiP71Bfo0axspSS4xrfczOlYGJebvTH4Naf7QrlOst/MdRBG82gCj71CFQ1s3IIVXTYvJyoW2w6rgo5Fym3H698EkOklJGreabuqGbE8dyjNCBwdNNBOahCgT/93TPDkZYx+jaTuIAk3OZOcncGOarZf1UjFcF+Kb+xs7bDwZMBJUv+gAZcsYjRg4Vr4a7gcVCtfwkZTgEc0LNDVUtJIS+9Z31E0trOkYAtppllSXG82CQlZL9trMKhCRyuYeBcnOM6qwS1lXdbUtQnllm4zl3tE+tBqRapAHF7HFDGf3aGDTX0alrocyZdJYIgFsyUew/mTM1GUk5U5MU9MHIHn8VkgzGNd5Ctj5OgAfjDfI81WSyhEH2hHHcwCjGOue3OUHzPRIAiYzt9iJ3DUMIO6vlDQCsgxQKYi42+0A2yXS0c604leFRnUVbpLj1J39332S/QjBYY7izY9x2aQfoZMUSXFuFFL2gb0oWW5jemYdeK1WfnvE8K1FvD7C+fz2nYb+djrpi/9F7UhozAsWbeigsQX9T90ig9PDPsOhrGYxWpaE5be/a/0UfACBKomsR3nB9dyD8qR0AnJXr8rnImN9eI29ZctQJnpn5Ddn9TUIcguDF9T5rqYcFir/Gvy8wiy5pws1O90b1aAIsXnG0wBY/NQTaRas04E4t8kFKmkFY3iLGN/zEeV5yce2pfVhS2f5VnUmHKIKc8cdpTwHePFZnQsUQn0EXP6C+tL1t1L5a644HVYMLkD+YUE+orlasg9ggQ2LqOSFQt4cBcEjlV78sObPBpz0BYJvzdm56KtGRGiDaX4/rTU5G5k7JoSYCEg1WSD2iXoUaCrYuBeoy8UHG0kqvWrk0b0DZPTVoDo5x7A+FLAddr1nSLZfb7X1QvvhS3Wjhshk74XAKnBLW72xD/M5VyMO/QI8ZXpK/JU+lb+yjU+RvHoB/fcQqSxo4suko6upCaLup8avjdBhxJd9NUL6CkdbSaJ8D+Dggkc3yXFV/CUnuCXXQfx/JsIiF2jSVHkmtLdVUPcNn2918UDZ/Ubh7jteD4Lsc2Z8PyP0tDyjVr16budHQq43PUfUjXNdzrT7FjN28WHIye4gFJvfLP+tNB1pgEbWA7wc2uBnkMxpsbJ6mOoYqz5Suj+KUOuEONlazgqzsTnRUOWleNxLPuOaEjuHyonazJl/7zOSPYmNgIUBuL0JyFYQbd5jEMAiUoCeje+H+SYWG2E48XfYRoIA31hhzJOJYC5y96WaE5Lostc+s9p+sCAQjXmTe5Jx+KjNijzov9t+Wo0WJsLcno4oP+ozTDN3zWRFsb0JAEAGgsYXmEhNiwAi7rchy6802Ud9+zf/90iaDPmRZqbYrp8/cvko5fvHyXa5An7rsjjAfEuwGJArxi85szTVewbl/Yus8eG1UJ6nSFmfo8XbLESNZjaAgY/PcxFlYHszYr/UkArVOYkl2gpdhluMmm0tYlaCZTl0nxWqwhMmdSk0fwoGl3l8UoaDVQmS5WBZLDSJhr9SGAZrvLjr8Pvv3n0xlqyiqjrS8w7k+t3T5ISvxV+gYfMBWbcsgfydouSH9pTqj5MzDzMgJ9DeFZk8SBTtzAFJudDGIRHX1SKH1/qcFIZ2QvH66OqQ1jr/ii8DOE2OTOMM+/DvFt23mvfY9MEQQqlTRPrJnlIgOrgIBX3qP6aJ6lnJpEnxakGxNLlJk2baWKkCo4EX3Wt65DTy0Rs9W6ypThxefaiJXviYwvu5+GNBAO2DptfN1P7wdVn6CbHrPFe8hxyXG7nhDsysz3qUxMIa3Q6ggyLmRnwzahgZLCzUh5V7TcfFaDgotzUsNvQdbv5xrpNa5TSoRKGd3sYxY5plOtWFmV5V0jaxRmbJRMtpE+N00GPv/0PoNFt5UEFwQf2/PzHApy+T+7G0klRr3OWq9simiBXxHCyafKE0Y91wtAM6vIYwDvxAzaCiBsWJWJrcaH74OLX2RjzUt6Jgqqsg6ztF1hyJ+LDGh7jOoe8seqn/fIHcDJzQ942CE+EAVwWtzy6fB6Gq29Lxrjjmduk7+mn49B1VYFBu/jQF4LZjP6Z48kvSk4fzFew2fQaHLxUyKGiUDbE+cuGLIUp/agpFuUsdkajRpXArgcRUoRZQdknUe3o8hLFOsg+wEbu0RMT/2eneO+NdvjVwWxe5gLOFoYPXw1j1+cf+Gzx1YB/FvJTUNyLK9QFGyeI8YyrO5HDZMX8pAfhwa3II2Sb5VijvLMpCf08SUZ6gBVqok4TPVjCqQ9qIrIQrLZe4HEJejoQ/j21PcHQ3gGnb65ZhK70=",
+          "sig": "83ba4163539adac4423367bff0449f457033a396113046df42be313ac8a0bac89633f62933d599d8baf768d83576ca614912c3f4f4257eceda7c88d8cc90ffea"
+        }
+      ],
+      "plaintexts": {
+        "8998a52dcda70d13f8368c7f7e5ec85cb6ec70cd61a545b1baf89f5c1aa68512": "{\"sv\":1,\"session\":\"2e594645da039653d1a27edbb56c0e4a3693b68cf62345bc68f564fa5ed7c505\",\"from\":1760000000,\"until\":1760010800,\"agreement\":{\"engine\":1,\"rules\":{\"type\":\"x01\",\"modeId\":\"501\",\"startScore\":501,\"doubleIn\":false,\"doubleOut\":true,\"cutThroat\":false,\"bullFinish\":false,\"legsToWin\":1,\"setsToWin\":1,\"startRule\":\"alternate\"},\"seats\":[{\"alias\":\"Mia\",\"pubkey\":\"b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0\"},{\"alias\":\"Jonas\",\"pubkey\":\"a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6\"}],\"visibility\":\"private\",\"stake\":{\"msat\":500000,\"note\":\"Verlierer zahlt\"}}}",
+        "6e4e4f0bade2866fbe0becb3da00e83a8dae388d4a8a94a99e7f2f3a725fa984": "{\"sv\":1,\"n\":1,\"status\":\"playing\",\"throws\":\"1777\",\"from\":0,\"standing\":{\"leg\":0,\"current\":1,\"scores\":[321,501],\"legs\":[0,0],\"winner\":null},\"auth\":{\"id\":\"8998a52dcda70d13f8368c7f7e5ec85cb6ec70cd61a545b1baf89f5c1aa68512\",\"pubkey\":\"d073231b225699c406b4ada691fdea20c121fe84545e8e8b71c3e2d91d352352\",\"created_at\":1760000000,\"kind\":1501,\"tags\":[[\"L\",\"blueline\"],[\"l\",\"match.session\",\"blueline\"],[\"v\",\"1\"],[\"alt\",\"BlueLine Darts match.session\"],[\"enc\",\"nip44\",\"3a908ceddf7b64be138028bb48aa105acbb9e22b83ed7d869ea5391c7b0e067d\"]],\"content\":\"AiF/6P/yRnAh4kW0Tz0WuH2ALMRTv5ehc+LqqVVfCQ2u40Jz6brleWayYYsvz5LIhiMtG4fvjtf/SUfs54/ZKHQduyy9/wpuP9uWyUaVXvJwpbYj3NO0DyGpIjuKLrVgdoUp9ToDyMfPCXn3y9HS5aAMsG5elov/7sA16XAGV8EsOvdH3+FbJ3DNpft5sZQwPQZzxKQWs+bwQXLUXWFfhQovwGQo6oIlEK+xkMYJ9hXbQwCFX4VAhoLwbYgbMNehcmLdyF/ExPHaHGIY/A/nMFoqNo0zBZ1B6Dyor5xyI8Vn4bEc2OjZPaVqqnfuNBTkG6ayR3Gs4xr0ngTF489OPsOJImgMB1BNrXqsu5ljXkdu6uCpiZsutDCL4v91pUPX8cC6Z6odBRjtms7Pu8OrNs7gA/nRXXWxpZn9JgIiBSV6cF8pl3wNTP5w6r5lVQr65ALhfSlYTpPbBNYLXFC8OAW9/74pd1lrIyQTxZVg8zCX/haAZx26VXbOiHxxU3xNbd6GqavhqhBjS7EvbD7EBtQLH+vWbg2rGEmlslQNj8v/v8BysYCcIR7+deDQNP1uuzrgn8RMzgWvhK9OTgj4osYEVCXfOVMHAfJcGYXFt2mDks4vMAurfxLu5Y8H9lWx+SbCmN7IOxgukiqMKrhIEHiPYx18ahJ8erQdhyVCKwhlSzXBJIBEUcCMHiwoTFUIuOl+0UniaLXfZIwg2KrfkCBrDtUg8RsCGuUl+TxUZwSN5DJKAJhDTe+Jx/IBVmdoM5nN6xibUOdqeGlS8/ns6okjlQ1SkcEgGPYkONY8OjsP2nikJgBTWXcZRx8tydrYz+PUjJOsGdx9W1rvlQOT7mBcJKVDRRHSKjiYhvzKDnhYapOKh3VKZGg0JI06+SlpGJpH/JlHrUQBMCjvZqy7bAIGzpCCgAxJeATv8J7h3Gv17e4=\",\"sig\":\"37240a1fa9f9b63d21f15309436cd7a6ff4f4fae61815805b076f170e8b4bab7abe800c69f8754b3e9f5a9b0684615f9863bf8a40eb37429a86123d72d83acac\"}}"
+      },
+      "labels": {
+        "found": "8998a52dcda70d13f8368c7f7e5ec85cb6ec70cd61a545b1baf89f5c1aa68512",
+        "live": "6e4e4f0bade2866fbe0becb3da00e83a8dae388d4a8a94a99e7f2f3a725fa984"
+      },
+      "expect": {
+        "applied": ["8998a52dcda70d13f8368c7f7e5ec85cb6ec70cd61a545b1baf89f5c1aa68512", "6e4e4f0bade2866fbe0becb3da00e83a8dae388d4a8a94a99e7f2f3a725fa984"],
+        "rejected": [],
+        "state": {
+          "stake": 500000,
+          "live": "live"
+        }
+      }
+    },
+    {
+      "name": "chunked-log",
+      "description": "A long throw log travels in hash-chained pieces; the result names the chain's head, piece count and size.",
+      "now": 1760100000,
+      "root": "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24",
+      "open": true,
+      "events": [
+        {
+          "id": "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24",
+          "pubkey": "d073231b225699c406b4ada691fdea20c121fe84545e8e8b71c3e2d91d352352",
+          "created_at": 1760000000,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.session", "blueline"],
+            ["v", "1"],
+            ["alt", "BlueLine Darts match.session"]
+          ],
+          "content": "{\"sv\":1,\"session\":\"2e594645da039653d1a27edbb56c0e4a3693b68cf62345bc68f564fa5ed7c505\",\"from\":1760000000,\"until\":1760010800,\"agreement\":{\"engine\":1,\"rules\":{\"type\":\"x01\",\"modeId\":\"501\",\"startScore\":501,\"doubleIn\":false,\"doubleOut\":true,\"cutThroat\":false,\"bullFinish\":false,\"legsToWin\":1,\"setsToWin\":1,\"startRule\":\"alternate\"},\"seats\":[{\"alias\":\"Mia\",\"pubkey\":\"b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0\"},{\"alias\":\"Jonas\",\"pubkey\":\"a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6\"}],\"visibility\":\"public\"}}",
+          "sig": "2a0de1e5a82e14491eab472da1fd914b4280415addc734b89278148730e75df14e6eb886a71147e959cbcb726b25507c08ecfeb7d64a00add6b3f71a9d5ffeff"
+        },
+        {
+          "id": "f31030dfd6dfc3df6634b09f185fabd73ac86a39d8ef6285b0c7fb04184ac9c6",
+          "pubkey": "2e594645da039653d1a27edbb56c0e4a3693b68cf62345bc68f564fa5ed7c505",
+          "created_at": 1760000100,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.log", "blueline"],
+            ["v", "1"],
+            ["e", "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+            ["alt", "BlueLine Darts match.log"]
+          ],
+          "content": "{\"set\":\"0626984f5b7795b4ba12472841d12c4b0e8717e7617738cbeb60f3dc39ce6ce0\",\"seq\":0,\"total\":3,\"prev\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"data\":\"1AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA\"}",
+          "sig": "d756337a8ba8f89f670ffda2c2b695256598e1da7f082ab4dd1d6e357ecf64b58c34c266cfc137233dd13d5ed5b24250512a75837e1389e7eef4fca0823bc799"
+        },
+        {
+          "id": "d479fd9bf0d9c4d68b141d639a2e29ead3fd33c07d443d406bec4854a31c3956",
+          "pubkey": "2e594645da039653d1a27edbb56c0e4a3693b68cf62345bc68f564fa5ed7c505",
+          "created_at": 1760000101,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.log", "blueline"],
+            ["v", "1"],
+            ["e", "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+            ["alt", "BlueLine Darts match.log"]
+          ],
+          "content": "{\"set\":\"0626984f5b7795b4ba12472841d12c4b0e8717e7617738cbeb60f3dc39ce6ce0\",\"seq\":1,\"total\":3,\"prev\":\"01656bcb37fc404d02d37bd397dcad7deb298714d42e8fb41fc425ffe5961f42\",\"data\":\".AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA\"}",
+          "sig": "8c3d166c4f5f1554fd42b28512760d7cf1c6b98c5d8e96f1eaa5c64b085323e18e797d9b3d3d45db6b4c84159ab7a76e834803a1f076e7ff74d1e7a8835c5675"
+        },
+        {
+          "id": "5ec57145bff85dcc67547ae10a79b8e5e509f47623cc9c92593011daf50a640e",
+          "pubkey": "2e594645da039653d1a27edbb56c0e4a3693b68cf62345bc68f564fa5ed7c505",
+          "created_at": 1760000102,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.log", "blueline"],
+            ["v", "1"],
+            ["e", "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+            ["alt", "BlueLine Darts match.log"]
+          ],
+          "content": "{\"set\":\"0626984f5b7795b4ba12472841d12c4b0e8717e7617738cbeb60f3dc39ce6ce0\",\"seq\":2,\"total\":3,\"prev\":\"1be061a95124914cd1e443e238dfacfb17c25bd9a6c1fef2f1e19140438db55c\",\"data\":\".AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.888\"}",
+          "sig": "2cbba5e3e9e82f60170a5c47f314e6a92d7189097396ac49cbfd61757586d29ee21e4e3b0fc788f72d6ef779f14ff263a2d83ae73972cb0d3c8b57bec46713c6"
+        },
+        {
+          "id": "645a2eb2fffb6d4e586fad50e00aaacdc4c9a70e1415f2e17f53a6da46d9dd67",
+          "pubkey": "2e594645da039653d1a27edbb56c0e4a3693b68cf62345bc68f564fa5ed7c505",
+          "created_at": 1760000200,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.result", "blueline"],
+            ["v", "1"],
+            ["e", "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+            ["alt", "BlueLine Darts match.result"]
+          ],
+          "content": "{\"sv\":1,\"status\":\"finished\",\"winner\":null,\"legs\":[0,0],\"log\":{\"head\":\"0626984f5b7795b4ba12472841d12c4b0e8717e7617738cbeb60f3dc39ce6ce0\",\"total\":3,\"bytes\":164},\"finishedAt\":1760000200,\"auth\":{\"id\":\"87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24\",\"pubkey\":\"d073231b225699c406b4ada691fdea20c121fe84545e8e8b71c3e2d91d352352\",\"created_at\":1760000000,\"kind\":1501,\"tags\":[[\"L\",\"blueline\"],[\"l\",\"match.session\",\"blueline\"],[\"v\",\"1\"],[\"alt\",\"BlueLine Darts match.session\"]],\"content\":\"{\\\"sv\\\":1,\\\"session\\\":\\\"2e594645da039653d1a27edbb56c0e4a3693b68cf62345bc68f564fa5ed7c505\\\",\\\"from\\\":1760000000,\\\"until\\\":1760010800,\\\"agreement\\\":{\\\"engine\\\":1,\\\"rules\\\":{\\\"type\\\":\\\"x01\\\",\\\"modeId\\\":\\\"501\\\",\\\"startScore\\\":501,\\\"doubleIn\\\":false,\\\"doubleOut\\\":true,\\\"cutThroat\\\":false,\\\"bullFinish\\\":false,\\\"legsToWin\\\":1,\\\"setsToWin\\\":1,\\\"startRule\\\":\\\"alternate\\\"},\\\"seats\\\":[{\\\"alias\\\":\\\"Mia\\\",\\\"pubkey\\\":\\\"b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0\\\"},{\\\"alias\\\":\\\"Jonas\\\",\\\"pubkey\\\":\\\"a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6\\\"}],\\\"visibility\\\":\\\"public\\\"}}\",\"sig\":\"2a0de1e5a82e14491eab472da1fd914b4280415addc734b89278148730e75df14e6eb886a71147e959cbcb726b25507c08ecfeb7d64a00add6b3f71a9d5ffeff\"}}",
+          "sig": "120d7ea72b444875754e1b9dece9de6ef11fc8f1b727229cfd738588d0d5da5eacd90a508cffd84c67272aefdc7d5880f5db7e1e5ed257923efd9f6abd5dfe9e"
+        }
+      ],
+      "plaintexts": {},
+      "labels": {
+        "found": "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24",
+        "log-0": "f31030dfd6dfc3df6634b09f185fabd73ac86a39d8ef6285b0c7fb04184ac9c6",
+        "log-1": "d479fd9bf0d9c4d68b141d639a2e29ead3fd33c07d443d406bec4854a31c3956",
+        "log-2": "5ec57145bff85dcc67547ae10a79b8e5e509f47623cc9c92593011daf50a640e",
+        "result": "645a2eb2fffb6d4e586fad50e00aaacdc4c9a70e1415f2e17f53a6da46d9dd67"
+      },
+      "expect": {
+        "applied": ["87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24", "f31030dfd6dfc3df6634b09f185fabd73ac86a39d8ef6285b0c7fb04184ac9c6", "d479fd9bf0d9c4d68b141d639a2e29ead3fd33c07d443d406bec4854a31c3956", "5ec57145bff85dcc67547ae10a79b8e5e509f47623cc9c92593011daf50a640e", "645a2eb2fffb6d4e586fad50e00aaacdc4c9a70e1415f2e17f53a6da46d9dd67"],
+        "rejected": [],
+        "state": {
+          "result": "result",
+          "log": {
+            "head": "0626984f5b7795b4ba12472841d12c4b0e8717e7617738cbeb60f3dc39ce6ce0",
+            "pieces": 3,
+            "text": "1AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.AAA.888"
+          }
+        }
+      }
+    },
+    {
+      "name": "unknown-version",
+      "description": "A snapshot in a newer format version is kept, not executed.",
+      "now": 1760100000,
+      "root": "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24",
+      "open": true,
+      "events": [
+        {
+          "id": "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24",
+          "pubkey": "d073231b225699c406b4ada691fdea20c121fe84545e8e8b71c3e2d91d352352",
+          "created_at": 1760000000,
+          "kind": 1501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.session", "blueline"],
+            ["v", "1"],
+            ["alt", "BlueLine Darts match.session"]
+          ],
+          "content": "{\"sv\":1,\"session\":\"2e594645da039653d1a27edbb56c0e4a3693b68cf62345bc68f564fa5ed7c505\",\"from\":1760000000,\"until\":1760010800,\"agreement\":{\"engine\":1,\"rules\":{\"type\":\"x01\",\"modeId\":\"501\",\"startScore\":501,\"doubleIn\":false,\"doubleOut\":true,\"cutThroat\":false,\"bullFinish\":false,\"legsToWin\":1,\"setsToWin\":1,\"startRule\":\"alternate\"},\"seats\":[{\"alias\":\"Mia\",\"pubkey\":\"b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0\"},{\"alias\":\"Jonas\",\"pubkey\":\"a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6\"}],\"visibility\":\"public\"}}",
+          "sig": "2a0de1e5a82e14491eab472da1fd914b4280415addc734b89278148730e75df14e6eb886a71147e959cbcb726b25507c08ecfeb7d64a00add6b3f71a9d5ffeff"
+        },
+        {
+          "id": "d30a33912369682e188b09588feff2ce354e52d12a75a38b67761b68b9486ca1",
+          "pubkey": "2e594645da039653d1a27edbb56c0e4a3693b68cf62345bc68f564fa5ed7c505",
+          "created_at": 1760000100,
+          "kind": 31501,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.live", "blueline"],
+            ["v", "2"],
+            ["d", "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+            ["e", "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+            ["alt", "BlueLine Darts match.live"]
+          ],
+          "content": "{\"sv\":1,\"n\":1,\"status\":\"playing\",\"throws\":\"1777\",\"from\":0,\"standing\":{\"leg\":0,\"current\":1,\"scores\":[321,501],\"legs\":[0,0],\"winner\":null},\"auth\":{\"id\":\"87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24\",\"pubkey\":\"d073231b225699c406b4ada691fdea20c121fe84545e8e8b71c3e2d91d352352\",\"created_at\":1760000000,\"kind\":1501,\"tags\":[[\"L\",\"blueline\"],[\"l\",\"match.session\",\"blueline\"],[\"v\",\"1\"],[\"alt\",\"BlueLine Darts match.session\"]],\"content\":\"{\\\"sv\\\":1,\\\"session\\\":\\\"2e594645da039653d1a27edbb56c0e4a3693b68cf62345bc68f564fa5ed7c505\\\",\\\"from\\\":1760000000,\\\"until\\\":1760010800,\\\"agreement\\\":{\\\"engine\\\":1,\\\"rules\\\":{\\\"type\\\":\\\"x01\\\",\\\"modeId\\\":\\\"501\\\",\\\"startScore\\\":501,\\\"doubleIn\\\":false,\\\"doubleOut\\\":true,\\\"cutThroat\\\":false,\\\"bullFinish\\\":false,\\\"legsToWin\\\":1,\\\"setsToWin\\\":1,\\\"startRule\\\":\\\"alternate\\\"},\\\"seats\\\":[{\\\"alias\\\":\\\"Mia\\\",\\\"pubkey\\\":\\\"b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0\\\"},{\\\"alias\\\":\\\"Jonas\\\",\\\"pubkey\\\":\\\"a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6\\\"}],\\\"visibility\\\":\\\"public\\\"}}\",\"sig\":\"2a0de1e5a82e14491eab472da1fd914b4280415addc734b89278148730e75df14e6eb886a71147e959cbcb726b25507c08ecfeb7d64a00add6b3f71a9d5ffeff\"}}",
+          "sig": "a9d9b2ee6123974fe0229c4b2439a386e9d0b2b535eb8131382039d871e6caf7defc65aa9d529db94361c57cb521ea8b16ac6231cf6936ffe067f431d172134e"
+        }
+      ],
+      "plaintexts": {},
+      "labels": {
+        "found": "87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24",
+        "live-v2": "d30a33912369682e188b09588feff2ce354e52d12a75a38b67761b68b9486ca1"
+      },
+      "expect": {
+        "applied": ["87f9fbfc6409fa4bbdc85d2b587c418848407494138e15f6b740d57c522a8c24"],
+        "rejected": [],
+        "unapplied": [
+          {
+            "id": "d30a33912369682e188b09588feff2ce354e52d12a75a38b67761b68b9486ca1",
+            "label": "live-v2",
+            "why": "unknown"
+          }
+        ],
+        "state": {
+          "live": null
+        }
+      }
+    }
+  ],
+  "keys": {
+    "host": {
+      "secret": "ddb3b94eb7bc74f96d8c63f893a7acc8f7ffcd56ee107f61a2572ec858130080",
+      "pubkey": "d073231b225699c406b4ada691fdea20c121fe84545e8e8b71c3e2d91d352352"
+    },
+    "mallory": {
+      "secret": "9be7c2943089a10a5b83ebbd95d0634afa644ee232db8397c3d5be8d260979c0",
+      "pubkey": "c1e16b2f3158d52908cf590f78527436ec5b2a5f79832834d5ff81ad47321978"
+    },
+    "matchkey": {
+      "secret": "c36d92072292f12e780b06c00619020080568e1b1ba01fe1a35f02958a40db3a",
+      "pubkey": "3a908ceddf7b64be138028bb48aa105acbb9e22b83ed7d869ea5391c7b0e067d"
+    },
+    "p1": {
+      "secret": "5f376707328cb0702d59a27465f39f418af2e6d728638ec9416ffc415b55aa31",
+      "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0"
+    },
+    "p2": {
+      "secret": "6fa792f67001e89db0f94b1d158b5b87f43ce5a7f68a551bf2684f9373dc0be9",
+      "pubkey": "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6"
+    },
+    "session1": {
+      "secret": "6e122d69aa6d2ba19b378d43e0b468915ce345962076529f47c4965f15f904ae",
+      "pubkey": "2e594645da039653d1a27edbb56c0e4a3693b68cf62345bc68f564fa5ed7c505"
+    },
+    "session2": {
+      "secret": "8cbc769ad704fbba8374d87a2f2cf447d3f9ec77072e49e34c5c153cea18d078",
+      "pubkey": "420e2108da3b896463ff46c4b4a72b918e3b8633737dd4e35d03f46496a3c377"
+    }
+  }
+}
