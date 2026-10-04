@@ -9,11 +9,14 @@ import { Dartboard, GAME_HIGHLIGHTS } from "@/components/dartboard"
 import { useT } from "@/components/i18n-provider"
 import { recentPlayerNames, useMatchHistory } from "@/lib/leaderboard"
 import { loadLastPlayers, loadRules } from "@/lib/game/storage"
+import { assignPlayers, listPlayers, savePlayers, type PlayerRecord } from "@/lib/storage/players"
 import { LEG_OPTIONS, SET_OPTIONS, START_SCORES, configFor, modeIdFor, type GameRules } from "@/lib/game/rules"
 import type { GameType, MatchConfig } from "@/lib/game/types"
 import { cn } from "@/lib/utils"
 
 const MAX_PLAYERS = 6
+// How long Start waits for the player directory, if it isn't loaded yet, before playing without.
+const START_WAIT_MS = 300
 
 interface SetupPlayer {
   key: string
@@ -122,7 +125,8 @@ export function SetupScreen({ type, onBack, onStart }: SetupScreenProps) {
   const change = (patch: Partial<GameRules>) => setRules((current) => ({ ...current, ...patch }))
   const texts = t.modes[modeIdFor(type, rules)]
   const inputs = useRef(new Map<string, HTMLInputElement>())
-  const { matches } = useMatchHistory()
+  const { all: matches, players: directory } = useMatchHistory()
+  const starting = useRef(false)
 
   const nameKeys = players.map((p) => p.name.trim().toLowerCase())
   const duplicates = new Set(nameKeys.filter((k, i) => k && nameKeys.indexOf(k) !== i))
@@ -157,9 +161,24 @@ export function SetupScreen({ type, onBack, onStart }: SetupScreenProps) {
     })
   }
 
+  // A name played before keeps its player id, so results add up per person. The directory is
+  // loaded long before anyone taps Start. If it isn't (storage still opening or blocked), the
+  // game starts right away anyway: seats keep their setup ids, and the archive finds known
+  // players by name when the game is finished, so no one is counted twice.
   const start = () => {
-    const named = players.map((p, i) => ({ id: p.key, name: p.name.trim() || t.setup.placeholder(i + 1) }))
-    onStart(configFor(type, rules, named, texts.name))
+    if (starting.current) return
+    starting.current = true
+    const names = players.map((p, i) => p.name.trim() || t.setup.placeholder(i + 1))
+    const begin = (known: PlayerRecord[] | null) => {
+      if (!known) return onStart(configFor(type, rules, players.map((p, i) => ({ id: p.key, name: names[i] })), texts.name))
+      const { players: named, created } = assignPlayers(names, known)
+      // If this fails, the archive adds them when the game is finished.
+      if (created.length > 0) savePlayers(created).catch(() => {})
+      onStart(configFor(type, rules, named, texts.name))
+    }
+    if (directory) return begin(directory)
+    const giveUp = new Promise<null>((resolve) => setTimeout(() => resolve(null), START_WAIT_MS))
+    void Promise.race([listPlayers().catch(() => null), giveUp]).then(begin)
   }
 
   const multipleLegs = rules.legsToWin > 1

@@ -10,10 +10,12 @@ import { SettingsScreen } from "@/components/settings-screen"
 import { GameScreen } from "@/components/game/game-screen"
 import { UndoBanner } from "@/components/undo-banner"
 import { FallbackScreen } from "@/components/fallback-screen"
+import { StorageAlert } from "@/components/data/storage-alert"
 import { useT } from "@/components/i18n-provider"
 import { modeName, type Messages } from "@/lib/i18n"
 import { SITE } from "@/lib/site"
 import { newMatchId } from "@/lib/leaderboard"
+import { trackSave } from "@/lib/storage/save-status"
 import { replay } from "@/lib/game/engine"
 import { rulesOf } from "@/lib/game/rules"
 import { legName, rulesSummary } from "@/lib/game/words"
@@ -111,8 +113,10 @@ export default function DartScorer() {
     setHydrated(true)
   }, [])
 
+  // A write that fails is shown (StorageAlert), never passed off as saved. Leaving a game removes
+  // it from storage; if even that fails, there is no game left to warn about.
   useEffect(() => {
-    if (hydrated) saveMatch(match)
+    if (hydrated) void trackSave("game", () => saveMatch(match) || match === null)
   }, [hydrated, match])
 
   useEffect(() => {
@@ -250,6 +254,8 @@ export default function DartScorer() {
         }}
         onExpire={clearEnded}
       />
+
+      <StorageAlert />
     </div>
   )
 }
