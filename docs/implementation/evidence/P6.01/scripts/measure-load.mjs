@@ -1,7 +1,8 @@
 // Load measurement for the tournament engine (P6.01): 128 participants, 16 boards.
 // Run from the repository root: node docs/implementation/evidence/P6.01/scripts/measure-load.mjs
 // Wall-clock times (performance.now) of the pure engine in Node, without any screen. Every state
-// change is followed by resolveTournament(), as a screen would do.
+// change is followed by resolveTournament(), as a screen would do. With --cpu: processor time of
+// this thread instead, for a busy machine where wall-clock times say more about the other work.
 import { createTournament, recordResult, resolveTournament, startMatch, suggestBoards } from "../../../../../lib/tournaments/engine.ts"
 
 const field = (n) => Array.from({ length: n }, (_, i) => ({ id: `p${i + 1}`, name: `Spieler ${i + 1}` }))
@@ -13,14 +14,21 @@ const setups = [
   ["Gruppen 2 × 64, dann K.-o., 128", 128, { format: "groups", groups: { count: 2, advance: 4 } }],
   ["Jeder gegen jeden, 64", 64, { format: "roundRobin" }],
 ]
+const cpu = process.argv.includes("--cpu")
+const now = cpu
+  ? () => {
+      const used = process.threadCpuUsage()
+      return (used.user + used.system) / 1000
+    }
+  : () => performance.now()
 const timed = (fn) => {
-  const start = performance.now()
+  const start = now()
   fn()
-  return performance.now() - start
+  return now() - start
 }
 const q = (list, p) => [...list].sort((a, b) => a - b)[Math.floor(p * (list.length - 1))].toFixed(1)
 
-console.log(`Node ${process.version}, ${process.platform} ${process.arch}`)
+console.log(`Node ${process.version}, ${process.platform} ${process.arch}, ${cpu ? "Prozessorzeit" : "Wanduhr"}`)
 console.log("| Format | Spiele | Auslosung kalt / warm (ms) | Aufrufe p50 / p99 / max (ms) | Ergebnisse p50 / p99 / max (ms) | Ergebnisse gesamt |")
 console.log("| --- | --- | --- | --- | --- | --- |")
 for (const [label, n, setup] of setups) {
