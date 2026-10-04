@@ -1,0 +1,126 @@
+# 0002 Architektur der Erweiterung
+
+**Status:** Angenommen (Umsetzer, 4. Oktober 2026). Grundlage: [0001](0001-kein-eigenes-backend.md), [PLAN.md](../implementation/PLAN.md), Risikobericht P0.01.
+
+Dieses Dokument ist der Vertrag für alle Umsetzungsschritte. Abweichungen brauchen eine neue Entscheidung.
+
+## 1 Grundsätze
+
+1. **Gast zuerst.** Der Gastweg (öffnen, einrichten, spielen, Ergebnis, Rangliste) lädt kein nostr-core und öffnet keine Netzwerkverbindung. Neue Funktionen laden ihren Code per `import()` erst bei Bedarf.
+2. **Lokal ist maßgeblich.** Jede Aktion wirkt sofort lokal. Relays sind Kopie und Transport, nie Voraussetzung für die Bedienung.
+3. **Einfach sprechen.** Keine Protokollbegriffe in normalen Ansichten; Technik nur unter „Erweitert“. Keine Meldungen über Hintergrundabgleich. „Dein Spiel ist gespeichert.“ ist die einzige Speicherbestätigung.
+4. **Ehrliche Zustände.** Unbekannt ist nicht null, nicht geladen ist nicht leer, eine unbestätigte Zahlung ist nicht bezahlt.
+5. **Nicht überbauen.** Die kleinste Lösung, die die Abnahmekriterien vollständig erfüllt.
+
+## 2 Module
+
+| Ordner | Inhalt | Darf importieren |
+| --- | --- | --- |
+| `lib/game/` | Bestehende Spielregeln, unverändert in ihrer Logik | nur eigene Dateien |
+| `lib/storage/` | IndexedDB-Zugriff, Spielarchiv, Spielerverzeichnis, Migration, Export, Löschen | `lib/game` |
+| `lib/nostr/` | **Einziger Importeur von nostr-core.** Lazy-Loader, Relay-Katalog, Veröffentlichen mit Ergebnis je Relay, Abfragen mit EOSE/Timeout, Signer-Adapter mit Prüfung, `ext/` für fehlende generische Bausteine | nostr-core, `@noble/*`, `@scure/base` |
+| `lib/protocol/` | BlueLine-Kinds, Tags, Inhaltsschemas und Prüfer je Eventfamilie | `lib/nostr` (Typen), `lib/game` |
+| `lib/profile/` | Sitzung, Identität, Profilmetadaten, Avatar, Profilansichten-Daten | `lib/nostr`, `lib/storage` |
+| `lib/sync/` | Warteschlange (Outbox), private Historie, Selbstheilung, Diagnose | `lib/nostr`, `lib/storage`, `lib/profile` |
+| `lib/devices/` | Gerätekopplung per QR, Link und Code | `lib/nostr`, `lib/profile` |
+| `lib/recovery/` | Sicherungsdatei (NIP-49), Passkey-Paket | `lib/nostr`, `lib/profile`, `lib/storage` |
+| `lib/live/` | Zuschauen, Spieler am Board verbinden, Schreiberwechsel, Ergebnisbestätigung | `lib/nostr`, `lib/protocol`, `lib/game` |
+| `lib/clubs/` | Clubs, Rollen, Einladungen, Saisons, Tabellen | `lib/protocol`, `lib/nostr` |
+| `lib/tournaments/` | `engine.ts` (rein, ohne Netz) und Turnierdaten | `lib/protocol`, `lib/nostr` |
+| `lib/badges/` | Katalog, Meilensteine, NIP-58 lesen und schreiben | `lib/protocol`, `lib/nostr`, `lib/storage` |
+| `lib/payments/` | NWC-Verbindung, Bezahlen, Empfangen, Zaps, Zahlungsjournal | `lib/nostr`, `lib/storage` |
+| `components/<bereich>/` | Oberflächen je Bereich | alles oben über die öffentlichen Funktionen |
+
+Dateien unter `lib/`, die in Node getestet werden, verwenden relative Importe mit `.ts`-Endung und nur löschbare TypeScript-Syntax (keine `enum`, `namespace`, Parameter-Properties), wie die bestehenden Dateien.
+
+## 3 Speicherung
+
+- Das **laufende Spiel** bleibt in `localStorage` unter `dart-scorer.current-match.v1` (synchron, klein, kompatibel zu 1.0.0). Schreibfehler werden sichtbar: „Dein Spiel konnte nicht gespeichert werden.“ mit „Erneut versuchen“; die Eingaben bleiben im Speicher der Seite.
+- **IndexedDB** `blueline` (Version 1) mit den Stores `matches` (vollständiges Archiv), `players` (Spielerverzeichnis), `kv` (kleine Zustände), `outbox` (signierte Events und Zustand je Relay), `payments` (Zahlungsjournal), `objects` (zwischengespeicherte Club-, Turnier- und Profil-Events), `pending` (laufende Kopplungen, Signer-Anfragen).
+- **Migration:** Beim Start werden Einträge aus `dart-scorer.matches.v1` idempotent als `source: "imported-v1"` übernommen (nur vorhandene Summen, keine erfundenen Würfe). Neue Spiele werden **zusätzlich** im v1-Format nach `matches.v1` geschrieben, damit eine Rückkehr zu 1.0.0 keine Spiele verliert. Vorhandene v1-Schlüssel werden nie umgeschrieben oder um unbekannte Felder in Settings/Rules ergänzt.
+- **Spieler-IDs:** Das Spielerverzeichnis vergibt stabile IDs (`pl_` + 128 Bit Zufall). Die Einrichtung verwendet für bekannte Namen die vorhandene ID. Eine optionale `pubkey` verbindet einen lokalen Spieler mit einem Profil. Gleichnamige Personen werden nie automatisch zusammengeführt; Platzhalternamen („Spieler 1“) gelten als unbenannt.
+- **Neue Objekt-IDs** sind 128 Bit aus `crypto.getRandomValues`, hex.
+- Tabs bleiben über `BroadcastChannel("blueline")` synchron.
+
+## 4 Identität und Signer
+
+```ts
+// lib/profile/session.ts
+type SessionKind = "local" | "nip07" | "nip46" | "nip55"
+interface Session { pubkey: string; kind: SessionKind; createdAt: number }
+getSession(): Session | null
+useSession(): Session | null            // React, useSyncExternalStore
+getSigner(): Promise<Signer>            // lädt nostr-core lazy; wirft, wenn keine Sitzung
+startLocalProfile(): Promise<Session>    // erzeugt Schlüssel
+importLocalKey(secretKey: Uint8Array): Promise<Session>
+connectExternal(kind, params): Promise<Session>
+signOut(options: { keepLocalData: boolean }): Promise<void>
+```
+
+- Lokale Schlüssel liegen in IndexedDB, verschlüsselt mit einem nicht exportierbaren AES-GCM-Schlüssel (WebCrypto). Keine Klartext-Schlüssel in `localStorage`.
+- Jede Signatur wird geprüft: gültige Signatur, `pubkey` gleich Sitzung, Kind/Inhalt/Tags/Zeit unverändert. Sonst Abbruch und Hinweis.
+- Externe Signer: NIP-07 (vor allem Desktop), NIP-46 (`bunker://` einfügen, `nostrconnect://` als QR für Amber und andere), NIP-55 (Android; nur Schlüssel abfragen und gelegentliches Signieren, Rückgabe über `/#signer-return`).
+- **Datenschlüssel:** Jedes Profil hat einen zufälligen 32-Byte-Datenschlüssel. Er wird einmal mit `signer.nip44.encrypt(selbst)` verpackt und als NIP-78-Datensatz gespeichert. Private Inhalte werden lokal mit XChaCha20-Poly1305 unter diesem Schlüssel verschlüsselt. Dadurch braucht ein externer Signer nur eine Entschlüsselung pro Gerät.
+
+## 5 Relays
+
+| Rolle | Standard | Verwendung |
+| --- | --- | --- |
+| Profil | `wss://nos.lol`, `wss://relay.primal.net`, `wss://nostr-01.yakihonne.com`, `wss://nostr.oxtr.dev`, `wss://purplepag.es` | Kind 0, 10002, NIP-51-Listen, 10008 |
+| Allgemein | die ersten vier | BlueLine-Events, private Datensätze, Live-Spiele, Auszeichnungen |
+
+- „Veröffentlicht“ ab zwei bestätigten Relays verschiedener Betreiber; vollständig verteilt erst bei allen Zielen. Fehlende Kopien werden beim Öffnen der App erneut gesendet.
+- Bestätigt heißt: `OK true` des Relays. Ein Abfrageergebnis ohne Antwort eines Relays ist „unbekannt“, nie „leer“.
+- Für Tests und Vorschauen ersetzt die Build-Variable `NEXT_PUBLIC_BLUELINE_RELAYS` (kommagetrennt) alle Standardrelays, etwa durch `ws://localhost:10547` von `nak serve`. Sie enthält keine Geheimnisse.
+- Für NWC gelten ausschließlich die Relays der Wallet-Verbindung.
+
+## 6 BlueLine-Events
+
+Eine Kind-Nummer je Bereich, Typ als NIP-32-Label. Geprüft am 4. Oktober 2026 gegen das Kind-Register und die NIP-Übersicht: frei.
+
+| Kind | Bereich | Verwendung |
+| --- | --- | --- |
+| **1501** | regulär | Unveränderliche Datensätze: Gründungen, Änderungen, Anfragen, Ergebnisse, Bestätigungen |
+| **31501** | adressierbar | Aktuelle Zustände mit `d`: Live-Spielstand, Statistikkarte |
+| **21501** | flüchtig | Kopplungs- und Board-Handshake-Nachrichten |
+| 78 / 30078 | NIP-78 | Private, verschlüsselte Datensätze des Profils (Historie als 78; Datenschlüssel und kleine Listen als 30078 mit nicht sprechendem `d`) |
+| 1059 | NIP-59 | Verpackte Zahlungsanfragen an Mitspieler |
+
+Pflicht-Tags für 1501/31501: `["L","blueline"]`, `["l","<typ>","blueline"]`, `["v","1"]`. Bezug auf ein Wurzelobjekt (Club, Turnier, Match) mit `["e","<id der Gründung>"]`. Club- und Turnier-IDs sind die Event-IDs ihrer Gründung (bleiben bei Eigentümerwechsel gleich). Typen und Inhalte stehen in `docs/protocol/`.
+
+**Zustand durch Abspielen:** Club- und Turnierzustand ergibt sich deterministisch aus Gründung und allen gültigen Änderungen, sortiert nach `created_at`, dann `id`. Jede Änderung wird beim Abspielen gegen die Rechte des Autors zu diesem Zeitpunkt geprüft; ungültige werden ignoriert und in der Diagnose angezeigt.
+
+**Geschlossene Clubs:** Ein zufälliges Club-Schlüsselpaar. Inhalte werden mit NIP-44 vom Autor an den Club-Pubkey verschlüsselt, sodass jedes Mitglied mit dem Club-Geheimnis lesen kann. Einladungslinks tragen das Geheimnis im Fragment. Beim Entfernen eines Mitglieds erzeugt der Eigentümer einen neuen Club-Schlüssel und verpackt ihn mit NIP-44 einzeln für jedes verbleibende Mitglied. Bereits gelesene Inhalte bleiben beim entfernten Mitglied; das wird nicht anders dargestellt.
+
+**Einladungen:** Ein Admin veröffentlicht `invite.create` mit dem Hash eines zufälligen Tokens, maximaler Nutzung und Ablaufzeit. Der Beitretende beweist den Besitz mit `HMAC(token, eigener pubkey)`. Beim Abspielen werden die ersten gültigen Nutzungen bis zum Limit aufgenommen; so funktioniert ein Beitritt ohne dass ein Admin online sein muss. Ohne Einladung wartet eine Anfrage auf Bestätigung.
+
+**Live-Spiele:** Das Board erzeugt pro Spiel einen Sitzungsschlüssel und veröffentlicht nach jeder Aufnahme den adressierbaren Spielstand (31501, `d` = Match-ID, steigende Version, kompakte Würfe). Private Spiele verschlüsseln den Inhalt mit einem Spielschlüssel aus dem Link-Fragment. Spieler verbinden sich über einen Board-QR, der nie einen Profilschlüssel überträgt.
+
+**Auszeichnungen:** NIP-58 mit 30009 (Definition), 8 (Vergabe), 10008 (Profilauswahl, Altformat 30008 lesbar). Aussteller ist der Veranstalter oder, gekennzeichnet „Selbst erreicht“, der Spieler. Prüfung: Signaturen, Vergabe-Autor gleich Definitions-Autor, Empfänger im `p`-Tag, deterministischer Anlass-Tag gegen Doppelte.
+
+## 7 Kopplung, Sicherung, Wiederherstellung
+
+- **Kopplung:** Das neue Gerät zeigt einen QR beziehungsweise Link `/#pair=<einmaliger Pubkey>.<Sitzungs-ID>.<Ablauf>.<Relays>` und alternativ einen 12-stelligen Code (60 Bit). Das vorhandene Gerät öffnet „Eigenes Gerät hinzufügen“ (nie über den allgemeinen Scanner), tauscht verschlüsselte flüchtige Nachrichten (21501, NIP-44 zwischen Einmalschlüsseln) aus, beide Geräte zeigen dieselbe aus beiden Schlüsseln berechnete Prüfkennung, und erst nach Bestätigung wird das Profilpaket übertragen. Das neue Gerät bestätigt die Entschlüsselung; erst dann erscheint „Dein Profil ist dabei.“ Wiederholung bis Bestätigung oder Ablauf (10 Minuten).
+- **Sicherungsdatei:** JSON `blueline-sicherung.json` mit NIP-49-`ncryptsec` (log_n 16, im Web Worker), Datenschlüssel und Relays, verschlüsselt mit einem erzeugten starken Kennwort. „Gesichert“ erst nach erfolgreicher Probe-Entschlüsselung.
+- **Passkey:** Nur wenn PRF beim Anlegen und beim sofortigen erneuten Abrufen funktioniert. Aus dem PRF-Wert werden per HKDF ein Locator-Schlüssel und ein Verschlüsselungsschlüssel abgeleitet; das Paket liegt als 30078 (`d=blueline-backup-v1`, signiert vom Locator) auf den allgemeinen Relays.
+- Externe Profile sichern ihren Hauptschlüssel im Signer; BlueLine sichert nur App-Daten.
+
+## 8 Zahlungen
+
+- NWC über die `NWC`-Klasse von nostr-core, Verbindung lokal verschlüsselt gespeichert, nie in Sicherungen, Links oder Events.
+- Vor jeder Zahlung: `connect({ verifyEncryption: true })`, Rechnung mit `decodeBolt11` gegen Betrag und Ablauf prüfen, Journal-Eintrag schreiben, dann `payInvoice`. Timeout oder Entschlüsselungsfehler heißt „Status unbekannt“ und wird über `lookupInvoice` geklärt, nie durch erneutes Senden.
+- Empfänger: Lightning-Adresse aus dem Profil des Mitspielers oder eine angezeigte Rechnung („Empfangen“). Zaps nach NIP-57 mit vollständiger Belegprüfung.
+
+## 9 Oberfläche
+
+- Tab-Leiste (Telefon, iPad hoch) beziehungsweise Seitenleiste (iPad quer, Desktop): **Spielen, Rangliste, Clubs, Turniere, Profil**. Einstellungen und „Über“ liegen im Profil-Tab und sind auch als Gast erreichbar.
+- Jeder Tab hat einen eigenen Navigationsstapel mit großem Titel und Zurück-Taste. Sekundäres öffnet sich als Sheet.
+- Links (`/#p=`, `/#watch=`, `/#club=`, `/#tournament=`, `/#pair=`, `/#board=`, `/#signer-return`) öffnen direkt die passende Ansicht.
+- Der Spielbildschirm bleibt ein fester Bildschirm ohne Scrollen. Neue Funktionen erscheinen dort nur im Menü „Spieloptionen“.
+- Bestehende Bausteine aus `components/ui` (Group, Zeilen, Segmented, Sheet, Button, AlertDialog) werden wiederverwendet. Berührungsflächen ≥ 44 pt, keine Kürzung von Namen mit „…“, Text statt Farbe allein, reduzierte Bewegung, VoiceOver-Beschriftungen, Deutsch und Englisch vollständig.
+
+## 10 Bedrohungsmodell in Kürze
+
+- Öffentliche Relays sehen Autor, Kind, Zeitpunkt, Größe und Tags. Private Inhalte sind verschlüsselt, aber dauerhaft abrufbar; NIP-44 hat keine Vorwärtssicherheit.
+- Code derselben Website kann Schlüssel im Browser nutzen. Schutz: keine fremden Skripte, feste Abhängigkeitsversionen, keine `dangerouslySetInnerHTML` mit fremden Inhalten, fremde Bilder nur als https-Raster ohne Referrer.
+- Ein verlorenes Gerät mit Profilschlüssel lässt sich nicht kryptografisch widerrufen; die Geräteliste ist informativ.

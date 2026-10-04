@@ -1,4 +1,15 @@
 import type { Messages } from "./index"
+import { shellEn } from "./features/shell.en.ts"
+import { dataEn } from "./features/data.en.ts"
+import { profileEn } from "./features/profile.en.ts"
+import { devicesEn } from "./features/devices.en.ts"
+import { backupEn } from "./features/backup.en.ts"
+import { syncEn } from "./features/sync.en.ts"
+import { liveEn } from "./features/live.en.ts"
+import { clubsEn } from "./features/clubs.en.ts"
+import { tournamentsEn } from "./features/tournaments.en.ts"
+import { badgesEn } from "./features/badges.en.ts"
+import { paymentsEn } from "./features/payments.en.ts"
 
 // English. Same shape as the German catalog (TypeScript checks every entry).
 
@@ -555,4 +566,17 @@ export const en: Messages = {
       },
     },
   },
+
+  // Areas added for profiles, devices, clubs, tournaments and payments (one file each).
+  shell: shellEn,
+  data: dataEn,
+  profile: profileEn,
+  devices: devicesEn,
+  backup: backupEn,
+  sync: syncEn,
+  live: liveEn,
+  clubs: clubsEn,
+  tournaments: tournamentsEn,
+  badges: badgesEn,
+  payments: paymentsEn,
 }

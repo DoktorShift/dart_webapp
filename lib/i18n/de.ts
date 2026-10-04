@@ -3,6 +3,17 @@
 // order and plurals stay right in each language.
 
 import type { ModeId } from "@/types/game-modes"
+import { shellDe } from "./features/shell.de.ts"
+import { dataDe } from "./features/data.de.ts"
+import { profileDe } from "./features/profile.de.ts"
+import { devicesDe } from "./features/devices.de.ts"
+import { backupDe } from "./features/backup.de.ts"
+import { syncDe } from "./features/sync.de.ts"
+import { liveDe } from "./features/live.de.ts"
+import { clubsDe } from "./features/clubs.de.ts"
+import { tournamentsDe } from "./features/tournaments.de.ts"
+import { badgesDe } from "./features/badges.de.ts"
+import { paymentsDe } from "./features/payments.de.ts"
 
 // The options picked in setup that a game's rules text mentions.
 export interface RuleOptions {
@@ -582,4 +593,17 @@ export const de = {
       },
     },
   },
+
+  // Areas added for profiles, devices, clubs, tournaments and payments (one file each).
+  shell: shellDe,
+  data: dataDe,
+  profile: profileDe,
+  devices: devicesDe,
+  backup: backupDe,
+  sync: syncDe,
+  live: liveDe,
+  clubs: clubsDe,
+  tournaments: tournamentsDe,
+  badges: badgesDe,
+  payments: paymentsDe,
 }
