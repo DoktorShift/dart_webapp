@@ -4,6 +4,7 @@
 // - The client-initiated nostrconnect:// flow: the app shows a QR code, a signer app (Amber,
 //   nsec.app, ...) scans it and answers with the secret; the app learns the signer's key from
 //   that answer, and the signer proves it holds the user key it names by signing a challenge.
+//   A second signer answering the same link means someone else saw the code ("mismatch").
 //   nostr-core only knows bunker:// and misreads the nostrconnect:// host.
 // - The signer-initiated bunker:// handshake with today's connect parameters, on every relay of
 //   the link, staying pending through auth_url (nostr-core sends outdated parameters, tries one
@@ -43,7 +44,9 @@ export interface Nip46Transport {
   ): { close: () => void }
 }
 
-export type Nip46ErrorCode = "timeout" | "rejected" | "unreachable" | "closed" | "invalid"
+// "mismatch": two different signers answered the same nostrconnect:// link; someone else has
+// seen the code, so a new one is needed.
+export type Nip46ErrorCode = "timeout" | "rejected" | "unreachable" | "closed" | "invalid" | "mismatch"
 
 export class Nip46RequestError extends Error {
   code: Nip46ErrorCode
@@ -367,70 +370,101 @@ export async function createClientUri(options: ClientUriOptions): Promise<Client
   return { uri: `nostrconnect://${clientPubkey}?${params.toString()}`, clientSecretKey, clientPubkey, secret, relays: [...options.relays] }
 }
 
+// The account a nostrconnect:// signer proved, for the user to confirm.
+export interface Nip46Account {
+  userPubkey: string
+  remoteSignerPubkey: string
+}
+
 export interface WaitForSignerOptions extends Omit<Nip46SignerOptions, "transport"> {
   transport: Nip46Transport
   signal?: AbortSignal
   // How long to wait for a signer to scan the code. Default 10 minutes.
   waitMs?: number
+  // After the key proof, the link stays watched at least this long, and for as long as confirm
+  // is open. Default 3 s.
+  graceMs?: number
+  // Shows the user the proven account and resolves true when they confirm it, false when they
+  // don't (the wait then fails as "rejected"). `signal` fires when the wait ends meanwhile (a
+  // second signer answered, abort): close the question then.
+  confirm?: (account: Nip46Account, signal: AbortSignal) => Promise<boolean>
 }
 
 // Waits until a signer answers the nostrconnect:// link with its secret, asks for the user's
-// public key and has the signer prove it holds that key (a signed challenge). The secret alone
-// proves nothing: anyone who sees the QR code (a club tablet, a shared screen) can answer with
-// it and name any key, the victim's included. So every party answering with the secret is
-// checked; one that names a key it can't sign for is dropped and the wait goes on, so the real
-// signer still gets through. Answers with a wrong secret are ignored. Fails when a party refuses
-// or stops answering (unless another is still being checked), and on timeout or abort; after a
-// timeout that only saw failed proofs, the error is "invalid". onSessionChange hears only from
-// the party that passed; onAuthUrl can come from one still being checked, so show the page's
-// address with it.
+// public key and has the signer prove it holds that key (a signed challenge). Answers with a
+// wrong secret are ignored.
+//
+// The secret alone proves nothing: anyone who sees the QR code (a club tablet, a shared screen)
+// can answer with it. The proof stops a party from naming a key it can't sign for (the wait
+// fails as "invalid"). It can't stop a party from answering first with its own key, the
+// victim's copied name and picture on its profile: the app would sign in to that account, and
+// the data key and every private record would be encrypted to it. So the link is meant for one
+// signer: when a second, different signer answers with the secret, while the first is checked,
+// during graceMs after its proof or while confirm is open, the wait fails as "mismatch"
+// (someone else has seen the code: show a new one) and nothing is handed out. An answer after
+// that window goes unnoticed, which is why the sign-in screen must pass confirm: show the
+// account (name and picture from its profile; a short key fingerprint under "Erweitert") and
+// let the user confirm it before any session is stored or data key created, so the real
+// signer's answer still lands in the window while the question is open.
+//
+// Also fails when the signer refuses or stops answering, and on timeout or abort.
+// onSessionChange hears only from a signer that passed and was confirmed; onAuthUrl can come
+// from one still being checked, so show the page's address with it.
 export async function waitForSigner(link: ClientUri, options: WaitForSignerOptions): Promise<{ session: Nip46Session; signer: Nip46Signer }> {
   const core = await loadCore()
   const signer = await new Promise<Nip46Signer>((resolve, reject) => {
     let settled = false
-    // Parties being checked, by remote signer key; each key is checked once.
-    const candidates = new Map<string, Nip46Signer>()
-    const seen = new Set<string>()
-    let failedProof: Error | null = null
-    const finish = (error: Error | null, winner?: Nip46Signer) => {
+    // The one signer that answered with the secret.
+    let candidate: Nip46Signer | null = null
+    const confirming = new AbortController()
+    let endGrace = () => {}
+    let graceTimer: ReturnType<typeof setTimeout> | undefined
+    const finish = (error: Error | null) => {
       if (settled) return
       settled = true
       clearTimeout(timer)
+      clearTimeout(graceTimer)
+      endGrace()
       options.signal?.removeEventListener("abort", onAbort)
       subscription.close()
-      for (const candidate of candidates.values()) if (candidate !== winner) candidate.close()
-      if (error || !winner) reject(error)
-      else resolve(winner)
+      if (!error && candidate) return resolve(candidate)
+      confirming.abort()
+      candidate?.close()
+      reject(error)
     }
-    const check = async (remoteSignerPubkey: string) => {
-      let won = false
-      const session: Nip46Session = { clientSecretKey: bytesToHex(link.clientSecretKey), remoteSignerPubkey, userPubkey: "", relays: link.relays }
-      // Session changes of a party still being checked must not reach the caller's storage.
-      const candidate = new Nip46Signer(session, { ...options, onSessionChange: (next) => won && options.onSessionChange?.(next) })
-      candidates.set(remoteSignerPubkey, candidate)
+    const check = async (current: Nip46Signer, accepted: () => void) => {
       try {
-        await candidate.getPublicKey()
-        await proveKey(candidate, link.relays[0])
-        if (settled) return candidate.close()
-        won = true
-        finish(null, candidate)
-        options.onSessionChange?.(candidate.session)
+        await current.getPublicKey()
+        await proveKey(current, link.relays[0])
+        if (settled) return
+        // Proven: the time limit for scanning no longer applies, the watch for a second signer
+        // goes on.
+        clearTimeout(timer)
+        const graceOver = new Promise<void>((done) => {
+          endGrace = done
+          graceTimer = setTimeout(done, options.graceMs ?? 3000)
+        })
+        const account = { userPubkey: current.session.userPubkey, remoteSignerPubkey: current.session.remoteSignerPubkey }
+        const [confirmed] = await Promise.all([options.confirm ? options.confirm(account, confirming.signal) : true, graceOver])
+        if (settled) return
+        if (confirmed !== true) return finish(new Nip46RequestError("rejected", "the account was not confirmed"))
+        accepted()
+        finish(null)
+        options.onSessionChange?.(current.session)
       } catch (error) {
-        candidate.close()
-        candidates.delete(remoteSignerPubkey)
-        if (error instanceof Nip46RequestError && error.code === "invalid") failedProof = error
-        else if (candidates.size === 0) finish(error instanceof Error ? error : new Nip46RequestError("invalid", String(error)))
+        finish(error instanceof Error ? error : new Nip46RequestError("invalid", String(error)))
       }
     }
     const onAbort = () => finish(new Nip46RequestError("closed", "stopped waiting for the signer"))
-    const timer = setTimeout(() => finish(failedProof ?? new Nip46RequestError("timeout", "no signer answered")), options.waitMs ?? 600_000)
+    const timer = setTimeout(() => finish(new Nip46RequestError("timeout", "no signer answered")), options.waitMs ?? 600_000)
     options.signal?.addEventListener("abort", onAbort)
     const subscription = options.transport.subscribe(
       [{ kinds: [NIP46_KIND], "#p": [link.clientPubkey], since: nowSeconds() - STALE_SECONDS }],
       link.relays,
       {
         onevent: (event) => {
-          if (settled || !isHexKey(event.pubkey) || seen.has(event.pubkey)) return
+          // The candidate's own events (repeats, answers to its requests) need no look.
+          if (settled || !isHexKey(event.pubkey) || event.pubkey === candidate?.session.remoteSignerPubkey) return
           try {
             const conversationKey = core.nip44.getConversationKey(link.clientSecretKey, event.pubkey)
             const response = JSON.parse(core.nip44.decrypt(event.content, conversationKey)) as { result?: unknown; error?: unknown }
@@ -439,8 +473,14 @@ export async function waitForSigner(link: ClientUri, options: WaitForSignerOptio
             // Not for us, or not readable: ignore.
             return
           }
-          seen.add(event.pubkey)
-          void check(event.pubkey)
+          if (candidate) return finish(new Nip46RequestError("mismatch", "a second signer answered the same code; someone else has seen it"))
+          let won = false
+          const session: Nip46Session = { clientSecretKey: bytesToHex(link.clientSecretKey), remoteSignerPubkey: event.pubkey, userPubkey: "", relays: link.relays }
+          // Session changes before the signer is accepted must not reach the caller's storage.
+          candidate = new Nip46Signer(session, { ...options, onSessionChange: (next) => won && options.onSessionChange?.(next) })
+          void check(candidate, () => {
+            won = true
+          })
         },
       },
     )

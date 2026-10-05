@@ -2,7 +2,7 @@
 // - bunker:// (signer-initiated): connect with today's parameters on the resumable signer, a
 //   reload resumes without a new connect.
 // - nostrconnect:// (client-initiated): the app's link handed to "nak bunker connect"; the
-//   bunker proves the user key by signing the challenge.
+//   bunker proves the user key by signing the challenge, and the app confirms the account.
 import { after, before, test } from "node:test"
 import assert from "node:assert/strict"
 import { loadCore, type Core } from "../../lib/nostr/core.ts"
@@ -62,10 +62,25 @@ test("bunker://: the link's secret is single-use, which is why sessions resume i
 })
 
 test("nostrconnect://: the app's link, scanned by the bunker, gives a working session", async () => {
-  const start = await startNostrConnect({ relays: [relay.url], perms: ["sign_event:1180", "nip44_encrypt", "nip44_decrypt"], name: "BlueLine Darts", transport: transport(), timeoutMs: 10_000, waitMs: 20_000 })
+  const shown: string[] = []
+  const start = await startNostrConnect({
+    relays: [relay.url],
+    perms: ["sign_event:1180", "nip44_encrypt", "nip44_decrypt"],
+    name: "BlueLine Darts",
+    transport: transport(),
+    timeoutMs: 10_000,
+    waitMs: 20_000,
+    graceMs: 500,
+    // The sign-in screen would show this account and wait for the user's yes.
+    confirm: async (account) => {
+      shown.push(account.userPubkey)
+      return true
+    },
+  })
   assert.match(start.uri, /^nostrconnect:\/\/[0-9a-f]{64}\?/)
   await bunker.connect(start.uri)
   const connection = await start.connection
+  assert.deepEqual(shown, [bunker.pubkey])
   assert.equal(connection.pubkey, bunker.pubkey)
   const event = await connection.signer.signEvent({ kind: 1180, content: "per QR verbunden", tags: [], created_at: now() })
   assert.ok(core.verifyEventSignature(event))
@@ -75,9 +90,38 @@ test("nostrconnect://: the app's link, scanned by the bunker, gives a working se
   connection.remote.close()
 })
 
+test("nostrconnect://: a second bunker answering the same link while the account question is open ends as mismatch", async () => {
+  const second = await startBunker(relay.url)
+  try {
+    let asked = () => {}
+    const askedNow = new Promise<void>((resolve) => (asked = resolve))
+    const shown: string[] = []
+    const start = await startNostrConnect({
+      relays: [relay.url],
+      transport: transport(),
+      timeoutMs: 10_000,
+      waitMs: 20_000,
+      graceMs: 0,
+      // The user hasn't answered yet; the question closes when the wait ends.
+      confirm: (account, signal) => {
+        shown.push(account.userPubkey)
+        asked()
+        return new Promise<boolean>((resolve) => signal.addEventListener("abort", () => resolve(false)))
+      },
+    })
+    await bunker.connect(start.uri)
+    await askedNow
+    await second.connect(start.uri)
+    await assert.rejects(start.connection, (error: SignerError) => error.code === "mismatch")
+    assert.deepEqual(shown, [bunker.pubkey])
+  } finally {
+    await second.stop()
+  }
+})
+
 test("a request the signer never answers ends as a timeout (unknown), not as a refusal", async () => {
   const connection = await (async () => {
-    const start = await startNostrConnect({ relays: [relay.url], transport: transport(), timeoutMs: 10_000, waitMs: 20_000 })
+    const start = await startNostrConnect({ relays: [relay.url], transport: transport(), timeoutMs: 10_000, waitMs: 20_000, graceMs: 500 })
     await bunker.connect(start.uri)
     return start.connection
   })()

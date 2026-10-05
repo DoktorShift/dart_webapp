@@ -7,7 +7,8 @@
 // - "rejected": the user or the signer said no.
 // - "unknown": no answer in time. The signer may still have done it; never treat as refused.
 // - "mismatch": the result is not what was asked for (other key, changed event, bad signature,
-//   a party answering a QR code that can't prove the key it names).
+//   a party answering a QR code that can't prove the key it names), or two different signers
+//   answered the same QR code (someone else saw it: show a new code, only to the user).
 // - "unavailable": the signer can't be reached (no extension, no relay).
 // - "unsupported": the signer lacks the capability (for example NIP-44 in an extension).
 // - "failed": the signer tried and couldn't, for a reason in the data: a local key that can't
@@ -19,7 +20,7 @@
 import { bytesToHex } from "@noble/hashes/utils.js"
 import { createRelayClient, type RelayClient } from "./client.ts"
 import { loadCore } from "./core.ts"
-import { connectToBunker, createClientUri, Nip46RequestError, resume, waitForSigner, type Nip46Session, type Nip46Signer, type Nip46Transport } from "./ext/nostrconnect.ts"
+import { connectToBunker, createClientUri, Nip46RequestError, resume, waitForSigner, type Nip46Account, type Nip46Session, type Nip46Signer, type Nip46Transport } from "./ext/nostrconnect.ts"
 import { mergeRelays } from "./relays.ts"
 import type { EventTemplate, NostrEvent, Signer, VerifiedEvent } from "./types.ts"
 
@@ -42,7 +43,7 @@ function toSignerError(error: unknown): SignerError {
   if (error instanceof Nip46RequestError) {
     if (error.code === "timeout") return new SignerError("unknown", error.message)
     if (error.code === "rejected") return new SignerError("rejected", error.message)
-    if (error.code === "invalid") return new SignerError("mismatch", error.message)
+    if (error.code === "invalid" || error.code === "mismatch") return new SignerError("mismatch", error.message)
     return new SignerError("unavailable", error.message)
   }
   const code = (error as { code?: unknown })?.code
@@ -261,14 +262,28 @@ export async function connectBunker(uri: string, options: Nip46Options & { perms
 export interface NostrConnectStart {
   // The link to show as QR code (and to open on the same phone).
   uri: string
-  // Settles once a signer answered and the user's key is known.
+  // Settles once a signer answered, proved the user's key and the user confirmed the account.
+  // "mismatch" when a second signer answered the same code: show a new one.
   connection: Promise<Nip46Connection>
   cancel: () => void
 }
 
-// Starts the client-initiated flow: show `uri`, then await `connection`.
+// Starts the client-initiated flow: show `uri`, then await `connection`. The sign-in screen
+// passes `confirm`: it gets the proven account, shows it (name and picture from the profile, a
+// short key fingerprint under "Erweitert") and resolves once the user said yes or no. Nothing is
+// stored and no data key is created before that; see waitForSigner in ext/nostrconnect.ts for
+// why (someone who sees the code can answer first with an account of its own).
 export async function startNostrConnect(
-  options: Nip46Options & { relays: string[]; perms?: string[]; name?: string; url?: string; image?: string; waitMs?: number },
+  options: Nip46Options & {
+    relays: string[]
+    perms?: string[]
+    name?: string
+    url?: string
+    image?: string
+    waitMs?: number
+    graceMs?: number
+    confirm?: (account: Nip46Account, signal: AbortSignal) => Promise<boolean>
+  },
 ): Promise<NostrConnectStart> {
   const link = await createClientUri(options)
   const controller = new AbortController()

@@ -1,12 +1,13 @@
 // NIP-46 client behaviour that nak's bunker can't show (auth_url, refusals, silence, relay
-// switches, spoofed answers), against an in-process remote signer on the fake relay network.
+// switches, spoofed and competing answers), against in-process remote signers on the fake relay
+// network.
 // The real interop runs in tests/relay/nip46.test.ts.
 import { after, before, test } from "node:test"
 import assert from "node:assert/strict"
 import { bytesToHex } from "@noble/hashes/utils.js"
 import { loadCore, type Core } from "../lib/nostr/core.ts"
 import { createRelayClient, type RelayClient } from "../lib/nostr/client.ts"
-import { createClientUri, Nip46RequestError, resume, waitForSigner, type Nip46Session } from "../lib/nostr/ext/nostrconnect.ts"
+import { createClientUri, Nip46RequestError, resume, waitForSigner, type Nip46Account, type Nip46Session } from "../lib/nostr/ext/nostrconnect.ts"
 import { connectBunker, SignerError } from "../lib/nostr/signers.ts"
 import { FakeNetwork } from "./support/fake-relay.ts"
 
@@ -55,6 +56,16 @@ function remoteSigner(network: FakeNetwork, relays: string[], behave: (request: 
 
 const randomHex = () => bytesToHex(core.generateSecretKey()).slice(0, 16)
 
+// A working signer app with its own account on wss://r1.example.
+function honestSigner(network: FakeNetwork) {
+  const party = remoteSigner(network, ["wss://r1.example"], (request, respond) => {
+    if (request.method === "get_public_key") respond({ result: party.pubkey })
+    if (request.method === "sign_event") respond({ result: party.sign(request.params[0]) })
+    if (request.method === "nip44_encrypt") respond({ result: core.nip44.encrypt(request.params[1], core.nip44.getConversationKey(party.key, request.params[0])) })
+  })
+  return party
+}
+
 function setup() {
   const network = new FakeNetwork()
   network.add("wss://r1.example")
@@ -89,11 +100,11 @@ test("auth_url: the request stays pending while the user confirms, then complete
   const { network, transport } = setup()
   const remote = remoteSigner(network, ["wss://r1.example"], (request, respond) => {
     respond({ result: "auth_url", error: "https://signer.example/confirm/123" })
-    setTimeout(() => respond({ result: remote.sign(request.params[0]) }), 1500)
+    setTimeout(() => respond({ result: remote.sign(request.params[0]) }), 3000)
   })
   await wait(50)
   const urls: string[] = []
-  const signer = resume(sessionFor(remote.pubkey, ["wss://r1.example"]), { transport, timeoutMs: 800, onAuthUrl: (url) => urls.push(url) })
+  const signer = resume(sessionFor(remote.pubkey, ["wss://r1.example"]), { transport, timeoutMs: 2000, onAuthUrl: (url) => urls.push(url) })
   // The request timeout would fire before the real answer; the auth_url extends the wait.
   const event = await signer.signEvent({ kind: 1, content: "after confirming", tags: [], created_at: 1_790_000_000 })
   assert.deepEqual(urls, ["https://signer.example/confirm/123"])
@@ -122,9 +133,10 @@ test("refusal, silence and no relay are told apart", async () => {
   })
   network.add("wss://down.example", { mode: "down" })
   await wait(50)
-  const signer = resume(sessionFor(remote.pubkey, ["wss://r1.example"]), { transport, timeoutMs: 300 })
+  // The refusal gets time to arrive on a busy machine; the silent requests wait only briefly.
+  const signer = resume(sessionFor(remote.pubkey, ["wss://r1.example"]), { transport, timeoutMs: 2000 })
   await assert.rejects(signer.signEvent({ kind: 1, content: "", tags: [], created_at: 1 }), (error: Nip46RequestError) => error.code === "rejected")
-  await assert.rejects(signer.nip44.encrypt(remote.pubkey, "x"), (error: Nip46RequestError) => error.code === "timeout")
+  await assert.rejects(signer.request("nip44_encrypt", [remote.pubkey, "x"], 300), (error: Nip46RequestError) => error.code === "timeout")
   assert.equal(await signer.ping(300), false)
   const offline = resume(sessionFor(remote.pubkey, ["wss://down.example"]), { transport, timeoutMs: 2000 })
   await assert.rejects(offline.nip44.encrypt(remote.pubkey, "x"), (error: Nip46RequestError) => error.code === "unreachable")
@@ -232,7 +244,8 @@ test("nostrconnect://: an answer with the wrong secret is ignored; the right one
     const content = core.nip44.encrypt(JSON.stringify({ id: "x", result: secret }), core.nip44.getConversationKey(key, link.clientPubkey))
     return core.finalizeEvent({ kind: 24133, tags: [["p", link.clientPubkey]], content, created_at: Math.floor(Date.now() / 1000) }, key)
   }
-  const waiting = waitForSigner(link, { transport, timeoutMs: 2000, waitMs: 3000 })
+  // No second signer answers within graceMs, so the one that proved its key connects.
+  const waiting = waitForSigner(link, { transport, timeoutMs: 2000, waitMs: 5000, graceMs: 200 })
   await wait(100)
   await remote.transport.publish(answer(impostor, "deadbeefdeadbeef"), ["wss://r1.example"])
   await remote.transport.publish(answer(remote.key, link.secret), ["wss://r1.example"])
@@ -247,36 +260,129 @@ test("nostrconnect://: an answer with the wrong secret is ignored; the right one
   signer.close()
 })
 
-test("nostrconnect://: someone who saw the QR code and claims the victim's key is dropped; the real signer connects", async () => {
+test("nostrconnect://: someone who saw the QR code and claims the victim's key never connects; the victim's answer meanwhile ends the wait as mismatch", async () => {
   const { network, transport } = setup()
   const link = await createClientUri({ relays: ["wss://r1.example"] })
-  const victim = remoteSigner(network, ["wss://r1.example"], (request, respond) => {
-    if (request.method === "get_public_key") respond({ result: victim.pubkey })
-    if (request.method === "sign_event") respond({ result: victim.sign(request.params[0]) })
-    if (request.method === "nip44_encrypt") respond({ result: core.nip44.encrypt(request.params[1], core.nip44.getConversationKey(victim.key, request.params[0])) })
-  })
+  const victim = honestSigner(network)
   // The attacker read the secret off the screen, answers first and names the victim's key. It
-  // can only sign with its own key.
+  // can only sign with its own key, and it takes its time.
   const attacker = remoteSigner(network, ["wss://r1.example"], (request, respond) => {
-    if (request.method === "get_public_key") respond({ result: victim.pubkey })
+    if (request.method === "get_public_key") setTimeout(() => respond({ result: victim.pubkey }), 1500)
     if (request.method === "sign_event") respond({ result: attacker.sign(request.params[0]) })
     if (request.method === "nip44_encrypt") respond({ result: "stolen" })
   })
   const changes: Nip46Session[] = []
-  const waiting = waitForSigner(link, { transport, timeoutMs: 2000, waitMs: 5000, onSessionChange: (session) => changes.push(session) })
+  const waiting = waitForSigner(link, { transport, timeoutMs: 3000, waitMs: 5000, onSessionChange: (session) => changes.push(session) })
+  // It may end while the victim's answer is still being published.
+  waiting.catch(() => {})
   await wait(100)
   await attacker.answerLink(link)
-  await wait(300)
+  await wait(150)
   await victim.answerLink(link)
-  const { session, signer } = await waiting
-  assert.equal(session.remoteSignerPubkey, victim.pubkey)
-  assert.equal(session.userPubkey, victim.pubkey)
-  // Nothing private ever went to the attacker, and its session never reached storage.
-  assert.deepEqual(attacker.methods, ["get_public_key", "sign_event"])
-  assert.ok(changes.length > 0 && changes.every((change) => change.remoteSignerPubkey === victim.pubkey))
-  const ciphertext = await signer.nip44.encrypt(victim.pubkey, "data key")
-  assert.notEqual(ciphertext, "stolen")
-  assert.deepEqual(attacker.methods, ["get_public_key", "sign_event"])
+  await assert.rejects(waiting, (error: Nip46RequestError) => error.code === "mismatch")
+  // Nothing private went anywhere, the victim's signer got no request, nothing reached storage.
+  assert.deepEqual(attacker.methods, ["get_public_key"])
+  assert.deepEqual(victim.methods, [])
+  assert.deepEqual(changes, [])
+})
+
+test("nostrconnect://: an onlooker who answers first with its own account and a valid proof is caught when the real signer answers in the grace window", async () => {
+  const { network, transport } = setup()
+  const link = await createClientUri({ relays: ["wss://r1.example"] })
+  // Both are working signers; the onlooker's proof passes because it names its own key.
+  const onlooker = honestSigner(network)
+  const user = honestSigner(network)
+  const changes: Nip46Session[] = []
+  const waiting = waitForSigner(link, { transport, timeoutMs: 2000, waitMs: 5000, graceMs: 2000, onSessionChange: (session) => changes.push(session) })
+  waiting.catch(() => {})
+  await wait(100)
+  await onlooker.answerLink(link)
+  await wait(150)
+  await user.answerLink(link)
+  await assert.rejects(waiting, (error: Nip46RequestError) => error.code === "mismatch")
+  // No data key request reached the onlooker, the user's signer got none, nothing was stored.
+  assert.ok(onlooker.methods.every((method) => method === "get_public_key" || method === "sign_event"), onlooker.methods.join())
+  assert.deepEqual(user.methods, [])
+  assert.deepEqual(changes, [])
+})
+
+test("nostrconnect://: confirm sees the proven account before anything is handed out or stored", async () => {
+  const { network, transport } = setup()
+
+  // The user sees an account that isn't theirs and says no.
+  const strangerLink = await createClientUri({ relays: ["wss://r1.example"] })
+  const stranger = honestSigner(network)
+  const shown: Nip46Account[] = []
+  const stored: Nip46Session[] = []
+  const declined = waitForSigner(strangerLink, {
+    transport,
+    timeoutMs: 2000,
+    waitMs: 5000,
+    graceMs: 0,
+    onSessionChange: (session) => stored.push(session),
+    confirm: async (account) => {
+      shown.push(account)
+      return false
+    },
+  })
+  declined.catch(() => {})
+  await wait(100)
+  await stranger.answerLink(strangerLink)
+  await assert.rejects(declined, (error: Nip46RequestError) => error.code === "rejected")
+  assert.deepEqual(shown, [{ userPubkey: stranger.pubkey, remoteSignerPubkey: stranger.pubkey }])
+  assert.deepEqual(stored, [])
+
+  // While the question about the onlooker's account is open (long after graceMs), the user's own
+  // signer answers: mismatch, and the question is closed.
+  const link = await createClientUri({ relays: ["wss://r1.example"] })
+  const onlooker = honestSigner(network)
+  const user = honestSigner(network)
+  let question: AbortSignal | null = null
+  let asked = () => {}
+  const askedNow = new Promise<void>((resolve) => (asked = resolve))
+  const contested = waitForSigner(link, {
+    transport,
+    timeoutMs: 2000,
+    waitMs: 5000,
+    graceMs: 0,
+    confirm: (_account, signal) => {
+      question = signal
+      asked()
+      return new Promise<boolean>((resolve) => signal.addEventListener("abort", () => resolve(false)))
+    },
+  })
+  contested.catch(() => {})
+  await wait(100)
+  await onlooker.answerLink(link)
+  await askedNow
+  await wait(300)
+  await user.answerLink(link)
+  await assert.rejects(contested, (error: Nip46RequestError) => error.code === "mismatch")
+  assert.equal(question!.aborted, true)
+  assert.deepEqual(user.methods, [])
+
+  // The user confirms their own account: only then is the session handed out and stored.
+  const ownLink = await createClientUri({ relays: ["wss://r1.example"] })
+  const own = honestSigner(network)
+  const order: string[] = []
+  const confirmed = waitForSigner(ownLink, {
+    transport,
+    timeoutMs: 2000,
+    waitMs: 5000,
+    graceMs: 0,
+    onSessionChange: () => order.push("stored"),
+    confirm: async (account) => {
+      order.push(account.userPubkey === own.pubkey ? "shown" : "wrong account")
+      await wait(200)
+      order.push("confirmed")
+      return true
+    },
+  })
+  await wait(100)
+  await own.answerLink(ownLink)
+  const { session, signer } = await confirmed
+  assert.equal(session.userPubkey, own.pubkey)
+  assert.deepEqual(order, ["shown", "confirmed", "stored"])
   signer.close()
 })
 
@@ -289,17 +395,20 @@ test("nostrconnect://: a spoofer alone never connects; a declined key proof ends
     // A signature by the spoofer's own key, or anything else, fails the proof.
     if (request.method === "sign_event") respond({ result: spoofer.sign(request.params[0]) })
   })
-  const waiting = waitForSigner(link, { transport, timeoutMs: 1000, waitMs: 1500 })
+  const started = Date.now()
+  const waiting = waitForSigner(link, { transport, timeoutMs: 2000, waitMs: 10_000 })
   await wait(100)
   await spoofer.answerLink(link)
+  // At once, not after waitMs.
   await assert.rejects(waiting, (error: Nip46RequestError) => error.code === "invalid")
+  assert.ok(Date.now() - started < 5000)
 
   const second = await createClientUri({ relays: ["wss://r1.example"] })
   const declining = remoteSigner(network, ["wss://r1.example"], (request, respond) => {
     if (request.method === "get_public_key") respond({ result: declining.pubkey })
     if (request.method === "sign_event") respond({ error: "user declined" })
   })
-  const refused = waitForSigner(second, { transport, timeoutMs: 1000, waitMs: 5000 })
+  const refused = waitForSigner(second, { transport, timeoutMs: 2000, waitMs: 5000 })
   await wait(100)
   await declining.answerLink(second)
   await assert.rejects(refused, (error: Nip46RequestError) => error.code === "rejected")
@@ -312,12 +421,13 @@ test("bunker://: connect with today's parameters on every relay, pending through
   const remote = remoteSigner(network, ["wss://r2.example"], (request, respond, client) => {
     if (request.method === "connect") {
       if (request.params[1] !== "abc123") return respond({ error: "invalid secret" })
-      // A new client must confirm on the signer's page first; the answer follows on the same id.
+      // A new client must confirm on the signer's page first; the answer follows on the same id,
+      // later than timeoutMs below, so only the auth_url can have kept the request open.
       respond({ result: "auth_url", error: "https://signer.example/confirm?c=1" })
       setTimeout(() => {
         confirmed.add(client)
         respond({ result: "ack" })
-      }, 400)
+      }, 2000)
     }
     if (request.method === "get_public_key") respond({ result: remote.pubkey })
     if (request.method === "sign_event" && confirmed.has(client)) respond({ result: remote.sign(request.params[0]) })
@@ -325,7 +435,7 @@ test("bunker://: connect with today's parameters on every relay, pending through
   await wait(50)
   const urls: string[] = []
   const uri = `bunker://${remote.pubkey}?relay=${encodeURIComponent("wss://down.example")}&relay=${encodeURIComponent("wss://r2.example")}&secret=abc123`
-  const connection = await connectBunker(uri, { transport, timeoutMs: 300, perms: ["sign_event:1180", "nip44_encrypt"], onAuthUrl: (url) => urls.push(url) })
+  const connection = await connectBunker(uri, { transport, timeoutMs: 1500, perms: ["sign_event:1180", "nip44_encrypt"], onAuthUrl: (url) => urls.push(url) })
   assert.deepEqual(urls, ["https://signer.example/confirm?c=1"])
   assert.equal(connection.pubkey, remote.pubkey)
   const connect = remote.requests.filter((request) => request.method === "connect")

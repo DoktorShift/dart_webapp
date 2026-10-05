@@ -28,6 +28,11 @@ const sign = (key: Uint8Array, kind: number, content = "", tags: string[][] = []
   core.finalizeEvent({ kind, content, tags, created_at: at }, key)
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+// Waits for a condition instead of a fixed time, so a busy machine doesn't fail the test.
+async function until(condition: () => boolean, timeoutMs = 5000) {
+  const deadline = Date.now() + timeoutMs
+  while (!condition() && Date.now() < deadline) await wait(10)
+}
 
 // Unhandled rejections would surface as test failures here instead of crashing a browser tab.
 const unhandled: unknown[] = []
@@ -189,7 +194,8 @@ test("latestEvents: on equal created_at the lowest id wins (NIP-01)", () => {
 })
 
 test("NIP-42: without a signer the relay's auth-required refusal is reported; with one, AUTH once and retry", async () => {
-  const { network, client } = setup()
+  // The refusals come at once; the AUTH round trip gets time on a busy machine.
+  const { network, client } = setup({ publishTimeoutMs: 3000, queryTimeoutMs: 3000 })
   const relay = network.add("wss://members.example", { auth: true })
   const event = sign(alice, 1180, "members only")
   const refused = await client.publish(event, ["wss://members.example"])
@@ -231,15 +237,18 @@ test("subscribe: many subscriptions stay within the relay budget and each gets o
       oneose: () => eoses.push(i),
     }),
   )
-  await wait(100)
+  await until(() => eoses.length === 24)
   assert.equal(eoses.length, 24)
   for (let i = 0; i < 24; i++) await client.publish(sign(alice, 1180, `for ${i}`, [["t", `topic-${i}`]]), ["wss://busy.example"])
-  await wait(100)
+  await until(() => received.every((list) => list.length > 0))
+  // A little longer: an event delivered to the wrong subscription would show up now.
+  await wait(50)
   assert.ok(relay.maxOpenReqs <= 15, `open REQs ${relay.maxOpenReqs}`)
   received.forEach((list, i) => assert.deepEqual(list, [`for ${i}`]))
   for (const closer of closers) closer.close()
-  await wait(20)
-  assert.equal([...relay.sockets].reduce((n, s) => n + s.subs.size, 0), 0)
+  const openReqs = () => [...relay.sockets].reduce((n, s) => n + s.subs.size, 0)
+  await until(() => openReqs() === 0)
+  assert.equal(openReqs(), 0)
   client.close()
 })
 
