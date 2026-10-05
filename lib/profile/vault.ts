@@ -9,7 +9,7 @@ import { dbGet, dbWrite, type Keyed, type WriteOp } from "../storage/db.ts"
 const VAULT_KEY_ID = "profile.vault-key"
 
 // What a secret is for, bound into the encryption, so one secret can't stand in for another.
-export type SecretPurpose = "local-key" | "connection-key"
+export type SecretPurpose = "local-key" | "connection-key" | "wallet-connection"
 
 export interface SealedSecret {
   iv: Uint8Array<ArrayBuffer>

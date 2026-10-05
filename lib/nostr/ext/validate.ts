@@ -52,7 +52,10 @@ export interface InvoiceExpectation {
   now?: number
 }
 
-export type InvoiceCheck = (Check & { ok: false }) | { ok: true; amountMsat: number | undefined; paymentHash: string; expiresAt: number }
+// Why an invoice was refused, for a screen to explain.
+export type InvoiceProblem = "invalid" | "amount" | "expired" | "description"
+
+export type InvoiceCheck = { ok: false; reason: string; problem: InvoiceProblem } | { ok: true; amountMsat: number | undefined; paymentHash: string; expiresAt: number }
 
 // Decodes a BOLT-11 invoice with nostr-core and checks it against what is about to be paid.
 // A zero-amount invoice never passes an amount check.
@@ -62,12 +65,12 @@ export async function checkInvoice(bolt11: string, expected: InvoiceExpectation 
   try {
     invoice = core.decodeBolt11(bolt11)
   } catch {
-    return { ok: false, reason: "not a valid invoice" }
+    return { ok: false, reason: "not a valid invoice", problem: "invalid" }
   }
-  if (expected.amountMsat !== undefined && invoice.amountMsat !== expected.amountMsat) return { ok: false, reason: "the invoice amount differs" }
+  if (expected.amountMsat !== undefined && invoice.amountMsat !== expected.amountMsat) return { ok: false, reason: "the invoice amount differs", problem: "amount" }
   const now = expected.now ?? Math.floor(Date.now() / 1000)
-  if (invoice.expiresAt - now < (expected.minRemainingSeconds ?? 30)) return { ok: false, reason: "the invoice has expired or is about to" }
-  if (expected.descriptionHash !== undefined && invoice.descriptionHash !== expected.descriptionHash) return { ok: false, reason: "the invoice is for something else" }
+  if (invoice.expiresAt - now < (expected.minRemainingSeconds ?? 30)) return { ok: false, reason: "the invoice has expired or is about to", problem: "expired" }
+  if (expected.descriptionHash !== undefined && invoice.descriptionHash !== expected.descriptionHash) return { ok: false, reason: "the invoice is for something else", problem: "description" }
   return { ok: true, amountMsat: invoice.amountMsat, paymentHash: invoice.paymentHash, expiresAt: invoice.expiresAt }
 }
 
