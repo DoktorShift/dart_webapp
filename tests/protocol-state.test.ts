@@ -114,6 +114,52 @@ test("a tournament's badges come from the organizer who finished it", () => {
   assert.equal(after.state.log.rejected.find((r) => r.id === accept.id)?.reason, "phase_invalid")
 })
 
+test("a club's tournament depends on the club's history only for counting as the club's", () => {
+  const club = signed(owner, "club.found", { name: "Dartfreunde Nord", visibility: "public" }, 0)
+  const ask = signed(alice, "club.join", {}, 1, club.id)
+  const accept = signed(owner, "club.accept", { request: ask.id, member: alice.pubkey }, 2, club.id)
+  const director = signed(owner, "club.role", { member: alice.pubkey, role: "director", prev: ask.id }, 3, club.id)
+  const seed = "6".repeat(32)
+  const cup = { name: "Clubcup", engine: 1, format: "single", rules: { type: "x01", modeId: "501", startScore: 501, doubleIn: false, doubleOut: true, cutThroat: false, bullFinish: false, legsToWin: 2, setsToWin: 1, startRule: "alternate" }, capacity: 4, admission: "manual", waitlist: false, checkIn: false, approval: "organizer", club: club.id, seedCommit: seedCommitment(seed) } as const
+  const read = (clubEvents: unknown[], tournamentEvents: unknown[], root: string) => {
+    const c = reduceClub(clubEvents, club.id, { now: NOW + 100 })
+    assert.ok(c.state)
+    const clubState = c.state
+    const t = reduceTournament(tournamentEvents, root, { now: NOW + 100, clubRole: (pubkey, at) => clubRoleAt(clubState, pubkey, at) })
+    assert.ok(t.state)
+    return t.state
+  }
+
+  // The owner founds the club's tournament and hands it to Alice, a director, who draws.
+  const found = signed(owner, "tournament.found", cup, 10)
+  const root = found.id
+  const offer = signed(owner, "tournament.handover.offer", { to: alice.pubkey, prev: root, expires: NOW + 20 + 3600, core: root }, 20, root)
+  const take = signed(alice, "tournament.handover.accept", { offer: offer.id, core: root }, 30, root)
+  const g1 = signed(alice, "tournament.guest", { guest: "1".repeat(32), alias: "Gast 1" }, 40, root)
+  const g2 = signed(alice, "tournament.guest", { guest: "2".repeat(32), alias: "Gast 2" }, 41, root)
+  const draw = signed(alice, "tournament.draw", { seed, seeded: [], order: drawOrder(seed, ["1".repeat(32), "2".repeat(32)]), prev: root }, 50, root)
+  const tournament = [found, offer, take, g1, g2, draw]
+  const before = read([club, ask, accept, director], tournament, root)
+  assert.equal(before.organizer, alice.pubkey)
+  assert.equal(before.phase, "drawn")
+  // Weeks later the owner dates Alice's demotion in the club back between offer and acceptance:
+  // the completed hand-over and Alice's draw stand.
+  const demoted = signed(owner, "club.role", { member: alice.pubkey, role: "member", prev: director.id }, 25, club.id)
+  const after = read([club, ask, accept, director, demoted], tournament, root)
+  assert.equal(after.organizer, alice.pubkey)
+  assert.equal(after.phase, "drawn")
+  assert.deepEqual(after.club, { id: club.id, verified: true })
+
+  // A tournament Alice founded as director: a demotion dated before its founding takes away
+  // only that it counts for the club.
+  const own = signed(alice, "tournament.found", cup, 10)
+  assert.deepEqual(read([club, ask, accept, director], [own], own.id).club, { id: club.id, verified: true })
+  const backdated = signed(owner, "club.role", { member: alice.pubkey, role: "member", prev: director.id }, 5, club.id)
+  const detached = read([club, ask, accept, director, backdated], [own], own.id)
+  assert.deepEqual(detached.club, { id: club.id, verified: false })
+  assert.equal(detached.organizer, alice.pubkey)
+})
+
 test("decisions are dated after what they build on, even when the writer's clock lags", () => {
   assert.equal(createdAtAfter(NOW, NOW - 50), NOW)
   assert.equal(createdAtAfter(NOW, NOW + 30, NOW + 10), NOW + 31)

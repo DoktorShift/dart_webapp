@@ -1,25 +1,7 @@
 import type { ClubRole } from "./club.ts"
 import type { AnyRecord, BlueLineRecord, ContentOf } from "./records.ts"
-import type { Bases, Chains, FoundingProblem, HandoverEnd, Handovers, Pin, Problem, ReplayLog, ReplayOptions } from "./replay.ts"
-import {
-  applied,
-  buildsOn,
-  chainsOf,
-  copyLog,
-  firstAnswers,
-  foundingProblem,
-  handoverEnds,
-  handoverPrev,
-  handoverSubject,
-  laterAnswer,
-  notTheEnd,
-  pinRule,
-  prepare,
-  reject,
-  settle,
-  settleHandovers,
-  staleOr,
-} from "./replay.ts"
+import type { Bases, FoundingProblem, HandoverRules, Handovers, Problem, ReplayLog, ReplayOptions } from "./replay.ts"
+import { applied, copyLog, foundingProblem, prepare, reject, settle, settleHandovers, staleOr, waitsForPrev } from "./replay.ts"
 import type { TournamentPhase } from "./tournament.ts"
 import { drawOrder, seedCommitment, TOURNAMENT_ENGINE } from "./tournament.ts"
 
@@ -35,10 +17,11 @@ import { drawOrder, seedCommitment, TOURNAMENT_ENGINE } from "./tournament.ts"
 // tournament engine's: it reads `draw.order` and the approved results; `dependents` lets it
 // mark slots a correction affects.
 //
-// A hand-over of the organization (replay.ts, docs/protocol/conflicts.md "Übergaben") holds
-// only when the replay applies its acceptance; the acceptance names the core (details, phase,
-// seed, draw) the new organizer took over, at least what the offer handed over, so the former
-// organizer cannot date core changes or hand-over records back into their tenure afterwards.
+// A hand-over of the organization (replay.ts settleHandovers, docs/protocol/conflicts.md
+// "Übergaben") holds only when the replay applies its acceptance. The acceptance names the core
+// (details, phase, seed, draw) the new organizer took over, at least what the offer handed over.
+// Up to the acceptance the core follows that state, so the former organizer cannot date core
+// changes or hand-over records back into their tenure afterwards.
 
 export type ParticipantStatus = "pending" | "registered" | "waitlist" | "withdrawn" | "removed"
 
@@ -100,7 +83,9 @@ export interface TournamentState {
   id: string
   founder: string
   organizer: string
-  // The club that runs it; `verified` when the founder's club role was checked (clubRole).
+  // The club it names; `verified` when its founder was the club's owner, an admin or a director
+  // at the founding, as the club's state tells (clubRole). Otherwise it is not one of the club's
+  // tournaments, but still a tournament.
   club?: { id: string; verified: boolean }
   settings: ContentOf<"tournament.found">
   phase: TournamentPhase
@@ -125,7 +110,9 @@ export interface TournamentOptions extends ReplayOptions {
   // Slots whose pairing depends on the given slot's result (from the tournament engine).
   dependents?: (slot: string, state: TournamentState) => string[]
   // For a club's tournament: the role a key held in that club at a time (club-state.ts
-  // clubRoleAt). Founding and taking over the organization need owner, admin or director.
+  // clubRoleAt). Only the founding is checked (club.verified): the club's history can be dated
+  // back by its owner and admins, so nothing else in the tournament depends on it. Who may take
+  // over the organization is lib/tournaments' choice when it makes the offer.
   clubRole?: (pubkey: string, at: number) => ClubRole | null
 }
 
@@ -141,48 +128,25 @@ const NEXT_PHASE: Record<TournamentPhase, readonly TournamentPhase[]> = {
   cancelled: [],
 }
 const CLUB_LEADERS: readonly (ClubRole | null)[] = ["owner", "admin", "director"]
-const HANDOVER_CHAIN = { offer: "tournament.handover.offer", cancel: "tournament.handover.cancel", accept: "tournament.handover.accept" }
 const CORE: readonly string[] = ["tournament.update", "tournament.phase", "tournament.seed", "tournament.draw"]
+const HANDOVER: HandoverRules = {
+  types: { offer: "tournament.handover.offer", cancel: "tournament.handover.cancel", accept: "tournament.handover.accept" },
+  subjectOf: (r) => (CORE.includes(r.type) ? "core" : null),
+  heads: (r) => ({ core: (r.content as { core: string }).core }),
+}
 
 export function reduceTournament(events: readonly unknown[], tournamentId: string, opts: TournamentOptions = {}): TournamentResult {
   const prepared = prepare(events, tournamentId, opts)
   const { records, log, founding } = prepared
   if (!founding || founding.type !== "tournament.found")
     return { state: null, problem: founding ? "invalid" : foundingProblem(log, tournamentId) }
-  const f = founding.content
   // Bracket rules of a newer engine are kept, never run with today's rules.
-  if (f.engine !== TOURNAMENT_ENGINE) return { state: null, problem: "unknown_version" }
-  if (f.club && opts.clubRole && !CLUB_LEADERS.includes(opts.clubRole(founding.pubkey, founding.created_at))) {
-    reject(log, founding, "not_authorized", "only the club's owner, an admin or a director founds its tournaments")
-    return { state: null, problem: "not_authorized" }
-  }
-  const chains = chainsOf(records, tournamentId, pinSubject, prevOf)
-  const answers = firstAnswers(records, HANDOVER_CHAIN)
-  // Rule Ü4: a hand-over holds when the replay applies its acceptance as the end (replay.ts
-  // settleHandovers).
-  const state = settleHandovers(
-    (refused) => handoverEnds(records, founding, HANDOVER_CHAIN, answers, refused),
-    (ends, refused) => {
-      const handovers: Handovers = { answers, refused, ends: new Set(ends.map((e) => e.accept.id)) }
-      return replay(prepared, founding, { opts, bases: prepared.bases, chains, handovers }, ends.flatMap(endPins))
-    },
-  )
+  if (founding.content.engine !== TOURNAMENT_ENGINE) return { state: null, problem: "unknown_version" }
+  const state = settleHandovers(records, founding, HANDOVER, (handovers) => replay(prepared, founding, { opts, bases: prepared.bases, handovers }))
   return { state }
 }
 
-const organizerSubject = handoverSubject(HANDOVER_CHAIN)
-const organizerPrev = handoverPrev(HANDOVER_CHAIN)
-const pinSubject = (r: AnyRecord): string | null => (CORE.includes(r.type) ? "core" : organizerSubject(r))
-const prevOf = (r: AnyRecord) => (organizerSubject(r) ? organizerPrev(r) : (r.content as { prev: string }).prev)
-
-// Rule Ü5: what the new organizer took over. The former organizer's hand-over records count up
-// to the accepted offer, their core changes up to the core the acceptance names.
-const endPins = ({ from, since, offer, accept }: HandoverEnd): Pin[] => [
-  { from, since, end: accept, subject: "chain", head: offer.id },
-  { from, since, end: accept, subject: "core", head: (accept as BlueLineRecord<"tournament.handover.accept">).content.core },
-]
-
-function replay(prepared: ReturnType<typeof prepare>, founding: BlueLineRecord<"tournament.found">, ctx: Context, pins: readonly Pin[]): TournamentState {
+function replay(prepared: ReturnType<typeof prepare>, founding: BlueLineRecord<"tournament.found">, ctx: Context): TournamentState {
   const f = founding.content
   const { opts } = ctx
   const log = copyLog(prepared.log)
@@ -190,7 +154,7 @@ function replay(prepared: ReturnType<typeof prepare>, founding: BlueLineRecord<"
     id: founding.id,
     founder: founding.pubkey,
     organizer: founding.pubkey,
-    ...(f.club ? { club: { id: f.club, verified: opts.clubRole !== undefined } } : {}),
+    ...(f.club ? { club: { id: f.club, verified: CLUB_LEADERS.includes(opts.clubRole?.(founding.pubkey, founding.created_at) ?? null) } } : {}),
     settings: { ...f },
     phase: "registration",
     participants: {},
@@ -205,11 +169,11 @@ function replay(prepared: ReturnType<typeof prepare>, founding: BlueLineRecord<"
     log,
   }
   applied(log, founding)
-  const pinned = pinRule(pins, ctx.chains, pinSubject)
+  const pinned = ctx.handovers.pinned()
   for (const r of prepared.records) {
     if (r === founding) continue
     if (r.created_at < founding.created_at) reject(log, r, "before_founding", "dated before the tournament was founded")
-    else settle(log, r, pinned(r) ?? apply(s, r, ctx))
+    else settle(log, r, pinned(r) ?? waitsForPrev(ctx.bases, r) ?? apply(s, r, ctx))
   }
   return s
 }
@@ -217,7 +181,6 @@ function replay(prepared: ReturnType<typeof prepare>, founding: BlueLineRecord<"
 interface Context {
   opts: TournamentOptions
   bases: Bases
-  chains: Chains
   handovers: Handovers
 }
 
@@ -518,21 +481,9 @@ function apply(s: TournamentState, r: AnyRecord, ctx: Context): Problem {
       return null
 
     case "tournament.handover.accept": {
-      // Rules Ü2 to Ü4 (replay.ts): the only answer to the open offer, from its recipient, in
-      // time, naming the offer's core or one built on it; and an end settleHandovers kept.
-      const h = ctx.handovers
-      const offer = s.offer
-      if (!offer || offer.event !== r.content.offer) return ["no_open_offer", "no such open offer"]
-      if (r.pubkey !== offer.to) return ["not_authorized", "the offer is for someone else"]
-      const later = laterAnswer(h, r)
-      if (later) return later
-      if (r.created_at > offer.expires) return ["no_open_offer", "the offer has expired"]
-      const older = buildsOn(ctx.chains, r.content.core, offer.core, "core", "tournament core")
-      if (older) return older
-      if (s.club && opts.clubRole && !CLUB_LEADERS.includes(opts.clubRole(r.pubkey, r.created_at)))
-        return ["not_authorized", "a club's tournament is organized by its owner, an admin or a director"]
-      const notEnd = notTheEnd(h, r)
-      if (notEnd) return notEnd
+      // Rules Ü2 to Ü4 (replay.ts settleHandovers).
+      const problem = ctx.handovers.accept(r, s.offer?.event ?? null)
+      if (problem) return problem
       s.organizer = r.pubkey
       s.offer = null
       s.heads.organizer = r.id

@@ -264,7 +264,7 @@ test("tournament vectors", () => {
     const want = c.expect.state ?? {}
     if (want.phase) assert.equal(s.phase, want.phase, `${c.name}: phase`)
     if (want.organizer) assert.equal(s.organizer, idOf(keys, want.organizer), `${c.name}: organizer`)
-    if (want.club) assert.deepEqual(s.club, { id: want.club, verified: true }, `${c.name}: club`)
+    if (want.club) assert.deepEqual(s.club, want.club, `${c.name}: club`)
     if (want.participants)
       for (const [n, status] of Object.entries(want.participants)) assert.equal(s.participants[idOf(keys, n)]?.status, status, `${c.name}: ${n}`)
     if (want.late)

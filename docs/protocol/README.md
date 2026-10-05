@@ -2,7 +2,7 @@
 
 Das offen beschriebene Darts-Format für Nostr: Kinds, Verträge je Eventfamilie, Rechte, Konfliktregeln, Datenschutz, JSON-Schemas und Testvektoren. Grundlage sind das Kapitel „Ereignismodell und eigenes Darts Format“ in [PLAN.md](../implementation/PLAN.md), [Entscheidung 0001](../decisions/0001-kein-eigenes-backend.md) und [Entscheidung 0002](../decisions/0002-architektur.md) §6 und §7.
 
-Stand: **P0.05**, 4. Oktober 2026, nach Review Runde 1 am 5. Oktober 2026, Formatversion 1. Implementierung: [`lib/protocol/`](../../lib/protocol) (reines TypeScript ohne Netzwerk). Die Kind-Nummern sind noch nicht im Kind-Register eingetragen und das Siegelverfahren geschlossener Clubs ist noch nicht extern geprüft (beides Nutzerhandlungen); bis dahin gilt hier nichts als Standard für andere Apps.
+Stand: **P0.05**, 4. Oktober 2026, nach den Review-Runden 1 bis 3 am 5. Oktober 2026, Formatversion 1. Implementierung: [`lib/protocol/`](../../lib/protocol) (reines TypeScript ohne Netzwerk). Die Kind-Nummern sind noch nicht im Kind-Register eingetragen und das Siegelverfahren geschlossener Clubs ist noch nicht extern geprüft (beides Nutzerhandlungen); bis dahin gilt hier nichts als Standard für andere Apps.
 
 ## Aufbau
 

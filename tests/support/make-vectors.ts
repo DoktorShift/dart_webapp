@@ -931,6 +931,93 @@ function clubCases() {
       }),
     )
   }
+  {
+    const c = newCase(
+      "admin-backdates-around-handover",
+      "Rule Ü5: up to the acceptance, the new owner's membership follows what the acceptance names, whoever writes about it. The owner's admin later dates removals of Alice back before the offer and between offer and acceptance, to give the club back to the owner: both branch off Alice's membership as the acceptance names it and are superseded. Alice's rename and her demotion of the admin stand.",
+      { reader: "owner" },
+    )
+    c.put("found", "owner", "club.found", publicClub(), { at: 0 })
+    c.setRoot("found")
+    const root = c.root()
+    const inv = invite("group", T, 1, null, root)
+    c.put("invite", "owner", "club.invite", inv.content, inv.opts)
+    c.put("join-admin", "admin", "club.join", join("admin", c.id("invite"), T), { at: 2, root })
+    c.put("join-alice", "alice", "club.join", join("alice", c.id("invite"), T), { at: 3, root })
+    c.put("make-admin", "owner", "club.role", { member: pub("admin"), role: "admin", prev: c.id("join-admin") }, { at: 4, root })
+    c.put("offer", "owner", "club.owner.offer", { to: pub("alice"), prev: root, expires: at(20) + OFFER_OPEN, info: root, member: c.id("join-alice") }, { at: 20, root })
+    c.put("accept", "alice", "club.owner.accept", { offer: c.id("offer"), info: root, member: c.id("join-alice") }, { at: 30, root })
+    c.put("rename", "alice", "club.update", { prev: root, name: "Dartfreunde Nord e.V." }, { at: 40, root })
+    c.put("demote-admin", "alice", "club.role", { member: pub("admin"), role: "member", prev: c.id("make-admin"), info: c.id("rename") }, { at: 50, root })
+    c.put("forged-remove-early", "admin", "club.remove", { member: pub("alice"), prev: c.id("join-alice") }, { at: 15, root })
+    c.put("forged-remove", "admin", "club.remove", { member: pub("alice"), prev: c.id("join-alice") }, { at: 25, root })
+    cases.push(
+      c.done({
+        applied: ["found", "invite", "join-admin", "join-alice", "make-admin", "offer", "accept", "rename", "demote-admin"],
+        rejected: [
+          ["forged-remove-early", "superseded"],
+          ["forged-remove", "superseded"],
+        ],
+        state: { owner: "alice", members: { owner: "admin", alice: "owner", admin: "member" }, name: "Dartfreunde Nord e.V." },
+      }),
+    )
+  }
+  {
+    const c = newCase(
+      "owner-transfer-after-rejoin",
+      "Rule Ü5 pins the new owner's membership as the acceptance names it, from their latest join on: the owner removed Alice once and she came back with a new invite; the hand-over to her holds and her earlier removal stays in the history.",
+      { reader: "owner" },
+    )
+    c.put("found", "owner", "club.found", publicClub(), { at: 0 })
+    c.setRoot("found")
+    const root = c.root()
+    const inv = invite("group", T, 1, null, root)
+    c.put("invite", "owner", "club.invite", inv.content, inv.opts)
+    c.put("join-alice", "alice", "club.join", join("alice", c.id("invite"), T), { at: 2, root })
+    c.put("remove-alice", "owner", "club.remove", { member: pub("alice"), prev: c.id("join-alice") }, { at: 5, root })
+    const inv2 = invite("group", T2, 6, null, root)
+    c.put("invite-2", "owner", "club.invite", inv2.content, inv2.opts)
+    c.put("rejoin-alice", "alice", "club.join", join("alice", c.id("invite-2"), T2), { at: 8, root })
+    c.put("offer", "owner", "club.owner.offer", { to: pub("alice"), prev: root, expires: at(20) + OFFER_OPEN, info: root, member: c.id("rejoin-alice") }, { at: 20, root })
+    c.put("accept", "alice", "club.owner.accept", { offer: c.id("offer"), info: root, member: c.id("rejoin-alice") }, { at: 30, root })
+    cases.push(
+      c.done({
+        applied: ["found", "invite", "join-alice", "remove-alice", "invite-2", "rejoin-alice", "offer", "accept"],
+        state: { owner: "alice", members: { owner: "admin", alice: "owner" } },
+      }),
+    )
+  }
+  {
+    const c = newCase(
+      "invite-ends-for-good",
+      "An invite ends for good when its maker stops being owner or admin: the admin's group link admits nobody after the demotion, and not again after the owner makes them admin once more (a link that leaked was often the reason for the demotion).",
+      { reader: "owner" },
+    )
+    c.put("found", "owner", "club.found", publicClub(), { at: 0 })
+    c.setRoot("found")
+    const root = c.root()
+    const inv = invite("group", T, 1, null, root)
+    c.put("invite", "owner", "club.invite", inv.content, inv.opts)
+    c.put("join-admin", "admin", "club.join", join("admin", c.id("invite"), T), { at: 2, root })
+    c.put("make-admin", "owner", "club.role", { member: pub("admin"), role: "admin", prev: c.id("join-admin") }, { at: 3, root })
+    const link = invite("group", T2, 4, null, root)
+    c.put("admin-link", "admin", "club.invite", link.content, link.opts)
+    c.put("join-erin", "erin", "club.join", join("erin", c.id("admin-link"), T2), { at: 5, root })
+    c.put("demote", "owner", "club.role", { member: pub("admin"), role: "member", prev: c.id("make-admin"), info: root }, { at: 10, root })
+    c.put("join-dave", "dave", "club.join", join("dave", c.id("admin-link"), T2), { at: 20, root })
+    c.put("make-admin-again", "owner", "club.role", { member: pub("admin"), role: "admin", prev: c.id("demote") }, { at: 30, root })
+    c.put("join-frank", "frank", "club.join", join("frank", c.id("admin-link"), T2), { at: 40, root })
+    cases.push(
+      c.done({
+        applied: ["found", "invite", "join-admin", "make-admin", "admin-link", "join-erin", "demote", "make-admin-again"],
+        rejected: [
+          ["join-dave", "invite_revoked"],
+          ["join-frank", "invite_revoked"],
+        ],
+        state: { members: { owner: "owner", admin: "admin", erin: "member" } },
+      }),
+    )
+  }
   // A public club's invite travels in the clear; one its maker sealed admits nobody, whoever
   // reads it.
   for (const reader of ["owner", "mallory"]) {
@@ -1011,22 +1098,27 @@ function clubCases() {
   {
     const c = newCase(
       "missing-predecessor",
-      "A change whose base this reader has not loaded waits for it (relays keep nothing for sure); a change on a base that is known but no longer current is a visible conflict.",
+      "A change whose base this reader has not loaded waits for it (relays keep nothing for sure), also when that base is the join of the member it names; a change on a base that is known but no longer current is a visible conflict.",
       { reader: "owner" },
     )
     c.put("found", "owner", "club.found", publicClub(), { at: 0 })
     c.setRoot("found")
     const root = c.root()
-    // The first rename never reached this reader.
+    // The first rename and Bob's join never reached this reader.
     const lost = record("owner", "club.update", { prev: root, name: "Dartfreunde Nord e.V." }, { at: 10, root }).event
+    const lostJoin = record("bob", "club.join", {}, { at: 11, root }).event
     c.put("about", "owner", "club.update", { prev: lost.id, about: "Dienstags ab 19 Uhr." }, { at: 20, root })
     c.put("rename", "owner", "club.update", { prev: root, name: "DF Nord" }, { at: 30, root })
     c.put("stale", "owner", "club.update", { prev: root, about: "Mittwochs" }, { at: 40, root })
+    c.put("bob-director", "owner", "club.role", { member: pub("bob"), role: "director", prev: lostJoin.id }, { at: 50, root })
     cases.push(
       c.done({
         applied: ["found", "rename"],
         rejected: [["stale", "stale_predecessor"]],
-        unapplied: [["about", "waiting"]],
+        unapplied: [
+          ["about", "waiting"],
+          ["bob-director", "waiting"],
+        ],
         state: { name: "DF Nord" },
       }),
     )
@@ -1425,6 +1517,31 @@ function tournamentCases() {
   }
   {
     const c = newCase(
+      "handover-lagging-offer",
+      "Known limit (rule Ü6 b): what the acceptance names is what counts. An organizer device that has not synced the draw and the start offers the founding as core, and organizer 2's device, just as far behind, accepts it: the draw and the start are cut. Without trusted time this is the same set of events as the organizer dating them back after a completed hand-over, which the rule must stop. lib/tournaments therefore offers and accepts only on a synced device and shows the core handed over.",
+    )
+    c.put("found", "organizer", "tournament.found", cup({ checkIn: false }), { at: 0 })
+    c.setRoot("found")
+    const root = c.root()
+    c.put("guest-1", "organizer", "tournament.guest", { guest: G, alias: "Gast 1" }, { at: 2, root })
+    c.put("guest-2", "organizer", "tournament.guest", { guest: G2, alias: "Gast 2" }, { at: 3, root })
+    c.put("draw", "organizer", "tournament.draw", { seed: SEED, seeded: [], order: order(SEED, [G, G2]), prev: root }, { at: 20, root })
+    c.put("running", "organizer", "tournament.phase", { phase: "running", prev: c.id("draw") }, { at: 30, root })
+    c.put("lagging-offer", "organizer", "tournament.handover.offer", { to: pub("organizer2"), prev: root, expires: at(40) + OFFER_OPEN, core: root }, { at: 40, root })
+    c.put("lagging-accept", "organizer2", "tournament.handover.accept", { offer: c.id("lagging-offer"), core: root }, { at: 41, root })
+    cases.push(
+      c.done({
+        applied: ["found", "guest-1", "guest-2", "lagging-offer", "lagging-accept"],
+        rejected: [
+          ["draw", "superseded"],
+          ["running", "stale_predecessor"],
+        ],
+        state: { organizer: "organizer2", phase: "registration" },
+      }),
+    )
+  }
+  {
+    const c = newCase(
       "handover-crossing-cancel",
       "Rules Ü5 and Ü6 a (known limit): the offer hands over the renamed tournament. The organizer withdraws it and renames again; organizer 2 accepts inside the offer's time without having seen either. The acceptance ends the tenure: the withdrawal and the second rename are cut, the first rename (handed over) stays.",
     )
@@ -1471,6 +1588,27 @@ function tournamentCases() {
     )
   }
   {
+    const c = newCase(
+      "missing-registration",
+      "A decision on a place whose registration this reader has not loaded waits for it, like any change on a missing base; it is not refused as 'not registered'.",
+    )
+    c.put("found", "organizer", "tournament.found", cup({ checkIn: false }), { at: 0 })
+    c.setRoot("found")
+    const root = c.root()
+    // p1's registration never reached this reader.
+    const lost = record("p1", "tournament.register", {}, { at: 10, root }).event
+    c.put("p2", "p2", "tournament.register", {}, { at: 11, root })
+    c.put("admit-p1", "organizer", "tournament.admit", { participant: pub("p1"), prev: lost.id }, { at: 20, root })
+    c.put("admit-p2", "organizer", "tournament.admit", { participant: pub("p2"), prev: c.id("p2") }, { at: 21, root })
+    cases.push(
+      c.done({
+        applied: ["found", "p2", "admit-p2"],
+        unapplied: [["admit-p1", "waiting"]],
+        state: { participants: { p2: "registered" } },
+      }),
+    )
+  }
+  {
     const c = newCase("rules-locked-and-unknown", "Rules cannot change once drawn, details can. A registration in a newer format version is kept, not executed.")
     c.put("found", "organizer", "tournament.found", cup({ checkIn: false }), { at: 0 })
     c.setRoot("found")
@@ -1490,23 +1628,26 @@ function tournamentCases() {
       }),
     )
   }
+  const CLUB = hex32("tournament-club")
   {
-    const CLUB = hex32("tournament-club")
-    const c = newCase("club-tournament", "A club's tournament: founded by a director of the club. Handing the organization to a plain member of the club is refused.")
+    const c = newCase(
+      "club-tournament",
+      "A club's tournament: founded by a director of the club, so it counts for the club. Nothing after the founding depends on the club's roles, which its owner and admins can date back: the hand-over to a plain member holds (lib/tournaments offers the organization only to the club's owner, admins and directors).",
+    )
     c.put("found", "director", "tournament.found", cup({ club: CLUB }), { at: 0 })
     c.setRoot("found")
     const root = c.root()
     c.put("offer", "director", "tournament.handover.offer", { to: pub("member"), prev: root, expires: at(10) + OFFER_OPEN, core: root }, { at: 10, root })
     c.put("accept", "member", "tournament.handover.accept", { offer: c.id("offer"), core: root }, { at: 20, root })
     cases.push(
-      c.done({ applied: ["found", "offer"], rejected: [["accept", "not_authorized"]], state: { organizer: "director", club: CLUB } }, { clubRoles: { director: "director", member: "member" } }),
+      c.done({ applied: ["found", "offer", "accept"], state: { organizer: "member", club: { id: CLUB, verified: true } } }, { clubRoles: { director: "director", member: "member" } }),
     )
   }
   {
-    const c = newCase("club-tournament-by-member", "A plain member cannot found a tournament for the club.")
-    c.put("found", "member", "tournament.found", cup({ club: hex32("tournament-club") }), { at: 0 })
+    const c = newCase("club-tournament-by-member", "A plain member founds a tournament naming the club: it is a tournament, but not one of the club's.")
+    c.put("found", "member", "tournament.found", cup({ club: CLUB }), { at: 0 })
     c.setRoot("found")
-    cases.push(c.done({ problem: "not_authorized" }, { clubRoles: { director: "director", member: "member" } }))
+    cases.push(c.done({ applied: ["found"], state: { organizer: "member", club: { id: CLUB, verified: false } } }, { clubRoles: { director: "director", member: "member" } }))
   }
   {
     const c = newCase("newer-engine", "A tournament built with newer bracket rules is kept, never run with today's rules.")

@@ -3,26 +3,8 @@ import { CLUB_PLAIN_TYPES, MAX_CLUB_MEMBERS } from "./club.ts"
 import type { InviteKind } from "./invite.ts"
 import { verifyInviteProof } from "./invite.ts"
 import type { AnyRecord, BlueLineRecord } from "./records.ts"
-import type { Bases, Chains, FoundingProblem, HandoverEnd, Handovers, Pin, Problem, ReplayLog, ReplayOptions } from "./replay.ts"
-import {
-  applied,
-  buildsOn,
-  chainsOf,
-  copyLog,
-  firstAnswers,
-  foundingProblem,
-  handoverEnds,
-  handoverPrev,
-  handoverSubject,
-  laterAnswer,
-  notTheEnd,
-  pinRule,
-  prepare,
-  reject,
-  settle,
-  settleHandovers,
-  staleOr,
-} from "./replay.ts"
+import type { Bases, FoundingProblem, HandoverRules, Handovers, Pin, Problem, ReplayLog, ReplayOptions } from "./replay.ts"
+import { applied, copyLog, foundingProblem, prepare, reject, settle, settleHandovers, staleOr, waitsForPrev } from "./replay.ts"
 
 // Club state from the founding and all changes (docs/protocol/families/club.md and
 // permissions.md). Each change is checked against its author's role at that point of the
@@ -35,13 +17,13 @@ import {
 // or admin, never by a created_at the joiner chose. Whoever reads the invite checks the proof
 // (in a public club everyone); a reader who cannot sees a waiting request, and an owner's or
 // admin's record that treats the person as a member accepts it for that reader. An invite ends
-// with its maker's role as owner or admin.
+// for good when its maker stops being owner or admin.
 //
 // Ends of authority (replay.ts, docs/protocol/conflicts.md "Übergaben"): an ownership hand-over
-// holds only when the replay applies its acceptance, and the former owner's records about the
-// hand-over chain, the club details and the new owner's membership count only up to what the
-// acceptance names; a demoted admin's club.updates since their appointment only up to what the
-// demotion names.
+// holds only when the replay applies its acceptance. The former owner's hand-over records in
+// their tenure count only up to the accepted offer, and up to the acceptance the club details
+// and the new owner's membership follow the state it names, whoever wrote about them. A demoted
+// admin's club.updates since their appointment count only up to what the demotion names.
 
 export interface ClubMember {
   pubkey: string
@@ -65,7 +47,9 @@ export interface ClubInvite {
   at: number
   expires: number
   label?: string
-  revoked: boolean
+  // Why it admits no one any more: ended by an owner or admin (club.invite.revoke), or because
+  // its maker stopped being owner or admin, for good.
+  ended: "revoked" | "maker_role" | null
   // Group link: everyone it admitted. Personal invite: the one accepted use.
   uses: { pubkey: string; event: string; at: number }[]
 }
@@ -143,7 +127,15 @@ export interface ClubState {
 export type ClubResult = { state: ClubState } | { state: null; problem: FoundingProblem }
 
 const ARCHIVED_BLOCKS: readonly string[] = ["club.invite", "club.join", "club.accept", "club.season", "club.season.rules", "club.result", "club.date"]
-const OWNER_CHAIN = { offer: "club.owner.offer", cancel: "club.owner.cancel", accept: "club.owner.accept" }
+const memberSubject = (pubkey: string) => `member:${pubkey}`
+const HANDOVER: HandoverRules = {
+  types: { offer: "club.owner.offer", cancel: "club.owner.cancel", accept: "club.owner.accept" },
+  subjectOf: (r) => (r.type === "club.update" ? "info" : r.type === "club.role" || r.type === "club.remove" ? memberSubject(r.content.member) : null),
+  heads: (r, to) => {
+    const c = r.content as { info: string; member: string }
+    return { info: c.info, [memberSubject(to)]: c.member }
+  },
+}
 
 type Prepared = ReturnType<typeof prepare>
 
@@ -159,55 +151,25 @@ export function reduceClub(events: readonly unknown[], clubId: string, opts: Rep
     reject(log, founding, "invalid_tags", "a public club is founded in the clear")
     return { state: null, problem: "invalid" }
   }
-  const env: Env = { prepared, founding, chains: chainsOf(records, founding.id, pinSubject, prevOf), answers: firstAnswers(records, OWNER_CHAIN), proofs: new Map() }
-  // Rule Ü4: an ownership hand-over holds when the replay applies its acceptance as the end
-  // (replay.ts settleHandovers). Within each replay, demotions of admins show up as they are
-  // applied and pin that admin's club.updates: then the club is replayed once more with them.
-  const state = settleHandovers(
-    (refused) => handoverEnds(records, founding, OWNER_CHAIN, env.answers, refused),
-    (ends, refused) => {
-      const handovers: Handovers = { answers: env.answers, refused, ends: new Set(ends.map((e) => e.accept.id)) }
-      const pins = ends.flatMap(endPins)
-      const first = replay(env, handovers, pins)
-      return first.demotions.length === 0 ? first.state : replay(env, handovers, [...pins, ...first.demotions]).state
-    },
-  )
+  const env: Env = { prepared, founding, proofs: new Map() }
+  // Demotions of admins show up as they are applied and pin that admin's club.updates: then the
+  // club is replayed once more with them.
+  const state = settleHandovers(records, founding, HANDOVER, (handovers) => {
+    const first = replay(env, handovers, [])
+    return first.demotions.length === 0 ? first.state : replay(env, handovers, first.demotions).state
+  })
   return { state }
-}
-
-// The subjects whose heads the end of a role pins, and the predecessor a record names.
-const ownerSubject = handoverSubject(OWNER_CHAIN)
-const ownerPrev = handoverPrev(OWNER_CHAIN)
-const pinSubject = (r: AnyRecord): string | null => {
-  if (r.type === "club.update") return "info"
-  if (r.type === "club.role" || r.type === "club.remove") return `member:${r.content.member}`
-  return ownerSubject(r)
-}
-const prevOf = (r: AnyRecord) => (ownerSubject(r) ? ownerPrev(r) : (r.content as { prev: string }).prev)
-
-// Rule Ü5: what the new owner took over. The former owner's hand-over records count up to the
-// accepted offer, their club.updates and their records about the new owner's membership up to
-// the heads the acceptance names.
-const endPins = ({ from, since, offer, accept }: HandoverEnd): Pin[] => {
-  const c = (accept as BlueLineRecord<"club.owner.accept">).content
-  return [
-    { from, since, end: accept, subject: "chain", head: offer.id },
-    { from, since, end: accept, subject: "info", head: c.info },
-    { from, since, end: accept, subject: `member:${accept.pubkey}`, head: c.member },
-  ]
 }
 
 interface Env {
   prepared: Prepared
   founding: BlueLineRecord<"club.found">
-  chains: Chains
-  answers: ReadonlyMap<string, string>
   // Invite proofs checked in an earlier replay of the same events.
   proofs: Map<string, boolean>
 }
 
-function replay(env: Env, handovers: Handovers, pins: readonly Pin[]) {
-  const { prepared, founding, chains } = env
+function replay(env: Env, handovers: Handovers, demotions: readonly Pin[]) {
+  const { prepared, founding } = env
   const { records, datedAt, bases } = prepared
   const log = copyLog(prepared.log)
   const f = founding.content
@@ -230,13 +192,13 @@ function replay(env: Env, handovers: Handovers, pins: readonly Pin[]) {
     log,
   }
   applied(log, founding)
-  const ctx: Context = { datedAt, bases, parsed: new Set(records.map((r) => r.id)), chains, handovers, proofs: env.proofs, appointed: new Map(), demotions: [] }
-  const pinned = pinRule(pins, chains, pinSubject)
+  const ctx: Context = { datedAt, bases, parsed: new Set(records.map((r) => r.id)), handovers, proofs: env.proofs, appointed: new Map(), demotions: [] }
+  const pinned = handovers.pinned(demotions)
 
   for (const r of records) {
     if (r === founding) continue
     if (r.created_at < founding.created_at) reject(log, r, "before_founding", "dated before the club was founded")
-    else settle(log, r, pinned(r) ?? apply(s, r, ctx))
+    else settle(log, r, pinned(r) ?? waitsForPrev(bases, r) ?? apply(s, r, ctx))
   }
   return { state: s, demotions: ctx.demotions }
 }
@@ -259,7 +221,6 @@ interface Context {
   datedAt: Map<string, number>
   bases: Bases
   parsed: Set<string>
-  chains: Chains
   handovers: Handovers
   proofs: Map<string, boolean>
   // The record that made each admin an admin: their demotion pins what they did since.
@@ -269,11 +230,6 @@ interface Context {
 }
 
 const roleOf = (s: ClubState, pubkey: string): ClubRole | null => s.members[pubkey]?.role ?? null
-const manages = (s: ClubState, pubkey: string) => {
-  const role = roleOf(s, pubkey)
-  return role === "owner" || role === "admin"
-}
-const INVITE_MAKER_GONE: Problem = ["invite_revoked", "the person who made the invite no longer manages the club"]
 const memberCount = (s: ClubState) => Object.keys(s.members).length
 // A closed club seals every record for all members (seal.ts), so it never grows past
 // MAX_CLUB_MEMBERS; its own capacity may be lower. A public club has a limit only when it sets one.
@@ -285,7 +241,13 @@ const full = (s: ClubState) => {
 
 function setRole(s: ClubState, r: AnyRecord, pubkey: string, role: ClubRole | null) {
   s.history.push({ pubkey, role, at: r.created_at, event: r.id })
+  // An invite ends with its maker's role as owner or admin, and stays ended if they get the role
+  // back: a link that leaked was often the reason for the demotion.
+  if (role !== "owner" && role !== "admin") for (const invite of Object.values(s.invites)) if (invite.by === pubkey && !invite.ended) invite.ended = "maker_role"
 }
+
+const inviteEnded = (invite: ClubInvite): Problem =>
+  invite.ended === null ? null : ["invite_revoked", invite.ended === "revoked" ? "the invite was ended" : "its maker no longer manages the club"]
 
 function addMember(s: ClubState, r: AnyRecord, pubkey: string, via: ClubMember["via"], head: string) {
   s.members[pubkey] = { pubkey, role: "member", since: r.created_at, via, head }
@@ -307,8 +269,8 @@ function admit(s: ClubState, r: AnyRecord, request: JoinRequest): Problem {
   const invite = request.invite ? s.invites[request.invite] : undefined
   if (invite?.kind === "personal") {
     if (invite.uses.length > 0) return ["invite_exhausted", "the personal invite was used"]
-    if (invite.revoked) return ["invite_revoked", "the invite was ended"]
-    if (!manages(s, invite.by)) return INVITE_MAKER_GONE
+    const ended = inviteEnded(invite)
+    if (ended) return ended
   }
   if (full(s)) return ["club_full", "the club is full"]
   addMember(s, r, request.pubkey, "accepted", request.event)
@@ -360,7 +322,7 @@ function apply(s: ClubState, r: AnyRecord, ctx: Context): Problem {
       if (c.expires <= r.created_at) return ["invite_expired", "expires before it is made"]
       // A label may name the invited person: never in the clear (docs/protocol/privacy.md).
       if (c.label !== undefined && r.encryption !== "seal") return ["invalid_content", "an invite's label only travels sealed, in a closed club"]
-      s.invites[r.id] = { id: r.id, kind: c.kind, key: c.key, by: r.pubkey, at: r.created_at, expires: c.expires, ...(c.label ? { label: c.label } : {}), revoked: false, uses: [] }
+      s.invites[r.id] = { id: r.id, kind: c.kind, key: c.key, by: r.pubkey, at: r.created_at, expires: c.expires, ...(c.label ? { label: c.label } : {}), ended: null, uses: [] }
       return null
     }
 
@@ -368,8 +330,8 @@ function apply(s: ClubState, r: AnyRecord, ctx: Context): Problem {
       if (!manager) return ["not_authorized", "only the owner or an admin ends invites"]
       const invite = s.invites[r.content.invite]
       if (!invite) return ctx.parsed.has(r.content.invite) ? ["invite_unknown", "no such invite"] : ["waiting", "names an invite this reader cannot open or has not loaded"]
-      if (invite.revoked) return ["invite_revoked", "already ended"]
-      invite.revoked = true
+      if (invite.ended) return ["invite_revoked", "already ended"]
+      invite.ended = "revoked"
       return null
     }
 
@@ -418,7 +380,7 @@ function apply(s: ClubState, r: AnyRecord, ctx: Context): Problem {
         if (problem) return problem
       }
       dropMember(s, r, c.member, "removed", c.reason)
-      if (target.role === "admin") ctx.demotions.push({ from: c.member, end: r, subject: "info", head: c.info as string, since: ctx.appointed.get(c.member) })
+      if (target.role === "admin") ctx.demotions.push({ end: r, subject: "info", head: c.info as string, author: c.member, since: ctx.appointed.get(c.member) })
       return null
     }
 
@@ -442,7 +404,7 @@ function apply(s: ClubState, r: AnyRecord, ctx: Context): Problem {
       member.role = c.role
       member.head = r.id
       setRole(s, r, c.member, c.role)
-      if (demotes) ctx.demotions.push({ from: c.member, end: r, subject: "info", head: c.info as string, since: ctx.appointed.get(c.member) })
+      if (demotes) ctx.demotions.push({ end: r, subject: "info", head: c.info as string, author: c.member, since: ctx.appointed.get(c.member) })
       return null
     }
 
@@ -472,22 +434,9 @@ function apply(s: ClubState, r: AnyRecord, ctx: Context): Problem {
       return null
 
     case "club.owner.accept": {
-      // Rules Ü2 to Ü4 (replay.ts): the only answer to the open offer, from its recipient, in
-      // time, naming what the offer hands over or more; and an end settleHandovers kept.
-      const c = r.content
-      const h = ctx.handovers
-      const offer = s.offer
-      if (!offer || offer.event !== c.offer) return ["no_open_offer", "no such open offer"]
-      if (r.pubkey !== offer.to) return ["not_authorized", "the offer is for someone else"]
-      const later = laterAnswer(h, r)
-      if (later) return later
-      if (r.created_at > offer.expires) return ["no_open_offer", "the offer has expired"]
-      const older = buildsOn(ctx.chains, c.info, offer.info, "info", "state of the club") ?? buildsOn(ctx.chains, c.member, offer.member, `member:${r.pubkey}`, "membership")
-      if (older) return older
-      const next = s.members[r.pubkey]
-      if (!next) return ["not_member", "no longer a member"]
-      const notEnd = notTheEnd(h, r)
-      if (notEnd) return notEnd
+      // Rules Ü2 to Ü4 (replay.ts settleHandovers).
+      const problem = ctx.handovers.accept(r, s.offer?.event ?? null)
+      if (problem) return problem
       const previous = s.members[s.owner]
       if (previous) {
         previous.role = "admin"
@@ -495,6 +444,9 @@ function apply(s: ClubState, r: AnyRecord, ctx: Context): Problem {
         setRole(s, r, previous.pubkey, "admin")
         ctx.appointed.set(previous.pubkey, r)
       }
+      // The recipient of an open offer is a member: leaving or a removal withdraws the offer
+      // (dropMember).
+      const next = s.members[r.pubkey]
       next.role = "owner"
       next.head = r.id
       setRole(s, r, r.pubkey, "owner")
@@ -618,11 +570,11 @@ function join(s: ClubState, r: BlueLineRecord<"club.join">, ctx: Context): Probl
   const proof = `${invite.key}:${r.pubkey}:${c.proof}`
   if (!ctx.proofs.has(proof)) ctx.proofs.set(proof, verifyInviteProof(invite.key, r.pubkey, c.proof as string))
   if (!ctx.proofs.get(proof)) return ["invite_proof_invalid", "the proof is not for this key"]
-  if (invite.revoked) return ["invite_revoked", "the invite was ended"]
+  // Ended also with its maker's role (setRole): in a closed club, managers appointed later may
+  // not even see the invite to end it themselves.
+  const ended = inviteEnded(invite)
+  if (ended) return ended
   if (r.created_at > invite.expires) return ["invite_expired", "the invite has expired"]
-  // An invite ends with its maker's role: in a closed club, managers appointed later may not
-  // even see it to end it themselves.
-  if (!manages(s, invite.by)) return INVITE_MAKER_GONE
   const gone = s.former[r.pubkey]
   if (gone?.how === "removed" && invite.at <= gone.at) return ["removed_requires_new_invite", "removed members need an invite made after their removal"]
 
