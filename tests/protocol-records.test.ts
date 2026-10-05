@@ -2,11 +2,13 @@ import { test } from "node:test"
 import assert from "node:assert/strict"
 import { finalizeEvent, generateSecretKey, getPublicKey } from "nostr-core"
 import { KIND_RECORD, MAX_EVENT_BYTES } from "../lib/protocol/kinds.ts"
-import { buildRecord, encryptForLinkKey, parseRecord, sealRecord } from "../lib/protocol/records.ts"
+import { MAX_SHARED_KEYS } from "../lib/protocol/club.ts"
+import { buildRecord, encryptForLinkKey, maxSharedKeys, parseRecord, sealRecord } from "../lib/protocol/records.ts"
 import type { ContentOf } from "../lib/protocol/records.ts"
 import { ProtocolError } from "../lib/protocol/reasons.ts"
 import { signedEventBytes } from "../lib/protocol/tags.ts"
-import { profileBadgesTemplate, readProfileBadges } from "../lib/protocol/badges.ts"
+import { otherProfileTags, profileBadgesTemplate, readProfileBadges } from "../lib/protocol/badges.ts"
+import { MAX_SEAL_READERS } from "../lib/protocol/seal.ts"
 
 const sk = generateSecretKey()
 const otherKey = getPublicKey(generateSecretKey())
@@ -116,9 +118,10 @@ test("unknown fields of a known version are ignored, not fatal", () => {
 })
 
 test("encryption rules per type", () => {
-  const invite = buildRecord("club.invite", { kind: "group", token: "d".repeat(32), expires: NOW + 60 }, { created_at: NOW, root: ROOT })
-  // An invite in the clear would publish its token; a key share its keys.
-  assert.equal(parsed(sign(invite)), "sealing_required")
+  const invite = buildRecord("club.invite", { kind: "group", key: otherKey, expires: NOW + 60 }, { created_at: NOW, root: ROOT })
+  // An invite names only the public invite key, never the token: a public club's invite travels
+  // in the clear so everyone can check joins. A key share would publish its keys: always sealed.
+  assert.equal(parsed(sign(invite)), "ok")
   const keys = buildRecord("club.keys", { keys: [["b".repeat(64), "c".repeat(64)]] }, { created_at: NOW, root: ROOT })
   assert.equal(parsed(sign(keys)), "sealing_required")
   // A join comes from someone who cannot know the readers: never sealed.
@@ -183,4 +186,54 @@ test("profile badge choice: written as 10008, the former 30008 still read", () =
   assert.deepEqual(readProfileBadges(legacy), [{ address, award }])
   assert.equal(readProfileBadges(sign({ kind: 30008, created_at: NOW, content: "", tags: [["d", "other"]] })), null)
   assert.equal(reason(() => profileBadgesTemplate([{ address: "x", award }], NOW)), "invalid_content")
+})
+
+test("profile badge choice: reading and writing back keeps another app's relay hints and tags", () => {
+  const ours = `30009:${otherKey}:blueline:self:first-180:v1`
+  const theirs = `30009:${"c".repeat(64)}:bravery`
+  const award = "e".repeat(64)
+  const otherAward = "f".repeat(64)
+  const written = sign({
+    kind: 10008,
+    created_at: NOW,
+    content: "",
+    tags: [
+      ["a", theirs, "wss://relay.example"],
+      ["e", otherAward, "wss://relay.example"],
+      ["a", "30023:not-a-badge"],
+      ["e", award],
+      ["client", "other app"],
+      ["a", ours],
+    ],
+  })
+  const badges = readProfileBadges(written)
+  assert.deepEqual(badges, [{ address: theirs, award: otherAward, addressRelay: "wss://relay.example", awardRelay: "wss://relay.example" }])
+  const other = otherProfileTags(written)
+  assert.deepEqual(other, [["a", "30023:not-a-badge"], ["e", award], ["client", "other app"], ["a", ours]])
+  // Adding ours and writing back loses nothing of theirs.
+  const back = sign(profileBadgesTemplate([...(badges ?? []), { address: ours, award }], NOW + 1, other ?? []))
+  assert.deepEqual(readProfileBadges(back), [...(badges ?? []), { address: ours, award }])
+  assert.deepEqual(otherProfileTags(back), other)
+  assert.deepEqual(back.tags.slice(0, 2), written.tags.slice(0, 2))
+  // The former list's d tag belongs to its kind and is not carried over.
+  const legacy = sign({ kind: 30008, created_at: NOW, content: "", tags: [["d", "profile_badges"], ["a", ours], ["e", award]] })
+  assert.deepEqual(otherProfileTags(legacy), [])
+  assert.equal(otherProfileTags(sign({ kind: 1, created_at: NOW, content: "", tags: [] })), null)
+})
+
+test("a key share fits as many keys as its readers leave room for", () => {
+  assert.equal(maxSharedKeys(1), MAX_SHARED_KEYS)
+  assert.equal(maxSharedKeys(20), MAX_SHARED_KEYS)
+  const fit = maxSharedKeys(MAX_SEAL_READERS)
+  assert.ok(fit > 60 && fit < 75, `${fit} keys for ${MAX_SEAL_READERS} readers`)
+  // Exactly that many seal for a hundred readers, even with a 64-character relay hint on the
+  // root tag; one more does not.
+  const relay = `wss://${"relay".repeat(11)}.de`
+  assert.equal(relay.length, 64)
+  const keys = (n: number) => buildRecord("club.keys", { keys: Array.from({ length: n }, () => ["b".repeat(64), "c".repeat(64)]) }, { created_at: NOW, root: ROOT, relay })
+  assert.equal(parsed(sign(sealRecord(keys(fit), seal(MAX_SEAL_READERS)))), "sealed")
+  assert.equal(reason(() => sealRecord(keys(fit + 1), seal(MAX_SEAL_READERS))), "too_large")
+  // Fewer readers, more keys.
+  assert.ok(maxSharedKeys(50) > fit && maxSharedKeys(50) < MAX_SHARED_KEYS)
+  assert.throws(() => maxSharedKeys(MAX_SEAL_READERS + 1), RangeError)
 })

@@ -4,6 +4,8 @@ Stand: P0.05. Verbindlich ist der Code der Reducer ([`club-state.ts`](../../lib/
 
 Jede Änderung wird **gegen die Rolle des Autors zu dem Zeitpunkt geprüft, an dem sie beim Abspielen an der Reihe ist** (Reihenfolge `created_at`, dann `id`, [conflicts.md](conflicts.md)). Eine unberechtigte Änderung ändert nichts und steht mit `not_authorized` im Protokoll. Ohne Server ist ein einzelner Eigentümer- oder Veranstalterschlüssel die einzige Wurzel der Befugnis: Geht er verloren, lässt sich der Club oder das Turnier nicht mehr verwalten; wird er kompromittiert, kann der Angreifer übergeben (Recherche PR-10, offene Nutzerentscheidung über mehrere Eigentümer).
 
+„Zu diesem Zeitpunkt“ heißt: nach dem `created_at`, das der Autor selbst setzt. Damit eine abgegebene Befugnis sich nicht nachträglich zurückdatiert, nennt das Ende einer Leitung, eines Eigentums oder einer Admin-Rolle den Stand, den sein Autor sah; Turnierkern, Clubangaben und Übergabekette sind damit festgehalten, Plätze, Spiele, Boards, Mitglieder, Termine und Ergebnisse nicht ([conflicts.md](conflicts.md#ende-einer-befugnis), bekannte Grenze zu PR-10).
+
 ## Club
 
 ✓ = darf, – = darf nicht. „Gast“ ist keine Club-Rolle mit Schlüssel: Gäste spielen unter einem Alias in Spielen und Turnieren mit ([privacy.md](privacy.md)) und haben keine Rechte am Club.
@@ -14,11 +16,11 @@ Jede Änderung wird **gegen die Rolle des Autors zu dem Zeitpunkt geprüft, an d
 | Sichtbarkeit ändern, archivieren (`club.update`) | ✓ | – | – | – | – |
 | Einladen, Einladung beenden (`club.invite`, `club.invite.revoke`) | ✓ | ✓ | – | – | – |
 | Anfrage annehmen oder ablehnen (`club.accept`, `club.decline`) | ✓ | ✓ | – | – | – |
-| Mitglied entfernen (`club.remove`) | ✓ alle außer sich | ✓ Turnierleiter und Mitglieder | – | – | – |
-| Rolle Admin vergeben oder ändern (`club.role`) | ✓ | – | – | – | – |
+| Mitglied entfernen (`club.remove`) | ✓ alle außer sich (einen Admin mit `info`) | ✓ Turnierleiter und Mitglieder | – | – | – |
+| Rolle Admin vergeben oder ändern (`club.role`; Herabstufen mit `info`) | ✓ | – | – | – | – |
 | Rolle Turnierleiter / Mitglied vergeben (`club.role`) | ✓ | ✓ (nicht an Admins) | – | – | – |
 | Eigentum anbieten, Angebot zurückziehen (`club.owner.offer`, `.cancel`) | ✓ | – | – | – | – |
-| Eigentum annehmen (`club.owner.accept`) | – | nur die angebotene Person | | | |
+| Eigentum annehmen (`club.owner.accept`, nennt `info` und `member`) | – | nur die angebotene Person | | | |
 | Zugriff auf Früheres freigeben (`club.keys`) | ✓ | ✓ | – | – | – |
 | Saison anlegen, Regeln ändern, beenden (`club.season*`) | ✓ | ✓ | – | – | – |
 | Ergebnis für die Saison zählen lassen oder nicht (`club.result`) | ✓ | ✓ | ✓ | – | – |
@@ -31,6 +33,8 @@ Jede Änderung wird **gegen die Rolle des Autors zu dem Zeitpunkt geprüft, an d
 
 Nach `club.owner.accept` ist der bisherige Eigentümer Admin. Lesen ist keine Rolle, sondern Verschlüsselung: Wer verpackt wurde, liest; wer entfernt wurde, wird für Neues nicht mehr verpackt ([club.md](families/club.md)).
 
+Eine wartende Anfrage nimmt nicht nur `club.accept` an: Eine Rollenänderung oder Entfernung, die den Beitritt als `prev` nennt, und ein Eigentumsangebot an die Person nehmen sie zuerst an, mit denselben Prüfungen (persönliche Einladung unbenutzt, Höchstzahl). So sieht auch ein Leser, der den Gruppenlink nicht öffnen kann, die Entscheidung von Eigentümer oder Admin ([club.md](families/club.md#einladungen-und-beitritt)).
+
 ## Turnier
 
 | Handlung | Veranstalter | Board (zugelassener Geräteschlüssel) | Spieler | Gast |
@@ -42,7 +46,7 @@ Nach `club.owner.accept` ist der bisherige Eigentümer Admin. Lesen ist keine Ro
 | Ergebnis einreichen (`tournament.result`) | ✓ (zählt sofort) | ✓ nur für zugewiesene Spiele (zählt bei `approval: "board"`) | – | – |
 | Ergebnis freigeben, korrigieren | ✓ | – | – | – |
 | Spiel als Autorität gründen und übergeben (`match.session`) | ✓ | ✓ | – | – |
-| Leitung anbieten / annehmen | ✓ / – | – | – / nur die angebotene Person | – |
+| Leitung anbieten / annehmen (die Annahme nennt `core`) | ✓ / – | – | – / nur die angebotene Person | – |
 | Turnierauszeichnung vergeben (`mayIssueTournamentBadge`) | wer das Turnier beendet hat | – | – | – |
 
 Bei Club-Turnieren muss die gründende und die übernehmende Person zu diesem Zeitpunkt im Club Eigentümer, Admin oder Turnierleiter sein (`clubRole`). Ein Board hat nur seinen eingeschränkten Zugang; niemand nutzt am Board den Hauptschlüssel des Veranstalters.

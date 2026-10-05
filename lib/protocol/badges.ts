@@ -192,35 +192,58 @@ export interface ProfileBadge {
   address: string
   // Id of the kind 8 award.
   award: string
+  // Relay hints as other clients write them (["a", address, relay], ["e", award, relay]).
+  addressRelay?: string
+  awardRelay?: string
 }
 
 const ADDRESS = /^30009:[0-9a-f]{64}:[^\s]{1,200}$/
 
-// The profile's choice, in its order. Pairs of ["a", address] and ["e", award]; badges of other
-// apps are kept as they are, so writing back after reading loses nothing.
-export function profileBadgesTemplate(badges: readonly ProfileBadge[], created_at: number): EventTemplate {
+// The profile's choice, in its order: pairs of ["a", address] and ["e", award], each with its
+// relay hint when it has one. `other` are tags of the list this code does not read as a pair
+// (otherProfileTags); they are written back unchanged after the pairs, so a read-modify-write
+// of a list another app wrote loses nothing.
+export function profileBadgesTemplate(badges: readonly ProfileBadge[], created_at: number, other: readonly string[][] = []): EventTemplate {
   const tags: string[][] = []
   for (const b of badges) {
     if (!ADDRESS.test(b.address) || !HEX64.test(b.award)) throw new ProtocolError("invalid_content", "badge address or award id")
-    tags.push(["a", b.address], ["e", b.award])
+    tags.push(b.addressRelay ? ["a", b.address, b.addressRelay] : ["a", b.address], b.awardRelay ? ["e", b.award, b.awardRelay] : ["e", b.award])
+  }
+  for (const t of other) {
+    if (!Array.isArray(t) || t.length === 0 || !t.every((v) => typeof v === "string")) throw new ProtocolError("invalid_tags", "a kept tag is not a list of strings")
+    tags.push([...t])
   }
   const template = { kind: KIND_PROFILE_BADGES, created_at, tags, content: "" }
   if (signedEventBytes(template) > MAX_EVENT_BYTES) throw new ProtocolError("too_large", "too many badges in one profile choice")
   return template
 }
 
-// Reads a 10008 choice, or a former 30008 one with d=profile_badges; anything else is null.
-export function readProfileBadges(event: SignedEvent): ProfileBadge[] | null {
-  const legacy = event.kind === KIND_PROFILE_BADGES_LEGACY && tagValue(event.tags, "d") === "profile_badges"
-  if (event.kind !== KIND_PROFILE_BADGES && !legacy) return null
-  const out: ProfileBadge[] = []
-  let address: string | undefined
+const isProfileChoice = (event: SignedEvent) =>
+  event.kind === KIND_PROFILE_BADGES || (event.kind === KIND_PROFILE_BADGES_LEGACY && tagValue(event.tags, "d") === "profile_badges")
+
+// Walks the list: the a/e pairs it reads, and every other tag (unknown tags, an "a" without its
+// "e", an unreadable pair). The former list's d tag belongs to the old kind and is dropped.
+function walkProfile(event: SignedEvent): { badges: ProfileBadge[]; other: string[][] } {
+  const badges: ProfileBadge[] = []
+  const other: string[][] = []
+  let a: string[] | undefined
   for (const t of event.tags) {
-    if (t[0] === "a") address = ADDRESS.test(t[1] ?? "") ? t[1] : undefined
-    else if (t[0] === "e" && address !== undefined) {
-      if (HEX64.test(t[1] ?? "")) out.push({ address, award: t[1] })
-      address = undefined
-    }
+    if (t[0] === "a") {
+      if (a) other.push(a)
+      a = t
+    } else if (t[0] === "e" && a) {
+      if (ADDRESS.test(a[1] ?? "") && HEX64.test(t[1] ?? "")) {
+        badges.push({ address: a[1], award: t[1], ...(a[2] ? { addressRelay: a[2] } : {}), ...(t[2] ? { awardRelay: t[2] } : {}) })
+      } else other.push(a, t)
+      a = undefined
+    } else if (!(t[0] === "d" && event.kind === KIND_PROFILE_BADGES_LEGACY)) other.push(t)
   }
-  return out
+  if (a) other.push(a)
+  return { badges, other }
 }
+
+// Reads a 10008 choice, or a former 30008 one with d=profile_badges; anything else is null.
+export const readProfileBadges = (event: SignedEvent): ProfileBadge[] | null => (isProfileChoice(event) ? walkProfile(event).badges : null)
+
+// The tags of such a list that readProfileBadges does not return, for writing back.
+export const otherProfileTags = (event: SignedEvent): string[][] | null => (isProfileChoice(event) ? walkProfile(event).other : null)

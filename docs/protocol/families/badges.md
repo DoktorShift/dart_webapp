@@ -4,7 +4,7 @@ Stand: P0.05. Code: [`badges.ts`](../../../lib/protocol/badges.ts). Vektoren: [`
 
 ## Zweck
 
-Auszeichnungen nach NIP-58: Definition (Kind 30009), Vergabe (Kind 8), Profilauswahl (Kind 10008; das Altformat 30008 mit `d=profile_badges` bleibt lesbar). Es gibt keinen BlueLine-Ausstellerschlüssel: Club- und Turnierauszeichnungen vergibt der berechtigte Veranstalter mit seinem Schlüssel, persönliche Meilensteine nur der Spieler selbst, gekennzeichnet als „Selbst erreicht“.
+Auszeichnungen nach NIP-58: Definition (Kind 30009), Vergabe (Kind 8), Profilauswahl (Kind 10008; das Altformat 30008 mit `d=profile_badges` bleibt lesbar). Die Auswahl gehört allen Apps des Profils: `readProfileBadges` liefert die Paare mit ihren Relay-Hinweisen, `otherProfileTags` alles, was kein lesbares Paar ist, und `profileBadgesTemplate(badges, created_at, other)` schreibt beides unverändert zurück (ohne das `d` des Altformats); beim Zurückschreiben geht nichts einer anderen App verloren. Es gibt keinen BlueLine-Ausstellerschlüssel: Club- und Turnierauszeichnungen vergibt der berechtigte Veranstalter mit seinem Schlüssel, persönliche Meilensteine nur der Spieler selbst, gekennzeichnet als „Selbst erreicht“.
 
 ## Definition (Kind 30009)
 

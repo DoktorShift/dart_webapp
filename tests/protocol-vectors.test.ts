@@ -2,7 +2,8 @@ import { test } from "node:test"
 import assert from "node:assert/strict"
 import { createHash, createHmac, hkdfSync } from "node:crypto"
 import { readFileSync } from "node:fs"
-import { decodeBolt11, nip44, verifyEvent } from "nostr-core"
+import { decodeBolt11, getPublicKey, nip44, verifyEvent } from "nostr-core"
+import { schnorr } from "@noble/curves/secp256k1"
 import type { NostrEvent } from "nostr-core"
 import { replay } from "../lib/game/engine.ts"
 import { checkBadgeAward, dedupeAwards } from "../lib/protocol/badges.ts"
@@ -10,7 +11,7 @@ import { checkJoin, decodeBoardLink, parseBoardEvent } from "../lib/protocol/boa
 import { assembleChunks, chunkData } from "../lib/protocol/chunks.ts"
 import type { ClubRole } from "../lib/protocol/club.ts"
 import { clubRoleAt, reduceClub } from "../lib/protocol/club-state.ts"
-import { inviteProof, previewKey, readInvitePreview, verifyInviteProof } from "../lib/protocol/invite.ts"
+import { inviteKey, inviteProof, previewKey, readInvitePreview, verifyInviteProof } from "../lib/protocol/invite.ts"
 import { decodeLinkPayload, parseLinkFragment } from "../lib/protocol/links.ts"
 import { reduceMatch } from "../lib/protocol/match-state.ts"
 import type { PairingSession } from "../lib/protocol/pairing.ts"
@@ -136,6 +137,7 @@ test("club vectors", async () => {
       const expected = Object.fromEntries(Object.entries(want.members as Record<string, string>).map(([n, role]) => [idOf(keys, n), role]))
       assert.deepEqual(Object.fromEntries(Object.entries(s.members).map(([pk, m]) => [pk, m.role])), expected, `${c.name}: members`)
     }
+    if (want.memberCount !== undefined) assert.equal(Object.keys(s.members).length, want.memberCount, `${c.name}: member count`)
     if (want.via) for (const [n, via] of Object.entries(want.via)) assert.equal(s.members[idOf(keys, n)]?.via, via, `${c.name}: via`)
     if (want.inviteUses) for (const [label, n] of Object.entries(want.inviteUses)) assert.equal(s.invites[c.labels[label]].uses.length, n, `${c.name}: uses`)
     if (want.requests)
@@ -163,33 +165,61 @@ test("club vectors", async () => {
     // Every member's role in the history matches the final state.
     for (const [pk, m] of Object.entries(s.members)) assert.equal(clubRoleAt(s, pk, c.now), m.role, `${c.name}: history of ${pk}`)
     for (const pk of Object.keys(s.former)) assert.equal(clubRoleAt(s, pk, c.now), null, `${c.name}: history of former ${pk}`)
-  }
-})
-
-test("club vectors: no invite token or plaintext of a sealed record reaches a relay", () => {
-  const file = load("club")
-  for (const c of file.cases) {
-    for (const e of c.events as SignedEvent[]) {
-      if (!e.tags.some((t) => t[0] === "enc")) continue
-      const plaintext = c.plaintexts[e.id]
-      const token = JSON.parse(plaintext).token
-      if (token) assert.ok(!JSON.stringify(e).includes(token), `${c.name}: token in ${e.id}`)
-      for (const name of Object.keys(file.keys)) assert.ok(!e.content.includes(file.keys[name].pubkey), `${c.name}: ${name} named in a sealed envelope`)
+    // A tournament founded for the club counts when its founder's role, as this reader sees the
+    // club, allows it (tournament-state.ts clubRole).
+    if (c.tournament) {
+      const t = reduceTournament(c.tournament.events, c.tournament.root, { now: c.now, clubRole: (pk, at) => clubRoleAt(s, pk, at) })
+      assert.ok(t.state, `${c.name}: club tournament`)
+      assert.equal(t.state.organizer, idOf(keys, c.tournament.organizer), `${c.name}: club tournament organizer`)
+      assert.deepEqual(t.state.club, { id: c.root, verified: true }, `${c.name}: club tournament club`)
     }
   }
 })
 
-test("invite vectors: proofs and preview keys follow the documented derivations", () => {
-  for (const v of load("invite").cases) {
-    const independent = createHmac("sha256", Buffer.from(v.token, "hex")).update(`blueline-invite-v1:${v.pubkey}`).digest("hex")
-    assert.equal(v.proof, independent)
-    assert.equal(inviteProof(v.token, v.pubkey), independent)
-    assert.ok(verifyInviteProof(v.token, v.pubkey, v.proof))
-    assert.ok(!verifyInviteProof(v.token, v.pubkey, independent.replace(/^./, (ch: string) => (ch === "0" ? "1" : "0"))))
+test("club vectors: no invite token, label in the clear or reader's pubkey reaches a relay", () => {
+  const file = load("club")
+  const tokens = load("invite").cases.map((v: { token: string }) => v.token)
+  let invites = 0
+  for (const c of file.cases) {
+    for (const e of c.events as SignedEvent[]) {
+      for (const token of tokens) assert.ok(!JSON.stringify(e).includes(token), `${c.name}: token in ${e.id}`)
+      const sealed = e.tags.some((t) => t[0] === "enc")
+      if (e.tags.some((t) => t[0] === "l" && t[1] === "club.invite")) {
+        invites++
+        const content = JSON.parse(sealed ? c.plaintexts[e.id] : e.content)
+        assert.equal(content.token, undefined, `${c.name}: invite ${e.id} carries a token`)
+        assert.match(content.key, /^[0-9a-f]{64}$/)
+        if (!sealed) assert.equal(content.label, undefined, `${c.name}: label in the clear`)
+      }
+      if (!sealed) continue
+      for (const name of Object.keys(file.keys)) assert.ok(!e.content.includes(file.keys[name].pubkey), `${c.name}: ${name} named in a sealed envelope`)
+    }
+  }
+  assert.ok(invites > 20)
+})
+
+test("invite vectors: invite keys, proofs and preview keys follow the documented derivations", () => {
+  const cases = load("invite").cases
+  for (const v of cases) {
+    // HKDF and the message hash with node:crypto, the curve with nostr-core's own primitive.
+    const secret = Buffer.from(hkdfSync("sha256", Buffer.from(v.token, "hex"), "blueline-invite-v1", "proof", 32))
+    assert.equal(v.inviteKey, getPublicKey(Uint8Array.from(secret)))
+    assert.equal(inviteKey(v.token), v.inviteKey)
+    const message = createHash("sha256").update(`blueline-invite-v1:${v.pubkey}`).digest()
+    assert.ok(schnorr.verify(hexBytes(v.proof), Uint8Array.from(message), hexBytes(v.inviteKey)))
+    assert.equal(inviteProof(v.token, v.pubkey, new Uint8Array(32)), v.proof)
+    assert.ok(verifyInviteProof(v.inviteKey, v.pubkey, v.proof))
+    // Any auxiliary randomness gives another, equally valid proof.
+    assert.ok(verifyInviteProof(v.inviteKey, v.pubkey, inviteProof(v.token, v.pubkey)))
+    assert.ok(!verifyInviteProof(v.inviteKey, v.pubkey, v.proof.replace(/^./, (ch: string) => (ch === "0" ? "1" : "0"))))
     const hkdf = Buffer.from(hkdfSync("sha256", Buffer.from(v.token, "hex"), "blueline-invite-v1", "preview", 32)).toString("hex")
     assert.equal(v.previewKey, hkdf)
     assert.equal(Buffer.from(previewKey(v.token)).toString("hex"), hkdf)
   }
+  // A proof is bound to its joiner and to its link.
+  const [a, b, c] = cases
+  assert.ok(!verifyInviteProof(a.inviteKey, b.pubkey, a.proof))
+  assert.ok(!verifyInviteProof(c.inviteKey, a.pubkey, a.proof))
 })
 
 test("seal vectors: hints, wraps, content key and preview", () => {

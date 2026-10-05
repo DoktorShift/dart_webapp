@@ -1007,9 +1007,16 @@
           "maxLength": 64,
           "pattern": "^[0-9a-f]{64}$",
           "description": "Event id"
+        },
+        "core": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Last change of the tournament core (or its id) the new organizer saw: pins the former organizer's core changes"
         }
       },
-      "required": ["offer"],
+      "required": ["offer", "core"],
       "additionalProperties": true
     }
   }

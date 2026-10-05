@@ -2,7 +2,7 @@
 
 Das offen beschriebene Darts-Format für Nostr: Kinds, Verträge je Eventfamilie, Rechte, Konfliktregeln, Datenschutz, JSON-Schemas und Testvektoren. Grundlage sind das Kapitel „Ereignismodell und eigenes Darts Format“ in [PLAN.md](../implementation/PLAN.md), [Entscheidung 0001](../decisions/0001-kein-eigenes-backend.md) und [Entscheidung 0002](../decisions/0002-architektur.md) §6 und §7.
 
-Stand: **P0.05**, 4. Oktober 2026, Formatversion 1. Implementierung: [`lib/protocol/`](../../lib/protocol) (reines TypeScript ohne Netzwerk). Die Kind-Nummern sind noch nicht im Kind-Register eingetragen und das Siegelverfahren geschlossener Clubs ist noch nicht extern geprüft (beides Nutzerhandlungen); bis dahin gilt hier nichts als Standard für andere Apps.
+Stand: **P0.05**, 4. Oktober 2026, nach Review Runde 1 am 5. Oktober 2026, Formatversion 1. Implementierung: [`lib/protocol/`](../../lib/protocol) (reines TypeScript ohne Netzwerk). Die Kind-Nummern sind noch nicht im Kind-Register eingetragen und das Siegelverfahren geschlossener Clubs ist noch nicht extern geprüft (beides Nutzerhandlungen); bis dahin gilt hier nichts als Standard für andere Apps.
 
 ## Aufbau
 
@@ -27,7 +27,7 @@ Stand: **P0.05**, 4. Oktober 2026, Formatversion 1. Implementierung: [`lib/proto
 
 ## Testvektoren
 
-`node tests/support/make-vectors.ts` erzeugt `vectors/` und `schemas/` byteidentisch neu (feste Schlüssel aus Namen, feste Zeiten, feste Inhaltsschlüssel und Nonces, BIP-340 ohne Zufall). Die Erwartungen (angewandt, abgelehnt mit Grund, nicht angewandt, Zustand) sind je Fall von Hand aus diesen Regeln geschrieben, nicht aus den Reducern errechnet. `npm test` prüft, dass die Dateien aktuell sind, dass jede Signatur mit nostr-core gilt und dass die Implementierung jede Erwartung erfüllt; Ableitungen (HMAC, HKDF, Hashes, Auslosung) rechnet der Test unabhängig mit `node:crypto` nach. `node --test tests/relay/nak.test.ts` prüft zusätzlich mit nak als unabhängiger Implementierung: alle Signaturen, das Entpacken der Inhaltsschlüssel (NIP-44) und einen Durchlauf durch ein lokales In-Memory-Relay.
+`node tests/support/make-vectors.ts` erzeugt `vectors/` und `schemas/` byteidentisch neu (feste Schlüssel aus Namen, feste Zeiten, feste Inhaltsschlüssel und Nonces, BIP-340 ohne Zufall). Die Erwartungen (angewandt, abgelehnt mit Grund, nicht angewandt, Zustand) sind je Fall von Hand aus diesen Regeln geschrieben, nicht aus den Reducern errechnet. `npm test` prüft, dass die Dateien aktuell sind, dass jede Signatur mit nostr-core gilt und dass die Implementierung jede Erwartung erfüllt; Ableitungen (HMAC, HKDF, Hashes, Auslosung) rechnet der Test unabhängig mit `node:crypto` nach, Einladungsnachweise prüft er mit der BIP-340-Prüfung, die auch nostr-core verwendet. `node --test tests/relay/nak.test.ts` prüft zusätzlich mit nak als unabhängiger Implementierung: alle Signaturen, das Entpacken der Inhaltsschlüssel (NIP-44) und einen Durchlauf durch ein lokales In-Memory-Relay.
 
 ## Feste Regeln
 

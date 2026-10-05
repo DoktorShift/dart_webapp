@@ -2,13 +2,14 @@ import { after, before, test } from "node:test"
 import assert from "node:assert/strict"
 import { execFileSync, spawn, spawnSync } from "node:child_process"
 import type { ChildProcess } from "node:child_process"
+import { hkdfSync } from "node:crypto"
 import { readFileSync } from "node:fs"
 import { KIND_EPHEMERAL, KIND_RECORD, KIND_STATE } from "../../lib/protocol/kinds.ts"
 
 // Interop checks against nak (github.com/fiatjaf/nak), an independent Go implementation:
 // signatures and ids of every vector event, NIP-44 decryption of the content-key wraps of a
-// sealed club record, and a round trip through nak's in-memory relay (only localhost, never a
-// public relay).
+// sealed club record, the public key of an invite key, and a round trip through nak's
+// in-memory relay (only localhost, never a public relay).
 //
 //   node --test tests/relay/nak.test.ts        (needs nak on PATH or in /opt/homebrew/bin)
 
@@ -57,6 +58,13 @@ test("nak unwraps each reader's content key of a sealed club record", { skip }, 
     assert.ok(wrap, `wrap for ${reader.name}`)
     assert.equal(nak(["decrypt", "--sec", v.keys[reader.name].secret, "-p", sealed.event.pubkey, wrap[1]]).trim(), sealed.contentKey)
   }
+})
+
+test("nak derives the invite key's public key from the token's HKDF secret", { skip }, () => {
+  // The secret by node:crypto, the public key by nak: neither is lib/protocol.
+  const [v] = load("invite").cases
+  const secret = Buffer.from(hkdfSync("sha256", Buffer.from(v.token, "hex"), "blueline-invite-v1", "proof", 32)).toString("hex")
+  assert.equal(nak(["key", "public", secret]).trim(), v.inviteKey)
 })
 
 let relay: ChildProcess | null = null

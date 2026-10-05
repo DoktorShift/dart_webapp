@@ -64,7 +64,7 @@
       "expires": 1760086400
     },
     "event": {
-      "id": "4907a331b6d81c91e0fa49c3b03680bf7067c8c563593a27480d73c0f8c70f9e",
+      "id": "a9bb6be1bb82d99e68bff59594a98f1f2c8db640327c20521ee91ab32d85b415",
       "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
       "created_at": 1760000020,
       "kind": 1180,
@@ -76,10 +76,10 @@
         ["alt", "BlueLine Darts club.invite"],
         ["enc", "seal"]
       ],
-      "content": "{\"v\":1,\"n\":\"5+o3AN+GjFbkPYtVmA9Kwzwq8vD4STfx\",\"c\":\"RI489TnFLZ6+QZDgbdj5jcwNtz+3rtIK3shgfd7olvrRGOwkQYd8PCLqM/uSEuNOuKLi56xxASOFDYn5KYG6tj/6QtCVOuSJrXjAhaPaGYC9kXqjXIoYSfvQGSEYpszF\",\"k\":[[\"b42666b5\",\"Arie6C1y1TajQNdIwnDcmx6OJo2v/kUi0Bu4gw2orIKlVqJtF0kJlHHwW2lSiWlnyPPcaXXDo5kfrG2VHITyVqBenCRNftB1q2Sb4x2RT5fB7UMJpMgPbSybO7yvVume6/CKNl2vjfQyPHokJskv/gxxMVODojib3PoLLqFFcRBymww=\"]],\"p\":{\"n\":\"sI+Ucwok8dazJQkf4EwkE/F4Ucmuol2b\",\"c\":\"ZUYP6bNdP/eXDlTgRu8f8gAKDAJAPjlBThm3WVW8QXG1dybsgSZTfKY63Fy0gbok2e7BWgQSXCGEdcDwm3d7k0M4XHHzVWWZ017xijTkhrWOh3th/0XkySECbo4DnqABZSNR0Rfa+aydFC9/Ns/6GK7d8ldmodNDCfhmV0a4iqAIxVnnipz5+LwGQ2faeqTDd1FJnANyPjkq\"}}",
-      "sig": "f21aa0ff16c1934afd6f29143aa835f3eb5dd0fea1ca637fd4e295449d972b562410ececf813cace20a753be37c9815476c3ec5263590c8c7d79ae51a4d2ecc6"
+      "content": "{\"v\":1,\"n\":\"iAK9OipFDZbcnmdqG/NijnNhvd9tbGAg\",\"c\":\"2UObVy5DUjMjl3/jEj01Ju0u6R7XG0vZzq4YuOkE74APtKiXqiTncoMn6+AdLQjZcaSA8qoEe3q7dnOiC/7evF9izn3uOsai61yG+TgCU5I+oTtwpQjw1uD5eh6ydvO51ABOl4MiXHKsPT+k1B2SC0DC/YLrtEqAFOznT4LW\",\"k\":[[\"87d95c24\",\"AmjhlXX/HSXAgGJeDgWAz7ift1tcI+btvQdFWL+jNBIFLs2dRvQ5UgFVngPvwz7kIWLj8+Mf4gPojm+sCp0HodIFJFZIoIk3pkDgeilld/Hhqi69D5YWQddsq4ifsQtcCEZuhVy5aokgq/5mLI+8mq+MuSeDWyKtRCJgUD7zmtzU1O4=\"]],\"p\":{\"n\":\"sI+Ucwok8dazJQkf4EwkE/F4Ucmuol2b\",\"c\":\"ZUYP6bNdP/eXDlTgRu8f8gAKDAJAPjlBThm3WVW8QXG1dybsgSZTfKY63Fy0gbok2e7BWgQSXCGEdcDwm3d7k0M4XHHzVWWZ017xijTkhrWOh3th/0XkySECbo4DnqABZSNR0Rfa+aydFC9/Ns/6GK7d8ldmodNDCfhmV0a4iqAIxVnnipz5+LwGQ2faeqTDd1FJnANyPjkq\"}}",
+      "sig": "a3ba188d1c3f129e326db6e31a6a81df20b75cbc98f20c045edd0a0020650eb635f7e29db9773187395e0489dd6f0e41bc0cee9b2382c4a93f90a339108c008d"
     },
-    "plaintext": "{\"kind\":\"group\",\"token\":\"1f7f9485c7c897e7959aab95e044464f\",\"expires\":1760086400}"
+    "plaintext": "{\"kind\":\"group\",\"key\":\"fe36e90f96832e31afc00341723f386b096ded775514d2dd1c149704c79f841a\",\"expires\":1760086400}"
   },
   "keys": {
     "alice": {

@@ -4,7 +4,7 @@ import type { RecordSpec } from "./common.ts"
 import { alias, eventId, matchRules, name, objectId, prev, pubkey, shortText } from "./common.ts"
 import { KIND_RECORD } from "./kinds.ts"
 import type { Schema } from "./schema.ts"
-import { arr, bool, hex, httpsUrl, int, nullable, obj, oneOf, opt, refine, str, time } from "./schema.ts"
+import { arr, bool, hex, httpsUrl, id32, int, nullable, obj, oneOf, opt, refine, str, time } from "./schema.ts"
 
 // Tournament records (docs/protocol/families/tournament.md). A tournament is the id of its
 // tournament.found event; state comes from replaying the records (tournament-state.ts).
@@ -145,7 +145,10 @@ export const TOURNAMENT_TYPES = {
   ),
   "tournament.handover.offer": rec(obj({ to: pubkey(), prev: prev() }), "The organizer offers the organization to someone"),
   "tournament.handover.cancel": rec(obj({ offer: eventId() }), "The organizer withdraws the open offer"),
-  "tournament.handover.accept": rec(obj({ offer: eventId() }), "The offered person takes over the organization"),
+  "tournament.handover.accept": rec(
+    obj({ offer: eventId(), core: id32("Last change of the tournament core (or its id) the new organizer saw: pins the former organizer's core changes") }),
+    "The offered person takes over the organization",
+  ),
 } satisfies Record<string, RecordSpec>
 
 // The derivations of lib/tournaments/draw.ts (engine 1), so a draw checked here is the draw the

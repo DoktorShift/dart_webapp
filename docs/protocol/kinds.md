@@ -41,7 +41,7 @@ Jeder Typ legt fest, wie sein Inhalt verschlüsselt sein darf (`encryption` in [
 | Form | Tag | Verwendung | Leser |
 | --- | --- | --- | --- |
 | keine | – | öffentliche Clubs, öffentliche Turniere und Spiele, Beitrittsanfragen | alle |
-| **Siegel** | `["enc","seal"]` | geschlossene Clubs und ihre Turniere; Einladungen und Schlüsselfreigaben immer | jede Person, für die der Inhaltsschlüssel verpackt ist |
+| **Siegel** | `["enc","seal"]` | geschlossene Clubs (mit ihren Einladungen) und ihre Turniere; Schlüsselfreigaben immer | jede Person, für die der Inhaltsschlüssel verpackt ist |
 | **Link-Schlüssel** | `["enc","nip44",<pubkey>]` | private Spiele (Spielschlüssel aus dem Link-Fragment) | wer den Link hat |
 
 ### Versiegelter Umschlag
@@ -94,8 +94,8 @@ Die vollständigen Inhaltsschemas stehen maschinenlesbar in [`schemas/`](schemas
 | Alter flüchtiger Nachrichten | ≤ 600 s beim Leser | Relays verwerfen ältere als 60 s; der Leser lässt einen Kopplungsvorgang lang Uhrabweichungen zu |
 | Kopplungs-QR / Code | ≤ 10 min gültig | Entscheidung 0002 §7 |
 | Board-QR | ≤ 60 min gültig | Spieler sammeln sich am Board; danach zeigt das Board einen neuen QR |
-| Leser eines versiegelten Events, Clubmitglieder | ≤ 100 | jede Verpackung kostet Platz im Event |
-| Geteilte Schlüssel je `club.keys` | ≤ 150 | mehr in mehreren Datensätzen |
+| Leser eines versiegelten Events, Mitglieder eines geschlossenen Clubs | ≤ 100 | jede Verpackung kostet Platz im Event; ein geschlossener Club ohne eigene Höchstzahl nimmt danach nur noch auf Anfrage auf, ein größerer öffentlicher Club lässt sich nicht schließen |
+| Geteilte Schlüssel je `club.keys` | ≤ 150 laut Schema; wie viele passen, hängt von den Lesern ab: 150 bis 20 Leser, 122 bei 50, 68 bei 100 (`maxSharedKeys`) | Verpackungen und Schlüssel teilen sich die 32 KiB; mehr in mehreren Datensätzen |
 | Turnierteilnehmer | ≤ 128 | erste verbindliche Lastgröße (PLAN.md); wie die Turnier-Engine |
 
 Größere Daten werden in hash-verkettete Stücke geteilt ([`chunks.ts`](../../lib/protocol/chunks.ts)): `prev_0` = 64 × „0", `hash_i = sha256(prev_i ‖ data_i)`, jedes Stück nennt den Kopf `set`; der verweisende Datensatz nennt Kopf, Stückzahl und Größe. Vektoren: [`vectors/chunks.json`](vectors/chunks.json).

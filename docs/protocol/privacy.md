@@ -10,7 +10,7 @@ Es gibt keinen eigenen Relay und keine Zugriffsrechte durch einen Server. **Schu
 
 | Familie | Immer sichtbar | Nur für Berechtigte lesbar |
 | --- | --- | --- |
-| Öffentlicher Club | alles außer Einladungen und Schlüsselfreigaben: Name, Beschreibung, Saisons, Rollen, wer beigetreten ist und wer wen aufgenommen hat | Einladungen (Tokens), Schlüsselfreigaben |
+| Öffentlicher Club | alles außer Schlüsselfreigaben: Name, Beschreibung, Saisons, Rollen, wer beigetreten ist und wer wen aufgenommen hat, Einladungen mit Art, Ablauf und öffentlichem Einladungsschlüssel (ohne Bezeichnung) | Schlüsselfreigaben; der Token eines Einladungslinks steht in keinem Event |
 | Geschlossener Club | Club-ID (Gründungs-ID), Pubkeys aller, die im Club **handeln** (Gründer, Beitretende, Verantwortliche, Austretende), Zeitpunkte, Anzahl und Größe der Datensätze, Datensatztyp im Label, Zahl der Verpackungen je Datensatz (≈ Mitgliederzahl aus Sicht des Autors) | Name, Beschreibung, Mitgliederliste und Rollen, Einladungen, Saisons, Termine, Ergebnisentscheidungen, Gründe |
 | Einladungslink | – (geht nie an einen Server) | Vorschau und Beitritt für jeden, der den Link hat |
 | Öffentliches Turnier | Regeln, Phase, Teilnehmende als Pubkey oder **Gast-Alias**, Auslosung, Boards, Ergebnisse | – |
@@ -30,6 +30,7 @@ Zusätzlich sieht jedes Relay die IP-Adresse und die Zeit jeder Verbindung; alle
 - Die Verpackungen nennen keine Pubkeys. Ihr Hinweis hängt von der Zufallsnonce des Datensatzes ab: Eine Mitgliederliste lässt sich daraus nicht ablesen; wer einen bestimmten Pubkey vermutet, kann ihn aber prüfen. Wer selbst im Club handelt (beitritt, annimmt, austritt), ist als Autor ohnehin sichtbar.
 - Entfernte Mitglieder bekommen Neues nicht mehr verpackt; was sie schon gelesen haben, behalten sie.
 - Die Vorschau im Einladungslink zeigt Name, Beschreibung, Bild, Gastgeber, Art und Ablauf der Einladung und den nächsten Termin, nicht mehr.
+- Ein Beitritt über einen Gruppenlink trägt einen Nachweis, den jeder mit dem öffentlichen Einladungsschlüssel prüfen kann. In einem geschlossenen Club steht dieser Schlüssel nur im versiegelten Einladungsdatensatz; dass jemand beigetreten ist, verrät ohnehin der Klartext-Beitritt.
 
 ## Gäste und Dritte
 
@@ -37,7 +38,7 @@ Signierte öffentliche Daten über Dritte lassen sich nicht zuverlässig zurück
 
 - **Gäste erscheinen in öffentlichen Datensätzen nur unter einem Alias**, den die Leitung wählt (Vorschlag „Gast 1“, „Gast 2“). Ein echter Name steht dort nur, wenn die Person zugestimmt hat; das hält `named: true` fest (`tournament.guest`). Ohne Zustimmung bleibt `named` weg, und die App schlägt einen neutralen Alias vor.
 - In Spielen stehen Plätze als `alias` mit optionalem `pubkey`; ein Pubkey nur, wenn die Person selbst mit ihrem Profil beigetreten ist. Für Gäste ohne Profil gilt dasselbe wie im Turnier: ein neutraler Alias, außer `named: true` hält die Zustimmung fest.
-- Echte Namen von Gästen gehören in verschlüsselte Daten (private Datensätze, versiegelte Clubdaten), nie in Klartext-Events.
+- Echte Namen von Gästen gehören in verschlüsselte Daten (private Datensätze, versiegelte Clubdaten), nie in Klartext-Events. Deshalb trägt eine Einladung im Klartext keine Bezeichnung (sonst `invalid_content`): „Für Tom“ steht nur in versiegelten Einladungen.
 - Öffentliche Zusagen (NIP-52-RSVP) sind eine Entscheidung je Person.
 - Vergaben aus privaten Spielen oder geschlossenen Clubs nur nach ausdrücklicher Freigabe.
 

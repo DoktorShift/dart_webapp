@@ -1,28 +1,36 @@
 import type { ClubRole, SeasonRules } from "./club.ts"
-import { CLUB_PLAIN_TYPES } from "./club.ts"
+import { CLUB_PLAIN_TYPES, MAX_CLUB_MEMBERS } from "./club.ts"
 import type { InviteKind } from "./invite.ts"
 import { verifyInviteProof } from "./invite.ts"
-import type { Reason } from "./reasons.ts"
 import type { AnyRecord, BlueLineRecord } from "./records.ts"
-import type { FoundingProblem, ReplayLog, ReplayOptions } from "./replay.ts"
-import { applied, foundingProblem, prepare, reject } from "./replay.ts"
+import type { FoundingProblem, Pin, Problem, ReplayLog, ReplayOptions } from "./replay.ts"
+import { applied, copyLog, foundingProblem, handoverChain, pinRule, prepare, reject, settle, staleOr } from "./replay.ts"
 
 // Club state from the founding and all changes (docs/protocol/families/club.md and
 // permissions.md). Each change is checked against its author's role at that point of the
-// replay; a change that fails is kept in `rejected` with the reason and changes nothing.
+// replay; a change that fails is kept in `rejected` with the reason and changes nothing, one
+// that builds on data this reader cannot open waits in `unapplied`.
 //
 // Joining (docs/decisions/0002 §6): a group link admits a joiner with a valid proof at once,
 // unless the club has a member limit; a personal invite and a request without invite only
-// become membership through club.accept. Capacity and order are therefore always decided by an
-// owner or admin, never by a created_at the joiner chose.
+// become membership through acceptance. Capacity and order are therefore decided by an owner
+// or admin, never by a created_at the joiner chose. Whoever reads the invite checks the proof
+// (in a public club everyone); a reader who cannot sees a waiting request, and an owner's or
+// admin's record that treats the person as a member accepts it for that reader.
+//
+// Ends of authority (replay.ts): the ownership chain is replayed on its own first, and the
+// club.updates of an owner who handed over or an admin who was demoted count only up to what
+// the end of their role names.
 
 export interface ClubMember {
   pubkey: string
   role: ClubRole
   since: number
+  // "group": this reader checked the group link proof itself; "accepted": an owner or admin
+  // accepted the request (for a reader who cannot open the invite, also a group link joiner).
   via: "founder" | "group" | "accepted"
-  // Last change of this member (join, acceptance, role): the base a role change or removal
-  // must name as `prev`.
+  // The base a role change or removal names as `prev`: the join (also after an acceptance),
+  // then the last role change. The same for every reader, however they came to see the member.
   head: string
 }
 
@@ -30,6 +38,8 @@ export interface ClubInvite {
   // The club.invite event id.
   id: string
   kind: InviteKind
+  // Public key of the invite key: checks join proofs (invite.ts).
+  key: string
   by: string
   at: number
   expires: number
@@ -109,21 +119,49 @@ export interface ClubState {
 
 export type ClubResult = { state: ClubState } | { state: null; problem: FoundingProblem }
 
-type Problem = [Reason, string] | null
-
 const ARCHIVED_BLOCKS: readonly string[] = ["club.invite", "club.join", "club.accept", "club.season", "club.season.rules", "club.result", "club.date"]
+const OWNER_CHAIN = { offer: "club.owner.offer", cancel: "club.owner.cancel", accept: "club.owner.accept" }
+
+type Prepared = ReturnType<typeof prepare>
 
 export function reduceClub(events: readonly unknown[], clubId: string, opts: ReplayOptions = {}): ClubResult {
-  const { records, log, datedAt, founding } = prepare(events, clubId, opts)
+  const prepared = prepare(events, clubId, opts)
+  const { records, log, founding } = prepared
   if (!founding || founding.type !== "club.found") return { state: null, problem: founding ? "invalid" : foundingProblem(log, clubId) }
-  const f = founding.content
-  if (f.visibility === "closed" && founding.encryption !== "seal") {
+  if (founding.content.visibility === "closed" && founding.encryption !== "seal") {
     reject(log, founding, "sealing_required", "a closed club is sealed from its founding on")
     return { state: null, problem: "invalid" }
   }
+  // The ownership chain on its own first; each hand-over pins what the new owner saw of the
+  // club's details and of their own membership. Demotions of admins show up while replaying
+  // the club and pin that admin's club.updates: then the club is replayed once more with them.
+  const owners = handoverChain(records, founding, OWNER_CHAIN)
+  const pins: Pin[] = owners.ends.flatMap(({ from, accept }) => {
+    const c = (accept as BlueLineRecord<"club.owner.accept">).content
+    return [
+      { from, end: accept, subject: "info", head: c.info },
+      { from, end: accept, subject: `member:${accept.pubkey}`, head: c.member },
+    ]
+  })
+  const first = replay(prepared, founding, owners.superseded, pins)
+  if (first.demotions.length === 0) return { state: first.state }
+  return { state: replay(prepared, founding, owners.superseded, [...pins, ...first.demotions]).state }
+}
 
+// The subjects whose heads the end of a role pins, and the predecessor a record names.
+const pinSubject = (r: AnyRecord): string | null => {
+  if (r.type === "club.update") return "info"
+  if (r.type === "club.role" || r.type === "club.remove") return `member:${r.content.member}`
+  return null
+}
+const prevOf = (r: AnyRecord) => (r.content as { prev: string }).prev
+
+function replay(prepared: Prepared, founding: BlueLineRecord<"club.found">, superseded: ReadonlySet<string>, pins: readonly Pin[]) {
+  const { records, datedAt, unreadable } = prepared
+  const log = copyLog(prepared.log)
+  const f = founding.content
   const s: ClubState = {
-    id: clubId,
+    id: founding.id,
     founder: founding.pubkey,
     owner: founding.pubkey,
     info: { name: f.name, about: f.about, picture: f.picture, visibility: f.visibility, capacity: f.capacity, archived: false },
@@ -141,22 +179,16 @@ export function reduceClub(events: readonly unknown[], clubId: string, opts: Rep
     log,
   }
   applied(log, founding)
-  // Invite tokens stay beside the state: they are link secrets and must never end up in a
-  // view model, export or log by accident.
-  const tokens: Record<string, string> = {}
-  const parsed = new Set(records.map((r) => r.id))
+  const ctx: Context = { datedAt, unreadable, parsed: new Set(records.map((r) => r.id)), demotions: [] }
+  const pinned = pinRule(pins, records, founding.id, pinSubject, prevOf)
 
   for (const r of records) {
     if (r === founding) continue
-    if (r.created_at < founding.created_at) {
-      reject(log, r, "before_founding", "dated before the club was founded")
-      continue
-    }
-    const problem = apply(s, r, { tokens, datedAt, parsed })
-    if (problem) reject(log, r, problem[0], problem[1])
-    else applied(log, r)
+    if (r.created_at < founding.created_at) reject(log, r, "before_founding", "dated before the club was founded")
+    else if (superseded.has(r.id)) reject(log, r, "superseded", "the offer it competes with was accepted; dated before that acceptance")
+    else settle(log, r, pinned(r) ?? apply(s, r, ctx))
   }
-  return { state: s }
+  return { state: s, demotions: ctx.demotions }
 }
 
 // The role `pubkey` held in the club at `at` (unix seconds), from the replayed history.
@@ -174,21 +206,29 @@ export const mayIssueClubBadge = (state: ClubState, pubkey: string, at: number) 
 }
 
 interface Context {
-  tokens: Record<string, string>
   datedAt: Map<string, number>
+  unreadable: ReadonlySet<string>
   parsed: Set<string>
+  // Admins whose role ended in this replay: their club.updates are pinned (replay.ts).
+  demotions: Pin[]
 }
 
 const roleOf = (s: ClubState, pubkey: string): ClubRole | null => s.members[pubkey]?.role ?? null
 const memberCount = (s: ClubState) => Object.keys(s.members).length
-const full = (s: ClubState) => s.info.capacity !== undefined && memberCount(s) >= s.info.capacity
+// A closed club seals every record for all members (seal.ts), so it never grows past
+// MAX_CLUB_MEMBERS; its own capacity may be lower. A public club has a limit only when it sets one.
+const limitOf = (s: ClubState) => s.info.capacity ?? (s.info.visibility === "closed" ? MAX_CLUB_MEMBERS : undefined)
+const full = (s: ClubState) => {
+  const limit = limitOf(s)
+  return limit !== undefined && memberCount(s) >= limit
+}
 
 function setRole(s: ClubState, r: AnyRecord, pubkey: string, role: ClubRole | null) {
   s.history.push({ pubkey, role, at: r.created_at, event: r.id })
 }
 
-function addMember(s: ClubState, r: AnyRecord, pubkey: string, via: ClubMember["via"]) {
-  s.members[pubkey] = { pubkey, role: "member", since: r.created_at, via, head: r.id }
+function addMember(s: ClubState, r: AnyRecord, pubkey: string, via: ClubMember["via"], head: string) {
+  s.members[pubkey] = { pubkey, role: "member", since: r.created_at, via, head }
   delete s.requests[pubkey]
   delete s.former[pubkey]
   setRole(s, r, pubkey, "member")
@@ -201,10 +241,33 @@ function dropMember(s: ClubState, r: AnyRecord, pubkey: string, how: "left" | "r
   setRole(s, r, pubkey, null)
 }
 
+// Accepts a waiting request: with club.accept, or with a record of an owner or admin that
+// treats the person as a member (pending() below). Same checks either way.
+function admit(s: ClubState, r: AnyRecord, request: JoinRequest): Problem {
+  const invite = request.invite ? s.invites[request.invite] : undefined
+  if (invite?.kind === "personal") {
+    if (invite.uses.length > 0) return ["invite_exhausted", "the personal invite was used"]
+    if (invite.revoked) return ["invite_revoked", "the invite was ended"]
+  }
+  if (full(s)) return ["club_full", "the club is full"]
+  addMember(s, r, request.pubkey, "accepted", request.event)
+  invite?.uses.push({ pubkey: request.pubkey, event: r.id, at: r.created_at })
+  return null
+}
+
+// The waiting request of someone who is not a member, when a role change or removal names
+// their join as its base: for a reader who cannot open the invite of a group link joiner, that
+// record of an owner or admin is the confirmation.
+const pending = (s: ClubState, pubkey: string, prev: string): JoinRequest | undefined =>
+  !s.members[pubkey] && s.requests[pubkey]?.event === prev ? s.requests[pubkey] : undefined
+
+const ADMIN_PIN_MISSING: Problem = ["invalid_content", "ending an admin's role names the last club change its author saw (info)"]
+
 function apply(s: ClubState, r: AnyRecord, ctx: Context): Problem {
   const role = roleOf(s, r.pubkey)
   const manager = role === "owner" || role === "admin"
   const leader = manager || role === "director"
+  const stale = (prev: string, detail: string) => staleOr(ctx.unreadable, prev, detail)
   if (s.info.archived && ARCHIVED_BLOCKS.includes(r.type)) return ["club_archived", "the club is archived"]
   if (s.info.visibility === "closed" && r.encryption !== "seal" && !CLUB_PLAIN_TYPES.includes(r.type)) return ["sealing_required", "a closed club's records are sealed for its members"]
 
@@ -216,7 +279,8 @@ function apply(s: ClubState, r: AnyRecord, ctx: Context): Problem {
       const c = r.content
       if (!manager) return ["not_authorized", "only the owner or an admin edits the club"]
       if ((c.visibility !== undefined || c.archived !== undefined) && role !== "owner") return ["not_authorized", "only the owner changes visibility or archives"]
-      if (c.prev !== s.heads.info) return ["stale_predecessor", "the club was changed meanwhile"]
+      if (c.prev !== s.heads.info) return stale(c.prev, "the club was changed meanwhile")
+      if (c.visibility === "closed" && memberCount(s) > MAX_CLUB_MEMBERS) return ["club_full", `a closed club seals for at most ${MAX_CLUB_MEMBERS} members`]
       if (c.name !== undefined) s.info.name = c.name
       if (c.about !== undefined) s.info.about = c.about
       if (c.picture !== undefined) s.info.picture = c.picture ?? undefined
@@ -231,15 +295,16 @@ function apply(s: ClubState, r: AnyRecord, ctx: Context): Problem {
       const c = r.content
       if (!manager) return ["not_authorized", "only the owner or an admin invites"]
       if (c.expires <= r.created_at) return ["invite_expired", "expires before it is made"]
-      s.invites[r.id] = { id: r.id, kind: c.kind, by: r.pubkey, at: r.created_at, expires: c.expires, ...(c.label ? { label: c.label } : {}), revoked: false, uses: [] }
-      ctx.tokens[r.id] = c.token
+      // A label may name the invited person: never in the clear (docs/protocol/privacy.md).
+      if (c.label !== undefined && r.encryption !== "seal") return ["invalid_content", "an invite's label only travels sealed"]
+      s.invites[r.id] = { id: r.id, kind: c.kind, key: c.key, by: r.pubkey, at: r.created_at, expires: c.expires, ...(c.label ? { label: c.label } : {}), revoked: false, uses: [] }
       return null
     }
 
     case "club.invite.revoke": {
       if (!manager) return ["not_authorized", "only the owner or an admin ends invites"]
       const invite = s.invites[r.content.invite]
-      if (!invite) return ["invite_unknown", "no such invite"]
+      if (!invite) return ctx.parsed.has(r.content.invite) ? ["invite_unknown", "no such invite"] : ["waiting", "names an invite this reader cannot open or has not loaded"]
       if (invite.revoked) return ["invite_revoked", "already ended"]
       invite.revoked = true
       return null
@@ -254,15 +319,7 @@ function apply(s: ClubState, r: AnyRecord, ctx: Context): Problem {
       if (s.members[c.member]) return ["already_member", "already a member"]
       const request = s.requests[c.member]
       if (!request || request.event !== c.request) return ["request_unknown", "no such waiting request"]
-      const invite = request.invite ? s.invites[request.invite] : undefined
-      if (invite?.kind === "personal") {
-        if (invite.uses.length > 0) return ["invite_exhausted", "the personal invite was used"]
-        if (invite.revoked) return ["invite_revoked", "the invite was ended"]
-      }
-      if (full(s)) return ["club_full", "the club is full"]
-      addMember(s, r, c.member, "accepted")
-      invite?.uses.push({ pubkey: c.member, event: r.id, at: r.created_at })
-      return null
+      return admit(s, r, request)
     }
 
     case "club.decline": {
@@ -286,34 +343,56 @@ function apply(s: ClubState, r: AnyRecord, ctx: Context): Problem {
 
     case "club.remove": {
       const c = r.content
-      const target = s.members[c.member]
       if (!manager) return ["not_authorized", "only the owner or an admin removes members"]
+      const waiting = pending(s, c.member, c.prev)
+      const target = s.members[c.member] ?? (waiting ? { role: "member" as ClubRole, head: waiting.event } : undefined)
       if (!target) return ["not_member", "not a member"]
       if (target.role === "owner" || (target.role === "admin" && role !== "owner")) return ["not_authorized", "this member outranks the author"]
-      if (c.prev !== target.head) return ["stale_predecessor", "the member was changed meanwhile"]
+      if (c.prev !== target.head) return stale(c.prev, "the member was changed meanwhile")
+      if (target.role === "admin" && c.info === undefined) return ADMIN_PIN_MISSING
+      if (waiting) {
+        const problem = admit(s, r, waiting)
+        if (problem) return problem
+      }
       dropMember(s, r, c.member, "removed", c.reason)
+      if (target.role === "admin") ctx.demotions.push({ from: c.member, end: r, subject: "info", head: c.info as string })
       return null
     }
 
     case "club.role": {
       const c = r.content
-      const target = s.members[c.member]
       if (!manager) return ["not_authorized", "only the owner or an admin gives roles"]
+      const waiting = pending(s, c.member, c.prev)
+      const target = s.members[c.member] ?? (waiting ? { role: "member" as ClubRole, head: waiting.event } : undefined)
       if (!target) return ["not_member", "not a member"]
       if (target.role === "owner") return ["not_authorized", "ownership changes only by handover"]
       if (role === "admin" && (target.role === "admin" || c.role === "admin")) return ["not_authorized", "only the owner appoints or changes admins"]
-      if (c.prev !== target.head) return ["stale_predecessor", "the member was changed meanwhile"]
-      target.role = c.role
-      target.head = r.id
+      if (c.prev !== target.head) return stale(c.prev, "the member was changed meanwhile")
+      const demotes = target.role === "admin" && c.role !== "admin"
+      if (demotes && c.info === undefined) return ADMIN_PIN_MISSING
+      if (waiting) {
+        const problem = admit(s, r, waiting)
+        if (problem) return problem
+      }
+      const member = s.members[c.member]
+      member.role = c.role
+      member.head = r.id
       setRole(s, r, c.member, c.role)
+      if (demotes) ctx.demotions.push({ from: c.member, end: r, subject: "info", head: c.info as string })
       return null
     }
 
     case "club.owner.offer": {
       const c = r.content
       if (role !== "owner") return ["not_authorized", "only the owner offers ownership"]
-      if (c.prev !== s.heads.owner) return ["stale_predecessor", "ownership was changed meanwhile"]
-      if (!s.members[c.to] || c.to === r.pubkey) return ["not_member", "ownership goes to another member"]
+      if (c.prev !== s.heads.owner) return stale(c.prev, "ownership was changed meanwhile")
+      // Offering ownership to someone with a waiting request accepts it, like a role change.
+      const waiting = s.members[c.to] ? undefined : s.requests[c.to]
+      if ((!s.members[c.to] && !waiting) || c.to === r.pubkey) return ["not_member", "ownership goes to another member"]
+      if (waiting) {
+        const problem = admit(s, r, waiting)
+        if (problem) return problem
+      }
       s.offer = { event: r.id, to: c.to, at: r.created_at }
       s.heads.owner = r.id
       return null
@@ -396,7 +475,7 @@ function apply(s: ClubState, r: AnyRecord, ctx: Context): Problem {
       if (!season) return ["season_unknown", "no such season"]
       if (season.ended) return ["season_ended", "the season has ended"]
       const before = s.results[c.season]?.[c.match]
-      if (c.prev !== (before?.event ?? s.id)) return ["stale_predecessor", "the result was decided meanwhile"]
+      if (c.prev !== (before?.event ?? s.id)) return stale(c.prev, "the result was decided meanwhile")
       ;(s.results[c.season] ??= {})[c.match] = {
         season: c.season,
         match: c.match,
@@ -414,7 +493,7 @@ function apply(s: ClubState, r: AnyRecord, ctx: Context): Problem {
       const c = r.content
       if (!leader) return ["not_authorized", "only the owner, an admin or a director plans dates"]
       const before = s.dates[c.date]
-      if (c.prev !== (before?.head ?? s.id)) return ["stale_predecessor", "the date was changed meanwhile"]
+      if (c.prev !== (before?.head ?? s.id)) return stale(c.prev, "the date was changed meanwhile")
       s.dates[c.date] = {
         id: c.date,
         title: c.title,
@@ -453,11 +532,11 @@ function join(s: ClubState, r: BlueLineRecord<"club.join">, ctx: Context): Probl
     const at = ctx.datedAt.get(c.invite)
     if (at !== undefined && at >= r.created_at) return ["invite_unknown", "dated before the invite it names"]
     if (ctx.parsed.has(c.invite)) return ["invite_unknown", "the invite it names is not valid"]
-    // This reader cannot open the invite (not wrapped for them, or not loaded yet).
+    // This reader cannot open the invite (sealed for others, or not loaded yet).
     request(s, r, "unverified", c.invite)
     return null
   }
-  if (!verifyInviteProof(ctx.tokens[c.invite], r.pubkey, c.proof as string)) return ["invite_proof_invalid", "the proof is not for this key"]
+  if (!verifyInviteProof(invite.key, r.pubkey, c.proof as string)) return ["invite_proof_invalid", "the proof is not for this key"]
   if (invite.revoked) return ["invite_revoked", "the invite was ended"]
   if (r.created_at > invite.expires) return ["invite_expired", "the invite has expired"]
   const gone = s.former[r.pubkey]
@@ -469,12 +548,13 @@ function join(s: ClubState, r: BlueLineRecord<"club.join">, ctx: Context): Probl
     return null
   }
   // A group link admits at once, unless a member limit makes it a question of order: then an
-  // owner or admin decides (docs/decisions/0001, point 10).
-  if (s.info.capacity !== undefined) {
+  // owner or admin decides (docs/decisions/0001, point 10). A closed club's own limit
+  // (MAX_CLUB_MEMBERS) counts once it is reached.
+  if (s.info.capacity !== undefined || full(s)) {
     request(s, r, "ok", invite.id)
     return null
   }
   invite.uses.push({ pubkey: r.pubkey, event: r.id, at: r.created_at })
-  addMember(s, r, r.pubkey, "group")
+  addMember(s, r, r.pubkey, "group", r.id)
   return null
 }

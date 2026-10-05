@@ -3,22 +3,25 @@ import { eventId, MODE_ID, name, objectId, prev, pubkey, shortText } from "./com
 import { INVITE_KINDS } from "./invite.ts"
 import { KIND_RECORD } from "./kinds.ts"
 import type { Infer, Schema } from "./schema.ts"
-import { arr, bool, hex, httpsUrl, int, nullable, obj, oneOf, opt, refine, str, time } from "./schema.ts"
+import { arr, bool, hex, httpsUrl, id32, int, nullable, obj, oneOf, opt, refine, str, time } from "./schema.ts"
 import { MAX_SEAL_READERS } from "./seal.ts"
 
 // Club records (docs/protocol/families/club.md). A club is the id of its club.found event;
 // every other record names it in its "e" tag. State comes from replaying them (club-state.ts).
 // In a closed club every record except club.join and club.leave is sealed for the current
-// members (seal.ts); nothing is encrypted to a shared club key.
+// members (seal.ts); nothing is encrypted to a shared club key. A public club's records,
+// invites included, travel in the clear; only key shares are always sealed.
 
 export const CLUB_ROLES = ["owner", "admin", "director", "member"] as const
 export type ClubRole = (typeof CLUB_ROLES)[number]
 
-// Members per club: every sealed record wraps its key once per member, and that has to fit
-// into one event (seal.ts).
+// Members of a closed club: every sealed record wraps its key once per member, and that has to
+// fit into one event (seal.ts). A closed club without its own capacity has this one
+// (club-state.ts); a public club seals nothing for its members and has no such limit.
 export const MAX_CLUB_MEMBERS = MAX_SEAL_READERS
 
-// Content keys one club.keys record shares; more go into several records.
+// Content keys one club.keys record may list. How many fit depends on the readers it is
+// sealed for (records.ts maxSharedKeys: 68 for 100 readers); more go into several records.
 export const MAX_SHARED_KEYS = 150
 
 export const seasonRules = obj({
@@ -51,20 +54,26 @@ const clubUpdate = refine(
   (v) => (Object.keys(v).length > 1 ? null : "changes nothing"),
 )
 
-// The invite id is the event id of this record. The token is the secret of the link; members
-// need it to check join proofs, which is why an invite is always sealed. The preview for people
-// who open the link sits in the same event, encrypted under previewKey(token) (invite.ts).
+// The invite id is the event id of this record. It names the public key of the invite key
+// derived from the link's token, never the token: whoever reads the record checks join proofs
+// (invite.ts). In a public club it travels in the clear, so everyone can; a closed club seals
+// it, with the preview for people who open the link encrypted under previewKey(token).
 const clubInvite = obj({
   kind: oneOf(INVITE_KINDS, "group: admits with a valid proof until expiry or revocation; personal: once, after acceptance"),
-  token: hex(16, "Invite token (secret of the link)"),
+  key: pubkey("Public key of the invite key HKDF(token, 'blueline-invite-v1', 'proof'), see invite.ts"),
   expires: time(),
   label: opt(shortText(60)),
 })
 
+// Ending an admin's role (club.role to a lower role, club.remove) names the last club.update
+// the author saw: the admin's club.updates dated before the end count only up to there
+// (replay.ts, "Ends of authority").
+const tenurePin = id32("Last club.update (or the club id) the author saw; required when the member is an admin")
+
 const clubJoin = refine(
   obj({
     invite: opt(eventId("club.invite event id")),
-    proof: opt(hex(32, "HMAC-SHA256(token, 'blueline-invite-v1:' + joiner pubkey), see invite.ts")),
+    proof: opt(hex(64, "BIP-340 signature of the invite key over sha256('blueline-invite-v1:' + joiner pubkey), see invite.ts")),
   }),
   (v) => ((v.invite === undefined) === (v.proof === undefined) ? null : "invite and proof go together"),
 )
@@ -108,17 +117,20 @@ const rec = <S extends Schema<unknown>>(schema: S, description: string, extra: P
 export const CLUB_TYPES = {
   "club.found": rec(clubFound, "Founds a club; its id is the club id", { root: "self" }),
   "club.update": rec(clubUpdate, "Changes name, description, picture, visibility, capacity or archive state"),
-  "club.invite": rec(clubInvite, "Creates a group link or a personal invite", { encrypted: true }),
+  "club.invite": rec(clubInvite, "Creates a group link or a personal invite; a label only travels sealed"),
   "club.invite.revoke": rec(obj({ invite: eventId("club.invite event id") }), "Ends an invite"),
   "club.join": rec(clubJoin, "Joins through a group link, or asks to join (personal invite or none)", { encryption: "none" }),
   "club.accept": rec(obj({ request: eventId("club.join event id"), member: pubkey() }), "Accepts a waiting join request"),
   "club.decline": rec(obj({ request: eventId("club.join event id") }), "Declines a waiting join request"),
   "club.leave": rec(obj({}), "A member leaves, or someone withdraws their waiting request"),
-  "club.remove": rec(obj({ member: pubkey(), prev: prev(), reason: opt(shortText()) }), "Removes a member"),
-  "club.role": rec(obj({ member: pubkey(), role: oneOf(["admin", "director", "member"]), prev: prev() }), "Gives a member a role"),
+  "club.remove": rec(obj({ member: pubkey(), prev: prev(), reason: opt(shortText()), info: opt(tenurePin) }), "Removes a member"),
+  "club.role": rec(obj({ member: pubkey(), role: oneOf(["admin", "director", "member"]), prev: prev(), info: opt(tenurePin) }), "Gives a member a role"),
   "club.owner.offer": rec(obj({ to: pubkey(), prev: prev() }), "The owner offers ownership to a member"),
   "club.owner.cancel": rec(obj({ offer: eventId() }), "The owner withdraws the open offer"),
-  "club.owner.accept": rec(obj({ offer: eventId() }), "The offered member takes over ownership"),
+  "club.owner.accept": rec(
+    obj({ offer: eventId(), info: id32("Last club.update (or the club id) the new owner saw"), member: id32("The new owner's own last member change (their join, or a role change)") }),
+    "The offered member takes over ownership",
+  ),
   "club.keys": rec(obj({ keys: arr(sharedKey, { min: 1, max: MAX_SHARED_KEYS }) }), "Shares content keys of earlier sealed records", { encrypted: true }),
   "club.season": rec(
     refine(obj({ season: objectId(), name: name(), starts: time(), ends: opt(time()), rules: seasonRules }), (v) =>

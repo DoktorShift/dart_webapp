@@ -1,7 +1,7 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { finalizeEvent, generateSecretKey, getPublicKey, nip44 } from "nostr-core"
-import { invitePreview, previewKey, readInvitePreview } from "../lib/protocol/invite.ts"
+import { inviteKey, invitePreview, previewKey, readInvitePreview } from "../lib/protocol/invite.ts"
 import { buildRecord, parseRecord, sealRecord } from "../lib/protocol/records.ts"
 import { ProtocolError } from "../lib/protocol/reasons.ts"
 import { contentKeyText, MAX_SEAL_READERS, MAX_WRAP_TRIES, newContentKey, newSealNonce, openEnvelope, openSealedEvents, parseEnvelope, wrapHint, wrapsFor } from "../lib/protocol/seal.ts"
@@ -121,18 +121,21 @@ test("a removed member is simply no longer wrapped for", async () => {
 test("the invite link's token opens the preview; members open the invite itself", async () => {
   const token = "0f".repeat(16)
   const preview = { name: "Dartfreunde Nord", about: "Dienstags ab 19 Uhr", host: owner.pubkey, hostName: "Mia", kind: "personal" as const, expires: NOW + 86400, next: { title: "Clubabend", starts: NOW + 3600 } }
-  const invite = sealedEvent(owner, "club.invite", { kind: "personal", token, expires: NOW + 86400 }, [owner.pubkey, alice.pubkey], {
+  const invite = sealedEvent(owner, "club.invite", { kind: "personal", key: inviteKey(token), expires: NOW + 86400, label: "Für Alice" }, [owner.pubkey, alice.pubkey], {
     preview: { key: previewKey(token), nonce: newSealNonce(), content: preview },
   })
   const env = parseEnvelope(invite.event.content)
   assert.deepEqual(readInvitePreview(env, token), invitePreview.check(preview, ""))
   assert.throws(() => readInvitePreview(env, "1f".repeat(16)), (e: unknown) => e instanceof ProtocolError && e.reason === "invite_proof_invalid")
-  // The token itself never stands in the event.
+  // The token stands neither in the event nor in what members read: they get the invite key's
+  // public key, which checks join proofs without opening the link.
   assert.ok(!invite.event.content.includes(token))
   const r = parseRecord(invite.event, { now: NOW })
   assert.equal(r.status, "sealed")
   const opened = await openSealedEvents([invite.event], { reader: alice.pubkey, unwrap: unwrapper(alice.secret) })
-  assert.equal(JSON.parse(opened.plaintexts.get(invite.event.id) as string).token, token)
+  const plaintext = opened.plaintexts.get(invite.event.id) as string
+  assert.ok(!plaintext.includes(token))
+  assert.equal(JSON.parse(plaintext).key, inviteKey(token))
 })
 
 test("a hundred members fit into one sealed record", () => {

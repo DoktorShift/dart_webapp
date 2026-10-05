@@ -1,8 +1,7 @@
 import type { ClubRole } from "./club.ts"
-import type { Reason } from "./reasons.ts"
 import type { AnyRecord, BlueLineRecord, ContentOf } from "./records.ts"
-import type { FoundingProblem, ReplayLog, ReplayOptions } from "./replay.ts"
-import { applied, foundingProblem, prepare, reject } from "./replay.ts"
+import type { FoundingProblem, Pin, Problem, ReplayLog, ReplayOptions } from "./replay.ts"
+import { applied, foundingProblem, handoverChain, pinRule, prepare, reject, settle, staleOr } from "./replay.ts"
 import type { TournamentPhase } from "./tournament.ts"
 import { drawOrder, seedCommitment, TOURNAMENT_ENGINE } from "./tournament.ts"
 
@@ -17,6 +16,11 @@ import { drawOrder, seedCommitment, TOURNAMENT_ENGINE } from "./tournament.ts"
 // or withdrawal can therefore never make the organizer's draw invalid. Pairings are the
 // tournament engine's: it reads `draw.order` and the approved results; `dependents` lets it
 // mark slots a correction affects.
+//
+// A hand-over of the organization is replayed on its own first (replay.ts, "Ends of
+// authority"): an accepted offer binds the former organizer, and the acceptance pins the core
+// (details, phase, seed, draw) the new organizer saw, so the former organizer cannot date core
+// changes back into their tenure afterwards.
 
 export type ParticipantStatus = "pending" | "registered" | "waitlist" | "withdrawn" | "removed"
 
@@ -105,8 +109,6 @@ export interface TournamentOptions extends ReplayOptions {
   clubRole?: (pubkey: string, at: number) => ClubRole | null
 }
 
-type Problem = [Reason, string] | null
-
 const BEFORE_DRAW: readonly TournamentPhase[] = ["registration", "checkin"]
 const PLAYING: readonly TournamentPhase[] = ["running", "paused"]
 const NEXT_PHASE: Record<TournamentPhase, readonly TournamentPhase[]> = {
@@ -119,9 +121,11 @@ const NEXT_PHASE: Record<TournamentPhase, readonly TournamentPhase[]> = {
   cancelled: [],
 }
 const CLUB_LEADERS: readonly (ClubRole | null)[] = ["owner", "admin", "director"]
+const HANDOVER_CHAIN = { offer: "tournament.handover.offer", cancel: "tournament.handover.cancel", accept: "tournament.handover.accept" }
+const CORE: readonly string[] = ["tournament.update", "tournament.phase", "tournament.seed", "tournament.draw"]
 
 export function reduceTournament(events: readonly unknown[], tournamentId: string, opts: TournamentOptions = {}): TournamentResult {
-  const { records, log, founding } = prepare(events, tournamentId, opts)
+  const { records, log, founding, unreadable } = prepare(events, tournamentId, opts)
   if (!founding || founding.type !== "tournament.found")
     return { state: null, problem: founding ? "invalid" : foundingProblem(log, tournamentId) }
   const f = founding.content
@@ -152,17 +156,30 @@ export function reduceTournament(events: readonly unknown[], tournamentId: strin
   }
   applied(log, founding)
 
+  const clubRole = opts.clubRole
+  const mayAccept = f.club && clubRole ? (pubkey: string, at: number) => CLUB_LEADERS.includes(clubRole(pubkey, at)) : undefined
+  const handovers = handoverChain(records, founding, HANDOVER_CHAIN, mayAccept)
+  const pins: Pin[] = handovers.ends.map(({ from, accept }) => ({
+    from,
+    end: accept,
+    subject: "core",
+    head: (accept as BlueLineRecord<"tournament.handover.accept">).content.core,
+  }))
+  const pinned = pinRule(pins, records, tournamentId, (r) => (CORE.includes(r.type) ? "core" : null), (r) => (r.content as { prev: string }).prev)
+  const ctx: Context = { opts, unreadable }
+
   for (const r of records) {
     if (r === founding) continue
-    if (r.created_at < founding.created_at) {
-      reject(log, r, "before_founding", "dated before the tournament was founded")
-      continue
-    }
-    const problem = apply(s, r, opts)
-    if (problem) reject(log, r, problem[0], problem[1])
-    else applied(log, r)
+    if (r.created_at < founding.created_at) reject(log, r, "before_founding", "dated before the tournament was founded")
+    else if (handovers.superseded.has(r.id)) reject(log, r, "superseded", "the offer it competes with was accepted; dated before that acceptance")
+    else settle(log, r, pinned(r) ?? apply(s, r, ctx))
   }
   return { state: s }
+}
+
+interface Context {
+  opts: TournamentOptions
+  unreadable: ReadonlySet<string>
 }
 
 const admittedCount = (s: TournamentState) => Object.values(s.participants).filter((p) => p.status === "registered").length
@@ -179,7 +196,9 @@ export const waitingList = (s: TournamentState) =>
     .filter((p) => p.status === "waitlist")
     .sort((a, b) => (a.waitlistAt as number) - (b.waitlistAt as number) || (a.head < b.head ? -1 : 1))
 
-function apply(s: TournamentState, r: AnyRecord, opts: TournamentOptions): Problem {
+function apply(s: TournamentState, r: AnyRecord, ctx: Context): Problem {
+  const { opts } = ctx
+  const stale = (prev: string, detail: string) => staleOr(ctx.unreadable, prev, detail)
   const organizer = r.pubkey === s.organizer
   const closed = s.phase === "finished" || s.phase === "cancelled"
   // Guest places can still be linked to their players after the end.
@@ -193,7 +212,7 @@ function apply(s: TournamentState, r: AnyRecord, opts: TournamentOptions): Probl
     case "tournament.update": {
       const { prev, picture, registrationCloses, ...rest } = r.content
       if (!organizer) return notOrganizer
-      if (prev !== s.heads.core) return ["stale_predecessor", "the tournament was changed meanwhile"]
+      if (prev !== s.heads.core) return stale(prev, "the tournament was changed meanwhile")
       if ((rest.rules !== undefined || rest.final !== undefined) && !BEFORE_DRAW.includes(s.phase)) return ["rules_locked", "rules are fixed once drawn"]
       if (rest.capacity !== undefined && rest.capacity < admittedCount(s)) return ["tournament_full", "more players are admitted than the new capacity"]
       Object.assign(s.settings, rest)
@@ -212,7 +231,7 @@ function apply(s: TournamentState, r: AnyRecord, opts: TournamentOptions): Probl
     case "tournament.phase": {
       const c = r.content
       if (!organizer) return notOrganizer
-      if (c.prev !== s.heads.core) return ["stale_predecessor", "the tournament was changed meanwhile"]
+      if (c.prev !== s.heads.core) return stale(c.prev, "the tournament was changed meanwhile")
       if (!NEXT_PHASE[s.phase].includes(c.phase)) return ["phase_invalid", `${s.phase} cannot go to ${c.phase}`]
       if (c.phase === "checkin" && !s.settings.checkIn) return ["phase_invalid", "this tournament has no check-in"]
       s.phase = c.phase
@@ -224,7 +243,7 @@ function apply(s: TournamentState, r: AnyRecord, opts: TournamentOptions): Probl
     case "tournament.seed": {
       const c = r.content
       if (!organizer) return notOrganizer
-      if (c.prev !== s.heads.core) return ["stale_predecessor", "the tournament was changed meanwhile"]
+      if (c.prev !== s.heads.core) return stale(c.prev, "the tournament was changed meanwhile")
       if (![...BEFORE_DRAW, "drawn"].includes(s.phase)) return ["phase_invalid", "the draw is over"]
       s.seedCommit = c.commit
       s.heads.core = r.id
@@ -232,7 +251,7 @@ function apply(s: TournamentState, r: AnyRecord, opts: TournamentOptions): Probl
     }
 
     case "tournament.draw":
-      return draw(s, r)
+      return draw(s, r, stale)
 
     case "tournament.register": {
       if (!BEFORE_DRAW.includes(s.phase)) return ["registration_closed", "the field is drawn"]
@@ -273,7 +292,7 @@ function apply(s: TournamentState, r: AnyRecord, opts: TournamentOptions): Probl
       if (!organizer) return notOrganizer
       if (!BEFORE_DRAW.includes(s.phase)) return ["phase_invalid", "the field is fixed once drawn"]
       if (!p) return ["not_registered", "not registered"]
-      if (c.prev !== p.head) return ["stale_predecessor", "the participant was changed meanwhile"]
+      if (c.prev !== p.head) return stale(c.prev, "the participant was changed meanwhile")
       if (p.status === "registered") return ["already_registered", "already admitted"]
       if (p.status !== "pending" && p.status !== "waitlist") return ["not_registered", "only a waiting registration is admitted"]
       if (!hasRoom(s)) return ["tournament_full", "the tournament is full"]
@@ -291,7 +310,7 @@ function apply(s: TournamentState, r: AnyRecord, opts: TournamentOptions): Probl
       if (!s.settings.waitlist) return ["invalid_content", "this tournament has no waiting list"]
       if (!BEFORE_DRAW.includes(s.phase)) return ["phase_invalid", "the field is fixed once drawn"]
       if (!p) return ["not_registered", "not registered"]
-      if (c.prev !== p.head) return ["stale_predecessor", "the participant was changed meanwhile"]
+      if (c.prev !== p.head) return stale(c.prev, "the participant was changed meanwhile")
       if (p.status !== "registered" && p.status !== "pending") return ["not_registered", "only an admitted or waiting registration moves to the list"]
       p.status = "waitlist"
       p.waitlistAt = r.created_at
@@ -305,7 +324,7 @@ function apply(s: TournamentState, r: AnyRecord, opts: TournamentOptions): Probl
       const p = s.participants[c.participant]
       if (!organizer) return notOrganizer
       if (!p || p.status === "removed") return ["not_registered", "not taking part"]
-      if (c.prev !== p.head) return ["stale_predecessor", "the participant was changed meanwhile"]
+      if (c.prev !== p.head) return stale(c.prev, "the participant was changed meanwhile")
       p.status = "removed"
       p.checkedIn = false
       p.reason = c.reason
@@ -346,7 +365,7 @@ function apply(s: TournamentState, r: AnyRecord, opts: TournamentOptions): Probl
       const p = s.participants[c.guest]
       if (!organizer) return notOrganizer
       if (!p || p.kind !== "guest") return ["guest_unknown", "no such guest place"]
-      if (c.prev !== p.head) return ["stale_predecessor", "the participant was changed meanwhile"]
+      if (c.prev !== p.head) return stale(c.prev, "the participant was changed meanwhile")
       if (!p.claims?.includes(c.player)) return ["not_authorized", "the player has not claimed this place"]
       if (Object.values(s.participants).some((q) => q.player === c.player || (q.id === c.player && q.status !== "withdrawn")))
         return ["already_registered", "the player already has a place"]
@@ -362,7 +381,7 @@ function apply(s: TournamentState, r: AnyRecord, opts: TournamentOptions): Probl
       const p = s.participants[id]
       if (c.participant !== undefined && !organizer) return notOrganizer
       if (!p || p.status !== "registered") return ["not_registered", "not admitted"]
-      if (c.prev !== undefined && c.prev !== p.head) return ["stale_predecessor", "the participant was changed meanwhile"]
+      if (c.prev !== undefined && c.prev !== p.head) return stale(c.prev, "the participant was changed meanwhile")
       p.checkedIn = true
       if (c.prev !== undefined) p.head = r.id
       return null
@@ -371,7 +390,7 @@ function apply(s: TournamentState, r: AnyRecord, opts: TournamentOptions): Probl
     case "tournament.board": {
       const c = r.content
       if (!organizer) return notOrganizer
-      if (c.prev !== headOf(s, s.boards[c.board])) return ["stale_predecessor", "the board was changed meanwhile"]
+      if (c.prev !== headOf(s, s.boards[c.board])) return stale(c.prev, "the board was changed meanwhile")
       s.boards[c.board] = { id: c.board, name: c.name, key: c.key, active: true, head: r.id }
       return null
     }
@@ -381,7 +400,7 @@ function apply(s: TournamentState, r: AnyRecord, opts: TournamentOptions): Probl
       const board = s.boards[c.board]
       if (!organizer) return notOrganizer
       if (!board || !board.active) return ["board_unknown", "no such active board"]
-      if (c.prev !== board.head) return ["stale_predecessor", "the board was changed meanwhile"]
+      if (c.prev !== board.head) return stale(c.prev, "the board was changed meanwhile")
       board.active = false
       board.head = r.id
       return null
@@ -393,7 +412,7 @@ function apply(s: TournamentState, r: AnyRecord, opts: TournamentOptions): Probl
       if (!["drawn", ...PLAYING].includes(s.phase)) return ["phase_invalid", "boards are assigned after the draw"]
       if (!s.boards[c.board]?.active) return ["board_unknown", "no such active board"]
       const slot = slotOf(s, c.slot)
-      if (c.prev !== slot.head) return ["stale_predecessor", "the slot was changed meanwhile"]
+      if (c.prev !== slot.head) return stale(c.prev, "the slot was changed meanwhile")
       if (slot.approved) return ["already_approved", "the slot has a result"]
       slot.board = c.board
       slot.head = r.id
@@ -410,7 +429,7 @@ function apply(s: TournamentState, r: AnyRecord, opts: TournamentOptions): Probl
       const submission = slot?.submissions.find((x) => x.event === c.submission)
       if (!slot || !submission) return ["result_unknown", "no such submitted result"]
       if (slot.approved) return ["already_approved", "use a correction to change an approved result"]
-      if (c.prev !== slot.head) return ["stale_predecessor", "the slot was changed meanwhile"]
+      if (c.prev !== slot.head) return stale(c.prev, "the slot was changed meanwhile")
       slot.approved = {
         event: r.id,
         winner: submission.winner,
@@ -428,7 +447,7 @@ function apply(s: TournamentState, r: AnyRecord, opts: TournamentOptions): Probl
       const slot = s.slots[c.slot]
       if (!organizer) return notOrganizer
       if (!slot?.approved) return ["result_unknown", "only an approved result is corrected"]
-      if (c.prev !== slot.head) return ["stale_predecessor", "the slot was changed meanwhile"]
+      if (c.prev !== slot.head) return stale(c.prev, "the slot was changed meanwhile")
       if (c.winner !== null && !s.participants[c.winner]) return ["not_registered", "the winner is not in the tournament"]
       slot.approved = { event: r.id, winner: c.winner, score: c.score, at: r.created_at, corrected: true, reason: c.reason }
       slot.head = r.id
@@ -443,7 +462,7 @@ function apply(s: TournamentState, r: AnyRecord, opts: TournamentOptions): Probl
     case "tournament.handover.offer": {
       const c = r.content
       if (!organizer) return notOrganizer
-      if (c.prev !== s.heads.organizer) return ["stale_predecessor", "the organization was changed meanwhile"]
+      if (c.prev !== s.heads.organizer) return stale(c.prev, "the organization was changed meanwhile")
       if (c.to === r.pubkey) return ["invalid_content", "the organizer already organizes"]
       s.offer = { event: r.id, to: c.to, at: r.created_at }
       s.heads.organizer = r.id
@@ -481,10 +500,10 @@ function slotOf(s: TournamentState, slot: string): SlotState {
 // from the revealed seed. Only the organizer's own records can contradict it (a place taken out
 // or never registered); whatever players write, however they date it, cannot. Check-in is the
 // organizer's aid, not a condition here.
-function draw(s: TournamentState, r: BlueLineRecord<"tournament.draw">): Problem {
+function draw(s: TournamentState, r: BlueLineRecord<"tournament.draw">, stale: (prev: string, detail: string) => Problem): Problem {
   const c = r.content
   if (r.pubkey !== s.organizer) return ["not_authorized", "only the organizer draws"]
-  if (c.prev !== s.heads.core) return ["stale_predecessor", "the tournament was changed meanwhile"]
+  if (c.prev !== s.heads.core) return stale(c.prev, "the tournament was changed meanwhile")
   const allowed: TournamentPhase[] = s.settings.checkIn ? ["checkin", "drawn"] : ["registration", "drawn"]
   if (!allowed.includes(s.phase)) return ["phase_invalid", `no draw while ${s.phase}`]
   if (!s.seedCommit) return ["seed_not_committed", "a draw opens an earlier seed commitment"]

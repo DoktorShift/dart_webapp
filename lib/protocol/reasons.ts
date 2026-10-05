@@ -20,6 +20,7 @@ export const REASONS = [
   // Authority and ordering
   "not_authorized",
   "stale_predecessor",
+  "superseded",
   // Clubs
   "not_member",
   "already_member",

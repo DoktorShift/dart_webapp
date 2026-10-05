@@ -1,7 +1,9 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { finalizeEvent, generateSecretKey, getPublicKey } from "nostr-core"
+import { MAX_CLUB_MEMBERS } from "../lib/protocol/club.ts"
 import { clubRoleAt, mayIssueClubBadge, reduceClub } from "../lib/protocol/club-state.ts"
+import { inviteKey, inviteProof, newInviteToken } from "../lib/protocol/invite.ts"
 import { buildRecord } from "../lib/protocol/records.ts"
 import type { ContentOf, RecordType } from "../lib/protocol/records.ts"
 import { createdAtAfter } from "../lib/protocol/tags.ts"
@@ -29,8 +31,9 @@ test("club role history answers 'which role at that time' for badges and club to
   const found = signed(owner, "club.found", { name: "Dartfreunde Nord", visibility: "public" }, 0)
   const ask = signed(alice, "club.join", {}, 10, found.id)
   const accept = signed(owner, "club.accept", { request: ask.id, member: alice.pubkey }, 20, found.id)
-  const admin = signed(owner, "club.role", { member: alice.pubkey, role: "admin", prev: accept.id }, 30, found.id)
-  const removed = signed(owner, "club.remove", { member: alice.pubkey, prev: admin.id }, 40, found.id)
+  // A member's base stays their join after an acceptance: the same for every reader.
+  const admin = signed(owner, "club.role", { member: alice.pubkey, role: "admin", prev: ask.id }, 30, found.id)
+  const removed = signed(owner, "club.remove", { member: alice.pubkey, prev: admin.id, info: found.id }, 40, found.id)
   const result = reduceClub([found, ask, accept, admin, removed], found.id, { now: NOW + 100 })
   assert.ok(result.state)
   const s = result.state
@@ -41,6 +44,31 @@ test("club role history answers 'which role at that time' for badges and club to
   assert.equal(mayIssueClubBadge(s, alice.pubkey, NOW + 35), true)
   assert.equal(mayIssueClubBadge(s, alice.pubkey, NOW + 25), false)
   assert.equal(mayIssueClubBadge(s, owner.pubkey, NOW + 45), true)
+})
+
+test("a closed club stays within the members every sealed record can be wrapped for", () => {
+  const token = newInviteToken()
+  const found = signed(owner, "club.found", { name: "Dartfreunde Nord", visibility: "public" }, 0)
+  const invite = signed(owner, "club.invite", { kind: "group", key: inviteKey(token), expires: NOW + 86400 }, 1, found.id)
+  const people = Array.from({ length: MAX_CLUB_MEMBERS }, person)
+  const joins = people.map((p, i) => signed(p, "club.join", { invite: invite.id, proof: inviteProof(token, p.pubkey) }, 10 + i, found.id))
+  // A public club has no limit of its own: 101 members.
+  const close = signed(owner, "club.update", { prev: found.id, visibility: "closed" }, 200, found.id)
+  const crowded = reduceClub([found, invite, ...joins, close], found.id, { now: NOW + 1000 })
+  assert.ok(crowded.state)
+  assert.equal(Object.keys(crowded.state.members).length, MAX_CLUB_MEMBERS + 1)
+  // Closing it now would leave members no sealed record can reach.
+  assert.equal(crowded.state.log.rejected.find((r) => r.id === close.id)?.reason, "club_full")
+  assert.equal(crowded.state.info.visibility, "public")
+  // Once one has left, it closes; from then on the group link admits no one past the limit.
+  const leave = signed(people[0], "club.leave", {}, 150, found.id)
+  const late = person()
+  const lateJoin = signed(late, "club.join", { invite: invite.id, proof: inviteProof(token, late.pubkey) }, 300, found.id)
+  const closed = reduceClub([found, invite, ...joins, leave, close, lateJoin], found.id, { now: NOW + 1000 })
+  assert.ok(closed.state)
+  assert.equal(closed.state.info.visibility, "closed")
+  assert.equal(Object.keys(closed.state.members).length, MAX_CLUB_MEMBERS)
+  assert.equal(closed.state.requests[late.pubkey]?.check, "ok")
 })
 
 test("a tournament's badges come from the organizer who finished it", () => {
@@ -69,7 +97,7 @@ test("a tournament's badges come from the organizer who finished it", () => {
   const running = signed(organizer, "tournament.phase", { phase: "running", prev: draw.id }, 30, root)
   const offer = signed(organizer, "tournament.handover.offer", { to: other.pubkey, prev: root }, 40, root)
   const finished = signed(organizer, "tournament.phase", { phase: "finished", prev: running.id }, 50, root)
-  const accept = signed(other, "tournament.handover.accept", { offer: offer.id }, 60, root)
+  const accept = signed(other, "tournament.handover.accept", { offer: offer.id, core: finished.id }, 60, root)
 
   const before = reduceTournament([found, g1, g2, draw, running], root, { now: NOW + 100 })
   assert.ok(before.state)

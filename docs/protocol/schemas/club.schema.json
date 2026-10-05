@@ -101,22 +101,21 @@
       "additionalProperties": true
     },
     "club.invite": {
-      "description": "Creates a group link or a personal invite",
+      "description": "Creates a group link or a personal invite; a label only travels sealed",
       "kind": 1180,
       "encryption": "seal",
-      "encrypted": true,
       "type": "object",
       "properties": {
         "kind": {
           "enum": ["group", "personal"],
           "description": "group: admits with a valid proof until expiry or revocation; personal: once, after acceptance"
         },
-        "token": {
+        "key": {
           "type": "string",
-          "minLength": 32,
-          "maxLength": 32,
-          "pattern": "^[0-9a-f]{32}$",
-          "description": "Invite token (secret of the link)"
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Public key of the invite key HKDF(token, 'blueline-invite-v1', 'proof'), see invite.ts"
         },
         "expires": {
           "type": "integer",
@@ -129,7 +128,7 @@
           "description": "Plain text, never HTML"
         }
       },
-      "required": ["kind", "token", "expires"],
+      "required": ["kind", "key", "expires"],
       "additionalProperties": true
     },
     "club.invite.revoke": {
@@ -164,10 +163,10 @@
         },
         "proof": {
           "type": "string",
-          "minLength": 64,
-          "maxLength": 64,
-          "pattern": "^[0-9a-f]{64}$",
-          "description": "HMAC-SHA256(token, 'blueline-invite-v1:' + joiner pubkey), see invite.ts"
+          "minLength": 128,
+          "maxLength": 128,
+          "pattern": "^[0-9a-f]{128}$",
+          "description": "BIP-340 signature of the invite key over sha256('blueline-invite-v1:' + joiner pubkey), see invite.ts"
         }
       },
       "required": [],
@@ -247,6 +246,13 @@
           "type": "string",
           "maxLength": 280,
           "description": "Plain text, never HTML"
+        },
+        "info": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Last club.update (or the club id) the author saw; required when the member is an admin"
         }
       },
       "required": ["member", "prev"],
@@ -274,6 +280,13 @@
           "maxLength": 64,
           "pattern": "^[0-9a-f]{64}$",
           "description": "Expected predecessor: last change of this subject, or the founding"
+        },
+        "info": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Last club.update (or the club id) the author saw; required when the member is an admin"
         }
       },
       "required": ["member", "role", "prev"],
@@ -332,9 +345,23 @@
           "maxLength": 64,
           "pattern": "^[0-9a-f]{64}$",
           "description": "Event id"
+        },
+        "info": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Last club.update (or the club id) the new owner saw"
+        },
+        "member": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "The new owner's own last member change (their join, or a role change)"
         }
       },
-      "required": ["offer"],
+      "required": ["offer", "info", "member"],
       "additionalProperties": true
     },
     "club.keys": {

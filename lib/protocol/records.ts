@@ -1,5 +1,5 @@
 import type { EventTemplate } from "../nostr/types.ts"
-import { CLUB_TYPES } from "./club.ts"
+import { CLUB_TYPES, MAX_SHARED_KEYS } from "./club.ts"
 import type { RecordSpec } from "./common.ts"
 import type { InvitePreview } from "./invite.ts"
 import { previewPlaintext } from "./invite.ts"
@@ -11,7 +11,7 @@ import type { Reason } from "./reasons.ts"
 import { ProtocolError } from "./reasons.ts"
 import type { Infer } from "./schema.ts"
 import { SchemaError, utf8Length } from "./schema.ts"
-import { buildEnvelope, parseEnvelope } from "./seal.ts"
+import { buildEnvelope, MAX_SEAL_READERS, parseEnvelope } from "./seal.ts"
 import type { SignedEvent } from "./tags.ts"
 import { encryptionOf, HEX64, isSignedEventShape, linkKeyTag, oversizedTag, readLabels, recordTags, SEAL_TAG, signedEventBytes, tagValue, tagValues } from "./tags.ts"
 import { TOURNAMENT_TYPES } from "./tournament.ts"
@@ -137,6 +137,37 @@ export function sealRecord(
   const sealed = { ...template, tags: [...template.tags, SEAL_TAG], content }
   if (signedEventBytes(sealed) > MAX_EVENT_BYTES) throw new ProtocolError("too_large", "sealed event exceeds the budget; wrap for fewer readers or split the content")
   return sealed
+}
+
+// How many content keys one club.keys record can share when it is sealed for `readers` readers:
+// the readers' wraps (about 190 bytes each) and the keys (about 180 bytes each once encrypted)
+// share one event budget: all 150 for up to 20 readers, 122 for 50, 68 for 100. Measured
+// by sealing a record of that size, with room for a relay hint of up to 64 characters on the
+// root tag; lib/clubs splits a larger share into several records.
+export function maxSharedKeys(readers: number): number {
+  if (!Number.isInteger(readers) || readers < 1 || readers > MAX_SEAL_READERS) throw new RangeError(`readers must be 1 to ${MAX_SEAL_READERS}`)
+  // A NIP-44 v2 wrap of a 64-character content key is 176 base64 characters.
+  const wraps = Array.from({ length: readers }, (_, i) => ({ reader: i.toString(16).padStart(64, "0"), payload: `${"A".repeat(175)}=` }))
+  const root = "0".repeat(64)
+  const fits = (n: number) => {
+    const keys = Array.from({ length: n }, () => [root, root])
+    const template = buildRecord("club.keys", { keys }, { created_at: 2 ** 31, root, relay: `wss://${"r".repeat(58)}` })
+    try {
+      sealRecord(template, { key: new Uint8Array(32), nonce: new Uint8Array(24), wraps })
+      return true
+    } catch (e) {
+      if (e instanceof ProtocolError && e.reason === "too_large") return false
+      throw e
+    }
+  }
+  let low = 0
+  let high = MAX_SHARED_KEYS
+  while (low < high) {
+    const mid = Math.ceil((low + high) / 2)
+    if (fits(mid)) low = mid
+    else high = mid - 1
+  }
+  return low
 }
 
 // Replaces the plaintext content with its NIP-44 encryption to a link key (private match) and
