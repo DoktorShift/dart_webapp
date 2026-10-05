@@ -1,10 +1,9 @@
 import type { Chunk } from "./chunks.ts"
-import type { Reason } from "./reasons.ts"
 import { MAX_FUTURE_SKEW_SECONDS } from "./kinds.ts"
 import type { Agreement } from "./match.ts"
 import type { AnyRecord, BlueLineRecord } from "./records.ts"
-import type { FoundingProblem, ReplayLog, ReplayOptions } from "./replay.ts"
-import { applied, byReplayOrder, foundingProblem, prepare, reject } from "./replay.ts"
+import type { Bases, FoundingProblem, Problem, ReplayLog, ReplayOptions } from "./replay.ts"
+import { applied, byReplayOrder, foundingProblem, prepare, reject, settle, staleOr } from "./replay.ts"
 import { decodeThrows } from "./throws.ts"
 
 // Match state from its records (docs/protocol/families/session-authorization.md, match-live.md,
@@ -60,10 +59,8 @@ export interface MatchOptions extends ReplayOptions {
   authorities?: string[]
 }
 
-type Problem = [Reason, string] | null
-
 export function reduceMatch(events: readonly unknown[], matchId: string, opts: MatchOptions = {}): MatchResult {
-  const { records, log, founding } = prepare(events, matchId, opts)
+  const { records, log, founding, bases } = prepare(events, matchId, opts)
   if (!founding || founding.type !== "match.session" || founding.content.sv !== 1 || !founding.content.agreement)
     return { state: null, problem: founding ? "invalid" : foundingProblem(log, matchId) }
 
@@ -95,9 +92,7 @@ export function reduceMatch(events: readonly unknown[], matchId: string, opts: M
       reject(log, r, "before_founding", "dated before the match started")
       continue
     }
-    const problem = apply(s, r, authorities, verdicts, finalSv)
-    if (problem) reject(log, r, problem[0], problem[1])
-    else applied(log, r)
+    settle(log, r, apply(s, r, authorities, verdicts, finalSv, bases))
   }
 
   // Verdicts count for the result they name; the newest verdict of a seat wins.
@@ -142,7 +137,7 @@ function sessionProblem(s: MatchStateP, r: AnyRecord, sv: number): Problem {
   return null
 }
 
-function apply(s: MatchStateP, r: AnyRecord, authorities: string[], verdicts: BlueLineRecord<"match.confirm">[], finalSv: number): Problem {
+function apply(s: MatchStateP, r: AnyRecord, authorities: string[], verdicts: BlueLineRecord<"match.confirm">[], finalSv: number, bases: Bases): Problem {
   const isAuthority = r.pubkey === s.authority || authorities.includes(r.pubkey)
   // A private match stays private: every record after the founding is encrypted to the link key.
   if (s.agreement.visibility === "private" && r.encryption !== "link") return ["sealing_required", "a private match's records are encrypted"]
@@ -152,7 +147,8 @@ function apply(s: MatchStateP, r: AnyRecord, authorities: string[], verdicts: Bl
       const c = r.content
       if (c.sv === 1) return ["wrong_root", "a second founding"]
       if (!isAuthority) return ["not_authorized", "only the match authority hands over"]
-      if (c.sv !== s.current.sv + 1 || c.prev !== s.current.event) return ["stale_predecessor", `expected session ${s.current.sv + 1} after ${s.current.event}`]
+      // A predecessor this reader has not loaded: wait for it (docs/protocol/conflicts.md).
+      if (c.sv !== s.current.sv + 1 || c.prev !== s.current.event) return staleOr(bases, c.prev as string, `expected session ${s.current.sv + 1} after ${s.current.event}`)
       const next = sessionOf(r)
       s.sessions.push(next)
       s.current = next
@@ -183,7 +179,10 @@ function apply(s: MatchStateP, r: AnyRecord, authorities: string[], verdicts: Bl
       if (c.throws !== undefined && !throwsReadable(c.throws)) return ["invalid_content", "throw log does not decode"]
       // Results form one chain: each correction (or void) names the newest entry before it.
       const head = s.results.at(-1)
-      if ((c.replaces ?? null) !== (head?.event ?? null)) return ["stale_predecessor", head ? "a new result replaces the newest one" : "nothing to replace"]
+      if ((c.replaces ?? null) !== (head?.event ?? null)) {
+        const detail = head ? "a new result replaces the newest one" : "nothing to replace"
+        return c.replaces === undefined ? ["stale_predecessor", detail] : staleOr(bases, c.replaces, detail)
+      }
       const entry: MatchResultEntry = {
         event: r.id,
         by: r.pubkey,

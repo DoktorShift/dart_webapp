@@ -3,7 +3,7 @@ import { CLUB_TYPES, MAX_SHARED_KEYS } from "./club.ts"
 import type { RecordSpec } from "./common.ts"
 import type { InvitePreview } from "./invite.ts"
 import { previewPlaintext } from "./invite.ts"
-import { FORMAT_VERSION, KIND_RECORD, KIND_STATE, MAX_EVENT_BYTES, MAX_FUTURE_SKEW_SECONDS, MAX_SEALED_PLAINTEXT_BYTES } from "./kinds.ts"
+import { FORMAT_VERSION, KIND_RECORD, KIND_STATE, MAX_EVENT_BYTES, MAX_FUTURE_SKEW_SECONDS, MAX_OFFER_SECONDS, MAX_SEALED_PLAINTEXT_BYTES } from "./kinds.ts"
 import { LIVE_TYPES } from "./live.ts"
 import { MATCH_TYPES } from "./match.ts"
 import { PAYMENT_TYPES } from "./payment.ts"
@@ -70,6 +70,14 @@ function envelopeProblem(type: string, content: unknown, form: "none" | "seal" |
   return null
 }
 
+// Rule Ü1 (docs/protocol/conflicts.md, "Übergaben"): a hand-over offer is open from its own
+// date on, for at most MAX_OFFER_SECONDS.
+function offerWindowProblem(type: string, content: unknown, createdAt: number): string | null {
+  if (type !== "club.owner.offer" && type !== "tournament.handover.offer") return null
+  const { expires } = content as { expires: number }
+  return expires > createdAt && expires <= createdAt + MAX_OFFER_SECONDS ? null : `an offer expires after its date, at most ${MAX_OFFER_SECONDS / 86400} days later`
+}
+
 function checkContent(spec: RecordSpec, type: string, content: unknown): unknown {
   try {
     return spec.schema.check(content, "")
@@ -95,6 +103,8 @@ export function buildRecord<T extends RecordType>(
     // Built in the clear first; a private agreement goes through encryptForLinkKey before signing.
     if (a?.stake !== undefined && a.visibility !== "private") throw new ProtocolError("stake_requires_private", "a stake is only written into a private match")
   }
+  const offerWindow = offerWindowProblem(type, checked, opts.created_at)
+  if (offerWindow) throw new ProtocolError("invalid_content", offerWindow)
   const template = {
     kind: spec.kind,
     created_at: opts.created_at,
@@ -247,6 +257,8 @@ export function parseRecord(event: unknown, opts: { now?: number; plaintext?: st
   const root = rule === "self" ? event.id : roots[0]
   const d = spec.d ? (tagValue(event.tags, "d") as string) : null
   if (type === "match.live" && d !== root) return invalid("invalid_tags", "d differs from the match id", type)
+  const offerWindow = offerWindowProblem(type, content, event.created_at)
+  if (offerWindow) return invalid("invalid_content", offerWindow, type)
   const problem = envelopeProblem(type, content, enc.form)
   if (problem === "private_in_clear") return invalid("sealing_required", "a private match is encrypted", type)
   if (problem) return invalid(problem, "a stake is only written into a private, encrypted match", type)

@@ -74,6 +74,8 @@ function nip44To(author: string, recipient: string, plaintext: string) {
 }
 
 const at = (seconds: number) => T0 + seconds
+// Hand-over offers in the vectors are open for a day (rule Ü1 allows up to seven).
+const OFFER_OPEN = 86400
 
 // Independent helpers (deliberately not lib/protocol): the rules from docs/protocol. The invite
 // key is HKDF(token, "blueline-invite-v1", "proof"); a proof is its BIP-340 signature over
@@ -463,11 +465,11 @@ function clubCases() {
     c.put("invite", "owner", "club.invite", inv.content, inv.opts)
     c.put("join-alice", "alice", "club.join", join("alice", c.id("invite"), T), { at: 20, root })
     c.put("join-bob", "bob", "club.join", join("bob", c.id("invite"), T), { at: 21, root })
-    c.put("offer", "owner", "club.owner.offer", { to: pub("alice"), prev: root }, { at: 30, root })
+    c.put("offer", "owner", "club.owner.offer", { to: pub("alice"), prev: root, expires: at(30) + OFFER_OPEN, info: root, member: c.id("join-alice") }, { at: 30, root })
     c.put("bob-accepts", "bob", "club.owner.accept", { offer: c.id("offer"), info: root, member: c.id("join-bob") }, { at: 40, root })
     c.put("alice-accepts", "alice", "club.owner.accept", { offer: c.id("offer"), info: root, member: c.id("join-alice") }, { at: 50, root })
     c.put("old-owner-closes", "owner", "club.update", { prev: root, visibility: "closed" }, { at: 60, root })
-    c.put("old-owner-offers", "owner", "club.owner.offer", { to: pub("bob"), prev: c.id("alice-accepts") }, { at: 70, root })
+    c.put("old-owner-offers", "owner", "club.owner.offer", { to: pub("bob"), prev: c.id("alice-accepts"), expires: at(70) + OFFER_OPEN, info: root, member: c.id("join-bob") }, { at: 70, root })
     c.put("new-owner-renames", "alice", "club.update", { prev: root, name: "Dartfreunde Nord e.V." }, { at: 80, root })
     cases.push(
       c.done({
@@ -783,9 +785,9 @@ function clubCases() {
     c.put("invite", "owner", "club.invite", inv.content, inv.opts)
     c.put("join-alice", "alice", "club.join", join("alice", c.id("invite"), T), { at: 20, root })
     c.put("join-bob", "bob", "club.join", join("bob", c.id("invite"), T), { at: 21, root })
-    c.put("offer", "owner", "club.owner.offer", { to: pub("alice"), prev: root }, { at: 30, root })
+    c.put("offer", "owner", "club.owner.offer", { to: pub("alice"), prev: root, expires: at(30) + OFFER_OPEN, info: root, member: c.id("join-alice") }, { at: 30, root })
     c.put("forged-cancel", "owner", "club.owner.cancel", { offer: c.id("offer") }, { at: 40, root })
-    c.put("forged-offer-bob", "owner", "club.owner.offer", { to: pub("bob"), prev: c.id("offer") }, { at: 41, root })
+    c.put("forged-offer-bob", "owner", "club.owner.offer", { to: pub("bob"), prev: c.id("offer"), expires: at(41) + OFFER_OPEN, info: root, member: c.id("join-bob") }, { at: 41, root })
     c.put("forged-remove-alice", "owner", "club.remove", { member: pub("alice"), prev: c.id("join-alice") }, { at: 45, root })
     c.put("forged-close", "owner", "club.update", { prev: root, visibility: "closed" }, { at: 46, root })
     c.put("accept", "alice", "club.owner.accept", { offer: c.id("offer"), info: root, member: c.id("join-alice") }, { at: 50, root })
@@ -875,6 +877,157 @@ function clubCases() {
         applied: ["found", "invite", "join-bob"],
         rejected: [["join-alice", "invite_unknown"]],
         state: { members: { owner: "owner", bob: "member" } },
+      }),
+    )
+  }
+  {
+    const c = newCase(
+      "owner-accept-names-older-info",
+      "Rule Ü2 c: the owner closes the public club and then offers it to Alice, handing over the closed club. Alice accepts naming the founding instead, which would cut the closing and make the club public again: refused, the club stays closed and the owner keeps it.",
+      { reader: "owner" },
+    )
+    c.put("found", "owner", "club.found", publicClub(), { at: 0 })
+    c.setRoot("found")
+    const root = c.root()
+    const inv = invite("group", T, 1, null, root)
+    c.put("invite", "owner", "club.invite", inv.content, inv.opts)
+    c.put("join-alice", "alice", "club.join", join("alice", c.id("invite"), T), { at: 2, root })
+    c.put("close", "owner", "club.update", { prev: root, visibility: "closed" }, { at: 10, root })
+    const offer: ContentOf<"club.owner.offer"> = { to: pub("alice"), prev: root, expires: at(20) + OFFER_OPEN, info: c.id("close"), member: c.id("join-alice") }
+    c.put("offer", "owner", "club.owner.offer", offer, { at: 20, root, seal: ["owner", "alice"] })
+    c.put("accept-older", "alice", "club.owner.accept", { offer: c.id("offer"), info: root, member: c.id("join-alice") }, { at: 21, root, seal: ["owner", "alice"] })
+    cases.push(
+      c.done({
+        applied: ["found", "invite", "join-alice", "close", "offer"],
+        rejected: [["accept-older", "invalid_content"]],
+        state: { owner: "owner", visibility: "closed", members: { owner: "owner", alice: "member" } },
+      }),
+    )
+  }
+  {
+    const c = newCase(
+      "offer-recipient-left",
+      "Rule Ü4: the owner offers the club to Carol, who leaves; the owner then offers it to Bob and renames the club. Carol's later acceptance does not hold (she is gone), so it ends nothing and cuts nothing: Bob's acceptance ends the owner's tenure, and the rename counts.",
+      { reader: "owner" },
+    )
+    c.put("found", "owner", "club.found", publicClub(), { at: 0 })
+    c.setRoot("found")
+    const root = c.root()
+    const inv = invite("group", T, 1, null, root)
+    c.put("invite", "owner", "club.invite", inv.content, inv.opts)
+    c.put("join-carol", "carol", "club.join", join("carol", c.id("invite"), T), { at: 2, root })
+    c.put("join-bob", "bob", "club.join", join("bob", c.id("invite"), T), { at: 3, root })
+    c.put("offer-carol", "owner", "club.owner.offer", { to: pub("carol"), prev: root, expires: at(10) + OFFER_OPEN, info: root, member: c.id("join-carol") }, { at: 10, root })
+    c.put("carol-leaves", "carol", "club.leave", {}, { at: 15, root })
+    c.put("offer-bob", "owner", "club.owner.offer", { to: pub("bob"), prev: c.id("offer-carol"), expires: at(30) + OFFER_OPEN, info: root, member: c.id("join-bob") }, { at: 30, root })
+    c.put("rename", "owner", "club.update", { prev: root, name: "Dartfreunde Nord e.V." }, { at: 31, root })
+    c.put("carol-accepts", "carol", "club.owner.accept", { offer: c.id("offer-carol"), info: root, member: c.id("join-carol") }, { at: 40, root })
+    c.put("bob-accepts", "bob", "club.owner.accept", { offer: c.id("offer-bob"), info: c.id("rename"), member: c.id("join-bob") }, { at: 50, root })
+    cases.push(
+      c.done({
+        applied: ["found", "invite", "join-carol", "join-bob", "offer-carol", "carol-leaves", "offer-bob", "rename", "bob-accepts"],
+        rejected: [["carol-accepts", "no_open_offer"]],
+        state: { owner: "bob", members: { owner: "admin", bob: "owner" }, former: { carol: "left" }, name: "Dartfreunde Nord e.V." },
+      }),
+    )
+  }
+  // A public club's invite travels in the clear; one its maker sealed admits nobody, whoever
+  // reads it.
+  for (const reader of ["owner", "mallory"]) {
+    const c = newCase(
+      `public-club-sealed-invite-read-by-${reader}`,
+      "A public club's records travel in the clear (only key shares are sealed), so that every reader checks the same joins. The owner seals a labelled group link anyway: the owner, who can open it, refuses it and the join through it; an outsider cannot open it and sees a waiting request. Nobody becomes a member through it.",
+      { reader },
+    )
+    c.put("found", "owner", "club.found", publicClub(), { at: 0 })
+    c.setRoot("found")
+    const root = c.root()
+    c.put("sealed-invite", "owner", "club.invite", { kind: "group", key: inviteKeyOf(T), expires: at(86400), label: "Stammtisch" }, { at: 1, root, seal: ["owner"], preview: { token: T, content: preview("group", at(86400)) } })
+    c.put("join-alice", "alice", "club.join", join("alice", c.id("sealed-invite"), T), { at: 2, root })
+    cases.push(
+      c.done(
+        reader === "owner"
+          ? { applied: ["found"], rejected: [["sealed-invite", "invalid_tags"], ["join-alice", "invite_unknown"]], state: { members: { owner: "owner" }, requests: {} } }
+          : { applied: ["found", "join-alice"], unapplied: [["sealed-invite", "sealed"]], state: { members: { owner: "owner" }, requests: { alice: "unverified" } } },
+      ),
+    )
+  }
+  {
+    const c = newCase(
+      "invite-ends-with-role",
+      "An invite ends with its maker's role as owner or admin: other managers of a closed club may not even see it to end it. The admin's group link admits Erin while the admin manages the club; after the owner removes the admin, a fresh key cannot join through it any more, and Dave's request through the admin's personal invite can no longer be accepted.",
+      { reader: "owner" },
+    )
+    c.put("found", "owner", "club.found", closedClub(), { at: 0, seal: ["owner"] })
+    c.setRoot("found")
+    const root = c.root()
+    const inv = invite("group", T, 1, ["owner"], root)
+    c.put("invite", "owner", "club.invite", inv.content, inv.opts)
+    c.put("join-admin", "admin", "club.join", join("admin", c.id("invite"), T), { at: 2, root })
+    c.put("make-admin", "owner", "club.role", { member: pub("admin"), role: "admin", prev: c.id("join-admin") }, { at: 3, root, seal: ["owner", "admin"] })
+    const link = invite("group", T2, 4, ["owner", "admin"], root)
+    c.put("admin-link", "admin", "club.invite", link.content, link.opts)
+    const personal = invite("personal", T3, 5, ["owner", "admin"], root, at(86400), "Für Dave")
+    c.put("admin-invites-dave", "admin", "club.invite", personal.content, personal.opts)
+    c.put("dave-asks", "dave", "club.join", join("dave", c.id("admin-invites-dave"), T3), { at: 6, root })
+    c.put("join-erin", "erin", "club.join", join("erin", c.id("admin-link"), T2), { at: 8, root })
+    c.put("remove-admin", "owner", "club.remove", { member: pub("admin"), prev: c.id("make-admin"), info: root, reason: "Missbrauch" }, { at: 10, root, seal: ["owner", "admin", "erin"] })
+    c.put("sock-joins", "sock", "club.join", join("sock", c.id("admin-link"), T2), { at: 20, root })
+    c.put("accept-dave", "owner", "club.accept", { request: c.id("dave-asks"), member: pub("dave") }, { at: 25, root, seal: ["owner", "erin", "dave"] })
+    cases.push(
+      c.done({
+        applied: ["found", "invite", "join-admin", "make-admin", "admin-link", "admin-invites-dave", "dave-asks", "join-erin", "remove-admin"],
+        rejected: [
+          ["sock-joins", "invite_revoked"],
+          ["accept-dave", "invite_revoked"],
+        ],
+        state: { members: { owner: "owner", erin: "member" }, former: { admin: "removed" }, requests: { dave: "ok" } },
+      }),
+    )
+  }
+  {
+    // Member names member-001 … member-100; joins ten seconds apart.
+    const m = (i: number) => `member-${String(i).padStart(3, "0")}`
+    const c = newCase(
+      "member-limit-displacement",
+      "Known limit (open user decision, ADR 0002 §6): at the 100-member limit of a closed club without its own capacity, the joiners' own created_at decides. Someone who gets the link late and dates the join five seconds before member 99's takes the last place, and member 99, who joined earlier in real time, waits as a request. lib/clubs sets a capacity of 100 at about 90 members so an admin decides instead (club.md).",
+      { reader: "owner" },
+    )
+    c.put("found", "owner", "club.found", closedClub(), { at: 0, seal: ["owner"] })
+    c.setRoot("found")
+    const root = c.root()
+    const inv = invite("group", T, 1, ["owner"], root)
+    c.put("invite", "owner", "club.invite", inv.content, inv.opts)
+    const joined = Array.from({ length: 99 }, (_, i) => m(i + 1))
+    joined.forEach((who, i) => c.put(`join-${who}`, who, "club.join", join(who, c.id("invite"), T), { at: 10 + 10 * i, root }))
+    c.put("join-late", "late", "club.join", join("late", c.id("invite"), T), { at: 10 + 10 * 98 - 5, root })
+    cases.push(
+      c.done({
+        applied: ["found", "invite", ...joined.slice(0, 98).map((who) => `join-${who}`), "join-late", `join-${m(99)}`],
+        state: { memberCount: 100, via: { late: "group" }, requests: { [m(99)]: "ok" } },
+      }),
+    )
+  }
+  {
+    const c = newCase(
+      "missing-predecessor",
+      "A change whose base this reader has not loaded waits for it (relays keep nothing for sure); a change on a base that is known but no longer current is a visible conflict.",
+      { reader: "owner" },
+    )
+    c.put("found", "owner", "club.found", publicClub(), { at: 0 })
+    c.setRoot("found")
+    const root = c.root()
+    // The first rename never reached this reader.
+    const lost = record("owner", "club.update", { prev: root, name: "Dartfreunde Nord e.V." }, { at: 10, root }).event
+    c.put("about", "owner", "club.update", { prev: lost.id, about: "Dienstags ab 19 Uhr." }, { at: 20, root })
+    c.put("rename", "owner", "club.update", { prev: root, name: "DF Nord" }, { at: 30, root })
+    c.put("stale", "owner", "club.update", { prev: root, about: "Mittwochs" }, { at: 40, root })
+    cases.push(
+      c.done({
+        applied: ["found", "rename"],
+        rejected: [["stale", "stale_predecessor"]],
+        unapplied: [["about", "waiting"]],
+        state: { name: "DF Nord" },
       }),
     )
   }
@@ -1146,7 +1299,7 @@ function tournamentCases() {
     c.put("found", "organizer", "tournament.found", cup(), { at: 0 })
     c.setRoot("found")
     const root = c.root()
-    c.put("offer", "organizer", "tournament.handover.offer", { to: pub("organizer2"), prev: root }, { at: 10, root })
+    c.put("offer", "organizer", "tournament.handover.offer", { to: pub("organizer2"), prev: root, expires: at(10) + OFFER_OPEN, core: root }, { at: 10, root })
     c.put("mallory-accepts", "mallory", "tournament.handover.accept", { offer: c.id("offer"), core: root }, { at: 20, root })
     c.put("accept", "organizer2", "tournament.handover.accept", { offer: c.id("offer"), core: root }, { at: 30, root })
     c.put("old-organizer", "organizer", "tournament.phase", { phase: "checkin", prev: root }, { at: 40, root })
@@ -1176,7 +1329,7 @@ function tournamentCases() {
     c.put("guest-2", "organizer", "tournament.guest", { guest: G2, alias: "Gast 2" }, { at: 11, root })
     c.put("forged-cancel", "organizer", "tournament.phase", { phase: "cancelled", prev: root }, { at: 15, root })
     c.put("forged-guest", "organizer", "tournament.guest", { guest: hex16("guest-forged"), alias: "Gast 3" }, { at: 16, root })
-    c.put("offer", "organizer", "tournament.handover.offer", { to: pub("organizer2"), prev: root }, { at: 20, root })
+    c.put("offer", "organizer", "tournament.handover.offer", { to: pub("organizer2"), prev: root, expires: at(20) + OFFER_OPEN, core: root }, { at: 20, root })
     c.put("forged-withdraw-offer", "organizer", "tournament.handover.cancel", { offer: c.id("offer") }, { at: 25, root })
     c.put("accept", "organizer2", "tournament.handover.accept", { offer: c.id("offer"), core: root }, { at: 30, root })
     c.put("draw", "organizer2", "tournament.draw", { seed: SEED, seeded: [], order: order(SEED, [G, G2]), prev: root }, { at: 40, root })
@@ -1189,6 +1342,131 @@ function tournamentCases() {
           ["forged-withdraw-offer", "superseded"],
         ],
         state: { organizer: "organizer2", phase: "running", participants: { [G]: "registered", [G2]: "registered", [hex16("guest-forged")]: "registered" } },
+      }),
+    )
+  }
+  {
+    const c = newCase(
+      "handover-cancel-then-expired-accept",
+      "Rule Ü2 b: the organizer withdraws the offer and keeps running the tournament. Organizer 2 accepts after the offer expired: no hand-over, and nothing of the organizer's is cut.",
+    )
+    c.put("found", "organizer", "tournament.found", cup({ checkIn: false }), { at: 0 })
+    c.setRoot("found")
+    const root = c.root()
+    c.put("offer", "organizer", "tournament.handover.offer", { to: pub("organizer2"), prev: root, expires: at(10) + 3600, core: root }, { at: 10, root })
+    c.put("cancel", "organizer", "tournament.handover.cancel", { offer: c.id("offer") }, { at: 11, root })
+    c.put("rename", "organizer", "tournament.update", { prev: root, name: "Herbstcup 2025" }, { at: 20, root })
+    c.put("guest-1", "organizer", "tournament.guest", { guest: G, alias: "Gast 1" }, { at: 21, root })
+    c.put("guest-2", "organizer", "tournament.guest", { guest: G2, alias: "Gast 2" }, { at: 22, root })
+    c.put("draw", "organizer", "tournament.draw", { seed: SEED, seeded: [], order: order(SEED, [G, G2]), prev: c.id("rename") }, { at: 30, root })
+    c.put("running", "organizer", "tournament.phase", { phase: "running", prev: c.id("draw") }, { at: 40, root })
+    c.put("late-accept", "organizer2", "tournament.handover.accept", { offer: c.id("offer"), core: root }, { at: 10 + 3600 + 1, root })
+    cases.push(
+      c.done({
+        applied: ["found", "offer", "cancel", "rename", "guest-1", "guest-2", "draw", "running"],
+        rejected: [["late-accept", "no_open_offer"]],
+        state: { organizer: "organizer", phase: "running", name: "Herbstcup 2025" },
+      }),
+    )
+  }
+  {
+    const c = newCase(
+      "handover-completed-then-old-offer-accepted",
+      "Rules Ü3 and Ü4: the organizer withdraws the offer to organizer 2 and hands over to organizer 3, who accepts first. Organizer 2's later acceptance of the withdrawn offer (still inside its time) answers an offer of someone who no longer organizes: organizer 3 stays.",
+    )
+    c.put("found", "organizer", "tournament.found", cup({ checkIn: false }), { at: 0 })
+    c.setRoot("found")
+    const root = c.root()
+    c.put("offer-2", "organizer", "tournament.handover.offer", { to: pub("organizer2"), prev: root, expires: at(10) + OFFER_OPEN, core: root }, { at: 10, root })
+    c.put("cancel", "organizer", "tournament.handover.cancel", { offer: c.id("offer-2") }, { at: 11, root })
+    c.put("offer-3", "organizer", "tournament.handover.offer", { to: pub("organizer3"), prev: c.id("cancel"), expires: at(100) + OFFER_OPEN, core: root }, { at: 100, root })
+    c.put("accept-3", "organizer3", "tournament.handover.accept", { offer: c.id("offer-3"), core: root }, { at: 101, root })
+    c.put("rename-3", "organizer3", "tournament.update", { prev: root, name: "Herbstcup 2025" }, { at: 110, root })
+    c.put("accept-2", "organizer2", "tournament.handover.accept", { offer: c.id("offer-2"), core: root }, { at: 200, root })
+    cases.push(
+      c.done({
+        applied: ["found", "offer-2", "cancel", "offer-3", "accept-3", "rename-3"],
+        rejected: [["accept-2", "no_open_offer"]],
+        state: { organizer: "organizer3", name: "Herbstcup 2025" },
+      }),
+    )
+  }
+  {
+    const c = newCase(
+      "handover-accept-names-older-core",
+      "Rule Ü2 c: the offer hands over the running tournament (core = the start). Organizer 2 accepts naming the founding instead, to cut the draw, the start and the result: refused. A second, correct acceptance is not an answer any more (Ü3), so organizer 2's new seed and draw are refused and the draw stands.",
+    )
+    c.put("found", "organizer", "tournament.found", cup({ checkIn: false }), { at: 0 })
+    c.setRoot("found")
+    const root = c.root()
+    c.put("guest-1", "organizer", "tournament.guest", { guest: G, alias: "Gast 1" }, { at: 1, root })
+    c.put("guest-2", "organizer", "tournament.guest", { guest: G2, alias: "Gast 2" }, { at: 2, root })
+    c.put("draw", "organizer", "tournament.draw", { seed: SEED, seeded: [], order: order(SEED, [G, G2]), prev: root }, { at: 20, root })
+    c.put("running", "organizer", "tournament.phase", { phase: "running", prev: c.id("draw") }, { at: 30, root })
+    c.put("result", "organizer", "tournament.result", { slot: "R1-1", winner: G, score: [2, 0] }, { at: 35, root })
+    c.put("offer", "organizer", "tournament.handover.offer", { to: pub("organizer2"), prev: root, expires: at(40) + OFFER_OPEN, core: c.id("running") }, { at: 40, root })
+    c.put("accept-older", "organizer2", "tournament.handover.accept", { offer: c.id("offer"), core: root }, { at: 41, root })
+    c.put("accept-again", "organizer2", "tournament.handover.accept", { offer: c.id("offer"), core: c.id("running") }, { at: 42, root })
+    const SEED2 = hex16("seed-2")
+    c.put("new-seed", "organizer2", "tournament.seed", { commit: commit(SEED2), prev: root }, { at: 50, root })
+    c.put("new-draw", "organizer2", "tournament.draw", { seed: SEED2, seeded: [], order: order(SEED2, [G, G2]), prev: c.id("new-seed") }, { at: 51, root })
+    cases.push(
+      c.done({
+        applied: ["found", "guest-1", "guest-2", "draw", "running", "result", "offer"],
+        rejected: [
+          ["accept-older", "invalid_content"],
+          ["accept-again", "no_open_offer"],
+          ["new-seed", "not_authorized"],
+          ["new-draw", "not_authorized"],
+        ],
+        state: { organizer: "organizer", phase: "running", order: order(SEED, [G, G2]), slots: { "R1-1": { winner: G } } },
+      }),
+    )
+  }
+  {
+    const c = newCase(
+      "handover-crossing-cancel",
+      "Rules Ü5 and Ü6 a (known limit): the offer hands over the renamed tournament. The organizer withdraws it and renames again; organizer 2 accepts inside the offer's time without having seen either. The acceptance ends the tenure: the withdrawal and the second rename are cut, the first rename (handed over) stays.",
+    )
+    c.put("found", "organizer", "tournament.found", cup({ checkIn: false }), { at: 0 })
+    c.setRoot("found")
+    const root = c.root()
+    c.put("rename", "organizer", "tournament.update", { prev: root, name: "Herbstcup 2025" }, { at: 5, root })
+    c.put("offer", "organizer", "tournament.handover.offer", { to: pub("organizer2"), prev: root, expires: at(10) + OFFER_OPEN, core: c.id("rename") }, { at: 10, root })
+    c.put("cancel", "organizer", "tournament.handover.cancel", { offer: c.id("offer") }, { at: 20, root })
+    c.put("rename-again", "organizer", "tournament.update", { prev: c.id("rename"), name: "Wintercup" }, { at: 25, root })
+    c.put("accept", "organizer2", "tournament.handover.accept", { offer: c.id("offer"), core: c.id("rename") }, { at: 30, root })
+    cases.push(
+      c.done({
+        applied: ["found", "rename", "offer", "accept"],
+        rejected: [
+          ["cancel", "superseded"],
+          ["rename-again", "superseded"],
+        ],
+        state: { organizer: "organizer2", name: "Herbstcup 2025" },
+      }),
+    )
+  }
+  {
+    const c = newCase(
+      "later-offer-on-stale-base",
+      "Rules Ü4 and Ü5: organizer 2 takes over, then offers the organization on an outdated base (the first offer instead of their own acceptance). That offer is a visible conflict and its acceptance does not hold; since an end only reaches back to the start of the outgoing tenure, it cannot cut the acceptance that began it: organizer 2 stays.",
+    )
+    c.put("found", "organizer", "tournament.found", cup({ checkIn: false }), { at: 0 })
+    c.setRoot("found")
+    const root = c.root()
+    c.put("offer-1", "organizer", "tournament.handover.offer", { to: pub("organizer2"), prev: root, expires: at(10) + OFFER_OPEN, core: root }, { at: 10, root })
+    c.put("accept-1", "organizer2", "tournament.handover.accept", { offer: c.id("offer-1"), core: root }, { at: 20, root })
+    c.put("offer-2", "organizer2", "tournament.handover.offer", { to: pub("organizer3"), prev: c.id("offer-1"), expires: at(30) + OFFER_OPEN, core: root }, { at: 30, root })
+    c.put("accept-2", "organizer3", "tournament.handover.accept", { offer: c.id("offer-2"), core: root }, { at: 40, root })
+    cases.push(
+      c.done({
+        applied: ["found", "offer-1", "accept-1"],
+        rejected: [
+          ["offer-2", "stale_predecessor"],
+          ["accept-2", "no_open_offer"],
+        ],
+        state: { organizer: "organizer2" },
       }),
     )
   }
@@ -1218,7 +1496,7 @@ function tournamentCases() {
     c.put("found", "director", "tournament.found", cup({ club: CLUB }), { at: 0 })
     c.setRoot("found")
     const root = c.root()
-    c.put("offer", "director", "tournament.handover.offer", { to: pub("member"), prev: root }, { at: 10, root })
+    c.put("offer", "director", "tournament.handover.offer", { to: pub("member"), prev: root, expires: at(10) + OFFER_OPEN, core: root }, { at: 10, root })
     c.put("accept", "member", "tournament.handover.accept", { offer: c.id("offer"), core: root }, { at: 20, root })
     cases.push(
       c.done({ applied: ["found", "offer"], rejected: [["accept", "not_authorized"]], state: { organizer: "director", club: CLUB } }, { clubRoles: { director: "director", member: "member" } }),
@@ -1303,13 +1581,17 @@ function matchCases() {
     )
   }
   {
-    const c = newCase("forged-handover", "Only the match authority hands over, always to the next session on top of the current one; strangers cannot write.")
+    const c = newCase(
+      "forged-handover",
+      "Only the match authority hands over, always to the next session on top of the current one; strangers cannot write. A handover on a session this reader has not loaded waits for it.",
+    )
     const found = c.put("found", "host", "match.session", session(1, "session1", 0), { at: 0 })
     c.setRoot("found")
     const root = found.id
     c.put("by-session", "session1", "match.session", session(2, "session2", 100, root), { at: 100, root })
     c.put("skip", "host", "match.session", session(3, "session2", 110, root), { at: 110, root })
-    c.put("wrong-prev", "host", "match.session", session(2, "session2", 120, hex32("not-a-session")), { at: 120, root })
+    c.put("wrong-prev", "host", "match.session", session(2, "session2", 120, c.id("by-session")), { at: 120, root })
+    c.put("unknown-prev", "host", "match.session", session(3, "session2", 125, hex32("not-loaded-session")), { at: 125, root })
     c.add("stranger-live", snapshot("mallory", root, found, 1, 1, 130).event)
     cases.push(
       c.done({
@@ -1320,6 +1602,7 @@ function matchCases() {
           ["wrong-prev", "stale_predecessor"],
           ["stranger-live", "not_authorized"],
         ],
+        unapplied: [["unknown-prev", "waiting"]],
         state: { sv: 1, writer: "session1" },
       }),
     )
@@ -1347,7 +1630,7 @@ function matchCases() {
   {
     const c = newCase(
       "confirm-and-correct",
-      "Players confirm or dispute one exact result. A correction replaces it and its verdicts no longer count; only seated players give verdicts; a second result must name the one it replaces.",
+      "Players confirm or dispute one exact result. A correction replaces it and its verdicts no longer count; only seated players give verdicts; a second result must name the one it replaces, and one naming a result this reader has not loaded waits for it.",
     )
     const found = c.put("found", "host", "match.session", session(1, "session1", 0), { at: 0 })
     c.setRoot("found")
@@ -1357,6 +1640,7 @@ function matchCases() {
     c.put("p2-disputes", "p2", "match.confirm", { result: c.id("result-1"), verdict: "dispute", seat: 1, reason: "Letzte Aufnahme war 45" }, { at: 111, root })
     c.put("mallory-confirms", "mallory", "match.confirm", { result: c.id("result-1"), verdict: "confirm", seat: 0 }, { at: 112, root })
     c.add("unlinked", result("host", root, 1, 115).event)
+    c.add("replaces-unloaded", result("host", root, 1, 116, { replaces: hex32("result-not-loaded"), reason: "Korrektur" }).event)
     c.add("result-2", result("host", root, 1, 120, { replaces: c.id("result-1"), reason: "Aufnahme korrigiert", legs: [0, 1], winner: 1 }).event)
     c.put("p2-confirms", "p2", "match.confirm", { result: c.id("result-2"), verdict: "confirm", seat: 1 }, { at: 130, root })
     cases.push(
@@ -1366,6 +1650,7 @@ function matchCases() {
           ["mallory-confirms", "not_a_player"],
           ["unlinked", "stale_predecessor"],
         ],
+        unapplied: [["replaces-unloaded", "waiting"]],
         state: { result: "result-2", confirmations: { 1: "confirm" }, stale: 2 },
       }),
     )

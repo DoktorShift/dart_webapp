@@ -20,7 +20,7 @@ Kind 1180, `e` = Match-ID, Pflicht-Tags nach [kinds.md](../kinds.md). Private Sp
 
 ## Regeln
 
-1. **Kette der Ergebnisse:** Das erste Ergebnis hat kein `replaces`; jede Korrektur oder Aufhebung (`void`) nennt das jeweils neueste davor und eine Begründung. Ein zweites Ergebnis ohne Bezug ist ein sichtbarer Konflikt (`stale_predecessor`). Es zählt das neueste der Kette, außer es hebt das Match auf.
+1. **Kette der Ergebnisse:** Das erste Ergebnis hat kein `replaces`; jede Korrektur oder Aufhebung (`void`) nennt das jeweils neueste davor und eine Begründung. Ein zweites Ergebnis ohne Bezug oder mit Bezug auf ein vorliegendes, nicht neuestes Ergebnis ist ein sichtbarer Konflikt (`stale_predecessor`); nennt `replaces` ein Ergebnis, das der Leser nicht hat, wartet es. Es zählt das neueste der Kette, außer es hebt das Match auf.
 2. **Nur die letzte Sitzung** (nach allen Übergaben) und die Autorität schreiben Ergebnisse ([session-authorization.md](session-authorization.md)).
 3. **Bestätigungen** zählen für das Ergebnis, das sie nennen; je Platz zählt die neueste. Wird das Ergebnis ersetzt, bleiben seine Bestätigungen sichtbar, zählen aber nicht mehr (A13). Nur der Spieler des Platzes bestätigt (`not_a_player`).
 4. **Größe:** Passt das Wurfprotokoll nicht in ein Event, wird es nach Bytebudget in hash-verkettete Stücke geteilt: `prev_0` = 64 × „0", `hash_i = sha256(prev_i ‖ data_i)`, Kopf = letzter Hash. Jedes Stück nennt den Kopf, das Ergebnis Kopf, Stückzahl und Größe. Fehlende, doppelte mit anderem Inhalt oder falsch verkettete Stücke sind ein Fehler, nie ein halbes Ergebnis. Budget je Event: ≤ 32 KiB signiert, ≤ 20 480 Byte Klartext vor NIP-44 (Recherche PR-07).

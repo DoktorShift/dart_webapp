@@ -173,7 +173,7 @@
     },
     {
       "name": "forged-handover",
-      "description": "Only the match authority hands over, always to the next session on top of the current one; strangers cannot write.",
+      "description": "Only the match authority hands over, always to the next session on top of the current one; strangers cannot write. A handover on a session this reader has not loaded waits for it.",
       "now": 1760100000,
       "root": "dd749a5f1aab871427fe8d37547efd29067785d66d66f2ec30dd98b3681d469e",
       "events": [
@@ -222,7 +222,7 @@
           "sig": "6b7201379d63585a6e282fc5337d458987886236a4b05b63c594333e1b132bed8ee32a889b12c7ec8760ff3f37b24b67bddcebd4a7853751e80052c5c164fcb6"
         },
         {
-          "id": "7e9840876d922b3306c0863feefc0505aed1f9e291d46b6a5c0c1fb8a0c753db",
+          "id": "5d66cc163bf637f5dd0df1151051a0b6fe2cd68968eac18e1fd850ea8934db1c",
           "pubkey": "d073231b225699c406b4ada691fdea20c121fe84545e8e8b71c3e2d91d352352",
           "created_at": 1760000120,
           "kind": 1180,
@@ -233,8 +233,23 @@
             ["e", "dd749a5f1aab871427fe8d37547efd29067785d66d66f2ec30dd98b3681d469e"],
             ["alt", "BlueLine Darts match.session"]
           ],
-          "content": "{\"sv\":2,\"session\":\"420e2108da3b896463ff46c4b4a72b918e3b8633737dd4e35d03f46496a3c377\",\"from\":1760000120,\"until\":1760010920,\"prev\":\"a659f18f23635fb19f4ed9fa83939ec1743c5d3de6221f7199404182c3683bb0\"}",
-          "sig": "84dd6dd3bf35e59c427ec3359fc6c3323f3407cf5b52cdd278c884a0f65f5e7507614ef135a2fbe2b19dc9768f8d6fc0af12dce9daeb21e451d9ce8a9d73365e"
+          "content": "{\"sv\":2,\"session\":\"420e2108da3b896463ff46c4b4a72b918e3b8633737dd4e35d03f46496a3c377\",\"from\":1760000120,\"until\":1760010920,\"prev\":\"1896e6dc67febbc802f678d605c52c1893109da612a43ba5075e612434865514\"}",
+          "sig": "1fcb46734d86b1c31cce47cdda48cc99ebe1560c0cc4f19351ca4ce9542825593b6f62cc3730384506377a9c42f4e4f2da681a2adccb1d4e8d402575bf8648cf"
+        },
+        {
+          "id": "65b7e7f8186785398fc0a781eb8bfa25ed84a9a5795c5733efc580cd9fc11720",
+          "pubkey": "d073231b225699c406b4ada691fdea20c121fe84545e8e8b71c3e2d91d352352",
+          "created_at": 1760000125,
+          "kind": 1180,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.session", "blueline"],
+            ["v", "1"],
+            ["e", "dd749a5f1aab871427fe8d37547efd29067785d66d66f2ec30dd98b3681d469e"],
+            ["alt", "BlueLine Darts match.session"]
+          ],
+          "content": "{\"sv\":3,\"session\":\"420e2108da3b896463ff46c4b4a72b918e3b8633737dd4e35d03f46496a3c377\",\"from\":1760000125,\"until\":1760010925,\"prev\":\"92ee8d9a06c313d751c75c6dee9fa0cd9eb2d5d5856246c6440fb3f14b94e532\"}",
+          "sig": "ff115ad375efcfa32cbf4776bd035b0c955933594c2919493178f643be7a466c107c396273985afe791d0f3e755ebe3de197b140e1ad3055a437f7276d003cad"
         },
         {
           "id": "80b548152c5f6a874415d32b313a95c44c0e8ed10f7e77fd232df0457b037738",
@@ -258,7 +273,8 @@
         "found": "dd749a5f1aab871427fe8d37547efd29067785d66d66f2ec30dd98b3681d469e",
         "by-session": "1896e6dc67febbc802f678d605c52c1893109da612a43ba5075e612434865514",
         "skip": "e8ad8a7d6bd7c94bf18c5d8cedbfee04a799a329e50065d7aad16c9c18382996",
-        "wrong-prev": "7e9840876d922b3306c0863feefc0505aed1f9e291d46b6a5c0c1fb8a0c753db",
+        "wrong-prev": "5d66cc163bf637f5dd0df1151051a0b6fe2cd68968eac18e1fd850ea8934db1c",
+        "unknown-prev": "65b7e7f8186785398fc0a781eb8bfa25ed84a9a5795c5733efc580cd9fc11720",
         "stranger-live": "80b548152c5f6a874415d32b313a95c44c0e8ed10f7e77fd232df0457b037738"
       },
       "expect": {
@@ -275,7 +291,7 @@
             "reason": "stale_predecessor"
           },
           {
-            "id": "7e9840876d922b3306c0863feefc0505aed1f9e291d46b6a5c0c1fb8a0c753db",
+            "id": "5d66cc163bf637f5dd0df1151051a0b6fe2cd68968eac18e1fd850ea8934db1c",
             "label": "wrong-prev",
             "reason": "stale_predecessor"
           },
@@ -283,6 +299,13 @@
             "id": "80b548152c5f6a874415d32b313a95c44c0e8ed10f7e77fd232df0457b037738",
             "label": "stranger-live",
             "reason": "not_authorized"
+          }
+        ],
+        "unapplied": [
+          {
+            "id": "65b7e7f8186785398fc0a781eb8bfa25ed84a9a5795c5733efc580cd9fc11720",
+            "label": "unknown-prev",
+            "why": "waiting"
           }
         ],
         "state": {
@@ -404,7 +427,7 @@
     },
     {
       "name": "confirm-and-correct",
-      "description": "Players confirm or dispute one exact result. A correction replaces it and its verdicts no longer count; only seated players give verdicts; a second result must name the one it replaces.",
+      "description": "Players confirm or dispute one exact result. A correction replaces it and its verdicts no longer count; only seated players give verdicts; a second result must name the one it replaces, and one naming a result this reader has not loaded waits for it.",
       "now": 1760100000,
       "root": "dd749a5f1aab871427fe8d37547efd29067785d66d66f2ec30dd98b3681d469e",
       "events": [
@@ -498,6 +521,21 @@
           "sig": "66e91c4afc81e796925d409f79a614f708cd127d55599af2b95993d9ce4aca9fc2e040121eb699b5f617d60c2a5299db0a0ed973012a4b6144eb11f47de1943e"
         },
         {
+          "id": "dfe9ad91964941f073e7e11cc2911fc4eec0a400cf6b25a0977cf65ce86aa6da",
+          "pubkey": "d073231b225699c406b4ada691fdea20c121fe84545e8e8b71c3e2d91d352352",
+          "created_at": 1760000116,
+          "kind": 1180,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "match.result", "blueline"],
+            ["v", "1"],
+            ["e", "dd749a5f1aab871427fe8d37547efd29067785d66d66f2ec30dd98b3681d469e"],
+            ["alt", "BlueLine Darts match.result"]
+          ],
+          "content": "{\"sv\":1,\"status\":\"finished\",\"winner\":0,\"legs\":[1,0],\"throws\":\"1777.222.75M\",\"finishedAt\":1760000116,\"replaces\":\"694c33316394b352ddce8cca38445ba463353d2a5dff005ee40ce61ce50b9dd1\",\"reason\":\"Korrektur\"}",
+          "sig": "9b40cfc7f269426281a741b2f14e4143fe708bbc6a62ea93473088b1fac571d6a8266b8cb12ad154ffc5e511dd59435b4c72cd0bb20c7e9519e0b570c5b1b1ff"
+        },
+        {
           "id": "5851a77d1f2328fde55291e8097dd4eaff8def62a3f4c62b2ade4b96c34ae9b3",
           "pubkey": "d073231b225699c406b4ada691fdea20c121fe84545e8e8b71c3e2d91d352352",
           "created_at": 1760000120,
@@ -536,6 +574,7 @@
         "p2-disputes": "dacab1abf3c5ff08436e5638494a5d73d3ac23a293a5962da663ad614628a058",
         "mallory-confirms": "49e1ff5206610a9104995f7246654ea1f1dad0b5a8f6eb4a6cf3b749299ba9f6",
         "unlinked": "fbff7d748979e9b58fda5594470f651c602c44e4df192e119de5c5b5a8d7c000",
+        "replaces-unloaded": "dfe9ad91964941f073e7e11cc2911fc4eec0a400cf6b25a0977cf65ce86aa6da",
         "result-2": "5851a77d1f2328fde55291e8097dd4eaff8def62a3f4c62b2ade4b96c34ae9b3",
         "p2-confirms": "1b3002d4303d095f45297b7e7da37ae7c67bf54d948e8a1263e08ce7dad037c3"
       },
@@ -551,6 +590,13 @@
             "id": "fbff7d748979e9b58fda5594470f651c602c44e4df192e119de5c5b5a8d7c000",
             "label": "unlinked",
             "reason": "stale_predecessor"
+          }
+        ],
+        "unapplied": [
+          {
+            "id": "dfe9ad91964941f073e7e11cc2911fc4eec0a400cf6b25a0977cf65ce86aa6da",
+            "label": "replaces-unloaded",
+            "why": "waiting"
           }
         ],
         "state": {

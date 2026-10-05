@@ -40,3 +40,6 @@ export const MAX_EPHEMERAL_AGE_SECONDS = 60 * 10
 // at the board) for at most an hour before the board shows a fresh one.
 export const MAX_HANDSHAKE_SECONDS = 60 * 10
 export const MAX_BOARD_CODE_SECONDS = 60 * 60
+// An offer to hand over a tournament's organization or a club's ownership is open for at most
+// this long (docs/protocol/conflicts.md, "Übergaben", rule Ü1).
+export const MAX_OFFER_SECONDS = 7 * 24 * 60 * 60

@@ -973,9 +973,22 @@
           "maxLength": 64,
           "pattern": "^[0-9a-f]{64}$",
           "description": "Expected predecessor: last change of this subject, or the founding"
+        },
+        "expires": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295,
+          "description": "Open until then: after created_at, at most MAX_OFFER_SECONDS (7 days) later"
+        },
+        "core": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "The current tournament core it hands over: its last change, or the tournament id"
         }
       },
-      "required": ["to", "prev"],
+      "required": ["to", "prev", "expires", "core"],
       "additionalProperties": true
     },
     "tournament.handover.cancel": {
@@ -1013,7 +1026,7 @@
           "minLength": 64,
           "maxLength": 64,
           "pattern": "^[0-9a-f]{64}$",
-          "description": "Last change of the tournament core (or its id) the new organizer saw: pins the former organizer's core changes"
+          "description": "Last change of the tournament core (or its id) the new organizer saw: the offer's core or one built on it"
         }
       },
       "required": ["offer", "core"],

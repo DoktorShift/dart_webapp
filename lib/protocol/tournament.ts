@@ -143,10 +143,18 @@ export const TOURNAMENT_TYPES = {
     obj({ slot: slot(), winner: nullable(participantId()), score: score(), reason: shortText(), prev: prev() }),
     "The organizer corrects an approved result",
   ),
-  "tournament.handover.offer": rec(obj({ to: pubkey(), prev: prev() }), "The organizer offers the organization to someone"),
+  "tournament.handover.offer": rec(
+    obj({
+      to: pubkey(),
+      prev: prev(),
+      expires: time("Open until then: after created_at, at most MAX_OFFER_SECONDS (7 days) later"),
+      core: id32("The current tournament core it hands over: its last change, or the tournament id"),
+    }),
+    "The organizer offers the organization to someone",
+  ),
   "tournament.handover.cancel": rec(obj({ offer: eventId() }), "The organizer withdraws the open offer"),
   "tournament.handover.accept": rec(
-    obj({ offer: eventId(), core: id32("Last change of the tournament core (or its id) the new organizer saw: pins the former organizer's core changes") }),
+    obj({ offer: eventId(), core: id32("Last change of the tournament core (or its id) the new organizer saw: the offer's core or one built on it") }),
     "The offered person takes over the organization",
   ),
 } satisfies Record<string, RecordSpec>

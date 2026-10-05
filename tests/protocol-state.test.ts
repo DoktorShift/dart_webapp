@@ -4,7 +4,9 @@ import { finalizeEvent, generateSecretKey, getPublicKey } from "nostr-core"
 import { MAX_CLUB_MEMBERS } from "../lib/protocol/club.ts"
 import { clubRoleAt, mayIssueClubBadge, reduceClub } from "../lib/protocol/club-state.ts"
 import { inviteKey, inviteProof, newInviteToken } from "../lib/protocol/invite.ts"
-import { buildRecord } from "../lib/protocol/records.ts"
+import { MAX_OFFER_SECONDS } from "../lib/protocol/kinds.ts"
+import { ProtocolError } from "../lib/protocol/reasons.ts"
+import { buildRecord, parseRecord } from "../lib/protocol/records.ts"
 import type { ContentOf, RecordType } from "../lib/protocol/records.ts"
 import { createdAtAfter } from "../lib/protocol/tags.ts"
 import { drawOrder, seedCommitment } from "../lib/protocol/tournament.ts"
@@ -95,7 +97,7 @@ test("a tournament's badges come from the organizer who finished it", () => {
   const g2 = signed(organizer, "tournament.guest", { guest: "2".repeat(32), alias: "Gast 2" }, 11, root)
   const draw = signed(organizer, "tournament.draw", { seed, seeded: [], order: drawOrder(seed, ["1".repeat(32), "2".repeat(32)]), prev: root }, 20, root)
   const running = signed(organizer, "tournament.phase", { phase: "running", prev: draw.id }, 30, root)
-  const offer = signed(organizer, "tournament.handover.offer", { to: other.pubkey, prev: root }, 40, root)
+  const offer = signed(organizer, "tournament.handover.offer", { to: other.pubkey, prev: root, expires: NOW + 40 + 3600, core: running.id }, 40, root)
   const finished = signed(organizer, "tournament.phase", { phase: "finished", prev: running.id }, 50, root)
   const accept = signed(other, "tournament.handover.accept", { offer: offer.id, core: finished.id }, 60, root)
 
@@ -116,4 +118,49 @@ test("decisions are dated after what they build on, even when the writer's clock
   assert.equal(createdAtAfter(NOW, NOW - 50), NOW)
   assert.equal(createdAtAfter(NOW, NOW + 30, NOW + 10), NOW + 31)
   assert.equal(createdAtAfter(NOW), NOW)
+})
+
+test("Ü1: a hand-over offer is open after its date, for at most seven days", () => {
+  const root = "a".repeat(64)
+  const offer = (expires: number): ContentOf<"tournament.handover.offer"> => ({ to: other.pubkey, prev: root, expires, core: root })
+  const refused = (expires: number) => {
+    try {
+      buildRecord("tournament.handover.offer", offer(expires), { created_at: NOW, root })
+      return "built"
+    } catch (e) {
+      return e instanceof ProtocolError ? e.reason : String(e)
+    }
+  }
+  assert.equal(refused(NOW + 1), "built")
+  assert.equal(refused(NOW + MAX_OFFER_SECONDS), "built")
+  assert.equal(refused(NOW), "invalid_content")
+  assert.equal(refused(NOW + MAX_OFFER_SECONDS + 1), "invalid_content")
+  // A careless client signs one anyway: readers refuse it like any invalid content.
+  const ok = buildRecord("club.owner.offer", { to: other.pubkey, prev: root, expires: NOW + 60, info: root, member: root }, { created_at: NOW, root })
+  const tooLong = finalizeEvent({ ...ok, content: JSON.stringify({ ...JSON.parse(ok.content), expires: NOW + MAX_OFFER_SECONDS + 1 }) }, owner.secret)
+  const r = parseRecord(tooLong, { now: NOW })
+  assert.equal(r.status === "invalid" && r.reason, "invalid_content")
+})
+
+test("demotion: the pin covers the admin's records since their appointment, never earlier ones", () => {
+  const found = signed(owner, "club.found", { name: "Dartfreunde Nord", visibility: "public" }, 0)
+  const root = found.id
+  const ask = signed(alice, "club.join", {}, 1, root)
+  const accept = signed(owner, "club.accept", { request: ask.id, member: alice.pubkey }, 2, root)
+  // First term as admin: a rename, kept by the first demotion's pin.
+  const admin1 = signed(owner, "club.role", { member: alice.pubkey, role: "admin", prev: ask.id }, 10, root)
+  const rename1 = signed(alice, "club.update", { prev: root, name: "DF Nord" }, 11, root)
+  const demote1 = signed(owner, "club.role", { member: alice.pubkey, role: "member", prev: admin1.id, info: rename1.id }, 12, root)
+  // Second term: an owner's pin naming the founding cuts only what Alice did in that term.
+  const admin2 = signed(owner, "club.role", { member: alice.pubkey, role: "admin", prev: demote1.id }, 20, root)
+  const about2 = signed(alice, "club.update", { prev: rename1.id, about: "Dienstags" }, 21, root)
+  const demote2 = signed(owner, "club.role", { member: alice.pubkey, role: "member", prev: admin2.id, info: root }, 22, root)
+  const result = reduceClub([found, ask, accept, admin1, rename1, demote1, admin2, about2, demote2], root, { now: NOW + 100 })
+  assert.ok(result.state)
+  assert.equal(result.state.info.name, "DF Nord")
+  assert.equal(result.state.info.about, undefined)
+  assert.deepEqual(
+    result.state.log.rejected.map((r) => [r.id, r.reason]),
+    [[about2.id, "superseded"]],
+  )
 })

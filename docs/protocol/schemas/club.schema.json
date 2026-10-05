@@ -101,7 +101,7 @@
       "additionalProperties": true
     },
     "club.invite": {
-      "description": "Creates a group link or a personal invite; a label only travels sealed",
+      "description": "Creates a group link or a personal invite; in the clear in a public club, sealed in a closed one",
       "kind": 1180,
       "encryption": "seal",
       "type": "object",
@@ -125,7 +125,7 @@
         "label": {
           "type": "string",
           "maxLength": 60,
-          "description": "Plain text, never HTML"
+          "description": "Plain text; only in a closed club, where the invite is sealed, since it may name the invited person"
         }
       },
       "required": ["kind", "key", "expires"],
@@ -311,9 +311,29 @@
           "maxLength": 64,
           "pattern": "^[0-9a-f]{64}$",
           "description": "Expected predecessor: last change of this subject, or the founding"
+        },
+        "expires": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295,
+          "description": "Open until then: after created_at, at most MAX_OFFER_SECONDS (7 days) later"
+        },
+        "info": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "The current club details it hands over: last club.update, or the club id"
+        },
+        "member": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "The offered member's current base: their last role change, or their join"
         }
       },
-      "required": ["to", "prev"],
+      "required": ["to", "prev", "expires", "info", "member"],
       "additionalProperties": true
     },
     "club.owner.cancel": {
@@ -351,14 +371,14 @@
           "minLength": 64,
           "maxLength": 64,
           "pattern": "^[0-9a-f]{64}$",
-          "description": "Last club.update (or the club id) the new owner saw"
+          "description": "Last club.update (or the club id) the new owner saw: the offer's info or one built on it"
         },
         "member": {
           "type": "string",
           "minLength": 64,
           "maxLength": 64,
           "pattern": "^[0-9a-f]{64}$",
-          "description": "The new owner's own last member change (their join, or a role change)"
+          "description": "The new owner's own last member change (their join, or a role change): the offer's member or one built on it"
         }
       },
       "required": ["offer", "info", "member"],

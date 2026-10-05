@@ -26,8 +26,9 @@ export interface Unapplied {
   // "unknown": newer type or version, kept but not executed. "sealed": encrypted, and this
   // reader has no plaintext (not wrapped for them, or no link key). "waiting": readable, but it
   // builds on a record this reader cannot open or has not loaded (an invite sealed for others,
-  // a predecessor it holds only sealed); it may apply once that data is there. None of these is
-  // a rejection: the app shows "wartet auf Daten" (docs/protocol/conflicts.md).
+  // a predecessor it holds only sealed or never received); it may apply once that data is
+  // there. None of these is a rejection: the app shows "wartet auf Daten"
+  // (docs/protocol/conflicts.md).
   why: "unknown" | "sealed" | "waiting"
   version?: string
   detail?: string
@@ -92,10 +93,13 @@ export function prepare(events: readonly unknown[], root: string, opts: ReplayOp
   // When each record of this set was dated, including those this reader cannot open: a
   // reference to a record dated later than the referring one is never a valid base.
   const datedAt = new Map<string, number>([...records.map((r) => [r.id, r.created_at] as const), ...log.unapplied.map((u) => [u.id, u.at] as const)])
-  // Records this reader holds but cannot open: a change naming one of them as its base waits.
-  // (A change on a record of an unknown version stays a visible conflict, docs/protocol/kinds.md.)
-  const unreadable = new Set(log.unapplied.filter((u) => u.why === "sealed").map((u) => u.id))
-  return { records, log, datedAt, unreadable, founding: records.find((r) => r.id === root) ?? null }
+  const bases: Bases = {
+    // Records this reader holds but cannot open: a change naming one of them as its base waits.
+    unreadable: new Set(log.unapplied.filter((u) => u.why === "sealed").map((u) => u.id)),
+    // Every event id of this set, whatever became of it: a base outside it was not loaded.
+    known: seen,
+  }
+  return { records, log, datedAt, bases, founding: records.find((r) => r.id === root) ?? null }
 }
 
 // A fresh copy of a prepared log, for a reducer that replays more than once.
@@ -118,28 +122,105 @@ export function settle(log: ReplayLog, r: AnyRecord, problem: Problem) {
   else reject(log, r, problem[0], problem[1])
 }
 
-// A change whose `prev` is not the current base: a visible conflict, unless the base it names
-// is a record this reader holds but cannot open; then it waits for that data.
-export const staleOr = (unreadable: ReadonlySet<string>, prev: string, detail: string): Problem =>
-  unreadable.has(prev) ? ["waiting", "builds on a record this reader cannot open"] : ["stale_predecessor", detail]
+// What a reader holds of the records a change may name as its base.
+export interface Bases {
+  unreadable: ReadonlySet<string>
+  known: ReadonlySet<string>
+}
+
+// A change whose `prev` is not the current base: a visible conflict when that base is a record
+// of this set (it was replaced, or never valid). When this reader holds it only sealed, or has
+// not loaded it at all, the change waits for that data (docs/protocol/conflicts.md, "Abspielen").
+export function staleOr(bases: Bases, prev: string, detail: string): Problem {
+  if (bases.unreadable.has(prev)) return ["waiting", "builds on a record this reader cannot open"]
+  if (!bases.known.has(prev)) return ["waiting", "builds on a record this reader has not loaded"]
+  return ["stale_predecessor", detail]
+}
+
+// ---- Chains of predecessors -------------------------------------------------------------------
+
+export interface Chains {
+  // `head` and its predecessors on `subject`, following `prev` back to the root or to a record
+  // of another subject (a member's chain starts at their join); null when a link is missing
+  // for this reader.
+  of(head: string, subject: string): ReadonlySet<string> | null
+}
+
+export function chainsOf(records: readonly AnyRecord[], root: string, subjectOf: (r: AnyRecord) => string | null, prevOf: (r: AnyRecord) => string): Chains {
+  const byId = new Map(records.map((r) => [r.id, r]))
+  const memo = new Map<string, Set<string> | null>()
+  return {
+    of(head, subject) {
+      const key = `${subject} ${head}`
+      if (memo.has(key)) return memo.get(key) as Set<string> | null
+      let ids: Set<string> | null = new Set<string>()
+      for (let id = head; !ids.has(id); ) {
+        ids.add(id)
+        if (id === root) break
+        const r = byId.get(id)
+        if (!r) {
+          ids = null
+          break
+        }
+        if (subjectOf(r) !== subject) break
+        id = prevOf(r)
+      }
+      memo.set(key, ids)
+      return ids
+    },
+  }
+}
+
+// Rule Ü2 c: a head an acceptance names must be the one its offer named, or built on it.
+export function buildsOn(chains: Chains, head: string, base: string, subject: string, what: string): Problem {
+  const ids = chains.of(head, subject)
+  if (ids === null) return ["waiting", `the ${what} it names is not loaded`]
+  return ids.has(base) ? null : ["invalid_content", `names an older ${what} than the offer hands over`]
+}
 
 // ---- Ends of authority ------------------------------------------------------------------------
 //
 // Nobody can be stopped from dating a record into the past (docs/decisions/0001, point 10).
 // What can be stopped is a key that lost its authority dating records back into the time it
-// still had it. Two rules do that (docs/protocol/conflicts.md, "Uhren"):
-//
-// 1. A hand-over chain (tournament organization, club ownership: offer, cancel, accept) is
-//    first replayed on its own. An offer its recipient accepted binds its author: a cancel or
-//    another offer of theirs that sorts before the acceptance does not count ("superseded"),
-//    and neither does another offer of theirs on the same base.
-// 2. The record that ends a tenure (the acceptance of a hand-over, the demotion of a club
-//    admin) names the heads its author saw (Pin). A record of the outgoing authority about such
-//    a subject that sorts before that end counts only if it is the pinned head or one of its
-//    predecessors; everything else it dates into its tenure afterwards is superseded.
-//
-// Like the final-session rule of matches (match-state.ts), both hold however the outgoing key
-// dates its records. Subjects that are not pinned keep the limit described in conflicts.md.
+// still had it. The record that ends a tenure names the state its author took over (a Pin):
+// the outgoing authority's records about that subject that sort before the end count only when
+// they belong to that state, the named head or one of its predecessors (pinRule). Like the
+// final-session rule of matches (match-state.ts), this holds however the outgoing key dates
+// its records. docs/protocol/conflicts.md states the rules ("Übergaben", Ü1–Ü6, and
+// "Herabstufung"); the comments below name them.
+
+export interface Pin {
+  // The outgoing authority, and the record that ended its tenure.
+  from: string
+  end: AnyRecord
+  // What the head covers ("chain", "core", "info", "member:<pubkey>"), and the head its
+  // author named.
+  subject: string
+  head: string
+  // The start of the tenure (the founding or the acceptance that began it, an admin's
+  // appointment): records sorting at or before it are not checked. So the end of one tenure
+  // never reaches into an earlier one, and a later hand-over cannot change whether an earlier
+  // acceptance holds.
+  since?: AnyRecord
+}
+
+// Rule Ü5 (and the demotion rule) for one reducer: `subjectOf` says which pinnable subject a
+// record changes (null: none).
+export function pinRule(pins: readonly Pin[], chains: Chains, subjectOf: (r: AnyRecord) => string | null): (r: AnyRecord) => Problem {
+  if (pins.length === 0) return () => null
+  return (r) => {
+    const subject = subjectOf(r)
+    if (subject === null) return null
+    for (const pin of pins) {
+      if (pin.from !== r.pubkey || pin.subject !== subject || byReplayOrder(r, pin.end) >= 0) continue
+      if (pin.since && byReplayOrder(r, pin.since) <= 0) continue
+      const ids = chains.of(pin.head, pin.subject)
+      if (ids === null) return ["waiting", "the state the end of this tenure names is not loaded"]
+      if (!ids.has(r.id)) return ["superseded", "dated into a tenure that has ended, and not part of what its successor took over"]
+    }
+    return null
+  }
+}
 
 export interface HandoverTypes {
   offer: string
@@ -148,122 +229,107 @@ export interface HandoverTypes {
 }
 
 export interface HandoverEnd {
-  // The outgoing holder and the acceptance that ended their tenure.
+  // The outgoing holder, the start of their tenure (the founding, or the acceptance that
+  // began it), the offer and the acceptance that ended it.
   from: string
+  since: AnyRecord
+  offer: AnyRecord
   accept: AnyRecord
 }
 
-type Offer = { to: string; prev: string }
+// What a reducer knows about the hand-overs of one replay.
+export interface Handovers {
+  // Rule Ü3: offer id -> its first acceptance by the recipient, dated after it.
+  answers: ReadonlyMap<string, string>
+  // The proposed ends of this replay (rule Ü4).
+  ends: ReadonlySet<string>
+  // Offer id -> why its answer did not hold when replayed as an end.
+  refused: ReadonlyMap<string, Problem>
+}
+
+// The hand-over records form one chain: an offer names the record before it (`prev`), a
+// cancel and an acceptance the offer they answer.
+export const handoverSubject = (types: HandoverTypes) => (r: AnyRecord) => (r.type === types.offer || r.type === types.cancel || r.type === types.accept ? "chain" : null)
+export const handoverPrev = (types: HandoverTypes) => (r: AnyRecord) => {
+  const c = r.content as { prev?: string; offer?: string }
+  return (r.type === types.offer ? c.prev : c.offer) as string
+}
+
 const contentOf = <T>(r: AnyRecord) => r.content as unknown as T
 
-export function handoverChain(
+// Rule Ü3: only the first acceptance of an offer by its recipient, dated after the offer,
+// answers it.
+export function firstAnswers(records: readonly AnyRecord[], types: HandoverTypes): Map<string, string> {
+  const offers = new Map(records.filter((r) => r.type === types.offer).map((r) => [r.id, r]))
+  const first = new Map<string, string>()
+  for (const r of records) {
+    if (r.type !== types.accept) continue
+    const offer = offers.get(contentOf<{ offer: string }>(r).offer)
+    if (!offer || first.has(offer.id) || contentOf<{ to: string }>(offer).to !== r.pubkey || byReplayOrder(offer, r) >= 0) continue
+    first.set(offer.id, r.id)
+  }
+  return first
+}
+
+// Rule Ü4, the proposal: following the holders from the founding, the first answer in replay
+// order to an offer the current holder made in their tenure, unless it was refused. Whether it
+// holds is the replay's to say (settleHandovers).
+export function handoverEnds(
   records: readonly AnyRecord[],
   founding: AnyRecord,
   types: HandoverTypes,
-  // Further condition on whoever accepts (club roles of a club's tournament).
-  mayAccept: (pubkey: string, at: number) => boolean = () => true,
-): { superseded: Set<string>; ends: HandoverEnd[] } {
-  const chainTypes = [types.offer, types.cancel, types.accept]
-  const steps = records.filter((r) => r !== founding && chainTypes.includes(r.type) && r.created_at >= founding.created_at)
-  const offers = new Map(steps.filter((r) => r.type === types.offer).map((r) => [r.id, r]))
-  // The first acceptance of each offer by its recipient, sorting after the offer.
-  const acceptOf = new Map<string, AnyRecord>()
-  for (const r of steps) {
-    if (r.type !== types.accept) continue
-    const offer = offers.get(contentOf<{ offer: string }>(r).offer)
-    if (!offer || acceptOf.has(offer.id) || contentOf<Offer>(offer).to !== r.pubkey || byReplayOrder(offer, r) >= 0) continue
-    if (mayAccept(r.pubkey, r.created_at)) acceptOf.set(offer.id, r)
-  }
-  const accepted = [...acceptOf.keys()].map((id) => offers.get(id) as AnyRecord)
-
-  const superseded = new Set<string>()
+  answers: ReadonlyMap<string, string>,
+  refused: ReadonlyMap<string, Problem>,
+): HandoverEnd[] {
+  const byId = new Map(records.map((r) => [r.id, r]))
   const ends: HandoverEnd[] = []
   let holder = founding.pubkey
-  let head = founding.id
-  let open: AnyRecord | null = null
-  for (const r of steps) {
-    if (r.pubkey === holder && r.type !== types.accept) {
-      const bound = open !== null && acceptOf.has(open.id)
-      const sibling =
-        r.type === types.offer && !acceptOf.has(r.id) && accepted.some((x) => x.pubkey === r.pubkey && contentOf<Offer>(x).prev === contentOf<Offer>(r).prev)
-      if (bound || sibling) {
-        superseded.add(r.id)
-        continue
-      }
-    }
-    if (r.type === types.offer) {
-      const c = contentOf<Offer>(r)
-      if (r.pubkey === holder && c.prev === head && c.to !== r.pubkey) {
-        open = r
-        head = r.id
-      }
-    } else if (r.type === types.cancel) {
-      if (r.pubkey === holder && open?.id === contentOf<{ offer: string }>(r).offer) {
-        open = null
-        head = r.id
-      }
-    } else if (open !== null && acceptOf.get(open.id) === r) {
-      ends.push({ from: holder, accept: r })
-      holder = r.pubkey
-      open = null
-      head = r.id
-    }
+  let start: AnyRecord = founding
+  for (const r of records) {
+    if (r.type !== types.accept) continue
+    const id = contentOf<{ offer: string }>(r).offer
+    const offer = byId.get(id)
+    if (!offer || answers.get(id) !== r.id || refused.has(id) || offer.pubkey !== holder || byReplayOrder(start, offer) >= 0) continue
+    ends.push({ from: holder, since: start, offer, accept: r })
+    holder = r.pubkey
+    start = r
   }
-  return { superseded, ends }
+  return ends
 }
 
-export interface Pin {
-  // The outgoing authority, and the record that ended its tenure.
-  from: string
-  end: AnyRecord
-  // What the head covers ("core", "info", "member:<pubkey>"), and the head its author saw.
-  subject: string
-  head: string
+// Rule Ü4, the decision: replays with the proposed ends and refuses the first one the replay
+// did not apply, then proposes again, until every proposed end holds. Each round refuses one
+// offer's only answer, so there are at most as many rounds as offers; without a refusal (the
+// usual case) it is a single replay.
+export function settleHandovers<T extends { log: ReplayLog }>(
+  propose: (refused: ReadonlyMap<string, Problem>) => HandoverEnd[],
+  run: (ends: readonly HandoverEnd[], refused: ReadonlyMap<string, Problem>) => T,
+): T {
+  const refused = new Map<string, Problem>()
+  for (;;) {
+    const ends = propose(refused)
+    const result = run(ends, refused)
+    const done = new Set(result.log.applied.map((a) => a.id))
+    const failed = ends.find((e) => !done.has(e.accept.id))
+    if (!failed) return result
+    const no = result.log.rejected.find((x) => x.id === failed.accept.id)
+    const waits = result.log.unapplied.find((x) => x.id === failed.accept.id)
+    refused.set(failed.offer.id, no ? [no.reason, no.detail] : ["waiting", waits?.detail ?? "waits for data"])
+  }
 }
 
-// The check of rule 2 for one reducer. `subjectOf` says which pinnable subject a record
-// changes (null: none), `prevOf` the predecessor it names.
-export function pinRule(
-  pins: readonly Pin[],
-  records: readonly AnyRecord[],
-  root: string,
-  subjectOf: (r: AnyRecord) => string | null,
-  prevOf: (r: AnyRecord) => string,
-): (r: AnyRecord) => Problem {
-  if (pins.length === 0) return () => null
-  const byId = new Map(records.map((r) => [r.id, r]))
-  const chains = new Map<Pin, Set<string> | null>()
-  // The pinned head and its predecessors; null when a link is missing for this reader.
-  const chainOf = (pin: Pin): Set<string> | null => {
-    if (chains.has(pin)) return chains.get(pin) as Set<string> | null
-    let ids: Set<string> | null = new Set<string>()
-    for (let id = pin.head; !ids.has(id); ) {
-      ids.add(id)
-      if (id === root) break
-      const r = byId.get(id)
-      if (!r) {
-        ids = null
-        break
-      }
-      // A member's chain starts at their join, which is not itself a pinned change.
-      if (subjectOf(r) !== pin.subject) break
-      id = prevOf(r)
-    }
-    chains.set(pin, ids)
-    return ids
-  }
-  return (r) => {
-    const subject = subjectOf(r)
-    if (subject === null) return null
-    for (const pin of pins) {
-      if (pin.from !== r.pubkey || pin.subject !== subject || byReplayOrder(r, pin.end) >= 0) continue
-      const ids = chainOf(pin)
-      if (ids === null) return ["waiting", "the state the end of this tenure names is not loaded"]
-      if (!ids.has(r.id)) return ["superseded", "dated into a tenure that has ended, and not part of what its successor took over"]
-    }
-    return null
-  }
-}
+const offerOf = (accept: AnyRecord) => contentOf<{ offer: string }>(accept).offer
+
+// The reducers check an acceptance in this order: the open offer and its recipient, laterAnswer
+// (Ü3), the offer's time and heads (Ü2 b, c), their own conditions (Ü2 d), and last notTheEnd.
+export const laterAnswer = (h: Handovers, accept: AnyRecord): Problem =>
+  h.answers.get(offerOf(accept)) === accept.id ? null : ["no_open_offer", "the offer was answered by an earlier acceptance"]
+
+// An acceptance that passes every check but is not a proposed end: its offer's answer was
+// refused when replayed as the end (with the problem it had then), or settleHandovers has not
+// settled yet. So no acceptance changes the holder unless it is an end with its pins.
+export const notTheEnd = (h: Handovers, accept: AnyRecord): Problem =>
+  h.ends.has(accept.id) ? null : (h.refused.get(offerOf(accept)) ?? ["no_open_offer", "not the acceptance that ends this tenure"])
 
 // The outcome of a founding that could not be used.
 export type FoundingProblem = "missing" | "invalid" | "sealed" | "unknown_version" | "not_authorized"

@@ -148,6 +148,7 @@ test("club vectors", async () => {
       )
     if (want.former) for (const [n, how] of Object.entries(want.former)) assert.equal(s.former[idOf(keys, n)]?.how, how, `${c.name}: former`)
     if (want.name) assert.equal(s.info.name, want.name, `${c.name}: name`)
+    if (want.visibility) assert.equal(s.info.visibility, want.visibility, `${c.name}: visibility`)
     if (want.shares !== undefined) assert.equal(s.shares.length, want.shares, `${c.name}: shares`)
     if (want.seasons)
       for (const [id, season] of Object.entries(want.seasons as Record<string, { versions: number; ended: boolean }>)) {
@@ -300,6 +301,7 @@ test("tournament vectors", () => {
         `${c.name}: checked in`,
       )
     if (want.place) assert.equal(s.settings.place, want.place)
+    if (want.name) assert.equal(s.settings.name, want.name, `${c.name}: name`)
     if (want.slots)
       for (const [slot, w] of Object.entries(want.slots as Record<string, { winner?: string; corrected?: boolean; affected?: boolean; walkover?: string }>)) {
         if (w.winner !== undefined) assert.equal(s.slots[slot].approved?.winner, w.winner, `${c.name}: ${slot} winner`)

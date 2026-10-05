@@ -1,6 +1,6 @@
 # Familie: Turnier
 
-Stand: P0.05 (nach Review Runde 1). Code: [`tournament.ts`](../../../lib/protocol/tournament.ts) (Typen, Schemas, Auslosung), [`tournament-state.ts`](../../../lib/protocol/tournament-state.ts) (Zustand). Schema: [`schemas/tournament.schema.json`](../schemas/tournament.schema.json). Vektoren: [`vectors/tournament.json`](../vectors/tournament.json). Rechte: [permissions.md](../permissions.md).
+Stand: P0.05 (nach Review Runde 2). Code: [`tournament.ts`](../../../lib/protocol/tournament.ts) (Typen, Schemas, Auslosung), [`tournament-state.ts`](../../../lib/protocol/tournament-state.ts) (Zustand). Schema: [`schemas/tournament.schema.json`](../schemas/tournament.schema.json). Vektoren: [`vectors/tournament.json`](../vectors/tournament.json). Rechte: [permissions.md](../permissions.md).
 
 ## Zweck
 
@@ -47,15 +47,15 @@ Spieler setzen `created_at` selbst. Deshalb entscheidet nichts, was ein Spieler 
 | `tournament.result` | zugewiesenes Board oder Veranstalter | `slot`, `winner`, `score`, `walkover?` (`noShow` / `retired`), `match?`, `result?` | während `running` / `paused`; zählt sofort bei `approval: "board"` oder vom Veranstalter |
 | `tournament.approve` | Veranstalter | `slot`, `submission`, `prev` | macht ein eingereichtes Ergebnis gültig |
 | `tournament.correct` | Veranstalter | `slot`, `winner`, `score`, `reason`, `prev` | ändert ein freigegebenes Ergebnis; abhängige, schon begonnene Spiele werden als `affected` markiert, nie still neu besetzt |
-| `tournament.handover.offer` | Veranstalter | `to`, `prev` | bietet die Leitung an |
-| `tournament.handover.cancel` | Veranstalter | `offer` | zieht das offene Angebot zurück; gilt nicht, wenn die angebotene Person angenommen hat (vor der Annahme einsortiert) |
-| `tournament.handover.accept` | angebotene Person | `offer`, `core` (letzte Änderung des Turnierkerns, die sie sah, oder Turnier-ID) | Turnier-ID bleibt; bei Club-Turnieren muss die übernehmende Person im Club Eigentümer, Admin oder Turnierleiter sein; hält den übernommenen Kern fest (unten) |
+| `tournament.handover.offer` | Veranstalter | `to`, `prev` (letzter Datensatz der Übergabekette oder Turnier-ID), `expires` (höchstens 7 Tage nach `created_at`), `core` (aktuelle Änderung des Turnierkerns oder Turnier-ID) | bietet die Leitung an und nennt den Kern, den sie übergibt |
+| `tournament.handover.cancel` | Veranstalter | `offer` | zieht das offene Angebot zurück; gilt nicht gegen eine Annahme, die vor ihm einsortiert ist oder ihn nicht kannte (Ü5, Ü6 a) |
+| `tournament.handover.accept` | angebotene Person | `offer`, `core` (letzte Änderung des Turnierkerns, die sie sah: der Kern des Angebots oder ein späterer, der darauf aufbaut) | nur die erste Annahme zählt, bis `expires`; Turnier-ID bleibt; bei Club-Turnieren muss die übernehmende Person im Club Eigentümer, Admin oder Turnierleiter sein; hält den übernommenen Kern fest (unten) |
 
 Teilnehmer-IDs sind Pubkeys (64 Hex) oder Gast-IDs (32 Hex). Slots benennt die Engine (`R1-1`, `GF2`, …).
 
 ## Übergabe der Leitung
 
-Die Übergabekette (Angebot, Rückzug, Annahme) wird vor allem anderen für sich abgespielt; ein angenommenes Angebot bindet den bisherigen Veranstalter. Die Annahme nennt in `core` den Turnierkern, den die übernehmende Person sah. Änderungen des Kerns (`tournament.update`, `.phase`, `.seed`, `.draw`) des bisherigen Veranstalters, die vor der Annahme einsortiert sind, gelten nur, wenn sie dieser Stand oder einer seiner Vorgänger sind; eine später zurückdatierte Absage oder ein Rückzug des Angebots ist `superseded` (Vektor `former-organizer-backdates`). Plätze, Boards und Spiele werden nicht festgehalten: Dort kann der bisherige Veranstalter weiter zurückdatieren, etwa einen Gast oder ein Herausnehmen vor der Auslosung, das sie ungültig macht ([conflicts.md](../conflicts.md#ende-einer-befugnis), bekannte Grenze zu PR-10).
+Es gelten die Übergaberegeln Ü1 bis Ü6 in [conflicts.md](../conflicts.md#übergaben-turnierleitung-club-eigentum). Kurz: Das Angebot ist höchstens 7 Tage offen und nennt den Kern, den es übergibt. Die erste Annahme der angebotenen Person beendet die Leitung des Veranstalters, wenn sie rechtzeitig ist, einen Kern nennt, der auf dem des Angebots aufbaut, und beim Abspielen gilt (Clubrolle, Turnier nicht beendet). Danach gelten Übergabedatensätze und Kernänderungen (`tournament.update`, `.phase`, `.seed`, `.draw`) des bisherigen Veranstalters, die vor der Annahme einsortiert sind, nur, wenn sie zu dem gehören, was die Annahme nennt; sonst `superseded`. Was der Veranstalter bis zum Angebot festgelegt hat, etwa Auslosung und Start, kann die Annahme also nicht abschneiden (Vektor `handover-accept-names-older-core`); was er danach tat und die übernehmende Person nicht kannte, schon (Vektor `handover-crossing-cancel`, bekannte Grenze Ü6 a). Plätze, Boards und Spiele werden nicht festgehalten: Dort kann der bisherige Veranstalter weiter zurückdatieren, etwa einen Gast oder ein Herausnehmen vor der Auslosung, das sie ungültig macht ([conflicts.md](../conflicts.md#nicht-festgehalten), bekannte Grenze zu PR-10).
 
 ## Auslosung
 
@@ -79,8 +79,8 @@ Wie bei Clubs: reguläre, nicht ersetzte Datensätze; Kopien sendet der Veransta
 
 ## Ablehnungen
 
-`not_authorized`, `stale_predecessor`, `superseded`, `phase_invalid`, `registration_closed`, `tournament_full`, `not_registered`, `already_registered`, `guest_unknown`, `seed_not_committed`, `seed_mismatch`, `draw_mismatch`, `board_unknown`, `board_not_assigned`, `result_unknown`, `already_approved`, `rules_locked`, `no_open_offer`, `invalid_content` (Warteliste ohne Warteliste), dazu die allgemeinen Gründe.
+`not_authorized`, `stale_predecessor`, `superseded`, `phase_invalid`, `registration_closed`, `tournament_full`, `not_registered`, `already_registered`, `guest_unknown`, `seed_not_committed`, `seed_mismatch`, `draw_mismatch`, `board_unknown`, `board_not_assigned`, `result_unknown`, `already_approved`, `rules_locked`, `no_open_offer` (zurückgezogen, abgelaufen, schon beantwortet), `invalid_content` (Warteliste ohne Warteliste, Angebot länger als 7 Tage offen, Annahme mit älterem Kern als das Angebot), dazu die allgemeinen Gründe. Änderungen auf einer Basis, die der Leser nicht hat, warten (`unapplied`, „wartet auf Daten“).
 
 ## Vektoren
 
-`registration-and-admission`, `capacity`, `guests-and-claims`, `checkin-and-draw`, `draw-holds-against-backdated-player-records`, `boards-and-results`, `organizer-handover`, `former-organizer-backdates`, `rules-locked-and-unknown`, `club-tournament`, `club-tournament-by-member`, `newer-engine`. Dazu Clubturniere mit dem Rollenverlauf eines echten Clubzustands in den Club-Vektoren `public-club-read-by-*` und `closed-club-partial-reader`.
+`registration-and-admission`, `capacity`, `guests-and-claims`, `checkin-and-draw`, `draw-holds-against-backdated-player-records`, `boards-and-results`, `organizer-handover`, `former-organizer-backdates`, `handover-cancel-then-expired-accept`, `handover-completed-then-old-offer-accepted`, `handover-accept-names-older-core`, `handover-crossing-cancel`, `later-offer-on-stale-base`, `rules-locked-and-unknown`, `club-tournament`, `club-tournament-by-member`, `newer-engine`. Dazu Clubturniere mit dem Rollenverlauf eines echten Clubzustands in den Club-Vektoren `public-club-read-by-*` und `closed-club-partial-reader`.

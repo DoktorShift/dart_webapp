@@ -40,7 +40,7 @@ Jeder Typ legt fest, wie sein Inhalt verschlüsselt sein darf (`encryption` in [
 
 | Form | Tag | Verwendung | Leser |
 | --- | --- | --- | --- |
-| keine | – | öffentliche Clubs, öffentliche Turniere und Spiele, Beitrittsanfragen | alle |
+| keine | – | öffentliche Clubs (dort ist nur `club.keys` versiegelt; jeder andere versiegelte Datensatz: `invalid_tags`), öffentliche Turniere und Spiele, Beitrittsanfragen | alle |
 | **Siegel** | `["enc","seal"]` | geschlossene Clubs (mit ihren Einladungen) und ihre Turniere; Schlüsselfreigaben immer | jede Person, für die der Inhaltsschlüssel verpackt ist |
 | **Link-Schlüssel** | `["enc","nip44",<pubkey>]` | private Spiele (Spielschlüssel aus dem Link-Fragment) | wer den Link hat |
 
@@ -94,7 +94,8 @@ Die vollständigen Inhaltsschemas stehen maschinenlesbar in [`schemas/`](schemas
 | Alter flüchtiger Nachrichten | ≤ 600 s beim Leser | Relays verwerfen ältere als 60 s; der Leser lässt einen Kopplungsvorgang lang Uhrabweichungen zu |
 | Kopplungs-QR / Code | ≤ 10 min gültig | Entscheidung 0002 §7 |
 | Board-QR | ≤ 60 min gültig | Spieler sammeln sich am Board; danach zeigt das Board einen neuen QR |
-| Leser eines versiegelten Events, Mitglieder eines geschlossenen Clubs | ≤ 100 | jede Verpackung kostet Platz im Event; ein geschlossener Club ohne eigene Höchstzahl nimmt danach nur noch auf Anfrage auf, ein größerer öffentlicher Club lässt sich nicht schließen |
+| Übergabeangebot (`tournament.handover.offer`, `club.owner.offer`) | ≤ 7 Tage offen (`MAX_OFFER_SECONDS`) | eine Annahme danach gilt nicht; ein Rückzug hält nur ehrliche Geräte auf ([conflicts.md](conflicts.md#übergaben-turnierleitung-club-eigentum), Ü1, Ü6) |
+| Leser eines versiegelten Events, Mitglieder eines geschlossenen Clubs | ≤ 100 | jede Verpackung kostet Platz im Event; ein geschlossener Club ohne eigene Höchstzahl nimmt danach nur noch auf Anfrage auf (an der Grenze entscheiden die Zeitstempel, deshalb setzt `lib/clubs` ab etwa 90 Mitgliedern eine Höchstzahl, [club.md](families/club.md#einladungen-und-beitritt)), ein größerer öffentlicher Club lässt sich nicht schließen |
 | Geteilte Schlüssel je `club.keys` | ≤ 150 laut Schema; wie viele passen, hängt von den Lesern ab: 150 bis 20 Leser, 122 bei 50, 68 bei 100 (`maxSharedKeys`) | Verpackungen und Schlüssel teilen sich die 32 KiB; mehr in mehreren Datensätzen |
 | Turnierteilnehmer | ≤ 128 | erste verbindliche Lastgröße (PLAN.md); wie die Turnier-Engine |
 
@@ -111,4 +112,4 @@ Größere Daten werden in hash-verkettete Stücke geteilt ([`chunks.ts`](../../l
 
 ## Prüfreihenfolge beim Lesen
 
-`parseRecord` ([`records.ts`](../../lib/protocol/records.ts)) prüft in dieser Reihenfolge und nennt den ersten Grund ([conflicts.md](conflicts.md#ablehnungsgründe)): Form (`invalid_event`) → Kind (`wrong_kind`) → Labels (`not_blueline`) → Größe (`too_large`) → Tag-Längen (`tag_too_long`) → Zeit (`future_timestamp`) → bekannter Typ und Version (sonst „unbekannt", nicht abgelehnt) → Kind passt zum Typ → Wurzel- und `d`-Tags (`invalid_tags`) → Verschlüsselungsform des Typs (`invalid_tags`, `sealing_required`) → Umschlag (`invalid_content`, neuere Umschlagversion: „unbekannt“) → ohne Klartext: „versiegelt“ → Inhalt gegen Schema (`invalid_content`) → Querprüfungen (`stake_requires_private`, `sealing_required`). Signatur und Id prüft vorher `lib/nostr` mit nostr-core; die Berechtigung prüfen danach die Reducer.
+`parseRecord` ([`records.ts`](../../lib/protocol/records.ts)) prüft in dieser Reihenfolge und nennt den ersten Grund ([conflicts.md](conflicts.md#ablehnungsgründe)): Form (`invalid_event`) → Kind (`wrong_kind`) → Labels (`not_blueline`) → Größe (`too_large`) → Tag-Längen (`tag_too_long`) → Zeit (`future_timestamp`) → bekannter Typ und Version (sonst „unbekannt", nicht abgelehnt) → Kind passt zum Typ → Wurzel- und `d`-Tags (`invalid_tags`) → Verschlüsselungsform des Typs (`invalid_tags`, `sealing_required`) → Umschlag (`invalid_content`, neuere Umschlagversion: „unbekannt“) → ohne Klartext: „versiegelt“ → Inhalt gegen Schema (`invalid_content`) → Querprüfungen (Gültigkeit eines Übergabeangebots `invalid_content`, `stake_requires_private`, `sealing_required`). Signatur und Id prüft vorher `lib/nostr` mit nostr-core; die Berechtigung prüfen danach die Reducer.
