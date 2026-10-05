@@ -13,7 +13,7 @@ import { DEFAULT_SETTINGS, saveLastGame, saveLastPlayers, saveMatch, saveRules, 
 import { archiveFinished, importV1Matches, loadArchive } from "../lib/storage/archive.ts"
 import { newObjectId } from "../lib/storage/ids.ts"
 import { assignPlayers, newPlayerRecord } from "../lib/storage/players.ts"
-import { getSaveState, retrySaves, dismissSaveAlert, trackSave } from "../lib/storage/save-status.ts"
+import { archiveSaveKind, getSaveState, retrySaves, dismissSaveAlert, trackSave } from "../lib/storage/save-status.ts"
 import { V1_KEYS } from "../lib/storage/v1.ts"
 
 beforeEach(resetStorage)
@@ -121,16 +121,28 @@ test("the save alert: shown on failure, gone after a success, retry and dismiss"
 })
 
 test("the save alert: a slow old write finishing late doesn't overrule a newer one", async () => {
+  const kind = archiveSaveKind("match-a")
   let finishOld: (ok: boolean) => void = () => {}
-  const old = trackSave("archive", () => new Promise<boolean>((resolve) => (finishOld = resolve)))
-  await trackSave("archive", async () => true)
+  const old = trackSave(kind, () => new Promise<boolean>((resolve) => (finishOld = resolve)))
+  await trackSave(kind, async () => true)
   finishOld(false)
   await old
   assert.equal(getSaveState().failing, false)
-  await trackSave("archive", () => Promise.reject(new Error("disk")))
+  await trackSave(kind, () => Promise.reject(new Error("disk")))
   assert.equal(getSaveState().failing, true)
-  await trackSave("archive", () => {
+  await trackSave(kind, () => {
     throw new Error("disk")
   })
   assert.equal(getSaveState().failing, true)
+})
+
+test("the save alert: a hidden alert comes back when another write starts failing", async () => {
+  await trackSave("game", () => false)
+  dismissSaveAlert()
+  // The same write failing again stays hidden ...
+  await trackSave("game", () => false)
+  assert.equal(getSaveState().dismissed, true)
+  // ... a game that can't be archived is new and shows it again.
+  await trackSave(archiveSaveKind("match-a"), () => false)
+  assert.deepEqual(getSaveState(), { failing: true, dismissed: false, recovered: 0 })
 })

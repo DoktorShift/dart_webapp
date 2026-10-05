@@ -426,7 +426,7 @@ export const de = {
     reset: "Rangliste zurücksetzen",
     resetTitle: "Rangliste zurücksetzen?",
     resetDescription: (n: number) =>
-      `Das löscht ${n === 1 ? "das gespeicherte Spiel" : `alle ${n} gespeicherten Spiele`} auf diesem Gerät. Das lässt sich nicht rückgängig machen.`,
+      `Das löscht ${n === 1 ? "das gespeicherte Spiel" : `alle ${n} gespeicherten Spiele`} der Rangliste auf diesem Gerät. Das lässt sich nicht rückgängig machen.`,
     resetConfirm: "Zurücksetzen",
     about: "Über die App",
     aboutApp: (name: string) => `Über ${name}`,

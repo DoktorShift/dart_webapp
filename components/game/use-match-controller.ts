@@ -16,7 +16,7 @@ import { calloutFor, type Callout } from "@/components/game/callout"
 import type { AppSettings } from "@/lib/game/storage"
 import type { Dart, SavedMatch, Throw } from "@/lib/game/types"
 import { archiveFinished, unarchive } from "@/lib/storage/archive"
-import { trackSave } from "@/lib/storage/save-status"
+import { archiveSaveKind, trackSave } from "@/lib/storage/save-status"
 import type { CorrectionTarget } from "@/components/game/visit-panel"
 
 const BOUNCE_MS = 70
@@ -223,11 +223,11 @@ function useArchiveSync(match: SavedMatch, state: MatchState) {
   const archived = useRef<boolean | null>(null)
   useEffect(() => {
     if (state.winner === null) {
-      if (archived.current || (archived.current === null && match.throws.length > 0)) void trackSave("archive", () => unarchive(match.id))
+      if (archived.current || (archived.current === null && match.throws.length > 0)) void trackSave(archiveSaveKind(match.id), () => unarchive(match.id))
       archived.current = false
       return
     }
-    void trackSave("archive", () => archiveFinished(match, state))
+    void trackSave(archiveSaveKind(match.id), () => archiveFinished(match, state))
     archived.current = true
   }, [match, state])
 }

@@ -181,6 +181,28 @@ test("deleting everything clears every 1.0.0 key and every store, and tells othe
   assert.deepEqual(heard.at(-1), { type: "wipe" })
 })
 
+test("a wipe that fails part way says so, and only the other tabs are told to start fresh", async (t) => {
+  await evening()
+  const before = await loadArchive()
+  t.mock.method(IDBObjectStore.prototype, "clear", () => {
+    throw new DOMException("simulated", "UnknownError")
+  })
+  const heard: StorageMessage[] = []
+  const stop = onStorageChange((m) => heard.push(m))
+  const otherTab = new BroadcastChannel("blueline")
+  t.after(() => otherTab.close())
+  const elsewhere = new Promise((resolve) => (otherTab.onmessage = (event) => resolve(event.data)))
+
+  assert.equal(await wipeAllData(), false)
+  stop()
+  // This tab stays, to show that not everything was deleted ...
+  assert.deepEqual(heard, [])
+  // ... while other tabs start fresh, so they can't write back what is gone.
+  assert.deepEqual(await elsewhere, { type: "wipe" })
+  assert.deepEqual(await loadArchive(), before)
+  for (const key of V1_KEY_LIST) assert.equal(localStore.getItem(key), null, key)
+})
+
 test("file names carry the date", () => {
   assert.equal(exportFileName("blueline-daten", new Date(2026, 9, 4, 23, 30)), "blueline-daten-2026-10-04.json")
 })

@@ -15,7 +15,7 @@ import {
   type V1Snapshot,
 } from "../lib/storage/archive.ts"
 import { closeDatabase, dbGet, dbGetAll, kvGet, onStorageChange } from "../lib/storage/db.ts"
-import { getSaveState, retrySaves, trackSave } from "../lib/storage/save-status.ts"
+import { archiveSaveKind, getSaveState, retrySaves, trackSave } from "../lib/storage/save-status.ts"
 import { listPlayers, newPlayerRecord, savePlayers } from "../lib/storage/players.ts"
 import { V1_KEYS } from "../lib/storage/v1.ts"
 
@@ -233,7 +233,7 @@ test("a game won while the database is slow to open is reported, and a retry sav
   Object.assign(globalThis, { indexedDB: slow.factory })
   t.mock.timers.enable({ apis: ["setTimeout"] })
   // A solo game: without the database nothing else keeps it.
-  const first = trackSave("archive", () => archiveFinished(matchE()))
+  const first = trackSave(archiveSaveKind("match-e"), () => archiveFinished(matchE()))
   await new Promise((resolve) => setImmediate(resolve))
   t.mock.timers.tick(5000)
   assert.equal(await first, false)
@@ -241,6 +241,31 @@ test("a game won while the database is slow to open is reported, and a retry sav
   assert.equal(getSaveState().failing, true)
 
   slow.release()
+  assert.equal(await retrySaves(), true)
+  assert.equal(getSaveState().failing, false)
+  assert.ok(await stored("match-e"))
+})
+
+test("one game saving fine never hides another game that couldn't be archived", async (t) => {
+  await closeDatabase()
+  const slow = slowIndexedDB()
+  Object.assign(globalThis, { indexedDB: slow.factory })
+  t.mock.timers.enable({ apis: ["setTimeout"] })
+  const first = trackSave(archiveSaveKind("match-e"), () => archiveFinished(matchE()))
+  await new Promise((resolve) => setImmediate(resolve))
+  t.mock.timers.tick(5000)
+  assert.equal(await first, false)
+  t.mock.timers.reset()
+
+  // The rematch is archived fine, and then taken off again by an Undo: neither touches the
+  // first game, which is still missing and still reported.
+  slow.release()
+  const next = matchA()
+  assert.equal(await trackSave(archiveSaveKind(next.id), () => archiveFinished(next)), true)
+  assert.equal(await trackSave(archiveSaveKind(next.id), () => unarchive(next.id)), true)
+  assert.equal(getSaveState().failing, true)
+  assert.equal(await stored("match-e"), undefined)
+
   assert.equal(await retrySaves(), true)
   assert.equal(getSaveState().failing, false)
   assert.ok(await stored("match-e"))

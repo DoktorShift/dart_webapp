@@ -2,13 +2,15 @@
 // try again; nothing says "saved" while one is failing. The page keeps everything entered in
 // memory meanwhile, so retrying writes the current state, not an old one.
 
-// "game": the running game (localStorage). "archive": a finished game's archive entry.
-export type SaveKind = "game" | "archive"
+// "game": the running game (localStorage). "archive:<match id>": that finished game's archive
+// entry. Each game has its own, so one game saving fine never hides another game's failure.
+export type SaveKind = "game" | `archive:${string}`
+export const archiveSaveKind = (matchId: string): SaveKind => `archive:${matchId}`
 type Attempt = () => boolean | Promise<boolean>
 
 export interface SaveState {
   failing: boolean
-  // The players hid the alert. It comes back with the next failure after a success.
+  // The players hid the alert. It comes back when another write starts failing.
   dismissed: boolean
   // Counts retries that made everything saved again, for the short "saved" confirmation.
   recovered: number
@@ -28,10 +30,16 @@ function update(next: Partial<SaveState>) {
 }
 
 function settle(kind: SaveKind, ok: boolean) {
-  if (ok) failed.delete(kind)
-  else failed.add(kind)
+  // A write that starts failing (another game, or one that worked before) shows the alert again,
+  // even if the players hid it for an earlier one.
+  const fresh = !ok && !failed.has(kind)
+  if (ok) {
+    failed.delete(kind)
+    // Nothing left to retry: let go of the game it would have written.
+    attempts.delete(kind)
+  } else failed.add(kind)
   const failing = failed.size > 0
-  if (failing !== state.failing) update({ failing, dismissed: failing && state.dismissed })
+  if (failing !== state.failing || (fresh && state.dismissed)) update({ failing, dismissed: failing && !fresh && state.dismissed })
 }
 
 // Runs a write and remembers whether it worked. Only the latest write of each kind counts: an

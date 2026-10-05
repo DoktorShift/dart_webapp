@@ -11,7 +11,7 @@ import {
   type ArchivedPlayer,
   type V1Snapshot,
 } from "./archive.ts"
-import { announce, dbClear, dbGetAll, dbWrite, kvGet, STORES, type WriteOp } from "./db.ts"
+import { announce, announceElsewhere, dbClear, dbGetAll, dbWrite, kvGet, STORES, type WriteOp } from "./db.ts"
 import { listPlayers, parsePlayerRecord, type PlayerRecord } from "./players.ts"
 import { isV1Record, mergeV1Records, readAllRaw, removeAllV1Data } from "./v1.ts"
 
@@ -248,7 +248,10 @@ export async function wipeAllData() {
     } catch {
       ok = false
     }
-    announce({ type: "wipe" })
+    // Other tabs start fresh either way, so they can't write back what is gone. This tab only
+    // does after a complete wipe; otherwise it stays to say that not everything was deleted.
+    if (ok) announce({ type: "wipe" })
+    else announceElsewhere({ type: "wipe" })
     return ok
   })
 }

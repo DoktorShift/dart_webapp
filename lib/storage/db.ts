@@ -226,6 +226,11 @@ export function onStorageChange(listener: Listener) {
 // Tells this tab and the others; BroadcastChannel itself never reaches the tab that sent it.
 export function announce(message: StorageMessage) {
   deliver(message)
+  announceElsewhere(message)
+}
+
+// Tells only the other tabs.
+export function announceElsewhere(message: StorageMessage) {
   try {
     getChannel()?.postMessage(message)
   } catch {
