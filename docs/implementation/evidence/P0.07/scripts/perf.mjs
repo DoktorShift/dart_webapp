@@ -14,6 +14,9 @@
 //    (the write of dart-scorer.current-match.v1), p50/p95/max. There is no sync yet to measure.
 // 3. Navigation (if the tab bar has a Profile tab): tab switches and pushes, same measure.
 //
+// OPEN_TABS=1 opens Rangliste, Clubs, Turniere and Profil › Einstellungen before the game starts,
+// so with the app shell they stay mounted (hidden) under the game while the throws are measured.
+//
 // Data: cold starts are first visits (empty storage). Input and navigation run with 1,000 saved
 // games in the history, the largest amount the plan's measurements use (DESIGN.md §5).
 import { chromium } from 'playwright'
@@ -102,6 +105,23 @@ for (let run = 0; run < 5; run++) {
 
 const { ctx, page } = await context({ throttleNetwork: false, seedHistory: true })
 await page.goto(BASE + '/', { waitUntil: 'networkidle' })
+if (process.env.OPEN_TABS) {
+  const bar = page.getByRole('navigation', { name: 'Bereiche' })
+  // Tabs a build doesn't have are skipped (the comparison builds before the app shell).
+  for (const name of ['Rangliste', 'Clubs', 'Turniere', 'Profil', 'Einstellungen']) {
+    const button = bar.getByRole('button', { name, exact: true })
+    if (!(await button.count())) continue
+    await button.tap()
+    await page.waitForTimeout(800)
+  }
+  const settings = page.getByRole('main').getByRole('button', { name: 'Einstellungen', exact: true })
+  if (await settings.count()) {
+    await settings.first().tap()
+    await page.waitForTimeout(900)
+  }
+  await bar.getByRole('button', { name: 'Spielen', exact: true }).tap()
+  await page.waitForTimeout(800)
+}
 await page.getByRole('button', { name: /^X01/ }).tap()
 await page.waitForTimeout(800)
 await page.getByRole('textbox', { name: 'Spieler 1' }).fill('Anna')

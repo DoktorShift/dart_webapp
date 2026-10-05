@@ -131,7 +131,7 @@ Echte Geräte für P8 (Vorschlag, Bestätigung durch den Nutzer, weil die Gerät
 | Layoutverschiebung (CLS) | ≤ 0,1 | PLAN Zeile 770 |
 | Punkteingabe bis sichtbare Rückmeldung | ≤ 100 ms im 95. Perzentil auf dem Referenzgerät, ohne Netzwerk im Weg | PLAN Zeile 772 |
 | Punkteingabe bis lokale Speicherung des laufenden Spiels | ≤ 100 ms im 95. Perzentil (gleiches Gerät); Grundlage für „Dein Spiel ist gespeichert.“ | PLAN Zeile 772 (getrennte Messung von Darstellung und Speicherbestätigung) |
-| JavaScript des Gaststarts (`/`, erster Aufruf) | höchstens 5 kB gzip über dem Ausgangsstand (`nostr-expansion` `fd4e6c5`: 242,9 kB gzip); kein nostr-core, kein QR-Leser, kein QR-Erzeuger darin | diese Grundlage (A01, A25) |
+| JavaScript des Gaststarts (`/`, erster Aufruf) | kein nostr-core, kein QR-Leser, kein QR-Erzeuger darin (PLAN A01, A25). Zuwachs gegenüber dem Ausgangsstand (`nostr-expansion` `fd4e6c5`: 242,9 kB gzip): Vorschlag höchstens 5 kB gzip | Die 5-kB-Grenze ist ein Vorschlag des Umsetzers, nicht des Plans; die Aufgabe verlangt „unverändert“. Nutzerentscheidung offen (für STATUS.md beim Koordinator) |
 
 Laborwerte ersetzen keine Felddaten; ohne echte Nutzungsdaten wird kein „erfüllt im Feld“ behauptet.
 
@@ -200,6 +200,29 @@ Bewertung:
 - **Navigation:** Tabwechsel, Push und Zurück bleiben unter der INP-Grenze von 200 ms.
 - Eine erste Messung mit sofortigem Vorladen im Leerlauf ergab 294 kB übertragenes JS beim Kaltstart; seitdem wartet das Vorladen vier Sekunden (siehe oben).
 
+### Nach Review-Runde 1 (5. Oktober 2026)
+
+Gemessen auf `wave1/shell` vor dem Zusammenführen mit `nostr-expansion` („nachher“) gegen den geprüften Stand `c61a108` („vorher“, aus `git archive`, gleiche `node_modules`). **Laborwerte unter paralleler Last:** andere Arbeiten liefen gleichzeitig auf dem Rechner, Lastmittel 4 bis 11 (meist um 7). Die Streuung zwischen Läufen desselben Stands ist größer als die meisten Unterschiede; die Werte sind einmalige Läufe, nicht wiederholt, bis sie passen. Rohdaten in [results/](results/) (`*-review1-*`).
+
+**Bundle** (`route-bundle.mjs`, [bundle-review1-after.txt](results/bundle-review1-after.txt)): 247,5 kB gzip (807,2 kB roh, 11 Dateien), also **+4,6 kB gzip (+1,9 %)** gegenüber dem Ausgangsstand `fd4e6c5` und +0,6 kB gegenüber `c61a108`. Seitenchunk `app/page` 38,6 kB (vorher 38,0), Textchunk 14,7 kB. Der Inhalt von Clubs, Turniere und Profil (Leerzustände, Slots, Gastprofil) lädt jetzt bei Bedarf (ein Chunk, 12,3 kB roh / 4,4 kB gzip, mit dem Gastprofil, das schon vorher nachgeladen wurde) und wird im Leerlauf vorgeladen. Das spart etwa 0,9 kB gzip im Start; hinzugekommen sind die verdeckt erhaltenen Tabs (`TabsLayer`), die Slot-Listen (`SlotItems`) und Spielmenü-Einträge in Einrichtung, Ergebnis und Optionsmenü sowie die Rückkehr in den aufrufenden Tab. nostr-core, jsQR und qrcode-generator sind weiterhin nicht im Erstaufruf. Die 5-kB-Grenze ist eine Annahme dieses Dokuments; die Aufgabe verlangt „unverändert“. Entscheidung beim Nutzer; der Eintrag in STATUS.md folgt bei der Integration durch den Koordinator.
+
+**Labor** (`perf.mjs`; neu `OPEN_TABS=1`: Rangliste mit 1.000 Spielen, Clubs, Turniere und Profil › Einstellungen sind vor dem Spiel geöffnet und bleiben mit dem App-Rahmen verdeckt erhalten; `win-latency.mjs`: der Siegdart mit denselben offenen Tabs, 7 bis 9 Läufe je Stand).
+
+| Messgröße | vorher (`c61a108`) | nachher | Ziel |
+| --- | --- | --- | --- |
+| LCP-Median aus 5 Kaltstarts | 720 / 720 / 712 / 728 ms | 720 / 708 / 720 / 764 / 776 ms | ≤ 2,5 s |
+| Scoreeingabe p50 / p95, nur Spielen geöffnet | 64 / 64 ms; 64 / 64 ms | 64 / 64 ms; 96 / 96 ms (Lauf unter Last 11); 64 / 72 ms | p95 ≤ 100 ms |
+| Scoreeingabe p50 / p95, alle Tabs vorher geöffnet | 64 / 72 ms; 64 / 72 ms | 64 / 80 ms; 64 / 96 ms | p95 ≤ 100 ms |
+| Tap bis lokale Speicherung p95 | 23 bis 27 ms | 22 bis 39 ms | ≤ 100 ms |
+| Navigation p95 | 64 bis 120 ms | 56 bis 96 ms | INP ≤ 200 ms |
+| Siegdart bis zur nächsten Darstellung, Median | 96 / 112 / 128 ms | 152 ms (ohne Einfrieren), 128 / 152 ms (eingefroren) | INP ≤ 200 ms |
+
+Bewertung:
+
+- **Erste Messung, ohne Einfrieren:** Mit den verdeckt erhaltenen Tabs rechnete die Rangliste (1.000 Spiele), das Gastprofil und die Einstellungen beim Siegdart synchron im selben Task neu, bevor das Ergebnis erschien (Median 152 gegen 96 ms). Deshalb werden die Tabs, sobald Einrichtung oder Spiel ganz eingeschoben sind, über eine Suspense-Grenze eingefroren (`components/nav/tabs-layer.tsx`, wie `<Activity mode="hidden">`, das die React-Version in Next.js 15 noch nicht exportiert): Zustand und DOM bleiben, Änderungen darin rendert React erst im Leerlauf oder beim Zeigen. Eine Probe mit MutationObserver auf der verdeckten Rangliste zeigt danach in 5 von 5 Läufen keine Änderung innerhalb von 2,5 s nach dem Siegdart; beim Zurückkehren zeigt sie das neue Ergebnis (review1-checks.mjs).
+- **Verbleibend:** In diesem Stand ruft das Spielende noch je geöffnetem Bildschirm mit Spielhistorie (Rangliste, Gastprofil, Einstellungen) `readMatches()` synchron auf, also `JSON.parse` der ganzen Historie aus `localStorage`; das liegt in `lib/leaderboard.ts` und wird durch die lokale Datengrundlage aus `nostr-expansion` (asynchrones Archiv) ersetzt. Nach dem Zusammenführen wurde nicht erneut gemessen (Absprache mit dem Koordinator wegen der Rechnerlast).
+- **Scoreeingabe:** p50 in allen Läufen 64 ms. p95 schwankt zwischen 64 und 96 ms in beiden Ständen unter wechselnder Last; ein Unterschied über die Streuung hinaus ist nicht nachweisbar. Ein Wurf rendert keinen Tab (memoisierte Wurzeln, `StackView` und `TabsLayer` memoisiert, Tabs eingefroren).
+
 ## 7 Offene Punkte
 
 - Echte Geräte, installierte PWA, VoiceOver und TalkBack auf Geräten: nicht geprüft (P8).
@@ -207,4 +230,5 @@ Bewertung:
 - Referenzgerät für die Eingabelatenz: Nutzerentscheidung (Vorschlag oben).
 - Originalassets Bitcoin/NWC: P7b.
 - Bestandsbefund Spielbildschirm: erster Tap nach Spielbeginn langsam (siehe §6); auf 568 × 320 (iPhone SE quer) läuft „Rückgängig“ im deutschen Tastenfeld an den Rand seiner Taste (im Ausgangsstand identisch, `shell-screens.mjs` meldet es). Beides gehört in eine eigene Änderung am Spielbildschirm, die diese Lieferung nicht vornimmt.
+- Nutzerentscheidung: Zuwachs des Gaststarts um 4,6 kB gzip annehmen oder die nicht aktive Sprache bei Bedarf laden (betrifft alle Bereiche).
 - Grundlinien der Tab-Beschriftungen: Eine auf Breite verkleinerte Beschriftung („Leaderboard“, „Tournaments“ auf 320 px) sitzt bis zu 1 px höher als die anderen (Rundung der Zeilenhöhe).

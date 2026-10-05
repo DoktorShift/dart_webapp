@@ -1,0 +1,5 @@
+Guest path, review1-after-freeze-1 (http://localhost:3303), CPU 4× slower
+Cold start (5 runs, 150 ms RTT, 1.6 Mbit/s): FCP median 764 ms, LCP median 764 ms (worst 844 ms), CLS max 0.000, JS transferred 260.3 kB
+Score input (60 taps): p50 64 ms, p95 72 ms, max 336 ms
+Tap to local save (60 of 60 taps saved): p50 14 ms, p95 24 ms, max 294 ms
+Navigation (40 taps: tabs, push, back): p50 32 ms, p95 72 ms, max 88 ms

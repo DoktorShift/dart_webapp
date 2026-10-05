@@ -66,11 +66,11 @@ PASS coming back to the scanner turns it on again (jsQR)
 PASS leaving the scanner turns the camera off (jsQR)
 PASS no console errors (camera jsQR other.y4m)
 PASS offline after one visit: Profil, Einstellungen and Über die App open (profile true, settings true, about true)
+PASS offline after one visit: the Clubs and Turniere empty states open (clubs true, tournaments true)
 PASS no page errors (offline)
 PASS Permissions-Policy allows the camera for this site only (camera=(self), microphone=(), geolocation=())
 PASS Reduce Motion: pushes fade instead of sliding (none)
 PASS English tab bar
 PASS English sheet for an existing profile
 PASS sheet choice opens its screen in the Profile tab
-
-74 of 74 checks passed
+75 of 75 checks passed

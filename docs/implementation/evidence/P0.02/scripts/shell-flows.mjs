@@ -282,7 +282,7 @@ if (VIDEOS && existsSync(join(VIDEOS, 'club.y4m'))) {
   console.log('SKIP camera scan checks (no fake camera videos given)')
 }
 
-// --- Offline: Profile, Settings and About are fetched while idle and work without a connection ---
+// --- Offline: Clubs, Tournaments, Profile, Settings and About are fetched while idle and work without a connection ---
 {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'de-DE', hasTouch: true, isMobile: true, serviceWorkers: 'allow' })
   const page = await ctx.newPage()
@@ -310,6 +310,13 @@ if (VIDEOS && existsSync(join(VIDEOS, 'club.y4m'))) {
   await settle(page, 800)
   const aboutOk = (await topHeading(page)) === 'Über die App' && (await page.getByRole('heading', { name: 'BlueLine Darts' }).isVisible())
   check('offline after one visit: Profil, Einstellungen and Über die App open', profileOk && settingsOk && aboutOk, `profile ${profileOk}, settings ${settingsOk}, about ${aboutOk}`)
+  await tabButton(page, 'Clubs').click()
+  await settle(page, 800)
+  const clubsOk = await page.getByRole('heading', { name: 'Noch kein Club' }).isVisible()
+  await tabButton(page, 'Turniere').click()
+  await settle(page, 800)
+  const tournamentsOk = await page.getByRole('heading', { name: 'Noch kein Turnier' }).isVisible()
+  check('offline after one visit: the Clubs and Turniere empty states open', clubsOk && tournamentsOk, `clubs ${clubsOk}, tournaments ${tournamentsOk}`)
   check('no page errors (offline)', errors.length === 0, errors.join(' | '))
   await ctx.close()
 }

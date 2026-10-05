@@ -1,0 +1,4 @@
+Winning dart with all tabs opened before, review1-after-freeze (http://localhost:3303), CPU 4× slower, 9 runs
+Key press to next paint: median 152 ms, max 256 ms
+Key press to result dialog in the page: median 125 ms, max 233 ms
+{"label":"review1-after-freeze","runs":[{"key":256,"toResult":233.40000009536743},{"key":152,"toResult":125.10000002384186},{"key":112,"toResult":86.40000009536743},{"key":88,"toResult":70.19999992847443},{"key":128,"toResult":102.5},{"key":168,"toResult":139.20000004768372},{"key":112,"toResult":94.60000002384186},{"key":240,"toResult":201.89999997615814},{"key":200,"toResult":168.60000002384186}]}
