@@ -1,6 +1,6 @@
 import { beforeEach, test } from "node:test"
 import assert from "node:assert/strict"
-import { resetStorage } from "./storage-helpers.ts"
+import { resetStorage, slowIndexedDB } from "./storage-helpers.ts"
 import {
   closeDatabase,
   dbClear,
@@ -125,4 +125,26 @@ test("an IndexedDB that refuses to open falls back to memory", async () => {
   await dbPut("kv", { id: "x" })
   assert.deepEqual(await dbGet("kv", "x"), { id: "x" })
   assert.equal(isStorageUnavailable(), true)
+})
+
+test("a database that is slow to open fails the call waiting for it, and is used once open", async (t) => {
+  await closeDatabase()
+  const slow = slowIndexedDB()
+  Object.assign(globalThis, { indexedDB: slow.factory })
+  t.mock.timers.enable({ apis: ["setTimeout"] })
+  const write = dbPut("kv", { id: "x" })
+  t.mock.timers.tick(5000)
+  await assert.rejects(write, { name: "TimeoutError" })
+  t.mock.timers.reset()
+  // Not given up on: no memory store that would lose the data on reload.
+  assert.equal(isStorageUnavailable(), false)
+
+  slow.release()
+  await dbPut("kv", { id: "x" })
+  assert.equal(isStorageUnavailable(), false)
+  assert.equal(await storageUnavailable(), false)
+  // It went to the database itself: a new connection finds it.
+  await closeDatabase()
+  Object.assign(globalThis, { indexedDB: slow.real })
+  assert.deepEqual(await dbGet("kv", "x"), { id: "x" })
 })

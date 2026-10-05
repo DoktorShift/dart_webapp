@@ -54,6 +54,29 @@ export async function resetStorage() {
   resetSaveState()
 }
 
+// An IndexedDB that takes its time to open: nothing answers until release() is called. Then
+// it is a normal (fake) IndexedDB, also reachable directly as `real`.
+export function slowIndexedDB() {
+  const real = new IDBFactory()
+  let release!: () => void
+  const gate = new Promise<void>((resolve) => (release = resolve))
+  type Handlers = { onupgradeneeded?: () => void; onsuccess?: () => void; onerror?: () => void }
+  const factory = {
+    open(name: string, version: number) {
+      const outer: Handlers = {}
+      void gate.then(() => {
+        const inner = real.open(name, version)
+        Object.defineProperties(outer, { result: { get: () => inner.result }, error: { get: () => inner.error } })
+        inner.onupgradeneeded = () => outer.onupgradeneeded?.()
+        inner.onsuccess = () => outer.onsuccess?.()
+        inner.onerror = () => outer.onerror?.()
+      })
+      return outer
+    },
+  }
+  return { factory, real, release }
+}
+
 export const ANNA = `pl_${"a".repeat(32)}`
 export const BEN = `pl_${"b".repeat(32)}`
 

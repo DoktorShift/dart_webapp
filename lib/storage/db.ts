@@ -2,9 +2,10 @@
 // holds plain objects keyed by their `id`, and a write is one transaction across the stores it
 // touches. Nothing opens until the first call, so starting the app costs nothing.
 //
-// Where IndexedDB can't be used (storage switched off, some private windows, a browser that
-// never answers) the same calls work on memory for as long as the page stays open, and
-// isStorageUnavailable() says so, so a screen can tell the players honestly.
+// Where IndexedDB can't be used (storage switched off, some private windows) the same calls work
+// on memory for as long as the page stays open, and isStorageUnavailable() says so, so a screen
+// can tell the players honestly. A database that is only slow to open is not given up on: the
+// calls that can't wait fail (a write then says so), and later calls use it once it is open.
 //
 // Other tabs hear about every write through BroadcastChannel("blueline"), so open screens stay
 // in step (localStorage's "storage" event doesn't exist for IndexedDB).
@@ -30,7 +31,7 @@ export type WriteOp =
 export type StorageMessage = { type: "change"; stores: StoreName[] } | { type: "wipe" }
 
 const CHANNEL_NAME = "blueline"
-// A browser that neither opens nor refuses the database within this time gets the memory store.
+// How long a call waits for the database to open before it fails.
 const OPEN_TIMEOUT_MS = 5000
 
 interface Backend {
@@ -111,40 +112,25 @@ function idbBackend(db: IDBDatabase): Backend {
 
 function openDatabase(idb: IDBFactory) {
   return new Promise<IDBDatabase>((resolve, reject) => {
-    let settled = false
-    const fail = (error: unknown) => {
-      if (settled) return
-      settled = true
-      clearTimeout(timer)
-      reject(error)
+    const request = idb.open(DB_NAME, DB_VERSION)
+    request.onupgradeneeded = () => {
+      const db = request.result
+      for (const store of STORES) if (!db.objectStoreNames.contains(store)) db.createObjectStore(store, { keyPath: "id" })
     }
-    const timer = setTimeout(() => fail(new DOMException("The database did not open in time.", "TimeoutError")), OPEN_TIMEOUT_MS)
-    try {
-      const request = idb.open(DB_NAME, DB_VERSION)
-      request.onupgradeneeded = () => {
-        const db = request.result
-        for (const store of STORES) if (!db.objectStoreNames.contains(store)) db.createObjectStore(store, { keyPath: "id" })
+    request.onsuccess = () => {
+      const db = request.result
+      // A newer version of the app wants to upgrade the database: step aside, reconnect later.
+      db.onversionchange = () => {
+        db.close()
+        backend = null
       }
-      request.onsuccess = () => {
-        const db = request.result
-        if (settled) return db.close()
-        settled = true
-        clearTimeout(timer)
-        // A newer version of the app wants to upgrade the database: step aside, reconnect later.
-        db.onversionchange = () => {
-          db.close()
-          backend = null
-        }
-        // The browser closed the connection (storage cleared, low memory): reconnect next time.
-        db.onclose = () => {
-          backend = null
-        }
-        resolve(db)
+      // The browser closed the connection (storage cleared, low memory): reconnect next time.
+      db.onclose = () => {
+        backend = null
       }
-      request.onerror = () => fail(request.error)
-    } catch (error) {
-      fail(error)
+      resolve(db)
     }
+    request.onerror = () => reject(request.error)
   })
 }
 
@@ -159,18 +145,36 @@ async function openBackend(): Promise<Backend> {
   return memoryBackend()
 }
 
+// Waits for the database, but not forever. The opening itself goes on, so a later call finds
+// the database once the browser has opened it.
+function ready(opening: Promise<Backend>) {
+  return new Promise<Backend>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new DOMException("The database did not open in time.", "TimeoutError")), OPEN_TIMEOUT_MS)
+    opening.then(
+      (b) => {
+        clearTimeout(timer)
+        resolve(b)
+      },
+      (error: unknown) => {
+        clearTimeout(timer)
+        reject(error)
+      },
+    )
+  })
+}
+
 // Runs a call on the open database. A connection the browser has closed in the meantime is
 // opened again once.
 async function run<T>(call: (b: Backend) => Promise<T>): Promise<T> {
   backend ??= openBackend()
   const current = backend
   try {
-    return await call(await current)
+    return await call(await ready(current))
   } catch (error) {
     if (!(error instanceof DOMException && error.name === "InvalidStateError")) throw error
     if (backend === current) backend = null
     backend ??= openBackend()
-    return call(await backend)
+    return call(await ready(backend))
   }
 }
 
@@ -261,18 +265,24 @@ export async function kvGet<T>(key: string): Promise<T | undefined> {
 export const kvSet = (key: string, value: unknown) => dbPut("kv", { id: key, value } as Keyed)
 
 // True once the database turned out not to be usable here: data then lasts only while the page
-// is open. Opens the database first, so the answer is final.
+// is open. Opens the database first, so the answer is final; one that doesn't open in time
+// counts as unavailable for now.
 export async function storageUnavailable() {
-  await run(async () => undefined)
-  return unavailable
+  try {
+    await run(async () => undefined)
+    return unavailable
+  } catch {
+    return true
+  }
 }
 
 export const isStorageUnavailable = () => unavailable
 
-// Closes the connection; the next call opens it again. For tests, and before deleting data.
+// Closes the connection; the next call opens it again. For the tests.
 export async function closeDatabase() {
   const current = backend
   backend = null
   unavailable = false
-  if (current) (await current).close()
+  // One still opening is closed once it is open.
+  void current?.then((b) => b.close())
 }

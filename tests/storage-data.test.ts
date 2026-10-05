@@ -2,7 +2,7 @@ import { beforeEach, test } from "node:test"
 import assert from "node:assert/strict"
 import { ANNA, at, localStore, resetStorage } from "./storage-helpers.ts"
 import { matchA, matchB, matchD, matchE, recordC } from "./storage-fixtures.ts"
-import { archiveFinished, fromV1Record, importV1Matches, loadArchive, type ArchivedMatch } from "../lib/storage/archive.ts"
+import { archiveFinished, clearLeaderboard, fromV1Record, importV1Matches, loadArchive, type ArchivedMatch } from "../lib/storage/archive.ts"
 import { buildExport, exportFileName, importData, wipeAllData, type ExportFile } from "../lib/storage/data.ts"
 import { dbGetAll, dbPut, kvSet, onStorageChange, STORES, type StorageMessage } from "../lib/storage/db.ts"
 import { listPlayers, newPlayerRecord, savePlayers } from "../lib/storage/players.ts"
@@ -54,7 +54,7 @@ test("export, delete everything, import: the same games and players come back", 
   assert.deepEqual(await loadArchive(), [])
 
   const result = await importData(text)
-  assert.deepEqual(result, { ok: true, added: 5, completed: 0, known: 0, playersAdded: 2, skipped: 0 })
+  assert.deepEqual(result, { ok: true, added: 5, completed: 0, known: 0, playersAdded: 2, playersKnown: 0, skipped: 0 })
   assert.deepEqual(await loadArchive(), before)
   assert.deepEqual(await listPlayers(), players)
   // Games with two or more players are back in 1.0.0's history too (a rollback keeps them).
@@ -65,7 +65,46 @@ test("export, delete everything, import: the same games and players come back", 
 test("importing the same file again adds nothing", async () => {
   await evening()
   const text = JSON.stringify(await buildExport())
-  assert.deepEqual(await importData(text), { ok: true, added: 0, completed: 0, known: 5, playersAdded: 0, skipped: 0 })
+  assert.deepEqual(await importData(text), { ok: true, added: 0, completed: 0, known: 5, playersAdded: 0, playersKnown: 2, skipped: 0 })
+})
+
+test("the result tells things already here from entries that couldn't be read", async () => {
+  await evening()
+  const file = await buildExport()
+  // Only players, all known here.
+  assert.deepEqual(await importData(JSON.stringify({ ...file, matches: [] })), {
+    ok: true,
+    added: 0,
+    completed: 0,
+    known: 0,
+    playersAdded: 0,
+    playersKnown: 2,
+    skipped: 0,
+  })
+  // Nothing readable at all.
+  const unreadable = { ...file, matches: [{ id: 5 }], players: [{ ...file.players[0], name: "x".repeat(5000) }] }
+  assert.deepEqual(await importData(JSON.stringify(unreadable)), {
+    ok: true,
+    added: 0,
+    completed: 0,
+    known: 0,
+    playersAdded: 0,
+    playersKnown: 0,
+    skipped: 2,
+  })
+})
+
+test("after resetting the Rangliste, an export holds none of its games", async () => {
+  await evening()
+  assert.equal(await clearLeaderboard(), true)
+  const file = await buildExport()
+  const text = JSON.stringify(file)
+  for (const id of ["match-a", "match-b", "match-d", recordC().id]) assert.ok(!text.includes(id), id)
+  // The solo game stays for personal statistics, the rest of the earlier copy as it was.
+  assert.deepEqual(ids(file.matches), ["match-e"])
+  assert.equal(file.v1Snapshot?.raw[V1_KEYS.matches], "[]")
+  assert.equal(file.v1Snapshot?.raw[V1_KEYS.language], "en")
+  assert.equal(file.v1[V1_KEYS.matches], "[]")
 })
 
 test("an imported 1.0.0 total is completed by the full game from a file", async () => {
@@ -117,7 +156,7 @@ test("broken or forged entries are skipped and counted", async () => {
     players: [{ id: ANNA, name: "Anna" }, { id: "nope", name: "X" }],
   })
   const result = await importData(text)
-  assert.deepEqual(result, { ok: true, added: 2, completed: 0, known: 0, playersAdded: 1, skipped: 6 })
+  assert.deepEqual(result, { ok: true, added: 2, completed: 0, known: 0, playersAdded: 1, playersKnown: 0, skipped: 6 })
   assert.deepEqual(ids(await dbGetAll("matches")), ["match-a", recordC().id].sort())
 })
 

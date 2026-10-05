@@ -70,6 +70,8 @@ export type ImportResult =
       // Games already here.
       known: number
       playersAdded: number
+      // Players already here.
+      playersKnown: number
       // Entries in the file that aren't valid games or players.
       skipped: number
     }
@@ -220,7 +222,15 @@ export async function importData(text: string): Promise<ImportResult> {
       await dbWrite(ops)
       // Games new to this device also go to 1.0.0's history, like games played here.
       mergeV1Records(fresh.filter((m) => m.players.length >= 2).map(toV1Record))
-      return { ok: true as const, added: fresh.length, completed, known, playersAdded: newPlayers.length, skipped }
+      return {
+        ok: true as const,
+        added: fresh.length,
+        completed,
+        known,
+        playersAdded: newPlayers.length,
+        playersKnown: players.size - newPlayers.length,
+        skipped,
+      }
     })
   } catch {
     return { ok: false, reason: "storage" }

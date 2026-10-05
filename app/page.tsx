@@ -255,7 +255,7 @@ export default function DartScorer() {
         onExpire={clearEnded}
       />
 
-      <StorageAlert />
+      <StorageAlert inGame={screen === "game"} />
     </div>
   )
 }

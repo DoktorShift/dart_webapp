@@ -10,6 +10,7 @@ import {
   readV1Records,
   removeV1Record,
   upsertV1Record,
+  V1_KEYS,
   type V1MatchRecord,
   type V1PlayerResult,
 } from "./v1.ts"
@@ -102,7 +103,8 @@ export function fromV1Record(record: V1MatchRecord, now = new Date()): ArchivedM
 // Before this version first writes to the archive or to 1.0.0's history, it keeps an exact copy
 // of every key 1.0.0 uses ("kv" store), so a repair can always start from the history as it was
 // before the upgrade. (The running game and settings are rewritten as the app is used, as in
-// 1.0.0, so their copy is just the latest state.) Taken once; deleting all data removes it too.
+// 1.0.0, so their copy is just the latest state.) Taken once; resetting the Rangliste empties
+// its history, and deleting all data removes it.
 export const V1_SNAPSHOT_KEY = "v1-snapshot"
 
 export interface V1Snapshot {
@@ -230,16 +232,20 @@ export async function loadArchive(): Promise<ArchivedMatch[]> {
 }
 
 // "Rangliste zurücksetzen": the games on the Rangliste (two or more players), here and in the
-// 1.0.0 history. Solo games stay for personal statistics.
+// 1.0.0 history. Solo games stay for personal statistics. The copy of 1.0.0's history taken
+// before the upgrade goes too (in the same write), so deleted results don't live on in it or in
+// an export.
 export function clearLeaderboard() {
   return serial(async () => {
     let ok = clearV1Records()
     try {
-      const all = await dbGetAll<ArchivedMatch>("matches")
-      await dbDelete(
-        "matches",
-        all.filter((m) => m.players.length >= 2).map((m) => m.id),
-      )
+      const [all, snapshot] = await Promise.all([dbGetAll<ArchivedMatch>("matches"), dbGet<{ id: string; value: V1Snapshot }>("kv", V1_SNAPSHOT_KEY)])
+      const ops: WriteOp[] = all.filter((m) => m.players.length >= 2).map((m) => ({ store: "matches", delete: m.id }))
+      if (snapshot && typeof snapshot.value?.raw?.[V1_KEYS.matches] === "string") {
+        const value: V1Snapshot = { ...snapshot.value, raw: { ...snapshot.value.raw, [V1_KEYS.matches]: "[]" } }
+        ops.push({ store: "kv", put: { id: V1_SNAPSHOT_KEY, value } as Keyed })
+      }
+      await dbWrite(ops)
     } catch {
       ok = false
     }

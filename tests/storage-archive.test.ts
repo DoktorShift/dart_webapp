@@ -1,6 +1,6 @@
 import { beforeEach, test } from "node:test"
 import assert from "node:assert/strict"
-import { ANNA, at, localStore, resetStorage, saved } from "./storage-helpers.ts"
+import { ANNA, at, localStore, resetStorage, saved, slowIndexedDB } from "./storage-helpers.ts"
 import { A_CONFIG, matchA, matchB, matchD, matchE, recordC } from "./storage-fixtures.ts"
 import { dart, play } from "./helpers.ts"
 import { ENGINE_VERSION, replay } from "../lib/game/engine.ts"
@@ -14,7 +14,8 @@ import {
   type ArchivedMatch,
   type V1Snapshot,
 } from "../lib/storage/archive.ts"
-import { dbGet, dbGetAll, kvGet, onStorageChange } from "../lib/storage/db.ts"
+import { closeDatabase, dbGet, dbGetAll, kvGet, onStorageChange } from "../lib/storage/db.ts"
+import { getSaveState, retrySaves, trackSave } from "../lib/storage/save-status.ts"
 import { listPlayers, newPlayerRecord, savePlayers } from "../lib/storage/players.ts"
 import { V1_KEYS } from "../lib/storage/v1.ts"
 
@@ -224,6 +225,25 @@ test("a failed write is reported, never passed off as saved", async () => {
   localStore.failWrites = false
   assert.equal(await archiveFinished(matchA()), true)
   assert.equal(v1().length, 1)
+})
+
+test("a game won while the database is slow to open is reported, and a retry saves it", async (t) => {
+  await closeDatabase()
+  const slow = slowIndexedDB()
+  Object.assign(globalThis, { indexedDB: slow.factory })
+  t.mock.timers.enable({ apis: ["setTimeout"] })
+  // A solo game: without the database nothing else keeps it.
+  const first = trackSave("archive", () => archiveFinished(matchE()))
+  await new Promise((resolve) => setImmediate(resolve))
+  t.mock.timers.tick(5000)
+  assert.equal(await first, false)
+  t.mock.timers.reset()
+  assert.equal(getSaveState().failing, true)
+
+  slow.release()
+  assert.equal(await retrySaves(), true)
+  assert.equal(getSaveState().failing, false)
+  assert.ok(await stored("match-e"))
 })
 
 test("quick undo after the winning dart never leaves the game archived", async () => {

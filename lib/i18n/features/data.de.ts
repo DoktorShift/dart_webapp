@@ -15,6 +15,10 @@ export const dataDe = {
   fileName: "blueline-daten",
   exportFailedTitle: "Export nicht möglich",
   exportFailed: "Die Daten konnten gerade nicht gelesen werden. Versuche es noch einmal.",
+  // The file took a moment to prepare: sharing it needs one more tap.
+  exportReadyTitle: "Datei ist bereit",
+  exportReady: "Teile die Datei, um sie zu sichern oder an ein anderes Gerät zu senden.",
+  shareFile: "Datei teilen",
   importDoneTitle: "Import abgeschlossen",
   importNothingTitle: "Nichts Neues",
   importAdded: (matches: number, people: number) =>
@@ -22,7 +26,10 @@ export const dataDe = {
   importCompleted: (n: number) => (n === 1 ? "1 früheres Spiel ist jetzt vollständig." : `${n} frühere Spiele sind jetzt vollständig.`),
   importKnown: (n: number) => (n === 1 ? "1 Spiel war schon auf diesem Gerät." : `${n} Spiele waren schon auf diesem Gerät.`),
   importNothing: "Alles aus dieser Datei ist schon auf diesem Gerät.",
+  importRestKnown: "Alles andere ist schon auf diesem Gerät.",
   importSkipped: (n: number) => (n === 1 ? "1 Eintrag war unlesbar und wurde übersprungen." : `${n} Einträge waren unlesbar und wurden übersprungen.`),
+  importNoneTitle: "Nichts importiert",
+  importEmpty: "Diese Datei enthält keine Spiele und keine Spieler.",
   importFormatTitle: "Datei passt nicht",
   importFormat: "Diese Datei enthält keine Daten von BlueLine Darts. Wähle eine Datei, die du mit „Daten exportieren“ erstellt hast.",
   importNewerTitle: "Neuere Version nötig",
@@ -40,7 +47,8 @@ export const dataDe = {
   // A write that failed, shown over the game.
   saveFailed: "Dein Spiel konnte nicht gespeichert werden.",
   saveFailedHint: "Solange die App geöffnet bleibt, geht nichts verloren.",
-  saveStillFailing: "Es hat wieder nicht geklappt. Gib auf diesem Gerät Speicherplatz frei und versuche es dann erneut.",
+  saveStillFailingTitle: "Es hat wieder nicht geklappt",
+  saveStillFailing: "Gib auf diesem Gerät Speicherplatz frei und versuche es dann erneut. Solange die App geöffnet bleibt, geht nichts verloren.",
   retry: "Erneut versuchen",
   hide: "Hinweis ausblenden",
   saved: "Dein Spiel ist gespeichert.",
