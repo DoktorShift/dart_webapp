@@ -69,6 +69,9 @@ await page.waitForTimeout(300)
 await page.getByRole("button", { name: T.retry }).click()
 await page.waitForTimeout(500)
 await page.screenshot({ path: `${OUT}${tag}-02-still-failing.png` })
+// The answer to the failed retry is an alert of its own.
+await page.getByRole("alertdialog").getByRole("button", { name: "OK" }).click()
+await page.waitForTimeout(400)
 
 // Storage works again: retry, confirmation.
 await page.evaluate(() => (window.__failSaves = false))
