@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react"
+import { Suspense, createContext, memo, use, useContext, useEffect, useRef, useState, type ReactNode } from "react"
 import { motion, useReducedMotion } from "framer-motion"
 
 // Whether the tabs are on screen, i.e. not covered by game setup or a game. A screen inside them
@@ -15,12 +15,24 @@ const VARIANTS = {
   covered: (reduce: boolean) => (reduce ? { opacity: 0 } : { x: "-25%", opacity: 0.6 }),
 }
 
+// Never settles: suspending on it keeps the tabs hidden until they are shown again.
+const hold = new Promise<never>(() => {})
+
+// While frozen, the tabs are suspended: React keeps their state and DOM, and whatever changes in
+// them meanwhile (a finished game reaching the Rangliste, an area's live data) is rendered only
+// when the browser is idle, never in the way of a throw. Like React's <Activity mode="hidden">,
+// which the React build inside Next.js 15 doesn't export yet.
+function Freeze({ frozen, children }: { frozen: boolean; children: ReactNode }) {
+  if (frozen) use(hold)
+  return children
+}
+
 // The tabs under setup and the game. They stay mounted the whole time, so every tab comes back
 // exactly as it was left: its pushed screens, their scroll positions and whatever was typed in
 // them (PLAN: returning keeps filters, scroll position and drafts). While covered they are inert
-// for focus and VoiceOver, and once the cover has slid in they are taken out of layout. Pass
-// memoised children: a game re-renders on every throw and must not reach them.
-export function TabsLayer({ covered, children }: { covered: boolean; children: ReactNode }) {
+// for focus and VoiceOver, and once the cover has slid in they are taken out of layout and frozen.
+// Pass memoised children: a game re-renders on every throw and must not reach them.
+export const TabsLayer = memo(function TabsLayer({ covered, children }: { covered: boolean; children: ReactNode }) {
   const reduceMotion = useReducedMotion() ?? false
   const ref = useRef<HTMLDivElement>(null)
   const [gone, setGone] = useState(false)
@@ -61,8 +73,10 @@ export function TabsLayer({ covered, children }: { covered: boolean; children: R
         style={{ display: shown ? undefined : "none" }}
         className="absolute inset-0 overflow-hidden"
       >
-        {children}
+        <Suspense fallback={null}>
+          <Freeze frozen={!shown}>{children}</Freeze>
+        </Suspense>
       </motion.div>
     </TabsShownContext.Provider>
   )
-}
+})

@@ -13,8 +13,9 @@
 //   in registration order; with none registered the place shows nothing at all, so the guest
 //   path looks exactly as before. A piece that throws or fails to load is left out.
 //     "result.actions"  On the result of a finished game, below the result and above its
-//                       buttons. Gets the finished game ({ match: FinishedMatch }). A small card
-//                       or button each; the result is one fixed screen.
+//                       buttons. Gets the finished game ({ match: FinishedMatch }). One row each
+//                       (a button or a one-line card, about 44 pt): the result is one fixed
+//                       screen, and on a phone in landscape there is room for about one row.
 //     "setup.extras"    At the end of game setup's options, before Start. Gets the game as it
 //                       would start now, plus the area's own value and onChange. The value is
 //                       saved with the started game as config.extras[id] (JSON only). Rematch and

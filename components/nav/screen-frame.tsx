@@ -47,11 +47,20 @@ export function ScreenFrame({
     // The title counts as gone once most of it has moved under the bar, or, where the bar floats
     // over the title (roots), out of the top of the screen.
     const bar = overlay ? 0 : (el.querySelector("header")?.getBoundingClientRect().height ?? 44)
-    const observer = new IntersectionObserver(([entry]) => setTitleAway(entry.intersectionRatio < 0.4), {
-      root: el,
-      rootMargin: `-${Math.round(bar)}px 0px 0px 0px`,
-      threshold: [0, 0.4, 1],
-    })
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        // A hidden screen (another tab, a screen pushed over it, setup or a game over the tabs)
+        // reports its title as gone. That isn't scrolling: taken as such, the bar would flash its
+        // title and background each time the screen shows again.
+        if (entry.boundingClientRect.height === 0 || !entry.rootBounds?.height) return
+        setTitleAway(entry.intersectionRatio < 0.4)
+      },
+      {
+        root: el,
+        rootMargin: `-${Math.round(bar)}px 0px 0px 0px`,
+        threshold: [0, 0.4, 1],
+      },
+    )
     observer.observe(heading)
     return () => observer.disconnect()
   }, [largeTitle, overlay])
