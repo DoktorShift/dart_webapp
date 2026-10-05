@@ -1,5 +1,4 @@
-import { sha256 } from "@noble/hashes/sha2"
-import { bytesToHex, utf8ToBytes } from "@noble/hashes/utils"
+import { commitSeed, drawOrder as engineDrawOrder } from "../tournaments/draw.ts"
 import type { RecordSpec } from "./common.ts"
 import { alias, eventId, matchRules, name, objectId, prev, pubkey, shortText } from "./common.ts"
 import { KIND_RECORD } from "./kinds.ts"
@@ -159,23 +158,18 @@ export const TOURNAMENT_TYPES = {
   ),
 } satisfies Record<string, RecordSpec>
 
-// The derivations of lib/tournaments/draw.ts (engine 1), so a draw checked here is the draw the
-// engine builds: the commitment published before the draw is
+// The draw is the engine's (lib/tournaments/draw.ts, engine 1), so a draw checked here is the
+// draw the engine builds: the commitment published before the draw is
 //   sha256("blueline-seed-v1\n" + seed)
 // and every unseeded participant is ordered by
 //   sha256("blueline-draw-v1\n" + seed + "\n" + id)
 // after the seeded ones in their given order. Anyone with the seed and the field reproduces it.
-const sha = (text: string) => bytesToHex(sha256(utf8ToBytes(text)))
-export const seedCommitment = (seed: string) => sha(`blueline-seed-v1\n${seed}`)
-export const drawKey = (seed: string, id: string) => sha(`blueline-draw-v1\n${seed}\n${id}`)
+export const seedCommitment = commitSeed
 
+// The engine's order for participant ids: the seeded ones that are in the field keep their order.
 export function drawOrder(seed: string, field: readonly string[], seeded: readonly string[] = []): string[] {
   const inField = new Set(field)
   const top = seeded.filter((id) => inField.has(id))
-  const rest = field
-    .filter((id) => !top.includes(id))
-    .map((id) => ({ id, key: drawKey(seed, id) }))
-    .sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : a.id < b.id ? -1 : 1))
-    .map((x) => x.id)
-  return [...top, ...rest]
+  const rest = field.filter((id) => !top.includes(id))
+  return engineDrawOrder([...top, ...rest].map((id) => ({ id, name: id })), seed, top.length).map((p) => p.id)
 }
