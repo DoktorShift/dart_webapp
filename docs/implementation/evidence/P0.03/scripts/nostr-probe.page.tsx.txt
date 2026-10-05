@@ -1,0 +1,81 @@
+"use client"
+
+// TEMPORARY measurement page for P0.03, never part of the app. To repeat the checks in
+// ../CORE.md, copy this file to app/nostr-probe/page.tsx, build, run scripts/measure.mjs, and
+// delete the route again. It loads the Nostr layer on demand and reports what happened; with
+// ?relay=ws://127.0.0.1:<port> (nak serve) it also publishes and reads back one event, and with
+// ?relay=default it uses the relay catalog, but only if that points at this machine.
+import { useState } from "react"
+import { loadCore } from "@/lib/nostr/core"
+import { createRelayClient } from "@/lib/nostr/client"
+import { createLocalSigner, probeNip44 } from "@/lib/nostr/signers"
+import { decryptOffThread, encryptOffThread, usesWorker } from "@/lib/nostr/ext/nip49.offthread"
+import { generalRelays, profileRelays } from "@/lib/nostr/relays"
+import { generateDataKey, encryptWithDataKey, decryptWithDataKey } from "@/lib/nostr/ext/crypto"
+
+export default function Probe() {
+  const [out, setOut] = useState("idle")
+  async function run() {
+    const result: Record<string, unknown> = {}
+    try {
+      const t0 = performance.now()
+      const core = await loadCore()
+      result.coreLoadMs = Math.round(performance.now() - t0)
+      result.generalRelays = generalRelays()
+      result.profileRelays = profileRelays()
+      const key = core.generateSecretKey()
+      const signer = await createLocalSigner(key)
+      const pubkey = await signer.getPublicKey()
+      const event = await signer.signEvent({ kind: 1180, content: "probe", tags: [["L", "blueline"]], created_at: Math.floor(Date.now() / 1000) })
+      result.signed = core.verifyEventSignature(event)
+      result.nip44 = await probeNip44(signer, pubkey)
+      const t1 = performance.now()
+      const ncryptsec = await encryptOffThread(key, "Grüße", { logN: 16 })
+      const t2 = performance.now()
+      const back = await decryptOffThread(ncryptsec, "Grüße")
+      const t3 = performance.now()
+      result.nip49EncryptMs = Math.round(t2 - t1)
+      result.nip49DecryptMs = Math.round(t3 - t2)
+      const t5 = performance.now()
+      await encryptOffThread(key, "Grüße", { logN: 16 })
+      result.nip49SecondEncryptMs = Math.round(performance.now() - t5)
+      result.nip49 = back.secretKey.every((b, i) => b === key[i])
+      result.worker = usesWorker()
+      // Main thread for comparison, measuring how long the page would be blocked per tick.
+      const { decryptAsync } = await import("@/lib/nostr/ext/nip49")
+      let longest = 0
+      let last = performance.now()
+      const ticker = setInterval(() => {
+        const now = performance.now()
+        longest = Math.max(longest, now - last)
+        last = now
+      }, 10)
+      const t4 = performance.now()
+      await decryptAsync(ncryptsec, "Grüße")
+      clearInterval(ticker)
+      result.nip49MainThreadMs = Math.round(performance.now() - t4)
+      result.nip49MainThreadLongestGapMs = Math.round(longest)
+      const dataKey = generateDataKey()
+      result.dataKey = decryptWithDataKey(dataKey, encryptWithDataKey(dataKey, "x", "r"), "r") === "x"
+      const param = new URLSearchParams(location.search).get("relay")
+      // "default" uses the catalog (the build variable in previews), never a public relay here.
+      const targets = param === "default" ? generalRelays() : param ? [param] : []
+      if (targets.length && targets.every((url) => url.startsWith("ws://127.0.0.1") || url.startsWith("ws://localhost"))) {
+        const client = createRelayClient()
+        const published = await client.publish(event, targets)
+        const queried = await client.query([{ ids: [event.id] }], targets)
+        result.relay = { published, complete: queried.complete, found: queried.events.length }
+        client.close()
+      }
+    } catch (error) {
+      result.error = String(error)
+    }
+    setOut(JSON.stringify(result))
+  }
+  return (
+    <main style={{ padding: 24 }}>
+      <button id="run" onClick={run}>run</button>
+      <pre id="out">{out}</pre>
+    </main>
+  )
+}
