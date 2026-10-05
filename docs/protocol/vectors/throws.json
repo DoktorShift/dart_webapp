@@ -1,0 +1,415 @@
+{
+  "family": "throws",
+  "description": "Compact throw logs (lib/protocol/throws.ts): engine log as stored and its encoding.",
+  "generator": "tests/support/make-vectors.ts",
+  "format": "Events are signed (BIP-340, zero aux randomness) with keys derived as sha256('blueline-vector:' + name). Content keys, nonces and NIP-44 nonces are fixed. Expected outcomes are written by hand from docs/protocol.",
+  "alphabet": "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-",
+  "cases": [
+    {
+      "description": "Recorded P0.01 game (Anna vs Ben, 301), as stored by the app",
+      "config": {
+        "modeId": "301",
+        "modeName": "301",
+        "type": "x01",
+        "startScore": 301,
+        "doubleIn": false,
+        "doubleOut": true,
+        "cutThroat": false,
+        "bullFinish": false,
+        "legsToWin": 1,
+        "setsToWin": 1,
+        "startRule": "alternate",
+        "players": [
+          {
+            "id": "pmut3oeo50",
+            "name": "Anna"
+          },
+          {
+            "id": "pmut3oeo51",
+            "name": "Ben"
+          }
+        ]
+      },
+      "log": [
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 20,
+            "multiplier": 3
+          },
+          "visit": 0,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 20,
+            "multiplier": 3
+          },
+          "visit": 0,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 20,
+            "multiplier": 1
+          },
+          "visit": 0,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 20,
+            "multiplier": 1
+          },
+          "visit": 1,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 19,
+            "multiplier": 1
+          },
+          "visit": 1,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 20,
+            "multiplier": 1
+          },
+          "visit": 1,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 20,
+            "multiplier": 3
+          },
+          "visit": 2,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 17,
+            "multiplier": 3
+          },
+          "visit": 2,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 25,
+            "multiplier": 2
+          },
+          "visit": 2,
+          "leg": 0
+        }
+      ],
+      "encoded": "1775.525.7y-"
+    },
+    {
+      "description": "Recorded P0.05 game with a correction in the app (Ben's second dart 19 corrected to 5), as stored",
+      "config": {
+        "modeId": "301",
+        "modeName": "301",
+        "type": "x01",
+        "startScore": 301,
+        "doubleIn": false,
+        "doubleOut": true,
+        "cutThroat": false,
+        "bullFinish": false,
+        "legsToWin": 1,
+        "setsToWin": 1,
+        "startRule": "alternate",
+        "players": [
+          {
+            "id": "pmutfbb3y0",
+            "name": "Anna"
+          },
+          {
+            "id": "pmutfbb3y1",
+            "name": "Ben"
+          }
+        ]
+      },
+      "log": [
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 20,
+            "multiplier": 3
+          },
+          "visit": 0,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 20,
+            "multiplier": 3
+          },
+          "visit": 0,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 20,
+            "multiplier": 1
+          },
+          "visit": 0,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 20,
+            "multiplier": 1
+          },
+          "visit": 1,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 5,
+            "multiplier": 1
+          },
+          "visit": 1,
+          "leg": 0,
+          "edited": true
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 20,
+            "multiplier": 1
+          },
+          "visit": 1,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 20,
+            "multiplier": 3
+          },
+          "visit": 2,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 17,
+            "multiplier": 3
+          },
+          "visit": 2,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 25,
+            "multiplier": 2
+          },
+          "visit": 2,
+          "leg": 0
+        }
+      ],
+      "encoded": "1775.5!M5.7y-"
+    },
+    {
+      "description": "Two legs, the first dart corrected (edited, leg result kept), no-score, a visit total and a turn",
+      "config": {
+        "modeId": "501",
+        "modeName": "501",
+        "type": "x01",
+        "startScore": 301,
+        "doubleOut": true,
+        "cutThroat": false,
+        "bullFinish": false,
+        "legsToWin": 2,
+        "players": [
+          {
+            "id": "a",
+            "name": "A"
+          },
+          {
+            "id": "b",
+            "name": "B"
+          }
+        ]
+      },
+      "log": [
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 19,
+            "multiplier": 3
+          },
+          "visit": 0,
+          "leg": 0,
+          "edited": true
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 20,
+            "multiplier": 3
+          },
+          "visit": 0,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 20,
+            "multiplier": 3
+          },
+          "visit": 0,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 0,
+            "multiplier": 1
+          },
+          "visit": 1,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 0,
+            "multiplier": 1
+          },
+          "visit": 1,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 0,
+            "multiplier": 1
+          },
+          "visit": 1,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 20,
+            "multiplier": 3
+          },
+          "visit": 2,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 11,
+            "multiplier": 3
+          },
+          "visit": 2,
+          "leg": 0
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 14,
+            "multiplier": 2
+          },
+          "visit": 2,
+          "leg": 0,
+          "closesLeg": true
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 20,
+            "multiplier": 1
+          },
+          "visit": 3,
+          "leg": 1
+        },
+        {
+          "kind": "noScore",
+          "visit": 3,
+          "leg": 1
+        },
+        {
+          "kind": "visit",
+          "total": 60,
+          "darts": 3,
+          "atDouble": 1,
+          "visit": 4,
+          "leg": 1
+        },
+        {
+          "kind": "turn",
+          "player": 0,
+          "visit": 5,
+          "leg": 1
+        }
+      ],
+      "encoded": "1!477.888.7g#o/5*.(v60,3,1).(t0)"
+    },
+    {
+      "description": "Log saved before throws were tagged",
+      "config": {
+        "modeId": "501",
+        "modeName": "501",
+        "type": "x01",
+        "startScore": 501,
+        "doubleOut": true,
+        "cutThroat": false,
+        "bullFinish": false,
+        "legsToWin": 1,
+        "players": [
+          {
+            "id": "a",
+            "name": "A"
+          },
+          {
+            "id": "b",
+            "name": "B"
+          }
+        ]
+      },
+      "log": [
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 20,
+            "multiplier": 1
+          }
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 25,
+            "multiplier": 2
+          }
+        },
+        {
+          "kind": "dart",
+          "dart": {
+            "segment": 0,
+            "multiplier": 1
+          }
+        }
+      ],
+      "encoded": "1[,]5-8"
+    }
+  ],
+  "keys": {}
+}

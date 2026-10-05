@@ -1,0 +1,110 @@
+{
+  "family": "board-join",
+  "description": "Joining a shared board (lib/protocol/board.ts).",
+  "generator": "tests/support/make-vectors.ts",
+  "format": "Events are signed (BIP-340, zero aux randomness) with keys derived as sha256('blueline-vector:' + name). Content keys, nonces and NIP-44 nonces are fixed. Expected outcomes are written by hand from docs/protocol.",
+  "now": 1760000600,
+  "sid": "570ca3458c8c450977b7b3979c65dab9",
+  "expires": 1760002400,
+  "steps": {
+    "join": {
+      "event": {
+        "id": "b146dd0f2e5cc4b3a419fb331af3f6a3504f27a711ac4172b48d5c3bb0bf1e6b",
+        "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
+        "created_at": 1760000590,
+        "kind": 21180,
+        "tags": [
+          ["L", "blueline"],
+          ["l", "board", "blueline"],
+          ["v", "1"],
+          ["p", "997e2d6c8d07fd802641a6bfc55e8175c8f2eb258c85fbf6864796bf419612de"]
+        ],
+        "content": "Ag7MA0AcGdr1gUYmVS84JI7HyVU9aSyMrqeE7r3JiuAKMpdzihagwwgu5JAXA1fTIBQP4KOizkVM/0zv7wtyxNsuvo8PhVbsMc8WRaImcNTPqzY/j3e5t2xeugtFB76j+hHT7IJnz3WyJYNkD2Ld3p6hcd7U4GxhDowbWbWqAlWw6uMuRID28YQkJE7+mJ8bxmnuCunAB3JbrV3jtbEhSpMu7w==",
+        "sig": "08dec96d8ca3e6aaea2fc2f3aa0ab3881600c097ea0c12515b675a4ae525c3e3e6cd25ea37601c4cd640865c6905aea36f0f213a4eb1b9776539b42e0630b446"
+      },
+      "plaintext": "{\"t\":\"join\",\"sid\":\"570ca3458c8c450977b7b3979c65dab9\",\"seat\":0,\"alias\":\"Mia\",\"confirm\":true}"
+    },
+    "seat": {
+      "event": {
+        "id": "162e41982f1c2fd508e303ab3eb2405584ef0b94dc9df558d82f3ed515bc22fb",
+        "pubkey": "997e2d6c8d07fd802641a6bfc55e8175c8f2eb258c85fbf6864796bf419612de",
+        "created_at": 1760000591,
+        "kind": 21180,
+        "tags": [
+          ["L", "blueline"],
+          ["l", "board", "blueline"],
+          ["v", "1"],
+          ["p", "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0"]
+        ],
+        "content": "AqmyG8w27LZCmeE5HYZQ0AhikkRVq+bOPXuc0KcREVcz2U5F7gkRJ2CfH9ZdayXZDJNO+WdKmqxnQgXxWykLq4wgLwJHaqEvHrgzKPENNWmaUgonHjXNSkwCSlYTPqLBytDwKvepMJVfWTrh64fAQRiACIeTsnN+9CmkgpiwQx6uIYQ=",
+        "sig": "4a212ed86551ce58fbaf19ad3450a0410d83241bbb389ec74d50ba97b0cbb15c1612e775ae88e7dea5d6d964433e6e61de77be2e04474188efb710383141b937"
+      },
+      "plaintext": "{\"t\":\"seat\",\"sid\":\"570ca3458c8c450977b7b3979c65dab9\",\"seat\":0}"
+    },
+    "joinTaken": {
+      "event": {
+        "id": "f63e71b91b14a2970cb291d68fa065d3d95805fa1412a3ab0f02e53fc837a373",
+        "pubkey": "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6",
+        "created_at": 1760000592,
+        "kind": 21180,
+        "tags": [
+          ["L", "blueline"],
+          ["l", "board", "blueline"],
+          ["v", "1"],
+          ["p", "997e2d6c8d07fd802641a6bfc55e8175c8f2eb258c85fbf6864796bf419612de"]
+        ],
+        "content": "ApPJ2Iv3iuAcA/CdoO2g44BV0PmVo/lkKXgmNeOLELqnxwIPVk17xv4fVpl8SQuGgkU/SgS7PxRkfy/tTGn7O8UZ4u08QAUrZV5js1AfyqQrp+LM7WLOWWJ7gU4oJ1knhvbGPwqHugGXxOnNnUTbiz/A7i2XyIjsOuvSze3MF4yEdjd3VtlJ2BZO9p7ZtfFnElc0BLpPwWSAGfz2hNwirbbS/w==",
+        "sig": "b5cdd57673b7774e72cdf97f7e3b4054dae631c69d3b718087a4f7f04d45aefaed64c20b702b9c87101c36d0fb68ccc5010b531537e2de5fe3d04693d9cf8d79"
+      },
+      "plaintext": "{\"t\":\"join\",\"sid\":\"570ca3458c8c450977b7b3979c65dab9\",\"seat\":0,\"confirm\":false}"
+    },
+    "smuggled": {
+      "event": {
+        "id": "a2db45a7353275cc922748f26a96397214d1df2fad791a6f4db4dd4e8f22fad6",
+        "pubkey": "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6",
+        "created_at": 1760000593,
+        "kind": 21180,
+        "tags": [
+          ["L", "blueline"],
+          ["l", "board", "blueline"],
+          ["v", "1"],
+          ["p", "997e2d6c8d07fd802641a6bfc55e8175c8f2eb258c85fbf6864796bf419612de"]
+        ],
+        "content": "At9qMkHDRpmMAQWXeEJcqr7JWMijTZZ4IBTuxEpd19PF3Aqp7WYMihD+Keee8WLLg8+a1LC4ezyXDDCV3R5u5P2VdiGG1dDUlhv//kUg9LISFpHBlltqE9+YogSPCRfG4yUsm/R4euFFvt+WYN0SDh84pVjbvOG6XzU+UcWE7cjaoSf+O3x8NeM0F0u/K0CdJoiny8rSHYY9+S/+SdNHsKdw3w==",
+        "sig": "4020743b7f8c1b3a1641499818c5d908ff09a0a9de503564c0afce4a96f12ae80b6fc93a54309bd56f62f61344a8bcfbfd862de24dec7adf67de8dc37ba41672"
+      },
+      "plaintext": "{\"t\":\"join\",\"sid\":\"570ca3458c8c450977b7b3979c65dab9\",\"seat\":1,\"confirm\":false,\"nsec\":\"nsec1…\"}"
+    },
+    "packageToBoard": {
+      "event": {
+        "id": "cbbbb654b51f17a427458180c38ed6382ca3a6269de787690a68fd632beee721",
+        "pubkey": "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6",
+        "created_at": 1760000594,
+        "kind": 21180,
+        "tags": [
+          ["L", "blueline"],
+          ["l", "board", "blueline"],
+          ["v", "1"],
+          ["p", "997e2d6c8d07fd802641a6bfc55e8175c8f2eb258c85fbf6864796bf419612de"]
+        ],
+        "content": "Aq/QPC+DAjz1gK0MxIrHjxh9e9VKPTsq02o2WqS/CLvL8oo81s62lXDC5KlyWc4SwBZ5JlInk2dnWZ50+uTXzUWWdjTwrVI/4U8+jUv6+aKSvdZBZmMZY6nO5uWehyKj2ye1qpSdB34v5tG7ap4WGHUydgcenbpss2r3UcicGjWAeO4EYEnNsEq+ZKxjJ+mOhJCKeEdsE4JNhRo4PyxKTfXXqQ==",
+        "sig": "62fc402238e31fdc3c57ee8a405a5642a2528ccaa9dbaeb05eb1efbfdc73a99c1ac290c6ef6e0943337d57029535a98aadd3a709f4a7098fbf6f305a8a5ae2f3"
+      },
+      "plaintext": "{\"t\":\"package\",\"sid\":\"570ca3458c8c450977b7b3979c65dab9\",\"data\":{\"key\":\"…\"}}"
+    }
+  },
+  "keys": {
+    "board1": {
+      "secret": "a4230859fd70476858b95381afa37a69c93d5c95f0dc86b1f0b3780c44b52860",
+      "pubkey": "997e2d6c8d07fd802641a6bfc55e8175c8f2eb258c85fbf6864796bf419612de"
+    },
+    "p1": {
+      "secret": "5f376707328cb0702d59a27465f39f418af2e6d728638ec9416ffc415b55aa31",
+      "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0"
+    },
+    "p2": {
+      "secret": "6fa792f67001e89db0f94b1d158b5b87f43ce5a7f68a551bf2684f9373dc0be9",
+      "pubkey": "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6"
+    }
+  }
+}

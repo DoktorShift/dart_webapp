@@ -1,0 +1,39 @@
+{
+  "family": "invite",
+  "description": "Invite keys HKDF-SHA256(token, 'blueline-invite-v1', 'proof') with their x-only public keys, join proofs as BIP-340 signatures of that key over sha256('blueline-invite-v1:' + joiner pubkey) (zero aux randomness here; any aux gives a valid proof), and preview keys HKDF-SHA256(token, 'blueline-invite-v1', 'preview').",
+  "generator": "tests/support/make-vectors.ts",
+  "format": "Events are signed (BIP-340, zero aux randomness) with keys derived as sha256('blueline-vector:' + name). Content keys, nonces and NIP-44 nonces are fixed. Expected outcomes are written by hand from docs/protocol.",
+  "cases": [
+    {
+      "token": "1f7f9485c7c897e7959aab95e044464f",
+      "inviteKey": "fe36e90f96832e31afc00341723f386b096ded775514d2dd1c149704c79f841a",
+      "pubkey": "48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d",
+      "proof": "8232f8d900ed6b3e0301ac87746dd2bd4c94b3ed9d6c2e3bcec1a95a35f043227129376dc89ee8b989590c0dfbc8eb2532ad319d93c489132339a272e728ee18",
+      "previewKey": "862473241a16d99218395a99597ca696469a684de033caff54d7481770d739ff"
+    },
+    {
+      "token": "1f7f9485c7c897e7959aab95e044464f",
+      "inviteKey": "fe36e90f96832e31afc00341723f386b096ded775514d2dd1c149704c79f841a",
+      "pubkey": "b400d330df264198a54d0f21847e5c3de7d470529c9e8f99cd1acf0bb256433b",
+      "proof": "fdbe6873991690395480207b104bed04c5f4c0a4a2fbc65a89d6fd4ac4d675dd7eb15743c5d6ffa20aee645188b304ed11e89e9fd17ab7c05af8f65134e556ef",
+      "previewKey": "862473241a16d99218395a99597ca696469a684de033caff54d7481770d739ff"
+    },
+    {
+      "token": "e1605eae8f73d2a4d4f13b8506dde37c",
+      "inviteKey": "57b9543237688a52cdcff0ff048ccd9f5c4a61829dadd8136bbddab7eac9e8cd",
+      "pubkey": "48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d",
+      "proof": "aa1d16135263d292030c2243d9dae22403294a5f5ffce5457a9307aa78a8c294878a098f6f400c0a3c5fdfc4225ecb091858d9a9675408a8999ddf7e67ea4904",
+      "previewKey": "23eceb25eee7760b9c1bf54ff2c71983072081c690877db737bb4c893fb2bb36"
+    }
+  ],
+  "keys": {
+    "alice": {
+      "secret": "ac04e577214a1ba612043d1b6cd926e95abc564ed740775fdce4045c45f14334",
+      "pubkey": "48f9177b799f0ae93c3a523461b0c00b057b618f172feed9f0c3ca5c86971c1d"
+    },
+    "bob": {
+      "secret": "68e1dcdb8a89dbca9f33af4bd9db167d305e056cc5824ae4171bcd26c13ec42a",
+      "pubkey": "b400d330df264198a54d0f21847e5c3de7d470529c9e8f99cd1acf0bb256433b"
+    }
+  }
+}

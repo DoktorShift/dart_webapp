@@ -1,0 +1,787 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BlueLine club record content",
+  "$defs": {
+    "club.found": {
+      "description": "Founds a club; its id is the club id",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60,
+          "pattern": "^\\S(.*\\S)?$",
+          "description": "Name, trimmed"
+        },
+        "about": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Plain text, never HTML"
+        },
+        "picture": {
+          "type": "string",
+          "maxLength": 512,
+          "pattern": "^https:\\/\\/[^\\s\"<>\\\\]+$",
+          "description": "https URL"
+        },
+        "visibility": {
+          "enum": ["closed", "public"],
+          "description": "closed: every record but join and leave is sealed for the members"
+        },
+        "capacity": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 100,
+          "description": "With a limit, group links admit no one directly; an owner or admin accepts"
+        }
+      },
+      "required": ["name", "visibility"],
+      "additionalProperties": true
+    },
+    "club.update": {
+      "description": "Changes name, description, picture, visibility, capacity or archive state",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "prev": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Expected predecessor: last change of this subject, or the founding"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60,
+          "pattern": "^\\S(.*\\S)?$",
+          "description": "Name, trimmed"
+        },
+        "about": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Plain text, never HTML"
+        },
+        "picture": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 512,
+              "pattern": "^https:\\/\\/[^\\s\"<>\\\\]+$",
+              "description": "https URL"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "visibility": {
+          "enum": ["closed", "public"]
+        },
+        "capacity": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 2,
+              "maximum": 100
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "archived": {
+          "type": "boolean"
+        }
+      },
+      "required": ["prev"],
+      "additionalProperties": true
+    },
+    "club.invite": {
+      "description": "Creates a group link or a personal invite; in the clear in a public club, sealed in a closed one",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": ["group", "personal"],
+          "description": "group: admits with a valid proof until expiry or revocation; personal: once, after acceptance"
+        },
+        "key": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Public key of the invite key HKDF(token, 'blueline-invite-v1', 'proof'), see invite.ts"
+        },
+        "expires": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 60,
+          "description": "Plain text; only in a closed club, where the invite is sealed, since it may name the invited person"
+        }
+      },
+      "required": ["kind", "key", "expires"],
+      "additionalProperties": true
+    },
+    "club.invite.revoke": {
+      "description": "Ends an invite",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "invite": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "club.invite event id"
+        }
+      },
+      "required": ["invite"],
+      "additionalProperties": true
+    },
+    "club.join": {
+      "description": "Joins through a group link, or asks to join (personal invite or none)",
+      "kind": 1180,
+      "encryption": "none",
+      "type": "object",
+      "properties": {
+        "invite": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "club.invite event id"
+        },
+        "proof": {
+          "type": "string",
+          "minLength": 128,
+          "maxLength": 128,
+          "pattern": "^[0-9a-f]{128}$",
+          "description": "BIP-340 signature of the invite key over sha256('blueline-invite-v1:' + joiner pubkey), see invite.ts"
+        }
+      },
+      "required": [],
+      "additionalProperties": true
+    },
+    "club.accept": {
+      "description": "Accepts a waiting join request",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "request": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "club.join event id"
+        },
+        "member": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Pubkey, lowercase hex"
+        }
+      },
+      "required": ["request", "member"],
+      "additionalProperties": true
+    },
+    "club.decline": {
+      "description": "Declines a waiting join request",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "request": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "club.join event id"
+        }
+      },
+      "required": ["request"],
+      "additionalProperties": true
+    },
+    "club.leave": {
+      "description": "A member leaves, or someone withdraws their waiting request",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": true
+    },
+    "club.remove": {
+      "description": "Removes a member",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "member": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Pubkey, lowercase hex"
+        },
+        "prev": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Expected predecessor: last change of this subject, or the founding"
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 280,
+          "description": "Plain text, never HTML"
+        },
+        "info": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Last club.update (or the club id) the author saw; required when the member is an admin"
+        }
+      },
+      "required": ["member", "prev"],
+      "additionalProperties": true
+    },
+    "club.role": {
+      "description": "Gives a member a role",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "member": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Pubkey, lowercase hex"
+        },
+        "role": {
+          "enum": ["admin", "director", "member"]
+        },
+        "prev": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Expected predecessor: last change of this subject, or the founding"
+        },
+        "info": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Last club.update (or the club id) the author saw; required when the member is an admin"
+        }
+      },
+      "required": ["member", "role", "prev"],
+      "additionalProperties": true
+    },
+    "club.owner.offer": {
+      "description": "The owner offers ownership to a member",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "to": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Pubkey, lowercase hex"
+        },
+        "prev": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Expected predecessor: last change of this subject, or the founding"
+        },
+        "expires": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295,
+          "description": "Open until then: after created_at, at most MAX_OFFER_SECONDS (7 days) later"
+        },
+        "info": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "The current club details it hands over: last club.update, or the club id"
+        },
+        "member": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "The offered member's current base: their last role change, or their join"
+        }
+      },
+      "required": ["to", "prev", "expires", "info", "member"],
+      "additionalProperties": true
+    },
+    "club.owner.cancel": {
+      "description": "The owner withdraws the open offer",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "offer": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Event id"
+        }
+      },
+      "required": ["offer"],
+      "additionalProperties": true
+    },
+    "club.owner.accept": {
+      "description": "The offered member takes over ownership",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "offer": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Event id"
+        },
+        "info": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Last club.update (or the club id) the new owner saw: the offer's info or one built on it"
+        },
+        "member": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "The new owner's own last member change (their join, or a role change): the offer's member or one built on it"
+        }
+      },
+      "required": ["offer", "info", "member"],
+      "additionalProperties": true
+    },
+    "club.keys": {
+      "description": "Shares content keys of earlier sealed records",
+      "kind": 1180,
+      "encryption": "seal",
+      "encrypted": true,
+      "type": "object",
+      "properties": {
+        "keys": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 64,
+              "maxLength": 64,
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "[event id, content key hex]"
+          },
+          "minItems": 1,
+          "maxItems": 150
+        }
+      },
+      "required": ["keys"],
+      "additionalProperties": true
+    },
+    "club.season": {
+      "description": "Sets up a season with rules version 1",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "season": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "128-bit object id, lowercase hex"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60,
+          "pattern": "^\\S(.*\\S)?$",
+          "description": "Name, trimmed"
+        },
+        "starts": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "ends": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "rules": {
+          "type": "object",
+          "properties": {
+            "modes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 16,
+                "pattern": "^[a-z0-9]{1,16}$"
+              },
+              "minItems": 1,
+              "maxItems": 6,
+              "uniqueItems": true,
+              "description": "Game modes that count"
+            },
+            "points": {
+              "type": "object",
+              "properties": {
+                "win": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10
+                },
+                "draw": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10
+                },
+                "loss": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10
+                }
+              },
+              "required": ["win", "draw", "loss"],
+              "additionalProperties": true
+            },
+            "confirmations": {
+              "enum": ["none", "opponent", "all"],
+              "description": "Player confirmations a result needs to count"
+            },
+            "minGames": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000,
+              "description": "Games needed to be ranked"
+            },
+            "tiebreak": {
+              "type": "array",
+              "items": {
+                "enum": ["wins", "legDifference", "headToHead", "average"]
+              },
+              "maxItems": 4,
+              "uniqueItems": true
+            }
+          },
+          "required": ["modes", "points", "confirmations", "minGames", "tiebreak"],
+          "additionalProperties": true
+        }
+      },
+      "required": ["season", "name", "starts", "rules"],
+      "additionalProperties": true
+    },
+    "club.season.rules": {
+      "description": "New rules version for a season; after its start only with a reason",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "season": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "128-bit object id, lowercase hex"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 1000
+        },
+        "rules": {
+          "type": "object",
+          "properties": {
+            "modes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 16,
+                "pattern": "^[a-z0-9]{1,16}$"
+              },
+              "minItems": 1,
+              "maxItems": 6,
+              "uniqueItems": true,
+              "description": "Game modes that count"
+            },
+            "points": {
+              "type": "object",
+              "properties": {
+                "win": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10
+                },
+                "draw": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10
+                },
+                "loss": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10
+                }
+              },
+              "required": ["win", "draw", "loss"],
+              "additionalProperties": true
+            },
+            "confirmations": {
+              "enum": ["none", "opponent", "all"],
+              "description": "Player confirmations a result needs to count"
+            },
+            "minGames": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000,
+              "description": "Games needed to be ranked"
+            },
+            "tiebreak": {
+              "type": "array",
+              "items": {
+                "enum": ["wins", "legDifference", "headToHead", "average"]
+              },
+              "maxItems": 4,
+              "uniqueItems": true
+            }
+          },
+          "required": ["modes", "points", "confirmations", "minGames", "tiebreak"],
+          "additionalProperties": true
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 280,
+          "description": "Plain text, never HTML"
+        }
+      },
+      "required": ["season", "version", "rules"],
+      "additionalProperties": true
+    },
+    "club.season.end": {
+      "description": "Ends a season",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "season": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "128-bit object id, lowercase hex"
+        }
+      },
+      "required": ["season"],
+      "additionalProperties": true
+    },
+    "club.result": {
+      "description": "Decides whether a match result counts for a season",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "season": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "128-bit object id, lowercase hex"
+        },
+        "match": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Match id"
+        },
+        "result": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "match.result event id the decision is about"
+        },
+        "count": {
+          "type": "boolean",
+          "description": "true: the result counts for the season; false: it is left out"
+        },
+        "prev": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Expected predecessor: last change of this subject, or the founding"
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 280,
+          "description": "Plain text, never HTML"
+        }
+      },
+      "required": ["season", "match", "result", "count", "prev"],
+      "additionalProperties": true
+    },
+    "club.date": {
+      "description": "Creates, changes or cancels a club date",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "date": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "128-bit object id, lowercase hex"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60,
+          "pattern": "^\\S(.*\\S)?$",
+          "description": "Name, trimmed"
+        },
+        "starts": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "ends": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "place": {
+          "type": "string",
+          "maxLength": 140,
+          "description": "Plain text, never HTML"
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Plain text, never HTML"
+        },
+        "cancelled": {
+          "type": "boolean"
+        },
+        "prev": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Expected predecessor: last change of this subject, or the founding"
+        }
+      },
+      "required": ["date", "title", "starts", "prev"],
+      "additionalProperties": true
+    },
+    "club.invite#preview": {
+      "description": "Preview in the invite's envelope, opened with the link token (invite.ts)",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60,
+          "pattern": "^\\S(.*\\S)?$",
+          "description": "Name, trimmed"
+        },
+        "about": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Plain text, never HTML"
+        },
+        "picture": {
+          "type": "string",
+          "maxLength": 512,
+          "pattern": "^https:\\/\\/[^\\s\"<>\\\\]+$",
+          "description": "https URL"
+        },
+        "host": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Owner or admin who made the invite"
+        },
+        "hostName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60,
+          "pattern": "^\\S(.*\\S)?$",
+          "description": "Name, trimmed"
+        },
+        "kind": {
+          "enum": ["group", "personal"]
+        },
+        "expires": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "next": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 60,
+              "pattern": "^\\S(.*\\S)?$",
+              "description": "Name, trimmed"
+            },
+            "starts": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            "place": {
+              "type": "string",
+              "maxLength": 140,
+              "description": "Plain text, never HTML"
+            }
+          },
+          "required": ["title", "starts"],
+          "additionalProperties": true
+        }
+      },
+      "required": ["name", "host", "kind", "expires"],
+      "additionalProperties": true
+    }
+  }
+}

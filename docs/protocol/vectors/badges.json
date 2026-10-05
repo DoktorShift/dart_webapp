@@ -1,0 +1,372 @@
+{
+  "family": "badges",
+  "description": "NIP-58 definitions and awards checked by checkBadgeAward (lib/protocol/badges.ts).",
+  "generator": "tests/support/make-vectors.ts",
+  "format": "Events are signed (BIP-340, zero aux randomness) with keys derived as sha256('blueline-vector:' + name). Content keys, nonces and NIP-44 nonces are fixed. Expected outcomes are written by hand from docs/protocol.",
+  "context": {
+    "mayIssue": [
+      ["tournament", "30ea7d98843f538222d42251f73341398c8de40f041acb4b9df77d37ebbc4795", "b3f4e9a11c2f790c41ec159f9bed16000a7c52340c680892a7e71281ed69e969"]
+    ],
+    "voided": ["a6fd69a993cac6956a7a3a35362986edb2bf3fb7f396ed4ff4085dc4992e9703"]
+  },
+  "cases": [
+    {
+      "name": "organizer-award",
+      "description": "The organizer awards the tournament win.",
+      "definition": {
+        "id": "38b1145946c3595f5b5d2ceae14c4bbe77060d00d6785c756ee943b5e37a812d",
+        "pubkey": "b3f4e9a11c2f790c41ec159f9bed16000a7c52340c680892a7e71281ed69e969",
+        "created_at": 1760000010,
+        "kind": 30009,
+        "tags": [
+          ["d", "blueline:tournament:30ea7d98843f538222d42251f73341398c8de40f041acb4b9df77d37ebbc4795:tournament-winner:v1"],
+          ["name", "Turniersieg"],
+          ["description", "Hat das Turnier gewonnen."],
+          ["L", "blueline"],
+          ["l", "badge.definition", "blueline"],
+          ["v", "1"],
+          ["scope", "tournament", "30ea7d98843f538222d42251f73341398c8de40f041acb4b9df77d37ebbc4795"]
+        ],
+        "content": "",
+        "sig": "0443de8519d3170998053f4c42486571133297bb26bbaf165522f7eaaccc24d888778ecc7d295f99b1c7eb2f00b57a27ef49d0d156effd19cd07d490e6f875f4"
+      },
+      "award": {
+        "id": "5087c080baf83ba2bfdaaf355b273dee0b27cb33bd9237c272ead9b6c6cd791c",
+        "pubkey": "b3f4e9a11c2f790c41ec159f9bed16000a7c52340c680892a7e71281ed69e969",
+        "created_at": 1760000050,
+        "kind": 8,
+        "tags": [
+          ["a", "30009:b3f4e9a11c2f790c41ec159f9bed16000a7c52340c680892a7e71281ed69e969:blueline:tournament:30ea7d98843f538222d42251f73341398c8de40f041acb4b9df77d37ebbc4795:tournament-winner:v1"],
+          ["p", "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0"],
+          ["e", "ae6d032afaa3bcfa3ad5f761d8a97939142bf8289a56a232ea9f36616fa26b8f"],
+          ["occasion", "30ea7d98843f538222d42251f73341398c8de40f041acb4b9df77d37ebbc4795"],
+          ["L", "blueline"],
+          ["l", "badge.award", "blueline"],
+          ["v", "1"]
+        ],
+        "content": "",
+        "sig": "86d954a92b7c2665618028c7ef1266a7ebb9bcee2c545874be8aaaf45bd2233f4e19b90bb501eb4f6e63b54500baa5d4df561dbd4bff1a161efc29bbcab64060"
+      },
+      "expect": {
+        "ok": true,
+        "self": false
+      }
+    },
+    {
+      "name": "forged-issuer",
+      "description": "Mallory signs an award pointing at the organizer's badge: refused (nostr-core 1.0.4 would accept it).",
+      "definition": {
+        "id": "38b1145946c3595f5b5d2ceae14c4bbe77060d00d6785c756ee943b5e37a812d",
+        "pubkey": "b3f4e9a11c2f790c41ec159f9bed16000a7c52340c680892a7e71281ed69e969",
+        "created_at": 1760000010,
+        "kind": 30009,
+        "tags": [
+          ["d", "blueline:tournament:30ea7d98843f538222d42251f73341398c8de40f041acb4b9df77d37ebbc4795:tournament-winner:v1"],
+          ["name", "Turniersieg"],
+          ["description", "Hat das Turnier gewonnen."],
+          ["L", "blueline"],
+          ["l", "badge.definition", "blueline"],
+          ["v", "1"],
+          ["scope", "tournament", "30ea7d98843f538222d42251f73341398c8de40f041acb4b9df77d37ebbc4795"]
+        ],
+        "content": "",
+        "sig": "0443de8519d3170998053f4c42486571133297bb26bbaf165522f7eaaccc24d888778ecc7d295f99b1c7eb2f00b57a27ef49d0d156effd19cd07d490e6f875f4"
+      },
+      "award": {
+        "id": "a86c439954a93e814037202ce216cabf850a95a3dbc57233c2bdae420dc21f91",
+        "pubkey": "c1e16b2f3158d52908cf590f78527436ec5b2a5f79832834d5ff81ad47321978",
+        "created_at": 1760000040,
+        "kind": 8,
+        "tags": [
+          ["a", "30009:b3f4e9a11c2f790c41ec159f9bed16000a7c52340c680892a7e71281ed69e969:blueline:tournament:30ea7d98843f538222d42251f73341398c8de40f041acb4b9df77d37ebbc4795:tournament-winner:v1"],
+          ["p", "c1e16b2f3158d52908cf590f78527436ec5b2a5f79832834d5ff81ad47321978"],
+          ["e", "ae6d032afaa3bcfa3ad5f761d8a97939142bf8289a56a232ea9f36616fa26b8f"],
+          ["occasion", "30ea7d98843f538222d42251f73341398c8de40f041acb4b9df77d37ebbc4795"],
+          ["L", "blueline"],
+          ["l", "badge.award", "blueline"],
+          ["v", "1"]
+        ],
+        "content": "",
+        "sig": "4d7d8319c0c3f3aba0e56da289d4ac6f8028e01058540d4e1bbbf91267effaa22137872283c3f2830713e3af4fe7abedaec0e9dff54c1b2e8b0e1094886dfe32"
+      },
+      "expect": {
+        "ok": false,
+        "reason": "issuer_mismatch"
+      }
+    },
+    {
+      "name": "self-earned",
+      "description": "A player shows a milestone as 'Selbst erreicht', with the match result as evidence.",
+      "definition": {
+        "id": "2328e15be332df509f7054870690bfef564c1f9a8481b37bd06843e794a7076c",
+        "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
+        "created_at": 1760000020,
+        "kind": 30009,
+        "tags": [
+          ["d", "blueline:self:first-180:v1"],
+          ["name", "Erste 180"],
+          ["description", "Drei Triple-20 in einer Aufnahme."],
+          ["L", "blueline"],
+          ["l", "badge.definition", "blueline"],
+          ["v", "1"],
+          ["scope", "self"]
+        ],
+        "content": "",
+        "sig": "d85035dd69b71954ecf4942d95aa6cbdd97eab67411d1e17d3ff86d102475b15e32d094b0d582df73af926d42593956f4eb41b2b5077426d1cccfac107f67413"
+      },
+      "award": {
+        "id": "908260060bec0623106fe67738bb6a240a091a561b4c7f68b1ce22f582b0955a",
+        "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
+        "created_at": 1760000070,
+        "kind": 8,
+        "tags": [
+          ["a", "30009:b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0:blueline:self:first-180:v1"],
+          ["p", "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0"],
+          ["e", "ae6d032afaa3bcfa3ad5f761d8a97939142bf8289a56a232ea9f36616fa26b8f"],
+          ["occasion", "once"],
+          ["L", "blueline"],
+          ["l", "badge.award", "blueline"],
+          ["v", "1"]
+        ],
+        "content": "",
+        "sig": "2b138975b688244acceb3b245d4050d532341f3a68542068e37fd48fdcc0f1aa8ca1e04e0ab2e004424ea7fdc2f02906c0a62c9349c57ed56ee73e042a51669f"
+      },
+      "expect": {
+        "ok": true,
+        "self": true
+      }
+    },
+    {
+      "name": "self-for-other",
+      "description": "A self-earned badge given to someone else.",
+      "definition": {
+        "id": "2328e15be332df509f7054870690bfef564c1f9a8481b37bd06843e794a7076c",
+        "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
+        "created_at": 1760000020,
+        "kind": 30009,
+        "tags": [
+          ["d", "blueline:self:first-180:v1"],
+          ["name", "Erste 180"],
+          ["description", "Drei Triple-20 in einer Aufnahme."],
+          ["L", "blueline"],
+          ["l", "badge.definition", "blueline"],
+          ["v", "1"],
+          ["scope", "self"]
+        ],
+        "content": "",
+        "sig": "d85035dd69b71954ecf4942d95aa6cbdd97eab67411d1e17d3ff86d102475b15e32d094b0d582df73af926d42593956f4eb41b2b5077426d1cccfac107f67413"
+      },
+      "award": {
+        "id": "98d045a072a85ab8bc21e4941e4499cf14d506b8c7deed60d97ece1af62e165e",
+        "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
+        "created_at": 1760000071,
+        "kind": 8,
+        "tags": [
+          ["a", "30009:b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0:blueline:self:first-180:v1"],
+          ["p", "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6"],
+          ["e", "ae6d032afaa3bcfa3ad5f761d8a97939142bf8289a56a232ea9f36616fa26b8f"],
+          ["occasion", "once"],
+          ["L", "blueline"],
+          ["l", "badge.award", "blueline"],
+          ["v", "1"]
+        ],
+        "content": "",
+        "sig": "3cbf7019f9ed35e704f60db98b13f4f52e56839abaad1414e1cc4f217b321d7aa7a6fdad49f519f95dd2c1bc87c8c1254b9a14f2385a6b07063dbe48eb151659"
+      },
+      "expect": {
+        "ok": false,
+        "reason": "issuer_mismatch"
+      }
+    },
+    {
+      "name": "club-not-issuer",
+      "description": "A club badge from someone the club state does not name as issuer.",
+      "definition": {
+        "id": "3c7808b5b99f986b949bcd1817532974a5da33514dcb243291fccf8d24dccb16",
+        "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+        "created_at": 1760000030,
+        "kind": 30009,
+        "tags": [
+          ["d", "blueline:club:7c18ae0ca33a6ebc13e1b416bd124a3f4ab96125687fd2c1a4a43cac8f9814ef:season-winner:v1"],
+          ["name", "Saisonsieg"],
+          ["description", "Hat die Saison gewonnen."],
+          ["L", "blueline"],
+          ["l", "badge.definition", "blueline"],
+          ["v", "1"],
+          ["scope", "club", "7c18ae0ca33a6ebc13e1b416bd124a3f4ab96125687fd2c1a4a43cac8f9814ef"]
+        ],
+        "content": "",
+        "sig": "15fcbfdaeeca9779427edcb29b0d685114849e0cb73adfc3ff406e0e9a10344f397edf4c8cd7e16c8608db1ecd014d1eb8c618453a386f9145c3f930fbf2e00b"
+      },
+      "award": {
+        "id": "48982c5fcb724946fb680e2eedc35ea256fdb2444ed07cdc0a3735a1dd3d809e",
+        "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78",
+        "created_at": 1760000072,
+        "kind": 8,
+        "tags": [
+          ["a", "30009:6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78:blueline:club:7c18ae0ca33a6ebc13e1b416bd124a3f4ab96125687fd2c1a4a43cac8f9814ef:season-winner:v1"],
+          ["p", "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0"],
+          ["e", "ae6d032afaa3bcfa3ad5f761d8a97939142bf8289a56a232ea9f36616fa26b8f"],
+          ["occasion", "f01b1b31fce93d420a87e8ebc6e09769"],
+          ["L", "blueline"],
+          ["l", "badge.award", "blueline"],
+          ["v", "1"]
+        ],
+        "content": "",
+        "sig": "eaf72023a76d1fb69d23e040ea23cf6711515b576b83d00aaf1e14a8c5eccc5bd1836486ef7cfe7c5d3539cd0085fd4c64a3c29a8d77dd390f382357071846bb"
+      },
+      "expect": {
+        "ok": false,
+        "reason": "not_authorized"
+      }
+    },
+    {
+      "name": "no-recipient",
+      "description": "An award without recipient.",
+      "definition": {
+        "id": "38b1145946c3595f5b5d2ceae14c4bbe77060d00d6785c756ee943b5e37a812d",
+        "pubkey": "b3f4e9a11c2f790c41ec159f9bed16000a7c52340c680892a7e71281ed69e969",
+        "created_at": 1760000010,
+        "kind": 30009,
+        "tags": [
+          ["d", "blueline:tournament:30ea7d98843f538222d42251f73341398c8de40f041acb4b9df77d37ebbc4795:tournament-winner:v1"],
+          ["name", "Turniersieg"],
+          ["description", "Hat das Turnier gewonnen."],
+          ["L", "blueline"],
+          ["l", "badge.definition", "blueline"],
+          ["v", "1"],
+          ["scope", "tournament", "30ea7d98843f538222d42251f73341398c8de40f041acb4b9df77d37ebbc4795"]
+        ],
+        "content": "",
+        "sig": "0443de8519d3170998053f4c42486571133297bb26bbaf165522f7eaaccc24d888778ecc7d295f99b1c7eb2f00b57a27ef49d0d156effd19cd07d490e6f875f4"
+      },
+      "award": {
+        "id": "7f8ec550a155d6fd87e8eb5e0fa86563e777abe39b6565feb7d9da449b710761",
+        "pubkey": "b3f4e9a11c2f790c41ec159f9bed16000a7c52340c680892a7e71281ed69e969",
+        "created_at": 1760000041,
+        "kind": 8,
+        "tags": [
+          ["a", "30009:b3f4e9a11c2f790c41ec159f9bed16000a7c52340c680892a7e71281ed69e969:blueline:tournament:30ea7d98843f538222d42251f73341398c8de40f041acb4b9df77d37ebbc4795:tournament-winner:v1"],
+          ["e", "ae6d032afaa3bcfa3ad5f761d8a97939142bf8289a56a232ea9f36616fa26b8f"],
+          ["occasion", "30ea7d98843f538222d42251f73341398c8de40f041acb4b9df77d37ebbc4795"],
+          ["L", "blueline"],
+          ["l", "badge.award", "blueline"],
+          ["v", "1"]
+        ],
+        "content": "",
+        "sig": "39a27916130bcd397fff13cd751d2e7a07a9adbc30a541d1dd3949cce59158937757007070b57a12aa63e3eb19baff2b4237cd3f6dba4fae27e83771033b4c7d"
+      },
+      "expect": {
+        "ok": false,
+        "reason": "recipient_missing"
+      }
+    },
+    {
+      "name": "evidence-voided",
+      "description": "The result the award rests on was voided since.",
+      "definition": {
+        "id": "38b1145946c3595f5b5d2ceae14c4bbe77060d00d6785c756ee943b5e37a812d",
+        "pubkey": "b3f4e9a11c2f790c41ec159f9bed16000a7c52340c680892a7e71281ed69e969",
+        "created_at": 1760000010,
+        "kind": 30009,
+        "tags": [
+          ["d", "blueline:tournament:30ea7d98843f538222d42251f73341398c8de40f041acb4b9df77d37ebbc4795:tournament-winner:v1"],
+          ["name", "Turniersieg"],
+          ["description", "Hat das Turnier gewonnen."],
+          ["L", "blueline"],
+          ["l", "badge.definition", "blueline"],
+          ["v", "1"],
+          ["scope", "tournament", "30ea7d98843f538222d42251f73341398c8de40f041acb4b9df77d37ebbc4795"]
+        ],
+        "content": "",
+        "sig": "0443de8519d3170998053f4c42486571133297bb26bbaf165522f7eaaccc24d888778ecc7d295f99b1c7eb2f00b57a27ef49d0d156effd19cd07d490e6f875f4"
+      },
+      "award": {
+        "id": "804bc50b6c3f49d412df4c4e5acc6280abacc193a0938f6d9e5a44843d76d516",
+        "pubkey": "b3f4e9a11c2f790c41ec159f9bed16000a7c52340c680892a7e71281ed69e969",
+        "created_at": 1760000080,
+        "kind": 8,
+        "tags": [
+          ["a", "30009:b3f4e9a11c2f790c41ec159f9bed16000a7c52340c680892a7e71281ed69e969:blueline:tournament:30ea7d98843f538222d42251f73341398c8de40f041acb4b9df77d37ebbc4795:tournament-winner:v1"],
+          ["p", "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6"],
+          ["e", "a6fd69a993cac6956a7a3a35362986edb2bf3fb7f396ed4ff4085dc4992e9703"],
+          ["occasion", "30ea7d98843f538222d42251f73341398c8de40f041acb4b9df77d37ebbc4795"],
+          ["L", "blueline"],
+          ["l", "badge.award", "blueline"],
+          ["v", "1"]
+        ],
+        "content": "",
+        "sig": "2083a4a95cb44282ec02b28dcfb7da5ba75521c129d6e65a27e278672abc00fce8066f4100f26aeeea85ff7079a90b91fe356d0ccd3818bbef41d9f9de42803a"
+      },
+      "expect": {
+        "ok": false,
+        "reason": "evidence_revoked"
+      }
+    },
+    {
+      "name": "duplicate",
+      "description": "The same award re-signed later counts once: the first in replay order.",
+      "definition": {
+        "id": "38b1145946c3595f5b5d2ceae14c4bbe77060d00d6785c756ee943b5e37a812d",
+        "pubkey": "b3f4e9a11c2f790c41ec159f9bed16000a7c52340c680892a7e71281ed69e969",
+        "created_at": 1760000010,
+        "kind": 30009,
+        "tags": [
+          ["d", "blueline:tournament:30ea7d98843f538222d42251f73341398c8de40f041acb4b9df77d37ebbc4795:tournament-winner:v1"],
+          ["name", "Turniersieg"],
+          ["description", "Hat das Turnier gewonnen."],
+          ["L", "blueline"],
+          ["l", "badge.definition", "blueline"],
+          ["v", "1"],
+          ["scope", "tournament", "30ea7d98843f538222d42251f73341398c8de40f041acb4b9df77d37ebbc4795"]
+        ],
+        "content": "",
+        "sig": "0443de8519d3170998053f4c42486571133297bb26bbaf165522f7eaaccc24d888778ecc7d295f99b1c7eb2f00b57a27ef49d0d156effd19cd07d490e6f875f4"
+      },
+      "award": {
+        "id": "c9a67f668fd75e170efbfd28b21fef6e375b3470dabb9e2ab4a546bec12175c2",
+        "pubkey": "b3f4e9a11c2f790c41ec159f9bed16000a7c52340c680892a7e71281ed69e969",
+        "created_at": 1760000060,
+        "kind": 8,
+        "tags": [
+          ["a", "30009:b3f4e9a11c2f790c41ec159f9bed16000a7c52340c680892a7e71281ed69e969:blueline:tournament:30ea7d98843f538222d42251f73341398c8de40f041acb4b9df77d37ebbc4795:tournament-winner:v1"],
+          ["p", "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0"],
+          ["e", "ae6d032afaa3bcfa3ad5f761d8a97939142bf8289a56a232ea9f36616fa26b8f"],
+          ["occasion", "30ea7d98843f538222d42251f73341398c8de40f041acb4b9df77d37ebbc4795"],
+          ["L", "blueline"],
+          ["l", "badge.award", "blueline"],
+          ["v", "1"]
+        ],
+        "content": "",
+        "sig": "ae97e5fad3aee71fb36fb4a040a5c827be762486db870e0c06b04f0a7301b99002797fafefd25519700a382abd92fa137b497b0fbd651e0f170ae9cfa1bbb7ba"
+      },
+      "duplicateOf": "5087c080baf83ba2bfdaaf355b273dee0b27cb33bd9237c272ead9b6c6cd791c",
+      "expect": {
+        "ok": true,
+        "self": false
+      }
+    }
+  ],
+  "keys": {
+    "mallory": {
+      "secret": "9be7c2943089a10a5b83ebbd95d0634afa644ee232db8397c3d5be8d260979c0",
+      "pubkey": "c1e16b2f3158d52908cf590f78527436ec5b2a5f79832834d5ff81ad47321978"
+    },
+    "organizer": {
+      "secret": "d9e570430e146e8f3a1214cd188a443d3d21820aa20b19c2eca0b3d3814fb4e4",
+      "pubkey": "b3f4e9a11c2f790c41ec159f9bed16000a7c52340c680892a7e71281ed69e969"
+    },
+    "owner": {
+      "secret": "34bf5f26a6087cd17ced618e07528939b60d3e97dff4f6de832edaf3e8eaac7d",
+      "pubkey": "6583bb4b8c29c77f71e84f37e6c40c816f2696b792c13b0c56e9cf562bff3e78"
+    },
+    "p1": {
+      "secret": "5f376707328cb0702d59a27465f39f418af2e6d728638ec9416ffc415b55aa31",
+      "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0"
+    },
+    "p2": {
+      "secret": "6fa792f67001e89db0f94b1d158b5b87f43ce5a7f68a551bf2684f9373dc0be9",
+      "pubkey": "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6"
+    }
+  }
+}
