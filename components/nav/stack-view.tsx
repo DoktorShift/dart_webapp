@@ -3,22 +3,20 @@
 import { Component, Suspense, memo, useEffect, useLayoutEffect, useRef, useState, type ComponentType, type ReactNode } from "react"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import { Button } from "@/components/ui/button"
+import { behind, offRight, onTop, pushTransition } from "@/components/nav/motion"
 import { ScreenFrame } from "@/components/nav/screen-frame"
-import { useTabsShown } from "@/components/nav/tabs-layer"
+import { useFocusReturn } from "@/components/nav/use-focus-return"
 import { useRegistryVersion } from "@/components/nav/use-registry"
 import { useT } from "@/components/i18n-provider"
 import { getScreen, type ScreenProps } from "@/lib/shell/registry"
 import type { StackEntry, TabId } from "@/lib/shell/nav"
 import { cn } from "@/lib/utils"
 
-// The same push and pop as the app's full-screen flows: the new screen slides in from the right
-// over the old one, which moves a little to the left and dims. Reduce Motion gets a cross-fade.
-const VARIANTS = {
-  enter: (reduce: boolean) => (reduce ? { opacity: 0 } : { x: "100%", opacity: 1 }),
-  top: { x: 0, opacity: 1 },
-  covered: (reduce: boolean) => (reduce ? { opacity: 0 } : { x: "-25%", opacity: 0.6 }),
-  exit: (reduce: boolean) => (reduce ? { opacity: 0 } : { x: "100%", opacity: 1 }),
-}
+// The same push and pop as the app's full-screen flows (motion.ts).
+const VARIANTS = { enter: offRight, top: onTop, covered: behind, exit: offRight }
+
+// The large title of a screen (ScreenFrame), where focus goes when the screen appears.
+const SCREEN_TITLE = "[data-screen-title]"
 
 // Pushed screens are opaque, with the board-light glow of the page behind them in dark mode.
 const PUSHED_SURFACE =
@@ -42,12 +40,11 @@ function StackLayer({
   // layout once the push animation has finished.
   const [coveredDone, setCoveredDone] = useState(false)
   if (isTop && coveredDone) setCoveredDone(false)
-  const tabsShown = useTabsShown()
   const visible = active && (isTop || !coveredDone)
 
   // Scroll positions of everything that scrolls inside this screen, put back whenever it shows
-  // again (another tab, a screen pushed over it, or setup and the game over all tabs): browsers
-  // forget them while an element is display: none.
+  // again (another tab, a screen pushed over it, or setup and the game over all tabs, whose
+  // reveal runs this layout effect again): browsers forget them while an element is display: none.
   const scrolls = useRef(new Map<Element, number>())
   useEffect(() => {
     const el = ref.current
@@ -59,34 +56,17 @@ function StackLayer({
     return () => el.removeEventListener("scroll", remember, { capture: true })
   }, [])
   useLayoutEffect(() => {
-    if (!visible || !tabsShown) return
+    if (!visible) return
     for (const [el, top] of scrolls.current) {
       if (el.isConnected && Math.abs(el.scrollTop - top) > 1) el.scrollTop = top
     }
-  }, [visible, tabsShown])
+  }, [visible])
 
   // VoiceOver and keyboard focus follow navigation: a new screen announces its title; going back
   // returns to the control that opened the screen above.
-  const lastFocus = useRef<HTMLElement | null>(null)
+  useFocusReturn(ref, isTop, SCREEN_TITLE)
   useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const track = (event: FocusEvent) => {
-      if (event.target instanceof HTMLElement) lastFocus.current = event.target
-    }
-    el.addEventListener("focusin", track)
-    return () => el.removeEventListener("focusin", track)
-  }, [])
-  const wasTop = useRef(isTop)
-  useEffect(() => {
-    if (isTop && !wasTop.current && active) {
-      const target = lastFocus.current?.isConnected ? lastFocus.current : ref.current?.querySelector<HTMLElement>("[data-screen-title]")
-      target?.focus({ preventScroll: true })
-    }
-    wasTop.current = isTop
-  }, [isTop, active])
-  useEffect(() => {
-    if (index > 0 && active) ref.current?.querySelector<HTMLElement>("[data-screen-title]")?.focus({ preventScroll: true })
+    if (index > 0 && active) ref.current?.querySelector<HTMLElement>(SCREEN_TITLE)?.focus({ preventScroll: true })
     // Only when the screen first appears.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -99,7 +79,7 @@ function StackLayer({
       initial="enter"
       animate={isTop ? "top" : "covered"}
       exit="exit"
-      transition={{ type: "tween", duration: reduceMotion ? 0.15 : 0.32, ease: [0.32, 0.72, 0, 1] }}
+      transition={pushTransition(reduceMotion)}
       onAnimationComplete={(name) => {
         if (name === "covered") setCoveredDone(true)
       }}

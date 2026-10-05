@@ -34,6 +34,12 @@
 // Areas register from components/shell/extensions.ts at module load, before the first render.
 // Registering later (after a lazy import) also works; open screens pick it up.
 //
+// Screens and slots stay mounted while hidden (another tab, a screen pushed over them, or setup and
+// the game over all tabs), so they keep their state. Under setup and the game the tabs are frozen:
+// updates from live data are rendered only when idle or when the tabs show again, so pausing a
+// subscription there is optional. Work that must stop while a screen can't be seen (the camera)
+// watches the screen's own element, as QRScanner does (components/common/qr-scanner.tsx).
+//
 // No React runtime here (types only), so the dispatch rules run in the Node unit tests.
 
 import type { ComponentType, ReactNode } from "react"

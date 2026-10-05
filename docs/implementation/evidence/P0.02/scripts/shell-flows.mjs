@@ -63,6 +63,8 @@ const browser = await chromium.launch()
   await page.getByText('Gast', { exact: true }).waitFor()
   check('Profil shows the guest header', await page.getByRole('heading', { name: 'Gast' }).isVisible())
   const stats = page.getByLabel('Auf diesem Gerät')
+  // The numbers follow the header once the history has been read.
+  await stats.waitFor({ timeout: 5000 }).catch(() => {})
   check('guest numbers come from the match history', await stats.getByText('14', { exact: true }).isVisible())
   check('most wins names the leader', (await stats.getByText('Lena', { exact: true }).isVisible()) && (await stats.getByText('9', { exact: true }).isVisible()))
   check('no history entry for switching tabs', (await depth(page)) === 0)

@@ -10,6 +10,7 @@ import { GameScreen } from "@/components/game/game-screen"
 import { UndoBanner } from "@/components/undo-banner"
 import { FallbackScreen } from "@/components/fallback-screen"
 import { StorageAlert } from "@/components/data/storage-alert"
+import { behind, offRight, onTop, pushTransition } from "@/components/nav/motion"
 import { NavProvider } from "@/components/nav/nav-context"
 import { StackView, type StackRoot } from "@/components/nav/stack-view"
 import { TabsLayer } from "@/components/nav/tabs-layer"
@@ -115,7 +116,7 @@ export default function DartScorer() {
   const screenRef = useRef<Screen>("tabs")
   const navRef = useRef(nav)
   const matchRef = useRef(match)
-  const reduceMotion = useReducedMotion()
+  const reduceMotion = useReducedMotion() ?? false
 
   useLayoutEffect(() => {
     navRef.current = nav
@@ -294,22 +295,21 @@ export default function DartScorer() {
     [go],
   )
 
-  // Tapping the open tab goes back to its root, and at the root scrolls to the top (iOS).
+  // Tapping the open tab at its root scrolls it to the top (iOS); everything else is the reducer's.
   const onTabChange = useCallback(
     (tab: TabId) => {
       const current = navRef.current
-      if (tab !== current.tab) dispatchNav({ type: "select", tab })
-      else if (depthOf(current) > 0) dispatchNav({ type: "popToRoot" })
-      else scrollTabToTop(tab, !reduceMotion)
+      if (tab === current.tab && depthOf(current) === 0) scrollTabToTop(tab, !reduceMotion)
+      else dispatchNav({ type: "select", tab })
     },
     [reduceMotion],
   )
 
-  // Push and pop like a navigation stack; Reduce Motion gets a cross-fade.
+  // Push and pop like a navigation stack (components/nav/motion.ts).
   const screenVariants = {
-    enter: (dir: number) => (reduceMotion ? { opacity: 0 } : { x: dir > 0 ? "100%" : "-25%", opacity: dir > 0 ? 1 : 0.6 }),
-    center: { x: 0, opacity: 1 },
-    exit: (dir: number) => (reduceMotion ? { opacity: 0 } : { x: dir > 0 ? "-25%" : "100%", opacity: dir > 0 ? 0.6 : 1 }),
+    enter: (dir: number) => (dir > 0 ? offRight : behind)(reduceMotion),
+    center: onTop,
+    exit: (dir: number) => (dir > 0 ? behind : offRight)(reduceMotion),
   }
 
   // The tabs, built from memoised parts: they stay mounted under setup and the game (TabsLayer),
@@ -427,7 +427,7 @@ export default function DartScorer() {
                 initial="enter"
                 animate="center"
                 exit="exit"
-                transition={{ type: "tween", duration: reduceMotion ? 0.15 : 0.32, ease: [0.32, 0.72, 0, 1] }}
+                transition={pushTransition(reduceMotion)}
                 className={screen === "setup" ? "absolute inset-0 overflow-y-auto overscroll-contain" : "absolute inset-0 overflow-hidden"}
               >
                 {content}
