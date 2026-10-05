@@ -1,0 +1,3 @@
+392 screenshots, 2 with findings
+{"shot":"game-de-light-se-landscape.png","pageScroll":false,"scrollsVertically":false,"offscreen":[],"ellipsis":[],"overflowing":["button:Letzten Dart rückgängig machen"],"small":[]}
+{"shot":"game-de-dark-se-landscape.png","pageScroll":false,"scrollsVertically":false,"offscreen":[],"ellipsis":[],"overflowing":["button:Letzten Dart rückgängig machen"],"small":[]}

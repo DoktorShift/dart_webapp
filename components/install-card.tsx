@@ -34,15 +34,16 @@ function Ready({ children }: { children: string }) {
 
 // The About page's main action: install for offline play. Browsers that can install in one
 // tap do so right here; the others open the step-by-step guide in a sheet. Once installed, the
-// card says so and leads back to the scorer.
-export function InstallCard({ qrSvg }: { qrSvg: string }) {
+// card says so and leads back to the scorer. Inside the app (`inApp`) there is nothing to lead
+// back to, so those links are left out.
+export function InstallCard({ qrSvg, inApp = false }: { qrSvg: string; inApp?: boolean }) {
   const t = useT()
   const install = useInstallApp()
   const offlineReady = useOfflineReady()
   const [guideOpen, setGuideOpen] = useState(false)
   const installed = install?.kind === "installed"
 
-  // Links to /about#install (from Settings) open the guide straight away.
+  // Links to /about#install open the guide straight away.
   useEffect(() => {
     if (window.location.hash === "#install") setGuideOpen(true)
   }, [])
@@ -55,12 +56,14 @@ export function InstallCard({ qrSvg }: { qrSvg: string }) {
         <>
           <Ready>{t.install.installed}</Ready>
           <p className="mt-1.5 text-[1.0625rem] leading-snug">{t.about.installedNote}</p>
-          <Link
-            href="/"
-            className="mt-4 flex h-14 items-center justify-center rounded-2xl bg-primary text-[1.0625rem] font-semibold text-primary-foreground active:bg-primary/80"
-          >
-            {t.about.openScorer}
-          </Link>
+          {!inApp && (
+            <Link
+              href="/"
+              className="mt-4 flex h-14 items-center justify-center rounded-2xl bg-primary text-[1.0625rem] font-semibold text-primary-foreground active:bg-primary/80"
+            >
+              {t.about.openScorer}
+            </Link>
+          )}
         </>
       ) : (
         <>
@@ -81,12 +84,14 @@ export function InstallCard({ qrSvg }: { qrSvg: string }) {
               </button>
             )}
           </div>
-          <Link
-            href="/"
-            className="mt-2 flex h-12 items-center justify-center rounded-2xl text-[1.0625rem] font-medium text-primary active:bg-primary/10"
-          >
-            {t.about.openScorer}
-          </Link>
+          {!inApp && (
+            <Link
+              href="/"
+              className="mt-2 flex h-12 items-center justify-center rounded-2xl text-[1.0625rem] font-medium text-primary active:bg-primary/10"
+            >
+              {t.about.openScorer}
+            </Link>
+          )}
         </>
       )}
 

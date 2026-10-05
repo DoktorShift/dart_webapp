@@ -7,8 +7,11 @@ import { Sheet } from "@/components/ui/sheet"
 import { slotLabel, visitResult } from "@/components/game/visit-panel"
 import { GamePreferences } from "@/components/game-preferences"
 import { useT } from "@/components/i18n-provider"
+import { useRegistryVersion } from "@/components/nav/use-registry"
 import type { CorrectionPlan, MatchState, Visit } from "@/lib/game/engine"
 import type { AppSettings } from "@/lib/game/storage"
+import type { SavedMatch } from "@/lib/game/types"
+import { getGameMenuItems } from "@/lib/shell/registry"
 import { legName, rulesSummary } from "@/lib/game/words"
 import { cn } from "@/lib/utils"
 
@@ -202,6 +205,7 @@ export function OptionsSheet({
   open,
   onOpenChange,
   state,
+  match,
   settings,
   onSettingsChange,
   onRestartLeg,
@@ -210,6 +214,7 @@ export function OptionsSheet({
   open: boolean
   onOpenChange: (open: boolean) => void
   state: MatchState
+  match: SavedMatch
   settings: AppSettings
   onSettingsChange: (settings: AppSettings) => void
   onRestartLeg: () => void
@@ -218,6 +223,9 @@ export function OptionsSheet({
   const t = useT()
   const [view, setView] = useState<OptionsView>("main")
   const players = state.config.players
+  // Entries areas added (lib/shell/registry.ts, game menu items), after the game's own.
+  useRegistryVersion()
+  const extraItems = getGameMenuItems()
   const change = (next: boolean) => {
     onOpenChange(next)
     if (!next) setView("main")
@@ -260,6 +268,20 @@ export function OptionsSheet({
                 {texts.playerLeaves}
               </button>
             )}
+            {extraItems.map(({ id, label, icon: Icon, onSelect }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => {
+                  change(false)
+                  onSelect({ match })
+                }}
+                className={cn(rowButton, "gap-3 text-primary")}
+              >
+                {Icon && <Icon className="h-5 w-5 shrink-0" aria-hidden />}
+                {label(t)}
+              </button>
+            ))}
           </div>
           <p className="mt-3 px-1 text-[0.8125rem] text-muted-foreground">{texts.tip}</p>
           <Button variant="ghost" onClick={() => change(false)} className={cn(secondary, "mt-2 w-full")}>

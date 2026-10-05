@@ -4,7 +4,8 @@ import { useState } from "react"
 import { useTheme } from "next-themes"
 import { Share, SquarePlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { ChoiceRow, Group, LinkRow } from "@/components/ui/group"
+import { ChoiceRow, Group } from "@/components/ui/group"
+import { ListRow } from "@/components/ui/list-row"
 import { Segmented } from "@/components/ui/segmented"
 import {
   AlertDialog,
@@ -23,7 +24,6 @@ import { useMatchHistory } from "@/lib/leaderboard"
 import { useInstallApp, type InstallState } from "@/hooks/use-install-app"
 import { LOCALES, type LocalePreference } from "@/lib/i18n"
 import type { AppSettings } from "@/lib/game/storage"
-import { SITE } from "@/lib/site"
 
 // Installing to the home screen: one tap where the browser allows it, otherwise the steps.
 function InstallRow({ state }: { state: InstallState | null }) {
@@ -71,7 +71,17 @@ function InstallRow({ state }: { state: InstallState | null }) {
   )
 }
 
-export function SettingsScreen({ settings, onSettingsChange }: { settings: AppSettings; onSettingsChange: (s: AppSettings) => void }) {
+// Settings, opened from the Profile tab (also as a guest). The tab's navigation stack brings the
+// title, back button and scrolling; the install guide opens inside the app as well.
+export function SettingsScreen({
+  settings,
+  onSettingsChange,
+  onOpenGuide,
+}: {
+  settings: AppSettings
+  onSettingsChange: (s: AppSettings) => void
+  onOpenGuide: () => void
+}) {
   const { t, preference, setPreference } = useI18n()
   const { theme, setTheme } = useTheme()
   const { matches, clear } = useMatchHistory()
@@ -79,10 +89,8 @@ export function SettingsScreen({ settings, onSettingsChange }: { settings: AppSe
   const install = useInstallApp()
 
   return (
-    <div className="h-full overflow-y-auto overscroll-contain">
-      <div className="mx-auto max-w-2xl px-4 pb-10 pl-[max(env(safe-area-inset-left),1rem)] pr-[max(env(safe-area-inset-right),1rem)] pt-[max(env(safe-area-inset-top),0.5rem)] lg:pt-10">
-        <h1 className="pt-3 font-display text-4xl font-semibold tracking-tight">{t.settings.title}</h1>
-
+    <>
+      <div>
         <Group title={t.settings.duringGame}>
           <ChoiceRow
             title={t.settings.scoreEntry}
@@ -99,7 +107,7 @@ export function SettingsScreen({ settings, onSettingsChange }: { settings: AppSe
 
         <Group title={t.settings.app} footer={install?.kind === "installed" ? t.settings.appInstalledFooter : t.settings.appFooter}>
           <InstallRow state={install} />
-          <LinkRow href="/about#install">{t.settings.guide}</LinkRow>
+          <ListRow title={t.settings.guide} onClick={onOpenGuide} />
         </Group>
 
         <Group title={t.settings.language}>
@@ -144,10 +152,6 @@ export function SettingsScreen({ settings, onSettingsChange }: { settings: AppSe
         </Group>
 
         <DataSection />
-
-        <Group title={t.settings.about}>
-          <LinkRow href="/about">{t.settings.aboutApp(SITE.name)}</LinkRow>
-        </Group>
       </div>
 
       <AlertDialog open={confirmReset} onOpenChange={setConfirmReset}>
@@ -164,6 +168,6 @@ export function SettingsScreen({ settings, onSettingsChange }: { settings: AppSe
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   )
 }

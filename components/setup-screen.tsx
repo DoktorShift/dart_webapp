@@ -6,12 +6,13 @@ import { ChevronLeft, GripVertical, Minus, Plus, Shuffle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ChoiceRow, Group, SwitchRow } from "@/components/ui/group"
 import { Dartboard, GAME_HIGHLIGHTS } from "@/components/dartboard"
+import { SlotItems } from "@/components/shell/slot-items"
 import { useT } from "@/components/i18n-provider"
 import { recentPlayerNames, useMatchHistory } from "@/lib/leaderboard"
 import { loadLastPlayers, loadRules } from "@/lib/game/storage"
 import { assignPlayers, listPlayers, savePlayers, type PlayerRecord } from "@/lib/storage/players"
 import { LEG_OPTIONS, SET_OPTIONS, START_SCORES, configFor, modeIdFor, type GameRules } from "@/lib/game/rules"
-import type { GameType, MatchConfig } from "@/lib/game/types"
+import type { GameType, MatchConfig, MatchPlayer } from "@/lib/game/types"
 import { cn } from "@/lib/utils"
 
 const MAX_PLAYERS = 6
@@ -25,6 +26,8 @@ interface SetupPlayer {
 
 interface SetupScreenProps {
   type: GameType
+  // The title of the screen setup was opened from; "Play" when left out.
+  backLabel?: string
   onBack: () => void
   onStart: (config: MatchConfig) => void
 }
@@ -117,7 +120,7 @@ function PlayerRow({
   )
 }
 
-export function SetupScreen({ type, onBack, onStart }: SetupScreenProps) {
+export function SetupScreen({ type, backLabel, onBack, onStart }: SetupScreenProps) {
   const t = useT()
   const [players, setPlayers] = useState<SetupPlayer[]>(initialPlayers)
   // The rules this group played last time, for this kind of game.
@@ -127,6 +130,8 @@ export function SetupScreen({ type, onBack, onStart }: SetupScreenProps) {
   const inputs = useRef(new Map<string, HTMLInputElement>())
   const { all: matches, players: directory } = useMatchHistory()
   const starting = useRef(false)
+  // Values areas add below the rules ("setup.extras" in lib/shell/registry.ts), by area id.
+  const [extras, setExtras] = useState<Record<string, unknown>>({})
 
   const nameKeys = players.map((p) => p.name.trim().toLowerCase())
   const duplicates = new Set(nameKeys.filter((k, i) => k && nameKeys.indexOf(k) !== i))
@@ -161,6 +166,15 @@ export function SetupScreen({ type, onBack, onStart }: SetupScreenProps) {
     })
   }
 
+  const names = players.map((p, i) => p.name.trim() || t.setup.placeholder(i + 1))
+  // Setup's own seat ids, until Start looks the names up in the player directory.
+  const seats = players.map((p, i) => ({ id: p.key, name: names[i] }))
+  // The game as it starts. Without extras the config is exactly what it always was.
+  const configWith = (named: MatchPlayer[]): MatchConfig => {
+    const base = configFor(type, rules, named, texts.name)
+    return Object.keys(extras).length > 0 ? { ...base, extras } : base
+  }
+
   // A name played before keeps its player id, so results add up per person. The directory is
   // loaded long before anyone taps Start. If it isn't (storage still opening or blocked), the
   // game starts right away anyway: seats keep their setup ids, and the archive finds known
@@ -168,13 +182,12 @@ export function SetupScreen({ type, onBack, onStart }: SetupScreenProps) {
   const start = () => {
     if (starting.current) return
     starting.current = true
-    const names = players.map((p, i) => p.name.trim() || t.setup.placeholder(i + 1))
     const begin = (known: PlayerRecord[] | null) => {
-      if (!known) return onStart(configFor(type, rules, players.map((p, i) => ({ id: p.key, name: names[i] })), texts.name))
+      if (!known) return onStart(configWith(seats))
       const { players: named, created } = assignPlayers(names, known)
       // If this fails, the archive adds them when the game is finished.
       if (created.length > 0) savePlayers(created).catch(() => {})
-      onStart(configFor(type, rules, named, texts.name))
+      onStart(configWith(named))
     }
     if (directory) return begin(directory)
     const giveUp = new Promise<null>((resolve) => setTimeout(() => resolve(null), START_WAIT_MS))
@@ -194,7 +207,7 @@ export function SetupScreen({ type, onBack, onStart }: SetupScreenProps) {
             className="flex min-h-11 items-center gap-0.5 rounded-lg pr-3 text-[1.0625rem] text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <ChevronLeft className="h-7 w-7" aria-hidden="true" />
-            {t.nav.play}
+            {backLabel ?? t.nav.play}
           </button>
           <span className="pointer-events-none absolute inset-x-0 text-center text-[1.0625rem] font-semibold">{t.setup.title}</span>
         </div>
@@ -332,6 +345,21 @@ export function SetupScreen({ type, onBack, onStart }: SetupScreenProps) {
             />
           )}
         </Group>
+
+        <SlotItems
+          list="setup.extras"
+          props={(id) => ({
+            config: configWith(seats),
+            value: extras[id],
+            onChange: (value) =>
+              setExtras((current) => {
+                const next = { ...current }
+                if (value === undefined) delete next[id]
+                else next[id] = value
+                return next
+              }),
+          })}
+        />
       </main>
 
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border/60 bg-background/85 px-4 pb-[max(env(safe-area-inset-bottom),1rem)] pt-3 backdrop-blur-xl">

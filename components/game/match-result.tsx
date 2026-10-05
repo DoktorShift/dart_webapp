@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, type ComponentType } from "react"
+import { useMemo, useState, useSyncExternalStore, type ComponentType } from "react"
 import { motion, useReducedMotion } from "framer-motion"
 import { ChartColumn, History, RotateCcw, Share, Trophy, Undo2, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -10,14 +10,18 @@ import { useT } from "@/components/i18n-provider"
 import { ConfettiBurst } from "@/components/game/confetti-burst"
 import { PlayerStatsTable, StatsTable, allRows, keyRows, rowValues } from "@/components/game/result-stats"
 import { useShareResult } from "@/components/game/use-share-result"
+import { SlotItems } from "@/components/shell/slot-items"
 import { legsWonInGame, perfectLegDarts, playsSets, type MatchState } from "@/lib/game/engine"
 import { legName } from "@/lib/game/words"
 import { modeName, type Messages } from "@/lib/i18n"
+import type { SavedMatch } from "@/lib/game/types"
+import type { FinishedMatch } from "@/lib/shell/registry"
 import type { ResultImage } from "@/lib/result-image"
 import { SITE } from "@/lib/site"
 
 interface MatchResultProps {
   state: MatchState
+  match: SavedMatch
   onRematch: () => void
   onNewGame: () => void
   onHome: () => void
@@ -71,14 +75,35 @@ function SmallAction({
   )
 }
 
+// Tailwind's `split` (side by side in landscape). Areas' pieces ("result.actions") are rendered
+// once, next to the buttons on screen, not in both copies of them.
+const SPLIT = "(orientation: landscape) and (min-width: 560px)"
+const subscribeSplit = (onChange: () => void) => {
+  const query = window.matchMedia(SPLIT)
+  query.addEventListener("change", onChange)
+  return () => query.removeEventListener("change", onChange)
+}
+
 // One fixed screen worth a screenshot: the winner, the key numbers per player, then Rematch.
 // Everything else is a small tap away: the full statistics, sharing a picture of the result,
 // the visits, the leaderboard. Undo (the winning dart was wrong) and Done sit in the top bar.
-export function MatchResult({ state, onRematch, onNewGame, onHome, onLeaderboard, onUndo, onReview }: MatchResultProps) {
+export function MatchResult({ state, match, onRematch, onNewGame, onHome, onLeaderboard, onUndo, onReview }: MatchResultProps) {
   const t = useT()
   const reduceMotion = useReducedMotion()
   const [statsOpen, setStatsOpen] = useState(false)
   const { title, subtitle, badges } = useMemo(() => headline(state, t), [state, t])
+  const split = useSyncExternalStore(subscribeSplit, () => window.matchMedia(SPLIT).matches, () => false)
+  const finished = useMemo<FinishedMatch>(
+    () => ({
+      id: match.id,
+      config: match.config,
+      players: match.config.players,
+      winner: state.winner ?? 0,
+      solo: match.config.players.length === 1,
+      throws: match.throws,
+    }),
+    [match, state.winner],
+  )
 
   const picture = useMemo<ResultImage>(
     () => ({
@@ -117,8 +142,9 @@ export function MatchResult({ state, onRematch, onNewGame, onHome, onLeaderboard
     </motion.div>
   )
 
-  const actions = (
+  const actions = (withPieces: boolean) => (
     <div>
+      {withPieces && <SlotItems list="result.actions" props={() => ({ match: finished })} className="mb-2 grid gap-2" />}
       <Button onClick={onRematch} className="h-14 w-full gap-2 rounded-2xl text-[1.0625rem] font-semibold xshort:h-12">
         <RotateCcw className="h-5 w-5" aria-hidden="true" />
         {t.result.rematch}
@@ -154,7 +180,7 @@ export function MatchResult({ state, onRematch, onNewGame, onHome, onLeaderboard
         <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[auto_minmax(0,1fr)_auto] gap-[clamp(0.5rem,2dvh,1.25rem)] split:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] split:grid-rows-[minmax(0,1fr)] split:items-center split:gap-8">
           <div className="flex flex-col gap-[clamp(0.5rem,3dvh,2rem)] split:justify-center">
             {hero}
-            <div className="hidden split:block">{actions}</div>
+            <div className="hidden split:block">{actions(split)}</div>
           </div>
           {/* One or two players side by side, like a TV graphic; more get a row each, so every name and number fits. */}
           {state.config.players.length > 2 ? (
@@ -162,7 +188,7 @@ export function MatchResult({ state, onRematch, onNewGame, onHome, onLeaderboard
           ) : (
             <StatsTable state={state} rows={keyRows(state, t)} large className="max-h-full self-center" />
           )}
-          <div className="split:hidden">{actions}</div>
+          <div className="split:hidden">{actions(!split)}</div>
         </div>
       </div>
 

@@ -1,0 +1,5 @@
+Guest path, review1-before-opentabs-2 (http://localhost:3304), CPU 4× slower
+Cold start (5 runs, 150 ms RTT, 1.6 Mbit/s): FCP median 728 ms, LCP median 728 ms (worst 780 ms), CLS max 0.000, JS transferred 260.3 kB
+Score input (60 taps): p50 64 ms, p95 72 ms, max 216 ms
+Tap to local save (60 of 60 taps saved): p50 11 ms, p95 24 ms, max 183 ms
+Navigation (40 taps: tabs, push, back): p50 40 ms, p95 64 ms, max 88 ms

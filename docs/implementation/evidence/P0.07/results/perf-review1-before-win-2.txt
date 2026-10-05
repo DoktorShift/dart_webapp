@@ -1,0 +1,4 @@
+Winning dart with all tabs opened before, review1-before-2 (http://localhost:3304), CPU 4× slower, 9 runs
+Key press to next paint: median 128 ms, max 304 ms
+Key press to result dialog in the page: median 107 ms, max 285 ms
+{"label":"review1-before-2","runs":[{"key":304,"toResult":285.2000000476837},{"key":128,"toResult":105.59999990463257},{"key":240,"toResult":195.20000004768372},{"key":128,"toResult":107.39999997615814},{"key":88,"toResult":71.20000004768372},{"key":80,"toResult":60.200000047683716},{"key":96,"toResult":76.79999995231628},{"key":176,"toResult":141.60000002384186},{"key":144,"toResult":118.60000002384186}]}

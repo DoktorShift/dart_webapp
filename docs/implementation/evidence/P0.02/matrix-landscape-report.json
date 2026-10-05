@@ -1,0 +1,582 @@
+[
+  {
+    "shot": "play-de-light-se-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-de-light-se-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-sheet-de-light-se-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "clubs-de-light-se-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "settings-de-light-se-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-de-light-se-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "link-invite-de-light-se-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "game-de-light-se-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [
+      "button:Letzten Dart rückgängig machen"
+    ],
+    "small": []
+  },
+  {
+    "shot": "play-de-light-iphone-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-de-light-iphone-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-sheet-de-light-iphone-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "clubs-de-light-iphone-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "settings-de-light-iphone-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-de-light-iphone-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "link-invite-de-light-iphone-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "game-de-light-iphone-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "play-de-dark-se-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-de-dark-se-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-sheet-de-dark-se-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "clubs-de-dark-se-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "settings-de-dark-se-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-de-dark-se-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "link-invite-de-dark-se-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "game-de-dark-se-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [
+      "button:Letzten Dart rückgängig machen"
+    ],
+    "small": []
+  },
+  {
+    "shot": "play-de-dark-iphone-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-de-dark-iphone-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-sheet-de-dark-iphone-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "clubs-de-dark-iphone-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "settings-de-dark-iphone-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-de-dark-iphone-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "link-invite-de-dark-iphone-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "game-de-dark-iphone-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "play-en-light-se-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-en-light-se-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-sheet-en-light-se-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "clubs-en-light-se-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "settings-en-light-se-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-en-light-se-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "link-invite-en-light-se-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "game-en-light-se-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "play-en-light-iphone-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-en-light-iphone-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-sheet-en-light-iphone-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "clubs-en-light-iphone-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "settings-en-light-iphone-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-en-light-iphone-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "link-invite-en-light-iphone-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "game-en-light-iphone-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "play-en-dark-se-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-en-dark-se-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-sheet-en-dark-se-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "clubs-en-dark-se-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "settings-en-dark-se-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-en-dark-se-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "link-invite-en-dark-se-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "game-en-dark-se-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "play-en-dark-iphone-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-en-dark-iphone-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-sheet-en-dark-iphone-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "clubs-en-dark-iphone-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "settings-en-dark-iphone-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-en-dark-iphone-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "link-invite-en-dark-iphone-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "game-en-dark-iphone-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  }
+]
