@@ -9,6 +9,26 @@
 //   LINK_ROUTES, in its tab.
 // - Slots: a whole tab root that an area takes over, e.g. the signed-in profile. The slot gets
 //   the shell's own view as `fallback`, to show while nothing area-specific applies.
+// - Slot lists: places in the game flow where several areas each add a small piece. Pieces show
+//   in registration order; with none registered the place shows nothing at all, so the guest
+//   path looks exactly as before. A piece that throws or fails to load is left out.
+//     "result.actions"  On the result of a finished game, below the result and above its
+//                       buttons. Gets the finished game ({ match: FinishedMatch }). A small card
+//                       or button each; the result is one fixed screen.
+//     "setup.extras"    At the end of game setup's options, before Start. Gets the game as it
+//                       would start now, plus the area's own value and onChange. The value is
+//                       saved with the started game as config.extras[id] (JSON only). Rematch and
+//                       "Play again" copy the config, extras included: keep settings there, not
+//                       references that only fit one game.
+// - Game menu items: entries at the end of the running game's options menu (the "…" button), each
+//   { id, label, icon?, onSelect }. onSelect gets the running game; the menu closes first.
+//   Nothing else on the game screen can be changed from outside.
+//
+//   registerSlotItem("result.actions", "profile.keep", KeepResultCard)
+//   registerSlotItem("setup.extras", "live", LiveSwitch)
+//   registerGameMenuItem({ id: "live.watchers", label: (t) => t.live.invite, icon: Radio, onSelect: ({ match }) => … })
+//
+// Slot items and game menu items return a function that removes them again (e.g. on sign-out).
 //
 // Areas register from components/shell/extensions.ts at module load, before the first render.
 // Registering later (after a lazy import) also works; open screens pick it up.
@@ -16,6 +36,7 @@
 // No React runtime here (types only), so the dispatch rules run in the Node unit tests.
 
 import type { ComponentType, ReactNode } from "react"
+import type { MatchConfig, MatchPlayer, SavedMatch, Throw } from "../game/types.ts"
 import type { Messages } from "../i18n/index.ts"
 import type { AppLink, LinkKind } from "./links.ts"
 import type { ScreenParams, TabId } from "./nav.ts"
@@ -30,7 +51,8 @@ export interface ShellNavigator {
   replaceTop(screen: string, params?: ScreenParams): void
   pop(): void
   popToRoot(tab?: TabId): void
-  // Opens game setup for X01, Cricket or Around the Clock on top of everything.
+  // Opens game setup for X01, Cricket or Around the Clock on top of everything. Back in setup,
+  // and leaving or finishing the game, return to the screen it was opened from.
   openSetup(type: "x01" | "cricket" | "clock"): void
 }
 
@@ -181,3 +203,85 @@ export function registerSlot(id: SlotId, component: SlotComponent) {
   changed()
 }
 export const getSlot = (id: SlotId): SlotComponent | undefined => slots.get(id)
+
+// A finished game, as "result.actions" gets it.
+export interface FinishedMatch {
+  id: string
+  config: MatchConfig
+  players: readonly MatchPlayer[]
+  // Index into players; in a solo game the one player.
+  winner: number
+  // One player: practice, no one to beat and not on the leaderboard.
+  solo: boolean
+  throws: readonly Throw[]
+}
+
+export interface SetupExtraProps {
+  // The game as it would start now: players, rules and every area's extras.
+  config: MatchConfig
+  // This area's value in config.extras, undefined until it sets one.
+  value: unknown
+  // Sets the value; undefined removes it. JSON values only, the game is saved as JSON.
+  onChange: (value: unknown) => void
+}
+
+export interface SlotListProps {
+  "result.actions": { match: FinishedMatch }
+  "setup.extras": SetupExtraProps
+}
+export type SlotListId = keyof SlotListProps
+export interface SlotItem<K extends SlotListId> {
+  id: string
+  Component: ComponentType<SlotListProps[K]>
+}
+
+const slotLists: { [K in SlotListId]: Map<string, ComponentType<SlotListProps[K]>> } = {
+  "result.actions": new Map(),
+  "setup.extras": new Map(),
+}
+
+// Adds a piece to a slot list. The same id again replaces the piece in its place.
+export function registerSlotItem<K extends SlotListId>(list: K, id: string, component: ComponentType<SlotListProps[K]>) {
+  const items: Map<string, ComponentType<SlotListProps[K]>> = slotLists[list]
+  items.set(id, component)
+  changed()
+  return () => {
+    if (items.get(id) !== component) return
+    items.delete(id)
+    changed()
+  }
+}
+
+// The pieces of a slot list in registration order.
+export function getSlotItems<K extends SlotListId>(list: K): SlotItem<K>[] {
+  const items: Map<string, ComponentType<SlotListProps[K]>> = slotLists[list]
+  return Array.from(items, ([id, Component]) => ({ id, Component }))
+}
+
+export interface GameMenuContext {
+  // The running game as saved: id, config (with extras), the throws so far.
+  match: SavedMatch
+}
+
+export interface GameMenuItem {
+  id: string
+  label: (t: Messages) => string
+  icon?: ComponentType<{ className?: string; "aria-hidden"?: boolean }>
+  onSelect: (context: GameMenuContext) => void
+}
+
+const gameMenu = new Map<string, GameMenuItem>()
+
+// Adds an entry to the game's options menu. The same id again replaces the entry in its place.
+export function registerGameMenuItem(item: GameMenuItem) {
+  gameMenu.set(item.id, item)
+  changed()
+  return () => {
+    if (gameMenu.get(item.id) !== item) return
+    gameMenu.delete(item.id)
+    changed()
+  }
+}
+
+// The game menu's entries from areas, in registration order.
+export const getGameMenuItems = (): GameMenuItem[] => [...gameMenu.values()]

@@ -6,6 +6,7 @@ import { ChevronLeft, GripVertical, Minus, Plus, Shuffle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ChoiceRow, Group, SwitchRow } from "@/components/ui/group"
 import { Dartboard, GAME_HIGHLIGHTS } from "@/components/dartboard"
+import { SlotItems } from "@/components/shell/slot-items"
 import { useT } from "@/components/i18n-provider"
 import { recentPlayerNames, useMatchHistory } from "@/lib/leaderboard"
 import { loadLastPlayers, loadRules } from "@/lib/game/storage"
@@ -125,6 +126,8 @@ export function SetupScreen({ type, backLabel, onBack, onStart }: SetupScreenPro
   const texts = t.modes[modeIdFor(type, rules)]
   const inputs = useRef(new Map<string, HTMLInputElement>())
   const { matches } = useMatchHistory()
+  // Values areas add below the rules ("setup.extras" in lib/shell/registry.ts), by area id.
+  const [extras, setExtras] = useState<Record<string, unknown>>({})
 
   const nameKeys = players.map((p) => p.name.trim().toLowerCase())
   const duplicates = new Set(nameKeys.filter((k, i) => k && nameKeys.indexOf(k) !== i))
@@ -159,10 +162,13 @@ export function SetupScreen({ type, backLabel, onBack, onStart }: SetupScreenPro
     })
   }
 
-  const start = () => {
+  // The game as it starts. Without extras the config is exactly what it always was.
+  const config = (): MatchConfig => {
     const named = players.map((p, i) => ({ id: p.key, name: p.name.trim() || t.setup.placeholder(i + 1) }))
-    onStart(configFor(type, rules, named, texts.name))
+    const base = configFor(type, rules, named, texts.name)
+    return Object.keys(extras).length > 0 ? { ...base, extras } : base
   }
+  const start = () => onStart(config())
 
   const multipleLegs = rules.legsToWin > 1
   const inSets = multipleLegs && rules.setsToWin > 1
@@ -315,6 +321,21 @@ export function SetupScreen({ type, backLabel, onBack, onStart }: SetupScreenPro
             />
           )}
         </Group>
+
+        <SlotItems
+          list="setup.extras"
+          props={(id) => ({
+            config: config(),
+            value: extras[id],
+            onChange: (value) =>
+              setExtras((current) => {
+                const next = { ...current }
+                if (value === undefined) delete next[id]
+                else next[id] = value
+                return next
+              }),
+          })}
+        />
       </main>
 
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border/60 bg-background/85 px-4 pb-[max(env(safe-area-inset-bottom),1rem)] pt-3 backdrop-blur-xl">

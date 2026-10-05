@@ -209,6 +209,7 @@ export function GameScreen({
       {showResult && (
         <MatchResult
           state={state}
+          match={match}
           onRematch={onRematch}
           onNewGame={onNewGame}
           onHome={onHome}
@@ -234,6 +235,7 @@ export function GameScreen({
         open={sheet === "options"}
         onOpenChange={(open) => setSheet(open ? "options" : null)}
         state={state}
+        match={match}
         settings={settings}
         onSettingsChange={onSettingsChange}
         onRestartLeg={game.restartLeg}
