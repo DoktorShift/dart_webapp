@@ -700,13 +700,18 @@ export function withdraw(t: Tournament, participant: string, kind: WithdrawalKin
   return { ...t, withdrawals: { ...t.withdrawals, [participant]: { kind, ...(afterGroup && { afterGroup: true as const }) } } }
 }
 
-// Takes a withdrawal back; like a withdrawal, not once the tournament is complete.
+// Takes a withdrawal back. Before the end, matches already built on it are marked affected. Once
+// the tournament is complete, only when that marks nothing: no result entered changes, just the
+// walkovers the withdrawal gave away open again (say a finalist was withdrawn or disqualified by
+// mistake, which ended the tournament). Otherwise played matches depend on it, and it stays.
 export function reinstate(t: Tournament, participant: string): Tournament {
   if (!t.withdrawals[participant]) return fail("notWithdrawn", `${participant} is not withdrawn`)
-  if (resolveTournament(t).complete) return fail("tournamentComplete", "the tournament is complete")
   const withdrawals = { ...t.withdrawals }
   delete withdrawals[participant]
-  return { ...t, withdrawals }
+  const reinstated = { ...t, withdrawals }
+  if (resolveTournament(t).complete && previewChange(t, reinstated).some((c) => c.kind === "affected"))
+    return fail("tournamentComplete", "the tournament is complete and played matches depend on the withdrawal")
+  return reinstated
 }
 
 // What a change does, before it is applied: compare the tournament before and after.

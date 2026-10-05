@@ -1062,10 +1062,13 @@ test("withdrawal after the group stage: the group place stays, the knockout matc
   assert.equal(view(t).champion, "p3")
   assert.deepEqual(places(t), { p3: "1", p1: "2", p2: "3-4", p4: "3-4", p5: "5-6", p6: "5-6", p7: "7-8", p8: "7-8" })
   assert.equal(view(t).status.p1, "withdrawn")
-  // After the end nobody can withdraw or be disqualified any more, and no withdrawal can be taken
-  // back (that would reopen the final).
+  // After the end nobody can withdraw or be disqualified any more.
   throwsCode(() => withdraw(t, "p3", "disqualified"), "tournamentComplete")
-  throwsCode(() => reinstate(t, "p1"), "tournamentComplete")
+  // The withdrawal itself ended the tournament (it gave the final away), so it can still be taken
+  // back, and the final is open again.
+  const back = reinstate(t, "p1")
+  assert.deepEqual([match(back, "K2-1").state, view(back).complete, view(back).champion], ["ready", false, null])
+  assert.deepEqual(who(back, "K2-1"), ["p1", "p3"])
   // The knockout match a withdrawn player gave away takes no result either.
   const open = win(withdraw(win(groupStage(), "K1-1", "p1"), "p1", "withdrawn"), "K1-2", "p3")
   throwsCode(() => win(open, "K2-1", "p1"), "notReady")
@@ -1118,6 +1121,59 @@ test("nobody wins the tournament after withdrawing: a final won before waits for
   assert.equal(view(win(t, "K2-1", "p2")).champion, "p2")
   // … or take the disqualification back.
   assert.equal(view(reinstate(t, "p1")).champion, "p1")
+})
+
+test("after the end a withdrawal can be taken back only if nothing played depends on it", () => {
+  const semis = () => win(win(make("single", 4), "K1-1", "p1"), "K1-2", "p2")
+  const keys = (before: Tournament, after: Tournament) => previewChange(before, after).map((c) => `${c.match}:${c.kind}`)
+  // The final was played, but p2 was withdrawn before its result went in (left early, or a wrong
+  // tap): p1 wins it by walkover and the tournament is over. No result can go in for a withdrawn
+  // player, so the withdrawal is taken back; the final is live again on its board.
+  let a = withdraw(startMatch(semis(), "K2-1", "B1"), "p2", "withdrawn")
+  assert.deepEqual([view(a).complete, view(a).champion, match(a, "K2-1").walkover], [true, "p1", "withdrawn"])
+  throwsCode(() => win(a, "K2-1", "p2"), "notReady")
+  assert.deepEqual(keys(a, reinstate(a, "p2")), ["K2-1:result"])
+  a = reinstate(a, "p2")
+  assert.deepEqual([match(a, "K2-1").state, match(a, "K2-1").board, view(a).complete, view(a).champion], ["live", "B1", false, null])
+  a = win(a, "K2-1", "p2")
+  assert.equal(view(a).champion, "p2")
+  assert.deepEqual(places(a), { p2: "1", p1: "2", p3: "3-4", p4: "3-4" })
+  // The wrong finalist disqualified before the final: p2 wins by walkover. Taken back, the final
+  // is ready and p1 has a place again.
+  let b = withdraw(semis(), "p1", "disqualified")
+  assert.deepEqual([view(b).complete, view(b).champion], [true, "p2"])
+  throwsCode(() => win(b, "K2-1", "p2"), "notReady")
+  b = reinstate(b, "p1")
+  assert.deepEqual([match(b, "K2-1").state, view(b).complete, view(b).status.p1], ["ready", false, "active"])
+  b = win(b, "K2-1", "p2")
+  assert.deepEqual(places(b), { p2: "1", p1: "2", p3: "3-4", p4: "3-4" })
+  // Double elimination: the losers' bracket finalist withdrew before the grand final. Taken back,
+  // the grand final is played, and the reset after it.
+  let d = withdraw(fourToGrandFinal(), "p3", "withdrawn")
+  assert.deepEqual([view(d).complete, view(d).champion, match(d, "GF2").state], [true, "p1", "void"])
+  // The reset is not needed after a walkover for the winners' bracket player; now it may be again.
+  assert.deepEqual(keys(d, reinstate(d, "p3")), ["GF:result", "GF2:result"])
+  d = reinstate(d, "p3")
+  assert.deepEqual([match(d, "GF").state, match(d, "GF2").state], ["ready", "pending"])
+  d = win(d, "GF", "p3")
+  assert.equal(match(d, "GF2").state, "ready")
+  d = win(d, "GF2", "p3")
+  assert.deepEqual(places(d), { p3: "1", p1: "2", p2: "3", p4: "4" })
+  // Round robin: the last match was given away by the withdrawal. Taken back, it is open again.
+  let rr = make("roundRobin", 4)
+  const last = view(rr).matches.at(-1)!
+  assert.deepEqual(who(rr, last.id), ["p3", "p4"])
+  for (const m of view(rr).matches) if (m.id !== last.id) rr = win(rr, m.id, m.slots[0].participant!)
+  rr = withdraw(rr, "p3", "withdrawn")
+  assert.equal(view(rr).complete, true)
+  rr = reinstate(rr, "p3")
+  assert.deepEqual([match(rr, last.id).state, view(rr).complete], ["ready", false])
+  // But a withdrawal that played matches were built on stays: p4 withdrew before the first round,
+  // and the final was played by the walkover's winner. Taking it back would mark the final.
+  const early = win(win(withdraw(make("single", 4), "p4", "withdrawn"), "K1-2", "p2"), "K2-1", "p1")
+  assert.equal(view(early).complete, true)
+  assert.deepEqual(keys(early, { ...early, withdrawals: {} }), ["K1-1:result", "K2-1:affected"])
+  throwsCode(() => reinstate(early, "p4"), "tournamentComplete")
 })
 
 test("a withdrawn player has no next match, also where the opponent is not known yet", () => {
@@ -1381,6 +1437,7 @@ test("property: every format ends with exactly one champion and complete places"
 
 test("property: random withdrawals, no-shows and corrections still end with one champion", () => {
   const rand = random(99)
+  const reinstates = { allowed: 0, refused: 0 }
   const groupSetups: [number, number][] = [
     [2, 2],
     [3, 2],
@@ -1426,8 +1483,35 @@ test("property: random withdrawals, no-shows and corrections still end with one 
       assert.ok(v.champion, `${label}: champion`)
       assert.ok(!t.withdrawals[v.champion!], `${label}: a withdrawn player cannot win`)
       checkPlaces(t, label)
+      // After the end a withdrawal comes back only if no played match depends on it. Then nothing
+      // entered changes, and the matches it opens again play out to one champion.
+      for (const q of quitters) {
+        if (!t.withdrawals[q]) continue
+        const rest = { ...t.withdrawals }
+        delete rest[q]
+        if (previewChange(t, { ...t, withdrawals: rest }).some((c) => c.kind === "affected")) {
+          throwsCode(() => reinstate(t, q), "tournamentComplete")
+          reinstates.refused++
+          continue
+        }
+        const back = reinstate(t, q)
+        reinstates.allowed++
+        const w = view(back)
+        for (const id in t.records) {
+          const [x, y] = [v.match(id)!, w.match(id)!]
+          // A match only started when the withdrawal came is live again; results stay.
+          const was = t.records[id].state === "live" && y.state === "live" ? ["live", null] : [x.state, x.winner]
+          assert.deepEqual([y.state, y.winner, y.affected], [...was, false], `${label}: ${id} after reinstating ${q}`)
+        }
+        const replayed = playAll(back, coin(random(run)))
+        const champion = view(replayed).champion
+        assert.ok(view(replayed).complete && champion && !replayed.withdrawals[champion], `${label}: ends again after reinstating ${q}`)
+        checkPlaces(replayed, `${label} reinstated ${q}`)
+      }
     }
   }
+  // Both ways occur in these runs.
+  assert.ok(reinstates.allowed > 0 && reinstates.refused > 0, JSON.stringify(reinstates))
 })
 
 test("property: reusing the last state gives exactly what a fresh computation gives", () => {
