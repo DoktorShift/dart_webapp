@@ -21,4 +21,8 @@ export const profileEn: Messages["profile"] = {
     fromApp: "With another app",
     fromAppHint: "Browser extension or Amber",
   },
+
+  setup: {
+    linked: "Linked to a profile",
+  },
 }

@@ -59,13 +59,23 @@ export function findByName(players: PlayerRecord[], name: string): PlayerRecord 
 }
 
 // Ids for the names entered in setup: a known name keeps its id, a new name gets a new player,
-// an empty seat gets an id for this game only. `created` still has to be saved.
-export function assignPlayers(names: string[], directory: PlayerRecord[], now = new Date()) {
+// an empty seat gets an id for this game only. A seat filled from a profile (its pubkey in
+// `pubkeys`) is that profile's player here, or a new one linked to it: never someone who only
+// shares the name. `created` still has to be saved.
+export function assignPlayers(names: string[], directory: PlayerRecord[], now = new Date(), pubkeys: readonly (string | undefined)[] = []) {
   const at = now.toISOString()
   const created: PlayerRecord[] = []
   const used = new Set<string>()
-  const players: MatchPlayer[] = names.map((name) => {
+  const players: MatchPlayer[] = names.map((name, i) => {
     if (isUnnamed(name)) return { id: newPlayerId(), name }
+    const pubkey = pubkeys[i]
+    if (isPubkey(pubkey)) {
+      const linked = directory.find((p) => p.pubkey === pubkey && !used.has(p.id))
+      const id = linked?.id ?? newPlayerId()
+      if (!linked) created.push({ ...newPlayerRecord(name, at, id), pubkey })
+      used.add(id)
+      return { id, name }
+    }
     // Two seats never share an id, even if their names differ only in spacing.
     const known = findByName(directory.filter((p) => !used.has(p.id)), name)
     const id = known?.id ?? newPlayerId()

@@ -20,4 +20,9 @@ export const profileDe = {
     fromApp: "Mit einer anderen App",
     fromAppHint: "Browser-Erweiterung oder Amber",
   },
+
+  // Game setup: a seat filled from a profile.
+  setup: {
+    linked: "Mit Profil verbunden",
+  },
 }

@@ -2129,7 +2129,7 @@ export function buildVectors(): Record<string, unknown> {
   }
 }
 
-const FAMILY_OF: Record<string, string> = { club: "club", tournament: "tournament", match: "match", payment: "payment-request" }
+const FAMILY_OF: Record<string, string> = { club: "club", tournament: "tournament", match: "match", payment: "payment-request", profile: "profile" }
 
 export function buildSchemas(): Record<string, JsonSchema> {
   const families: Record<string, Record<string, JsonSchema>> = {}

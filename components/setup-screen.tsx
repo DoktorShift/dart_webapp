@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState, type PointerEvent } from "react"
 import { Reorder, useDragControls } from "framer-motion"
-import { ChevronLeft, GripVertical, Minus, Plus, Shuffle } from "lucide-react"
+import { ChevronLeft, GripVertical, Minus, Plus, Shuffle, UserRoundCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ChoiceRow, Group, SwitchRow } from "@/components/ui/group"
 import { Dartboard, GAME_HIGHLIGHTS } from "@/components/dartboard"
@@ -13,6 +13,7 @@ import { loadLastPlayers, loadRules } from "@/lib/game/storage"
 import { assignPlayers, listPlayers, savePlayers, type PlayerRecord } from "@/lib/storage/players"
 import { LEG_OPTIONS, SET_OPTIONS, START_SCORES, configFor, modeIdFor, type GameRules } from "@/lib/game/rules"
 import type { GameType, MatchConfig, MatchPlayer } from "@/lib/game/types"
+import type { SetupSeat } from "@/lib/shell/registry"
 import { cn } from "@/lib/utils"
 
 const MAX_PLAYERS = 6
@@ -22,6 +23,8 @@ const START_WAIT_MS = 300
 interface SetupPlayer {
   key: string
   name: string
+  // Filled from a profile ("setup.players": a scanned profile, a saved round).
+  pubkey?: string
 }
 
 interface SetupScreenProps {
@@ -104,6 +107,11 @@ function PlayerRow({
           duplicate && "text-danger",
         )}
       />
+      {player.pubkey && (
+        <span role="img" aria-label={t.profile.setup.linked} title={t.profile.setup.linked} className="flex h-11 w-7 shrink-0 items-center justify-center text-primary">
+          <UserRoundCheck className="h-5 w-5" aria-hidden="true" />
+        </span>
+      )}
       {canRemove && (
         <button
           type="button"
@@ -148,11 +156,11 @@ export function SetupScreen({ type, backLabel, onBack, onStart }: SetupScreenPro
     if (!name) requestAnimationFrame(() => inputs.current.get(player.key)?.focus())
   }
 
-  // A recent name fills the first empty row before adding a new one.
-  const addRecent = (name: string) => {
+  // A recent name (or a seat from "setup.players") fills the first empty row before adding a new one.
+  const fillSeat = ({ name, pubkey }: SetupSeat) => {
     const empty = players.find((p) => !p.name.trim())
-    if (empty) setPlayers((prev) => prev.map((p) => (p.key === empty.key ? { ...p, name } : p)))
-    else addPlayer(name)
+    if (empty) setPlayers((prev) => prev.map((p) => (p.key === empty.key ? { key: p.key, name, pubkey } : p)))
+    else if (players.length < MAX_PLAYERS) setPlayers((prev) => [...prev, { key: newKey(), name, pubkey }])
   }
 
   const shuffle = () => {
@@ -184,7 +192,7 @@ export function SetupScreen({ type, backLabel, onBack, onStart }: SetupScreenPro
     starting.current = true
     const begin = (known: PlayerRecord[] | null) => {
       if (!known) return onStart(configWith(seats))
-      const { players: named, created } = assignPlayers(names, known)
+      const { players: named, created } = assignPlayers(names, known, undefined, players.map((p) => p.pubkey))
       // If this fails, the archive adds them when the game is finished.
       if (created.length > 0) savePlayers(created).catch(() => {})
       onStart(configWith(named))
@@ -250,7 +258,8 @@ export function SetupScreen({ type, backLabel, onBack, onStart }: SetupScreenPro
                   index={index}
                   canRemove={players.length > 1}
                   duplicate={duplicates.has(player.name.trim().toLowerCase())}
-                  onChange={(name) => setPlayers((prev) => prev.map((p) => (p.key === player.key ? { ...p, name } : p)))}
+                  // Emptied, the seat is nobody in particular again, not the profile it was filled from.
+                  onChange={(name) => setPlayers((prev) => prev.map((p) => (p.key === player.key ? { key: p.key, name, pubkey: name.trim() ? p.pubkey : undefined } : p)))}
                   onRemove={() => setPlayers((prev) => prev.filter((p) => p.key !== player.key))}
                   onNext={index < players.length - 1 ? () => inputs.current.get(players[index + 1].key)?.focus() : undefined}
                   inputRef={(el) => {
@@ -277,6 +286,17 @@ export function SetupScreen({ type, backLabel, onBack, onStart }: SetupScreenPro
             {duplicates.size > 0 ? t.setup.duplicate : players.length === 1 ? t.setup.solo : t.setup.order}
           </p>
 
+          <SlotItems
+            list="setup.players"
+            className="mt-4 grid gap-2"
+            props={() => ({
+              players: players.map(({ name, pubkey }) => ({ name, pubkey })),
+              canAdd: players.length < MAX_PLAYERS || players.some((p) => !p.name.trim()),
+              addPlayer: fillSeat,
+              replacePlayers: (seats) => setPlayers(seats.slice(0, MAX_PLAYERS).map(({ name, pubkey }) => ({ key: newKey(), name, pubkey }))),
+            })}
+          />
+
           {recent.length > 0 && players.length < MAX_PLAYERS && (
             <div className="mt-4">
               <p className="mb-2 px-1 text-[0.8125rem] font-medium text-muted-foreground">{t.setup.recent}</p>
@@ -285,7 +305,7 @@ export function SetupScreen({ type, backLabel, onBack, onStart }: SetupScreenPro
                   <button
                     key={name}
                     type="button"
-                    onClick={() => addRecent(name)}
+                    onClick={() => fillSeat({ name })}
                     className="flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-secondary/50 px-4 text-[0.9375rem] active:bg-secondary"
                   >
                     <Plus className="h-4 w-4 text-primary" aria-hidden="true" />
