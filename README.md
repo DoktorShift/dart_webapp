@@ -104,6 +104,7 @@ Share pictures in `public/social/`, each as `-de.jpg` and `-en.jpg`:
 | `lib/game/words.ts` | A game in words: leg names, the rules line, the line under the title. |
 | `lib/i18n/` | Texts: `de.ts` is the master catalog, `en.ts` must match it (TypeScript checks every entry). |
 | `components/game/use-match-controller.ts` | Entering darts, undo, corrections and turn changes for a running game. |
+| `lib/storage/` | Data on the device: the archive of finished games (rules and full throw log), the player directory with stable ids, statistics, export, import and deleting everything. |
 | `components/game/` | Game screen, scoreboards, keypads, visit panel, sheets, leg and result screens. |
 | `lib/result-image.ts` | Draws the result picture players share. |
 | `lib/board-geometry.ts` | Dartboard geometry, shared by the board, tap-to-score and the app icons. |
@@ -111,4 +112,4 @@ Share pictures in `public/social/`, each as `-de.jpg` and `-en.jpg`:
 | `docs/screenshots/` | The screenshots in this README. |
 | `tests/` | Unit tests. |
 
-Everything is saved on the device (localStorage): the game in progress, settings, the last game, remembered rules and the leaderboard. Saved data that can't be read is dropped quietly instead of showing an error.
+Everything is saved on the device. The game in progress, settings, the last game and remembered rules are in localStorage, as in 1.0.0. Finished games are archived whole (rules and every throw) in IndexedDB, together with a directory of players with stable ids; results with two or more players are also written to 1.0.0's leaderboard key, so going back to 1.0.0 loses no game, and its results are taken over into the archive as imported totals. If the game in progress can't be saved, the game says so and offers to try again. Settings › Data exports everything to a JSON file, imports such a file and deletes all data on the device.

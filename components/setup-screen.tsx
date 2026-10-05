@@ -10,11 +10,14 @@ import { SlotItems } from "@/components/shell/slot-items"
 import { useT } from "@/components/i18n-provider"
 import { recentPlayerNames, useMatchHistory } from "@/lib/leaderboard"
 import { loadLastPlayers, loadRules } from "@/lib/game/storage"
+import { assignPlayers, listPlayers, savePlayers, type PlayerRecord } from "@/lib/storage/players"
 import { LEG_OPTIONS, SET_OPTIONS, START_SCORES, configFor, modeIdFor, type GameRules } from "@/lib/game/rules"
-import type { GameType, MatchConfig } from "@/lib/game/types"
+import type { GameType, MatchConfig, MatchPlayer } from "@/lib/game/types"
 import { cn } from "@/lib/utils"
 
 const MAX_PLAYERS = 6
+// How long Start waits for the player directory, if it isn't loaded yet, before playing without.
+const START_WAIT_MS = 300
 
 interface SetupPlayer {
   key: string
@@ -125,7 +128,8 @@ export function SetupScreen({ type, backLabel, onBack, onStart }: SetupScreenPro
   const change = (patch: Partial<GameRules>) => setRules((current) => ({ ...current, ...patch }))
   const texts = t.modes[modeIdFor(type, rules)]
   const inputs = useRef(new Map<string, HTMLInputElement>())
-  const { matches } = useMatchHistory()
+  const { all: matches, players: directory } = useMatchHistory()
+  const starting = useRef(false)
   // Values areas add below the rules ("setup.extras" in lib/shell/registry.ts), by area id.
   const [extras, setExtras] = useState<Record<string, unknown>>({})
 
@@ -162,13 +166,33 @@ export function SetupScreen({ type, backLabel, onBack, onStart }: SetupScreenPro
     })
   }
 
+  const names = players.map((p, i) => p.name.trim() || t.setup.placeholder(i + 1))
+  // Setup's own seat ids, until Start looks the names up in the player directory.
+  const seats = players.map((p, i) => ({ id: p.key, name: names[i] }))
   // The game as it starts. Without extras the config is exactly what it always was.
-  const config = (): MatchConfig => {
-    const named = players.map((p, i) => ({ id: p.key, name: p.name.trim() || t.setup.placeholder(i + 1) }))
+  const configWith = (named: MatchPlayer[]): MatchConfig => {
     const base = configFor(type, rules, named, texts.name)
     return Object.keys(extras).length > 0 ? { ...base, extras } : base
   }
-  const start = () => onStart(config())
+
+  // A name played before keeps its player id, so results add up per person. The directory is
+  // loaded long before anyone taps Start. If it isn't (storage still opening or blocked), the
+  // game starts right away anyway: seats keep their setup ids, and the archive finds known
+  // players by name when the game is finished, so no one is counted twice.
+  const start = () => {
+    if (starting.current) return
+    starting.current = true
+    const begin = (known: PlayerRecord[] | null) => {
+      if (!known) return onStart(configWith(seats))
+      const { players: named, created } = assignPlayers(names, known)
+      // If this fails, the archive adds them when the game is finished.
+      if (created.length > 0) savePlayers(created).catch(() => {})
+      onStart(configWith(named))
+    }
+    if (directory) return begin(directory)
+    const giveUp = new Promise<null>((resolve) => setTimeout(() => resolve(null), START_WAIT_MS))
+    void Promise.race([listPlayers().catch(() => null), giveUp]).then(begin)
+  }
 
   const multipleLegs = rules.legsToWin > 1
   const inSets = multipleLegs && rules.setsToWin > 1
@@ -325,7 +349,7 @@ export function SetupScreen({ type, backLabel, onBack, onStart }: SetupScreenPro
         <SlotItems
           list="setup.extras"
           props={(id) => ({
-            config: config(),
+            config: configWith(seats),
             value: extras[id],
             onChange: (value) =>
               setExtras((current) => {

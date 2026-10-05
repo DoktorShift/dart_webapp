@@ -9,6 +9,7 @@ import { LeaderboardScreen } from "@/components/leaderboard-screen"
 import { GameScreen } from "@/components/game/game-screen"
 import { UndoBanner } from "@/components/undo-banner"
 import { FallbackScreen } from "@/components/fallback-screen"
+import { StorageAlert } from "@/components/data/storage-alert"
 import { NavProvider } from "@/components/nav/nav-context"
 import { StackView, type StackRoot } from "@/components/nav/stack-view"
 import { TabsLayer } from "@/components/nav/tabs-layer"
@@ -21,6 +22,7 @@ import { useT } from "@/components/i18n-provider"
 import { modeName, type Messages } from "@/lib/i18n"
 import { SITE } from "@/lib/site"
 import { newMatchId } from "@/lib/leaderboard"
+import { trackSave } from "@/lib/storage/save-status"
 import { replay } from "@/lib/game/engine"
 import { rulesOf } from "@/lib/game/rules"
 import { legName, rulesSummary } from "@/lib/game/words"
@@ -141,6 +143,14 @@ export default function DartScorer() {
     if (navRef.current.tab !== tab) dispatchNav({ type: "select", tab })
   }, [])
 
+  const backToTabs = useCallback(
+    (tab: TabId) => {
+      showTab(tab)
+      go("tabs")
+    },
+    [go, showTab],
+  )
+
   // What screens, actions and link handlers can do (lib/shell/registry.ts).
   const navigator = useMemo<ShellNavigator>(
     () => ({
@@ -189,13 +199,12 @@ export default function DartScorer() {
       if (screenRef.current === "game") return
       let rest = count
       if (screenRef.current === "setup") {
-        showTab(returnTab)
-        go("tabs")
+        backToTabs(returnTab)
         rest -= 1
       }
       if (rest > 0) dispatchNav({ type: "pop", count: rest })
     },
-    [go, showTab, returnTab],
+    [backToTabs, returnTab],
   )
 
   useHistorySync({
@@ -236,8 +245,10 @@ export default function DartScorer() {
     return () => window.removeEventListener("hashchange", handleHash)
   }, [hydrated, handleHash])
 
+  // A write that fails is shown (StorageAlert), never passed off as saved. Leaving a game removes
+  // it from storage; if even that fails, there is no game left to warn about.
   useEffect(() => {
-    if (hydrated) saveMatch(match)
+    if (hydrated) void trackSave("game", () => saveMatch(match) || match === null)
   }, [hydrated, match])
 
   useEffect(() => {
@@ -282,11 +293,6 @@ export default function DartScorer() {
     },
     [go],
   )
-
-  const backToTabs = (next: TabId) => {
-    showTab(next)
-    go("tabs")
-  }
 
   // Tapping the open tab goes back to its root, and at the root scrolls to the top (iOS).
   const onTabChange = useCallback(
@@ -440,6 +446,8 @@ export default function DartScorer() {
             }}
             onExpire={clearEnded}
           />
+
+          <StorageAlert inGame={screen === "game"} />
         </div>
       </AppSettingsProvider>
     </NavProvider>

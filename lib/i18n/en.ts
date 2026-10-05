@@ -400,7 +400,7 @@ export const en: Messages = {
     savedGames: "Saved games",
     reset: "Reset leaderboard",
     resetTitle: "Reset leaderboard?",
-    resetDescription: (n) => `This deletes all ${n} saved ${n === 1 ? "game" : "games"} on this device. It can’t be undone.`,
+    resetDescription: (n) => `This deletes ${n === 1 ? "the saved leaderboard game" : `all ${n} saved leaderboard games`} on this device. It can’t be undone.`,
     resetConfirm: "Reset",
     about: "About",
     aboutApp: (name) => `About ${name}`,

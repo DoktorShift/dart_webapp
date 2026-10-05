@@ -218,7 +218,8 @@ export interface FinishedMatch {
 }
 
 export interface SetupExtraProps {
-  // The game as it would start now: players, rules and every area's extras.
+  // The game as it would start now: players, rules and every area's extras. The players still
+  // carry setup's seat ids; Start swaps in the ids known players already have.
   config: MatchConfig
   // This area's value in config.extras, undefined until it sets one.
   value: unknown

@@ -2,6 +2,9 @@
 const nextConfig = {
   // Lint and type errors fail the build (ESLint config: eslint.config.mjs).
   images: { unoptimized: true },
+  // nostr-core 1.0.4 has no "sideEffects" field; this lets its lazily loaded chunk shrink from
+  // 55 to 22 KB gzip without touching the guest path (docs/implementation/evidence/P0.03/CORE.md).
+  experimental: { optimizePackageImports: ["nostr-core"] },
   async headers() {
     return [
       {

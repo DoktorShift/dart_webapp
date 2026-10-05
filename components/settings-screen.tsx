@@ -18,6 +18,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { GamePreferences } from "@/components/game-preferences"
+import { DataSection } from "@/components/data/data-section"
 import { useI18n, useT } from "@/components/i18n-provider"
 import { useMatchHistory } from "@/lib/leaderboard"
 import { useInstallApp, type InstallState } from "@/hooks/use-install-app"
@@ -149,6 +150,8 @@ export function SettingsScreen({
             {t.settings.reset}
           </button>
         </Group>
+
+        <DataSection />
       </div>
 
       <AlertDialog open={confirmReset} onOpenChange={setConfirmReset}>

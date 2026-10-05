@@ -16,7 +16,7 @@ PASS history follows the open tab (Clubs at its root)
 PASS each tab keeps its stack and scroll position (scrollTop 600)
 PASS switching back restores its history entry
 PASS tapping the open tab goes to its root
-PASS Rangliste keeps its scroll position across tabs (scrollTop 368 of 368)
+PASS Rangliste keeps its scroll position across tabs (scrollTop 406 of 406)
 PASS no console errors (navigation)
 PASS a club link opens the Clubs tab
 PASS … on its invitation screen

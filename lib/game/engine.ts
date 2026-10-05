@@ -4,6 +4,10 @@ import type { Dart, MatchConfig, Throw } from "./types"
 // throw log. Undo is "drop the last throw", resume is "replay what was saved", and a
 // correction is "change one entry and replay".
 
+// Stored with every archived game. Raise it when a change makes an old throw log replay to a
+// different result, so archived games can tell which rules they were scored by.
+export const ENGINE_VERSION = 1
+
 export const CRICKET_TARGETS = [20, 19, 18, 17, 16, 15, 25]
 
 // Totals no three darts can make.
