@@ -1,8 +1,9 @@
 "use client"
 
-import { replay } from "./engine"
-import { DEFAULT_RULES, LEG_OPTIONS, SET_OPTIONS, START_SCORES, type GameRules } from "./rules"
-import type { GameType, MatchConfig, SavedMatch } from "./types"
+// Explicit .ts paths: the storage tests run this module directly in Node.
+import { replay } from "./engine.ts"
+import { DEFAULT_RULES, LEG_OPTIONS, SET_OPTIONS, START_SCORES, type GameRules } from "./rules.ts"
+import type { GameType, MatchConfig, SavedMatch } from "./types.ts"
 
 const MATCH_KEY = "dart-scorer.current-match.v1"
 const PLAYERS_KEY = "dart-scorer.last-players.v1"
@@ -30,12 +31,15 @@ function read(key: string): unknown {
   }
 }
 
+// Returns whether the value was stored. Storage can be blocked or full; the app keeps working,
+// and the game says so instead of claiming it was saved (see lib/storage/save-status.ts).
 function write(key: string, value: unknown) {
   try {
     if (value === null) window.localStorage.removeItem(key)
     else window.localStorage.setItem(key, JSON.stringify(value))
+    return true
   } catch {
-    // Storage blocked or full: the app keeps working, it just can't resume.
+    return false
   }
 }
 

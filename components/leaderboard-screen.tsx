@@ -1,13 +1,15 @@
 "use client"
 
 import { useState } from "react"
+import { ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Segmented } from "@/components/ui/segmented"
 import { Dartboard } from "@/components/dartboard"
 import { FitText } from "@/components/fit-text"
+import { ImportedSheet } from "@/components/data/imported-sheet"
 import { useT } from "@/components/i18n-provider"
 import { formatNumber, formatPercent, modeName, type Messages } from "@/lib/i18n"
-import { computeStandings, useMatchHistory, type MatchRecord, type StandingsFilter } from "@/lib/leaderboard"
+import { computeStandings, useMatchHistory, type MatchRecord, type Standing, type StandingsFilter } from "@/lib/leaderboard"
 import { cn } from "@/lib/utils"
 
 const FILTERS: StandingsFilter[] = ["all", "x01", "cricket", "clock"]
@@ -26,6 +28,13 @@ function formatWhen(iso: string, t: Messages) {
   yesterday.setDate(now.getDate() - 1)
   if (date.toDateString() === yesterday.toDateString()) return t.leaderboard.yesterday(time)
   return date.toLocaleDateString(t.intl, { day: "numeric", month: "short", year: "numeric" })
+}
+
+// What a row is, besides a person: results from the earlier version, or an empty seat's label.
+function tag(player: Standing, t: Messages) {
+  if (player.unnamed) return t.data.unnamedTag
+  if (player.imported) return t.data.importedTag
+  return player.includesImported ? t.data.withImportedTag : null
 }
 
 function MatchRow({ match }: { match: MatchRecord }) {
@@ -49,10 +58,12 @@ function MatchRow({ match }: { match: MatchRecord }) {
 // The Leaderboard tab: a list, so it scrolls on its own like any iOS list screen.
 export function LeaderboardScreen({ onPlay }: { onPlay: () => void }) {
   const t = useT()
-  const { matches, loaded } = useMatchHistory()
+  const { matches, players, aliases, loaded } = useMatchHistory()
   const [filter, setFilter] = useState<StandingsFilter>("all")
+  // An imported row (or a row counting imported games) opened to assign or separate them.
+  const [opened, setOpened] = useState<Standing | null>(null)
 
-  const standings = computeStandings(matches, filter)
+  const standings = computeStandings(matches, filter, aliases)
   const filteredMatches = filter === "all" ? matches : matches.filter((m) => m.modeType === filter)
   // Only winners stand on the podium, and it takes two to make one: with a single winner the
   // list below says it all.
@@ -97,6 +108,10 @@ export function LeaderboardScreen({ onPlay }: { onPlay: () => void }) {
                   <span className="w-full px-1 text-center font-semibold">
                     <FitText minScale={0.7}>{player!.name}</FitText>
                   </span>
+                  {/* Two "Anna"s can stand here: the one from the earlier version says so. */}
+                  {(player!.imported || player!.unnamed) && (
+                    <span className="text-center text-[0.75rem] text-muted-foreground">{tag(player!, t)}</span>
+                  )}
                   <span className="mb-2 text-[0.875rem] tabular-nums text-muted-foreground">
                     {t.leaderboard.wins(player!.wins)}
                   </span>
@@ -128,23 +143,48 @@ export function LeaderboardScreen({ onPlay }: { onPlay: () => void }) {
                   <span className="w-12 text-right">{t.leaderboard.winsHeader}</span>
                 </div>
                 <ol className="divide-y divide-border">
-                  {standings.map((player, index) => (
-                    <li key={player.key} className="flex min-h-14 items-center gap-3 px-4 py-2">
-                      <span className="w-7 font-display text-xl font-semibold tabular-nums text-muted-foreground">{index + 1}</span>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium [overflow-wrap:anywhere]">{player.name}</p>
-                        <p className="text-[0.875rem] tabular-nums text-muted-foreground">
-                          {t.leaderboard.games(player.matches, formatPercent(t, player.winRate))}
-                        </p>
-                      </div>
-                      {showAverage && (
-                        <span className="w-14 text-right tabular-nums text-muted-foreground" title={t.leaderboard.avgNote}>
-                          {player.average === null ? "–" : formatNumber(t, player.average)}
+                  {standings.map((player, index) => {
+                    const label = tag(player, t)
+                    // Imported results can be assigned to a player (and separated again): the row
+                    // opens a sheet, and its tinted tag with a chevron says so.
+                    const opens = player.includesImported && !player.unnamed
+                    const row = (
+                      <>
+                        <span className="w-7 font-display text-xl font-semibold tabular-nums text-muted-foreground">{index + 1}</span>
+                        {/* Spans, not paragraphs: the row can be a button. */}
+                        <span className="block min-w-0 flex-1">
+                          <span className="block font-medium [overflow-wrap:anywhere]">{player.name}</span>
+                          <span className="block text-[0.875rem] tabular-nums text-muted-foreground">
+                            {t.leaderboard.games(player.matches, formatPercent(t, player.winRate))}
+                          </span>
+                          {label && (
+                            <span className={cn("flex items-center gap-0.5 text-[0.8125rem]", opens ? "text-primary" : "text-muted-foreground")}>
+                              {label}
+                              {opens && <ChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
+                            </span>
+                          )}
                         </span>
-                      )}
-                      <span className="w-12 text-right font-display text-2xl font-semibold tabular-nums">{player.wins}</span>
-                    </li>
-                  ))}
+                        {showAverage && (
+                          <span className="w-14 text-right tabular-nums text-muted-foreground" title={t.leaderboard.avgNote}>
+                            {player.average === null ? "–" : formatNumber(t, Math.round(player.average * 10) / 10)}
+                          </span>
+                        )}
+                        <span className="w-12 text-right font-display text-2xl font-semibold tabular-nums">{player.wins}</span>
+                      </>
+                    )
+                    const layout = "flex min-h-14 w-full items-center gap-3 px-4 py-2"
+                    return (
+                      <li key={player.key}>
+                        {opens ? (
+                          <button type="button" onClick={() => setOpened(player)} className={cn(layout, "text-left active:bg-secondary/60")}>
+                            {row}
+                          </button>
+                        ) : (
+                          <div className={layout}>{row}</div>
+                        )}
+                      </li>
+                    )
+                  })}
                 </ol>
               </div>
               {showAverage && <p className="mt-2 px-1 text-[0.75rem] text-muted-foreground">{t.leaderboard.avgNote}</p>}
@@ -163,6 +203,8 @@ export function LeaderboardScreen({ onPlay }: { onPlay: () => void }) {
           </>
         )}
       </div>
+
+      <ImportedSheet standing={opened} matches={matches} players={players ?? []} onClose={() => setOpened(null)} />
     </div>
   )
 }

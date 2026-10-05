@@ -17,6 +17,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { GamePreferences } from "@/components/game-preferences"
+import { DataSection } from "@/components/data/data-section"
 import { useI18n, useT } from "@/components/i18n-provider"
 import { useMatchHistory } from "@/lib/leaderboard"
 import { useInstallApp, type InstallState } from "@/hooks/use-install-app"
@@ -141,6 +142,8 @@ export function SettingsScreen({ settings, onSettingsChange }: { settings: AppSe
             {t.settings.reset}
           </button>
         </Group>
+
+        <DataSection />
 
         <Group title={t.settings.about}>
           <LinkRow href="/about">{t.settings.aboutApp(SITE.name)}</LinkRow>
