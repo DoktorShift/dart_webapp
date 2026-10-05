@@ -18,7 +18,7 @@ export const shellDe = {
     openInvite: "Einladung öffnen",
     tournamentCreate: "Turnier erstellen",
     tournament: "Turnier",
-    publicProfile: "Profil",
+    publicProfile: "Spielerprofil",
     pair: "Gerät verbinden",
     watch: "Zuschauen",
     board: "Am Board mitspielen",
@@ -78,6 +78,7 @@ export const shellDe = {
     share: "Teilen",
     copy: "Link kopieren",
     copied: "Kopiert",
+    loadFailed: "Der Code konnte nicht geladen werden. Prüfe die Verbindung.",
     copyFailed: "Kopieren war nicht möglich. Halte den Link gedrückt, um ihn zu kopieren.",
   },
 }

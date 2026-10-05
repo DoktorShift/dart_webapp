@@ -60,7 +60,7 @@ export function QRCodeView({
           </svg>
         ) : failed ? (
           <p role="status" className="flex h-full w-full items-center justify-center rounded-2xl bg-neutral-100 p-4 text-center text-[0.9375rem] leading-snug text-neutral-600">
-            {t.shell.loadFailed}
+            {t.shell.qr.loadFailed}
           </p>
         ) : (
           <div role="img" aria-label={label ?? t.shell.qr.label} className={cn("h-full w-full rounded-2xl bg-neutral-100", !reduceMotion && "animate-pulse")} />

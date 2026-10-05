@@ -11,6 +11,7 @@ import { UndoBanner } from "@/components/undo-banner"
 import { FallbackScreen } from "@/components/fallback-screen"
 import { NavProvider } from "@/components/nav/nav-context"
 import { StackView, type StackRoot } from "@/components/nav/stack-view"
+import { TabsLayer } from "@/components/nav/tabs-layer"
 import { replaceUrl, useHistorySync } from "@/components/nav/use-history-sync"
 import { AppSettingsProvider } from "@/components/shell/app-settings"
 import { warmOfflineScreens } from "@/components/shell/lazy"
@@ -38,7 +39,7 @@ import {
 import type { GameType, MatchConfig, SavedMatch } from "@/lib/game/types"
 import { parseHash, type AppLink } from "@/lib/shell/links"
 import { TABS, depthOf, initialNavState, makeEntry, navReducer, type TabId } from "@/lib/shell/nav"
-import { canOpenLink, dispatchLink, hasScreen, type ShellNavigator } from "@/lib/shell/registry"
+import { canOpenLink, dispatchLink, getScreen, hasScreen, type ShellNavigator } from "@/lib/shell/registry"
 
 // "tabs" is the app with its tab bar or sidebar; setup and game are full-screen flows on top.
 type Screen = "tabs" | "setup" | "game"
@@ -93,6 +94,8 @@ export default function DartScorer() {
   if (!opened.includes(nav.tab)) setOpened([...opened, nav.tab])
   const [direction, setDirection] = useState(1)
   const [setupType, setSetupType] = useState<GameType>("x01")
+  // Where setup and the game go back to: the tab they were opened from.
+  const [returnTab, setReturnTab] = useState<TabId>("play")
   const [match, setMatch] = useState<SavedMatch | null>(null)
   // The last game started, offered on the Play tab to play again in one tap.
   const [lastGame, setLastGame] = useState<MatchConfig | null>(null)
@@ -109,22 +112,26 @@ export default function DartScorer() {
   const [hydrated, setHydrated] = useState(false)
   const screenRef = useRef<Screen>("tabs")
   const navRef = useRef(nav)
+  const matchRef = useRef(match)
   const reduceMotion = useReducedMotion()
 
   useLayoutEffect(() => {
     navRef.current = nav
+    matchRef.current = match
   })
 
-  const go = useCallback((next: Screen) => {
+  // Leaving the tabs for setup or a game remembers the open tab (or `from`) to come back to.
+  const go = useCallback((next: Screen, from?: TabId) => {
+    if (screenRef.current === "tabs" && next !== "tabs") setReturnTab(from ?? navRef.current.tab)
     setDirection(DEPTH[next] >= DEPTH[screenRef.current] ? 1 : -1)
     screenRef.current = next
     setScreen(next)
   }, [])
 
   const openSetup = useCallback(
-    (type: GameType) => {
+    (type: GameType, from?: TabId) => {
       setSetupType(type)
-      go("setup")
+      go("setup", from)
     },
     [go],
   )
@@ -149,7 +156,7 @@ export default function DartScorer() {
       },
       pop: () => dispatchNav({ type: "pop" }),
       popToRoot: (tab) => dispatchNav({ type: "popToRoot", tab }),
-      openSetup,
+      openSetup: (type) => openSetup(type),
     }),
     [openSetup, showTab],
   )
@@ -182,13 +189,13 @@ export default function DartScorer() {
       if (screenRef.current === "game") return
       let rest = count
       if (screenRef.current === "setup") {
-        showTab("play")
+        showTab(returnTab)
         go("tabs")
         rest -= 1
       }
       if (rest > 0) dispatchNav({ type: "pop", count: rest })
     },
-    [go, showTab],
+    [go, showTab, returnTab],
   )
 
   useHistorySync({
@@ -237,10 +244,10 @@ export default function DartScorer() {
     if (hydrated) saveSettings(settings)
   }, [hydrated, settings])
 
-  // Profile, Settings and About load on first use. Fetch them a few seconds after the app settles
-  // on the tabs, when the browser is idle, so the service worker has them for offline use like the
-  // old Settings tab and About page. Never during the first taps or a game: a game started first
-  // cancels it, and it runs on the next visit to the tabs.
+  // Clubs, Tournaments, Profile, Settings and About load on first use. Fetch them a few seconds
+  // after the app settles on the tabs, when the browser is idle, so the service worker has them for
+  // offline use like the old Settings tab and About page. Never during the first taps or a game: a
+  // game started first cancels it, and it runs on the next visit to the tabs.
   const warmed = useRef(false)
   useEffect(() => {
     if (!hydrated || screen !== "tabs" || warmed.current || !window.navigator.onLine) return
@@ -263,15 +270,18 @@ export default function DartScorer() {
 
   // Every game started is remembered: its players and rules for setup, and the whole game for
   // the Play tab's "play again".
-  const startGame = (config: MatchConfig) => {
-    setEnded(null)
-    saveLastPlayers(config.players.map((p) => p.name))
-    saveRules(config.type, rulesOf(config))
-    saveLastGame(config)
-    setLastGame(config)
-    setMatch(newMatch(config))
-    go("game")
-  }
+  const startGame = useCallback(
+    (config: MatchConfig) => {
+      setEnded(null)
+      saveLastPlayers(config.players.map((p) => p.name))
+      saveRules(config.type, rulesOf(config))
+      saveLastGame(config)
+      setLastGame(config)
+      setMatch(newMatch(config))
+      go("game")
+    },
+    [go],
+  )
 
   const backToTabs = (next: TabId) => {
     showTab(next)
@@ -279,11 +289,15 @@ export default function DartScorer() {
   }
 
   // Tapping the open tab goes back to its root, and at the root scrolls to the top (iOS).
-  const onTabChange = (tab: TabId) => {
-    if (tab !== nav.tab) dispatchNav({ type: "select", tab })
-    else if (depthOf(nav) > 0) dispatchNav({ type: "popToRoot" })
-    else scrollTabToTop(tab, !reduceMotion)
-  }
+  const onTabChange = useCallback(
+    (tab: TabId) => {
+      const current = navRef.current
+      if (tab !== current.tab) dispatchNav({ type: "select", tab })
+      else if (depthOf(current) > 0) dispatchNav({ type: "popToRoot" })
+      else scrollTabToTop(tab, !reduceMotion)
+    },
+    [reduceMotion],
+  )
 
   // Push and pop like a navigation stack; Reduce Motion gets a cross-fade.
   const screenVariants = {
@@ -291,6 +305,55 @@ export default function DartScorer() {
     center: { x: 0, opacity: 1 },
     exit: (dir: number) => (reduceMotion ? { opacity: 0 } : { x: dir > 0 ? "-25%" : "100%", opacity: dir > 0 ? 0.6 : 1 }),
   }
+
+  // The tabs, built from memoised parts: they stay mounted under setup and the game (TabsLayer),
+  // and a throw, which re-renders this page, must not re-render any of them.
+  const again = useMemo(() => againInfo(lastGame, t), [lastGame, t])
+  const resume = useMemo(() => resumeInfo(match, t), [match, t])
+  const roots = useMemo<Record<TabId, StackRoot>>(
+    () => ({
+      play: {
+        title: t.shell.tabs.play,
+        content: (
+          <PlayScreen
+            onSelect={(type) => openSetup(type)}
+            again={again}
+            onPlayAgain={() => lastGame && startGame(lastGame)}
+            onChangeAgain={() => lastGame && openSetup(lastGame.type)}
+            resume={resume}
+            onResume={() => {
+              setMatch((m) => (m ? { ...m, status: "playing" } : m))
+              go("game")
+            }}
+            onDiscardResume={() => {
+              setEnded(matchRef.current)
+              setMatch(null)
+            }}
+          />
+        ),
+      },
+      // As in 1.0.0, a game started from the empty leaderboard comes back to Play.
+      leaderboard: { title: t.leaderboard.title, content: <LeaderboardScreen onPlay={() => openSetup("x01", "play")} /> },
+      clubs: { title: t.shell.tabs.clubs, content: <ClubsRoot /> },
+      tournaments: { title: t.shell.tabs.tournaments, content: <TournamentsRoot /> },
+      profile: { title: t.shell.tabs.profile, content: <ProfileRoot /> },
+    }),
+    [t, again, resume, lastGame, openSetup, startGame, go],
+  )
+  const tabs = useMemo(
+    () => (
+      <AppShell tab={nav.tab} onTabChange={onTabChange}>
+        {TABS.filter((id) => opened.includes(id)).map((id) => (
+          <StackView key={id} tab={id} active={nav.tab === id} root={roots[id]} entries={nav.stacks[id]} onBack={navigator.pop} />
+        ))}
+      </AppShell>
+    ),
+    [nav, opened, roots, onTabChange, navigator],
+  )
+
+  // Setup's back button names the screen it goes back to: the tab, or "Back" above a pushed screen.
+  const returnTop = nav.stacks[returnTab].at(-1)
+  const returnLabel = returnTop && getScreen(returnTop.screen) ? t.common.back : roots[returnTab].title
 
   if (unsupported) {
     return (
@@ -303,43 +366,9 @@ export default function DartScorer() {
   }
 
   let content: ReactNode = null
-  if (screen === "tabs") {
-    const roots: Record<TabId, () => StackRoot> = {
-      play: () => ({
-        title: t.shell.tabs.play,
-        content: (
-          <PlayScreen
-            onSelect={openSetup}
-            again={againInfo(lastGame, t)}
-            onPlayAgain={() => lastGame && startGame(lastGame)}
-            onChangeAgain={() => lastGame && openSetup(lastGame.type)}
-            resume={resumeInfo(match, t)}
-            onResume={() => {
-              setMatch((m) => (m ? { ...m, status: "playing" } : m))
-              go("game")
-            }}
-            onDiscardResume={() => {
-              setEnded(match)
-              setMatch(null)
-            }}
-          />
-        ),
-      }),
-      leaderboard: () => ({ title: t.leaderboard.title, content: <LeaderboardScreen onPlay={() => openSetup("x01")} /> }),
-      clubs: () => ({ title: t.shell.tabs.clubs, content: <ClubsRoot /> }),
-      tournaments: () => ({ title: t.shell.tabs.tournaments, content: <TournamentsRoot /> }),
-      profile: () => ({ title: t.shell.tabs.profile, content: <ProfileRoot /> }),
-    }
-    content = (
-      <AppShell tab={nav.tab} onTabChange={onTabChange}>
-        {TABS.filter((id) => opened.includes(id)).map((id) => (
-          <StackView key={id} tab={id} active={nav.tab === id} root={roots[id]()} entries={nav.stacks[id]} onBack={navigator.pop} />
-        ))}
-      </AppShell>
-    )
-  } else if (screen === "setup") {
-    content = <SetupScreen type={setupType} onBack={() => backToTabs("play")} onStart={startGame} />
-  } else if (match) {
+  if (screen === "setup") {
+    content = <SetupScreen type={setupType} backLabel={returnLabel} onBack={() => backToTabs(returnTab)} onStart={startGame} />
+  } else if (screen === "game" && match) {
     content = (
       <GameScreen
         match={match}
@@ -349,7 +378,7 @@ export default function DartScorer() {
         onLeave={(how) => {
           if (how === "discard") setEnded({ ...match, status: "paused" })
           setMatch((m) => (how === "save" && m ? { ...m, status: "paused" } : null))
-          backToTabs("play")
+          backToTabs(returnTab)
         }}
         onRematch={() => {
           // Same rules and players; the order rotates so someone else throws first.
@@ -362,7 +391,7 @@ export default function DartScorer() {
         }}
         onHome={() => {
           setMatch(null)
-          backToTabs("play")
+          backToTabs(returnTab)
         }}
         onLeaderboard={() => {
           setMatch(null)
@@ -380,19 +409,24 @@ export default function DartScorer() {
           <div aria-hidden="true" className="pointer-events-none absolute inset-0 hidden bg-[radial-gradient(circle_at_bottom_left,rgba(29,78,216,0.15),transparent_50%)] dark:block" />
           <div aria-hidden="true" className="pointer-events-none absolute inset-0 hidden bg-[radial-gradient(circle_at_top_right,rgba(29,78,216,0.15),transparent_50%)] dark:block" />
 
+          <TabsLayer covered={screen !== "tabs"}>{tabs}</TabsLayer>
+
+          {/* Setup and the game slide in over the tabs. */}
           <AnimatePresence initial={false} custom={direction}>
-            <motion.div
-              key={screen === "game" && match ? `game-${match.id}` : screen}
-              custom={direction}
-              variants={screenVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{ type: "tween", duration: reduceMotion ? 0.15 : 0.32, ease: [0.32, 0.72, 0, 1] }}
-              className={screen === "setup" ? "absolute inset-0 overflow-y-auto overscroll-contain" : "absolute inset-0 overflow-hidden"}
-            >
-              {content}
-            </motion.div>
+            {content && (
+              <motion.div
+                key={screen === "game" && match ? `game-${match.id}` : screen}
+                custom={direction}
+                variants={screenVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ type: "tween", duration: reduceMotion ? 0.15 : 0.32, ease: [0.32, 0.72, 0, 1] }}
+                className={screen === "setup" ? "absolute inset-0 overflow-y-auto overscroll-contain" : "absolute inset-0 overflow-hidden"}
+              >
+                {content}
+              </motion.div>
+            )}
           </AnimatePresence>
 
           {/* Undo brings the game back as it was; the Continue card picks it up from there. */}

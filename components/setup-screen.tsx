@@ -22,6 +22,8 @@ interface SetupPlayer {
 
 interface SetupScreenProps {
   type: GameType
+  // The title of the screen setup was opened from; "Play" when left out.
+  backLabel?: string
   onBack: () => void
   onStart: (config: MatchConfig) => void
 }
@@ -114,7 +116,7 @@ function PlayerRow({
   )
 }
 
-export function SetupScreen({ type, onBack, onStart }: SetupScreenProps) {
+export function SetupScreen({ type, backLabel, onBack, onStart }: SetupScreenProps) {
   const t = useT()
   const [players, setPlayers] = useState<SetupPlayer[]>(initialPlayers)
   // The rules this group played last time, for this kind of game.
@@ -175,7 +177,7 @@ export function SetupScreen({ type, onBack, onStart }: SetupScreenProps) {
             className="flex min-h-11 items-center gap-0.5 rounded-lg pr-3 text-[1.0625rem] text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <ChevronLeft className="h-7 w-7" aria-hidden="true" />
-            {t.nav.play}
+            {backLabel ?? t.nav.play}
           </button>
           <span className="pointer-events-none absolute inset-x-0 text-center text-[1.0625rem] font-semibold">{t.setup.title}</span>
         </div>

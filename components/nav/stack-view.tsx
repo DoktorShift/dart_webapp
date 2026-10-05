@@ -1,9 +1,10 @@
 "use client"
 
-import { Component, Suspense, useEffect, useLayoutEffect, useRef, useState, type ComponentType, type ReactNode } from "react"
+import { Component, Suspense, memo, useEffect, useLayoutEffect, useRef, useState, type ComponentType, type ReactNode } from "react"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { ScreenFrame } from "@/components/nav/screen-frame"
+import { useTabsShown } from "@/components/nav/tabs-layer"
 import { useRegistryVersion } from "@/components/nav/use-registry"
 import { useT } from "@/components/i18n-provider"
 import { getScreen, type ScreenProps } from "@/lib/shell/registry"
@@ -41,10 +42,12 @@ function StackLayer({
   // layout once the push animation has finished.
   const [coveredDone, setCoveredDone] = useState(false)
   if (isTop && coveredDone) setCoveredDone(false)
+  const tabsShown = useTabsShown()
   const visible = active && (isTop || !coveredDone)
 
   // Scroll positions of everything that scrolls inside this screen, put back whenever it shows
-  // again: browsers forget them while an element is display: none.
+  // again (another tab, a screen pushed over it, or setup and the game over all tabs): browsers
+  // forget them while an element is display: none.
   const scrolls = useRef(new Map<Element, number>())
   useEffect(() => {
     const el = ref.current
@@ -56,11 +59,11 @@ function StackLayer({
     return () => el.removeEventListener("scroll", remember, { capture: true })
   }, [])
   useLayoutEffect(() => {
-    if (!visible) return
+    if (!visible || !tabsShown) return
     for (const [el, top] of scrolls.current) {
       if (el.isConnected && Math.abs(el.scrollTop - top) > 1) el.scrollTop = top
     }
-  }, [visible])
+  }, [visible, tabsShown])
 
   // VoiceOver and keyboard focus follow navigation: a new screen announces its title; going back
   // returns to the control that opened the screen above.
@@ -173,8 +176,9 @@ export interface StackRoot {
 }
 
 // One tab: its root and the screens pushed onto it. Every tab stays mounted once it has been
-// opened, so switching tabs keeps each one exactly where it was (HIG: tab bars).
-export function StackView({
+// opened, so switching tabs keeps each one exactly where it was (HIG: tab bars). Memoised: with a
+// stable root and entries, nothing outside the tab re-renders it.
+export const StackView = memo(function StackView({
   tab,
   active,
   root,
@@ -219,4 +223,4 @@ export function StackView({
       </AnimatePresence>
     </div>
   )
-}
+})
