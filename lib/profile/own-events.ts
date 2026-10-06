@@ -11,7 +11,9 @@ import { OWN_OBJECT_PREFIX } from "./session.ts"
 // the "objects" store, so the profile shows at once and offline; the local copy comes first
 // (decision 0002 §1). An event signed here is kept before it is published, so a change is never
 // lost to a missing connection; relays only ever replace it with a newer version.
-// Everything here goes with the profile when it signs out (session.ts, "own:*").
+// Everything here goes with the profile when it signs out (session.ts, "own:*"), and so do other
+// areas' records of the profile kept under "own:" (badges: lib/badges/store.ts), which
+// ownEvents() leaves out.
 
 interface StoredEvent {
   id: string
@@ -27,9 +29,11 @@ function coordinate(event: Pick<NostrEvent, "kind" | "tags">): string {
 // NIP-01: the newer created_at wins; on a tie, the lower id.
 const newer = (a: NostrEvent, b: NostrEvent) => a.created_at > b.created_at || (a.created_at === b.created_at && a.id < b.id)
 
+const isKept = (event: NostrEvent) => isReplaceableKind(event.kind) || isAddressableKind(event.kind)
+
 export async function ownEvents(pubkey: string): Promise<Map<string, NostrEvent>> {
   const stored = await dbGetAll<StoredEvent>("objects")
-  return new Map(stored.filter((s) => s.id.startsWith(OWN_OBJECT_PREFIX) && s.event.pubkey === pubkey).map((s) => [coordinate(s.event), s.event]))
+  return new Map(stored.filter((s) => s.id.startsWith(OWN_OBJECT_PREFIX) && s.event.pubkey === pubkey && isKept(s.event)).map((s) => [coordinate(s.event), s.event]))
 }
 
 // Keeps the newest version of each of the profile's replaceable events; older ones, other
@@ -38,7 +42,7 @@ export async function rememberOwn(pubkey: string, events: readonly NostrEvent[])
   const known = await ownEvents(pubkey)
   const fresh = new Map<string, NostrEvent>()
   for (const event of events) {
-    if (event.pubkey !== pubkey || !(isReplaceableKind(event.kind) || isAddressableKind(event.kind))) continue
+    if (event.pubkey !== pubkey || !isKept(event)) continue
     const key = coordinate(event)
     const current = fresh.get(key) ?? known.get(key)
     if (!current || newer(event, current)) fresh.set(key, event)

@@ -249,22 +249,24 @@ export function profileBadgesTemplate(badges: readonly ProfileBadge[], created_a
 const isProfileChoice = (event: SignedEvent) =>
   event.kind === KIND_PROFILE_BADGES || (event.kind === KIND_PROFILE_BADGES_LEGACY && tagValue(event.tags, "d") === "profile_badges")
 
-// Walks the list: the a/e pairs it reads, and every other tag (unknown tags, an "a" without its
-// "e", an unreadable pair). The former list's d tag belongs to the old kind and is dropped.
+// Walks the list: the a/e pairs it reads (an "a" directly followed by its "e", as NIP-58 has
+// them), and every other tag in its order (unknown tags, an "a" without its "e", an unreadable
+// pair). The former list's d tag belongs to the old kind and is dropped.
 function walkProfile(event: SignedEvent): { badges: ProfileBadge[]; other: string[][] } {
   const badges: ProfileBadge[] = []
   const other: string[][] = []
   let a: string[] | undefined
   for (const t of event.tags) {
-    if (t[0] === "a") {
-      if (a) other.push(a)
-      a = t
-    } else if (t[0] === "e" && a) {
+    if (t[0] === "e" && a) {
       if (ADDRESS.test(a[1] ?? "") && HEX64.test(t[1] ?? "")) {
         badges.push({ address: a[1], award: t[1], ...(a[2] ? { addressRelay: a[2] } : {}), ...(t[2] ? { awardRelay: t[2] } : {}) })
       } else other.push(a, t)
       a = undefined
-    } else if (!(t[0] === "d" && event.kind === KIND_PROFILE_BADGES_LEGACY)) other.push(t)
+      continue
+    }
+    if (a) other.push(a)
+    a = t[0] === "a" ? t : undefined
+    if (!a && !(t[0] === "d" && event.kind === KIND_PROFILE_BADGES_LEGACY)) other.push(t)
   }
   if (a) other.push(a)
   return { badges, other }

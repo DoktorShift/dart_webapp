@@ -87,15 +87,33 @@ function evaluate(milestone: Milestone, games: readonly PlayedGame[]): Milestone
   return { milestone, achieved: null, progress }
 }
 
-// Every milestone of the catalog for the player with this statistics key (lib/storage/stats.ts
-// playerKey), in catalog order.
-export function evaluateMilestones(matches: readonly ArchivedMatch[], key: string, options: Pick<StatsOptions, "aliases" | "sameAs"> = {}): MilestoneStatus[] {
+type Who = Pick<StatsOptions, "aliases" | "sameAs">
+
+// The player's games (statistics key, lib/storage/stats.ts playerKey) in the order they ended.
+function gamesOf(matches: readonly ArchivedMatch[], key: string, options: Who): PlayedGame[] {
   const games: PlayedGame[] = []
   for (const match of [...matches].sort(byFinish)) {
     const seat = match.players.findIndex((p) => playerKey(match, p, options.aliases, options.sameAs) === key)
     if (seat >= 0) games.push({ match, seat, state: matchState(match) })
   }
+  return games
+}
+
+// Every milestone of the catalog for the player with this statistics key, in catalog order.
+export function evaluateMilestones(matches: readonly ArchivedMatch[], key: string, options: Who = {}): MilestoneStatus[] {
+  const games = gamesOf(matches, key, options)
   return MILESTONES.map((m) => evaluate(m, games))
+}
+
+// Whether one game still meets a milestone for the player, after corrections: its own figure
+// does (a count: the count up to it). null when the game is not on this device, so nothing
+// can be said about it here.
+export function holdsIn(milestone: Milestone, matches: readonly ArchivedMatch[], key: string, matchId: string, options: Who = {}): boolean | null {
+  const games = gamesOf(matches, key, options)
+  const index = games.findIndex((g) => g.match.id === matchId)
+  if (index < 0) return null
+  if (milestone.measure === "games" || milestone.measure === "wins") return evaluate(milestone, games.slice(0, index + 1)).achieved !== null
+  return evaluate(milestone, [games[index]]).achieved !== null
 }
 
 // The milestones a game made this player reach: the ones whose first game it is.
