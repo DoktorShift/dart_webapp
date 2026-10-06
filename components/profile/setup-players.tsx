@@ -1,11 +1,12 @@
 "use client"
 
-import { lazy, Suspense, useState } from "react"
+import { lazy, Suspense, useEffect, useState } from "react"
 import { QrCode } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet } from "@/components/ui/sheet"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
+import { takeOfferedSeat } from "@/components/profile/seat-handoff"
 import { useSession } from "@/lib/profile/session"
 import type { SetupPlayersProps } from "@/lib/shell/registry"
 
@@ -23,6 +24,13 @@ export const setupRowClass =
 
 export default function SetupPlayers({ players, canAdd, addPlayer, replacePlayers }: SetupPlayersProps) {
   const session = useSession()
+  // A player brought along from their profile ("Zum Spiel hinzufügen") takes a seat as setup opens.
+  useEffect(() => {
+    const seat = takeOfferedSeat()
+    if (seat?.name && canAdd && !players.some((p) => p.pubkey === seat.pubkey)) addPlayer(seat)
+    // Once, as setup shows; the seats of that moment are the ones to check.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   return (
     <>
       <ScanPlayer players={players} canAdd={canAdd} addPlayer={addPlayer} />

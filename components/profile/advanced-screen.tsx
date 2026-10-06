@@ -3,6 +3,16 @@
 import { useEffect, useState, type FormEvent } from "react"
 import { Check, CircleAlert, CircleCheck, Copy, LoaderCircle, Minus, Plus, Timer } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
 import { TextField } from "@/components/ui/text-field"
@@ -186,17 +196,19 @@ function RelayState({ status }: { status: RelayStatus | undefined }) {
   )
 }
 
-// The profile's relay list as hosts, with their state. Adding and removing publish a new list at
-// once, on top of the newest version known (lib/profile/own-events.ts); whatever another app
-// wrote into it stays (lib/profile/relay-list.ts). The app's relays not on the list are offered
-// with one tap.
+// The profile's relay list as hosts, with their state. Adding publishes a new list at once,
+// removing after a confirmation (it is a public change); both on top of the newest version known
+// (lib/profile/own-events.ts), and whatever another app wrote into it stays
+// (lib/profile/relay-list.ts). The app's relays not on the list are offered with one tap.
 function RelayList({ pubkey, entries, state, status }: { pubkey: string; entries: RelayEntry[]; state: ListState; status: Map<string, RelayStatus> | null }) {
+  const t = useT()
   const tx = useAreaT(PROFILE_TEXTS)
   const a = tx.advanced
   const [typed, setTyped] = useState("")
   const [invalid, setInvalid] = useState(false)
   const [busy, setBusy] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)
+  const [removing, setRemoving] = useState<RelayEntry | null>(null)
   const editable = state === "known" || state === "none"
   const recommended = editable ? generalRelays().filter((url) => !entries.some((e) => e.url === url)) : []
 
@@ -253,7 +265,7 @@ function RelayList({ pubkey, entries, state, status }: { pubkey: string; entries
               type="button"
               disabled={busy || entries.length === 1}
               aria-label={a.remove(relayHost(entry.url))}
-              onClick={() => void save(removeRelay(entries, entry.url))}
+              onClick={() => setRemoving(entry)}
               className="flex h-11 w-11 shrink-0 items-center justify-center disabled:opacity-40"
             >
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-danger text-white">
@@ -313,6 +325,27 @@ function RelayList({ pubkey, entries, state, status }: { pubkey: string; entries
           {problem}
         </InlineStatus>
       )}
+      <AlertDialog open={removing !== null} onOpenChange={(open) => !open && setRemoving(null)}>
+        <AlertDialogContent className="max-w-[calc(100vw-2rem)] rounded-2xl sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="[overflow-wrap:anywhere]">{removing && a.removeTitle(relayHost(removing.url))}</AlertDialogTitle>
+            <AlertDialogDescription>{a.removeDescription}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel className="h-11">{t.common.cancel}</AlertDialogCancel>
+            <AlertDialogAction
+              className="h-11 bg-danger text-white hover:bg-danger/90"
+              onClick={() => {
+                const entry = removing
+                setRemoving(null)
+                if (entry) void save(removeRelay(entries, entry.url))
+              }}
+            >
+              {a.removeConfirm}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

@@ -12,7 +12,7 @@ export const profileScreensDe = {
     later: "Später",
     laterLabel: "Später, nicht für dieses Spiel",
     done: "Dein Profil ist angelegt. Du findest es im Tab Profil.",
-    description: "Lege ein Profil an. Deine Spiele bleiben bei dir, auch auf deinem nächsten Handy.",
+    description: "Lege ein Profil an. Deine Spiele bleiben auf diesem Gerät privat; dein Profil kannst du teilen.",
     seat: "Welcher Spieler bist du?",
     seatHint: "Nur die Spiele dieses Spielers werden Teil deines Profils.",
     boardStays: (name: string) => `Am Board bleibst du „${name}“.`,
@@ -120,7 +120,7 @@ export const profileScreensDe = {
 
   edit: {
     title: "Profil bearbeiten",
-    save: "Sichern",
+    save: "Speichern",
     boardName: "Name im Spiel",
     boardHint: (max: number) => `So stehst du am Board und in der Spielerwahl, höchstens ${max} Zeichen.`,
     publicHint: "So sehen dich andere, auch in anderen Apps.",
@@ -246,6 +246,7 @@ export const profileScreensDe = {
 
   signOut: {
     title: "Abmelden?",
+    localTitle: "Abmelden ohne Sicherung?",
     description: "Auf einem Gerät, das andere mitbenutzen, kannst du deine Spiele hier gleich mit löschen.",
     localWarning: "Ohne Sicherung oder zweites Gerät kommst du danach nicht mehr an dieses Profil.",
     keep: "Abmelden, Spiele behalten",
@@ -277,6 +278,9 @@ export const profileScreensDe = {
     readWrite: "Lesen und Schreiben",
     states: { checking: "Wird geprüft", connected: "Verbunden", slow: "Langsam", unreachable: "Nicht erreichbar" },
     remove: (host: string) => `${host} entfernen`,
+    removeTitle: (host: string) => `${host} entfernen?`,
+    removeDescription: "Deine Liste wird ohne dieses Relay veröffentlicht. Du kannst es später wieder hinzufügen.",
+    removeConfirm: "Entfernen",
     recommended: "Empfohlen",
     addHost: (host: string) => `${host} hinzufügen`,
     add: "Relay hinzufügen",

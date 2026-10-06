@@ -28,7 +28,7 @@ import { deletedRoundTemplate, newRoundId, roundTemplate, savedRounds, type Roun
 import { getSigner, type Session } from "@/lib/profile/session"
 import type { SetupPlayersProps, SetupSeat } from "@/lib/shell/registry"
 import { usePlayers } from "@/lib/storage/hooks"
-import { findByName, isUnnamed, seatName } from "@/lib/storage/players"
+import { isUnnamed, seatName } from "@/lib/storage/players"
 import { submitOwn } from "@/lib/sync/publish"
 
 // The signed-in profile's quick picks in game setup: "Du" (its own seat, linked by the profile
@@ -46,11 +46,9 @@ export default function ProfileSeats({ session, players, canAdd, addPlayer, repl
   useEffect(() => {
     if (!events || !directory) return
     let alive = true
-    // Decrypting may ask a signer app; without a signer the public part still shows.
-    void getSigner()
-      .catch(() => null)
-      .then((signer) => savedRounds(events.values(), signer, directory))
-      .then((found) => alive && setRounds(found), () => {})
+    // A round not read before may need the signer to decrypt its guests; without one the public
+    // part still shows.
+    void savedRounds(events.values(), () => getSigner().catch(() => null), directory).then((found) => alive && setRounds(found), () => {})
     return () => {
       alive = false
     }
@@ -105,17 +103,14 @@ function SaveRound({ session, players, rounds, onSaved }: { session: Session; pl
   const t = useT()
   const tx = useAreaT(PROFILE_TEXTS)
   const s = tx.setup
-  const directory = usePlayers()
   const [title, setTitle] = useState("")
   const [busy, setBusy] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<Round | null>(null)
 
-  // The named seats, each with the profile it was filled from or the one its name stands for here.
-  const seats = useMemo(
-    () => players.filter((p) => !isUnnamed(p.name)).map((p) => ({ name: p.name.trim(), pubkey: p.pubkey ?? findByName(directory ?? [], p.name)?.pubkey })),
-    [players, directory],
-  )
+  // The named seats, each with the profile it was filled from (a scan, a round, "Du"); a typed
+  // name stands for nobody's profile, however familiar it is (PLAN.md: names never decide).
+  const seats = useMemo(() => players.filter((p) => !isUnnamed(p.name)).map((p) => ({ name: p.name.trim(), pubkey: p.pubkey })), [players])
   // An Android signer can't encrypt: guests' names would have to go public, so they stay out.
   const guestsLeftOut = session.kind === "nip55"
 

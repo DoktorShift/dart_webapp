@@ -11,7 +11,7 @@ export const profileScreensEn: Widen<typeof profileScreensDe> = {
     later: "Later",
     laterLabel: "Later, not for this game",
     done: "Your profile is ready. You'll find it in the Profile tab.",
-    description: "Create a profile. Your games stay with you, on your next phone too.",
+    description: "Create a profile. Your games stay private on this device; your profile is yours to share.",
     seat: "Which player are you?",
     seatHint: "Only this player's games become part of your profile.",
     boardStays: (name) => `At the board you stay "${name}".`,
@@ -137,7 +137,8 @@ export const profileScreensEn: Widen<typeof profileScreensDe> = {
     loading: "Loading profile",
     own: "This is you.",
     sharedBy: "Shared by the player",
-    asOf: (date) => `as of: ${date}`,
+    // formatWhen starts with "Today" or "Yesterday"; mid-sentence they are lower case.
+    asOf: (date) => `updated ${date.charAt(0).toLowerCase()}${date.slice(1)}`,
     noCard: "No shared games.",
     offline: (date) => `No connection. Last loaded: ${date}.`,
     offlineNever: "No connection. The profile couldn't be loaded.",
@@ -231,6 +232,7 @@ export const profileScreensEn: Widen<typeof profileScreensDe> = {
 
   signOut: {
     title: "Sign out?",
+    localTitle: "Sign out without a backup?",
     description: "On a device others use too, you can delete your games here as well.",
     localWarning: "Without a backup or a second device, you won't get back into this profile afterwards.",
     keep: "Sign out, keep games",
@@ -261,6 +263,9 @@ export const profileScreensEn: Widen<typeof profileScreensDe> = {
     readWrite: "Read and write",
     states: { checking: "Checking", connected: "Connected", slow: "Slow", unreachable: "Unreachable" },
     remove: (host) => `Remove ${host}`,
+    removeTitle: (host) => `Remove ${host}?`,
+    removeDescription: "Your list is published without this relay. You can add it again later.",
+    removeConfirm: "Remove",
     recommended: "Recommended",
     addHost: (host) => `Add ${host}`,
     add: "Add relay",
