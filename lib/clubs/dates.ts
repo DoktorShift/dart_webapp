@@ -106,14 +106,20 @@ export interface DateInput {
   note?: string
 }
 
-const DAY = 24 * 60 * 60
+// `days` later at the same local time: across a change of daylight-saving time a club night
+// stays at eight, which adding seconds would not.
+function daysLater(unix: number, days: number): number {
+  const date = new Date(unix * 1000)
+  date.setDate(date.getDate() + days)
+  return Math.floor(date.getTime() / 1000)
+}
 
 // The evenings of a recurring club night: `count` dates, `everyDays` apart.
 export function repeatDates(first: DateInput, everyDays: number, count: number): DateInput[] {
   return Array.from({ length: count }, (_, i) => ({
     ...first,
-    starts: first.starts + i * everyDays * DAY,
-    ...(first.ends !== undefined ? { ends: first.ends + i * everyDays * DAY } : {}),
+    starts: daysLater(first.starts, i * everyDays),
+    ...(first.ends !== undefined ? { ends: daysLater(first.ends, i * everyDays) } : {}),
   }))
 }
 

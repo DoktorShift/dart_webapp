@@ -43,7 +43,7 @@ export function sameNames(pubkeys: readonly string[], nameOf: (pubkey: string) =
 }
 
 // What to tell the person when a club change couldn't be signed or encrypted.
-export function problemText(error: unknown, tx: ClubsTexts, px: ProfileTexts): string {
+function problemText(error: unknown, tx: ClubsTexts, px: ProfileTexts): string {
   return error instanceof ClubSignerError ? tx.club.noEncryption : signerProblem(px, error)
 }
 

@@ -36,7 +36,7 @@ export interface StoredClub extends Keyed {
   loadedAt: number | null
 }
 
-export const clubObjectId = (club: string) => `${CLUB_OBJECT_PREFIX}${club}`
+const clubObjectId = (club: string) => `${CLUB_OBJECT_PREFIX}${club}`
 
 const empty = (club: string): StoredClub => ({ id: clubObjectId(club), club, events: [], keys: {}, tokens: {}, relays: [], unsent: [], loadedAt: null })
 

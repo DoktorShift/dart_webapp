@@ -12,7 +12,7 @@ import { useAreaT, useT } from "@/components/i18n-provider"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
 import { useChange } from "@/components/clubs/common"
 import { clubAuthor } from "@/components/clubs/use-clubs"
-import { useNames } from "@/components/clubs/use-names"
+import { useOwnProfile } from "@/components/profile/use-profile"
 import { nextDate, type ClubView } from "@/lib/clubs/club"
 import { clubLink } from "@/lib/clubs/links"
 import { createInvite } from "@/lib/clubs/membership"
@@ -42,7 +42,8 @@ export function InviteSheet({
   const t = useT()
   const tx = useAreaT(CLUBS_TEXTS)
   const describe = useChange()
-  const names = useNames(view.me.pubkey ? [view.me.pubkey] : [])
+  // The host's name in the preview: as this profile is called here, known at once.
+  const own = useOwnProfile()
   const [kind, setKind] = useState<"group" | "personal">("group")
   const [label, setLabel] = useState("")
   const [days, setDays] = useState(7)
@@ -56,7 +57,7 @@ export function InviteSheet({
     setProblem(null)
     try {
       const next = nextDate(view, nowSeconds())
-      const hostName = view.me.pubkey ? (names(view.me.pubkey).name ?? undefined) : undefined
+      const hostName = own?.name ?? undefined
       const result = await createInvite(
         state,
         { kind, days, ...(kind === "personal" && label.trim() ? { label } : {}), ...(hostName ? { hostName } : {}), ...(next ? { next: { title: next.title, starts: next.starts, ...(next.place ? { place: next.place } : {}) } } : {}) },

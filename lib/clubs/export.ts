@@ -7,8 +7,8 @@ import type { StoredClub } from "./store.ts"
 // and arrives at the same state, so a new owner or another app needs nothing else. The summary
 // is for people reading the file; it is never read back.
 
-export const CLUB_EXPORT_FORMAT = "blueline-club"
-export const CLUB_EXPORT_VERSION = 1
+const CLUB_EXPORT_FORMAT = "blueline-club"
+const CLUB_EXPORT_VERSION = 1
 
 export function clubExport(stored: StoredClub, view: ClubView, exportedAt = new Date()) {
   const state = view.state

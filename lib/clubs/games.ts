@@ -51,7 +51,7 @@ export function gameSeats(seats: readonly GameSeat[], visibility: "closed" | "pu
 
 // The result as the engine computed it on this device, with the throws so every reader can
 // replay it (docs/protocol/families/match-result.md).
-export function resultContent(game: FinishedGame, finishedAt: number) {
+function resultContent(game: FinishedGame, finishedAt: number) {
   const state = replay(game.config, [...game.throws])
   const seats = game.config.players.map((_, i) => i)
   const sets = state.setsWon.some((n) => n > 0) ? { sets: seats.map((i) => state.setsWon[i]) } : {}
@@ -137,7 +137,7 @@ function statsOf(records: readonly NostrEvent[], id: string, plaintexts: Readonl
   return { stats: parsed.record.content.stats }
 }
 
-export const seatOf = (game: ClubGame, pubkey: string) => game.agreement.seats.findIndex((s) => s.pubkey === pubkey)
+const seatOf = (game: ClubGame, pubkey: string) => game.agreement.seats.findIndex((s) => s.pubkey === pubkey)
 
 // Whether `pubkey` still has to say whether this result is right: a player with a profile who
 // did not record it and has not answered.

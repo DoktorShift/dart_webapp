@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { Check, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Segmented } from "@/components/ui/segmented"
@@ -18,7 +18,7 @@ import { CLUB_EXTRA } from "@/lib/clubs/extra"
 import type { GameType } from "@/lib/game/types"
 import { GAME_TYPES } from "@/lib/game/rules"
 import type { ClubState } from "@/lib/protocol/club-state"
-import type { SetupSeat } from "@/lib/shell/registry"
+import type { SetupPreset, SetupSeat } from "@/lib/shell/registry"
 import { isUnnamed, seatName } from "@/lib/storage/players"
 import { cn } from "@/lib/utils"
 
@@ -51,17 +51,26 @@ export function StartGameSheet({ view, state, open, onOpenChange }: { view: Club
     setGuests((current) => [...current, name])
     setGuestName("")
   }
+  // Setup opens once the sheet has slid away (Sheet onAnimationEnd): opened at once, it would
+  // cover and freeze the tabs with the sheet still on its way out.
+  const pending = useRef<SetupPreset | null>(null)
   const start = () => {
     const players: SetupSeat[] = [
       ...chosen.map((pubkey) => ({ name: seatName(pubkey === me ? (own?.name ?? tx.you) : nameOf(pubkey)), pubkey })),
       ...guests.map((name) => ({ name })),
     ]
+    pending.current = { players, extras: { [CLUB_EXTRA]: { club: view.id } } }
     onOpenChange(false)
-    nav.openSetup(type, { players, extras: { [CLUB_EXTRA]: { club: view.id } } })
+  }
+  const settled = (shown: boolean) => {
+    if (shown || !pending.current) return
+    const preset = pending.current
+    pending.current = null
+    nav.openSetup(type, preset)
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange} title={tx.game.title} description={tx.game.description}>
+    <Sheet open={open} onOpenChange={onOpenChange} onAnimationEnd={settled} title={tx.game.title} description={tx.game.description}>
       <div className="min-h-0 overflow-y-auto overscroll-contain pb-1">
         <p className="mb-2 px-1 text-[0.8125rem] font-medium text-muted-foreground">{tx.game.members}</p>
         <div className="flex flex-wrap gap-2">

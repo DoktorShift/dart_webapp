@@ -6,9 +6,12 @@ import { cn } from "@/lib/utils"
 
 // A bottom sheet for a focused task that can be dismissed (HIG: sheets). Used during a game
 // and for the install guide. Content that can be long brings its own scroll area.
+// `onAnimationEnd` says when the sheet has finished sliding in (true) or away (false): what
+// covers the tabs right after (setup, a game) waits for that, or the sheet never gets to leave.
 export function Sheet({
   open,
   onOpenChange,
+  onAnimationEnd,
   title,
   description,
   className,
@@ -16,13 +19,14 @@ export function Sheet({
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onAnimationEnd?: (open: boolean) => void
   title: string
   description?: ReactNode
   className?: string
   children: ReactNode
 }) {
   return (
-    <Drawer open={open} onOpenChange={onOpenChange} shouldScaleBackground={false}>
+    <Drawer open={open} onOpenChange={onOpenChange} onAnimationEnd={onAnimationEnd} shouldScaleBackground={false}>
       <DrawerContent className={cn("mx-auto max-h-[92dvh] max-w-lg border-border", className)}>
         <div className="flex min-h-0 flex-col px-4 pb-[max(env(safe-area-inset-bottom),1rem)]">
           <DrawerHeader className="px-0 text-left">

@@ -17,7 +17,7 @@ import { updateClub } from "./store.ts"
 
 const DAY = 24 * 60 * 60
 // Ownership offers are open for a day (conflicts.md, "Grenzen ohne vertrauenswürdige Zeit" 1).
-export const OFFER_SECONDS = DAY
+const OFFER_SECONDS = DAY
 // A closed club without its own limit gets one at about 90 members, so joins near the 100 a
 // sealed record can carry are decided by a leader, not by timestamps (club.md, "Ausnahme").
 const CAPACITY_AT = 90

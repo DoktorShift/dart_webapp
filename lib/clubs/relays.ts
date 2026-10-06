@@ -9,7 +9,7 @@ import { CALENDAR_RSVP_KIND, CALENDAR_TIME_KIND } from "./dates.ts"
 // plus the relays an invite link named. "No relay answered" is unknown, never empty: callers
 // keep showing what this device has, with the time relays last answered.
 
-export const clubRelays = (hints: readonly string[] = []) => mergeRelays(generalRelays(), hints)
+const clubRelays = (hints: readonly string[] = []) => mergeRelays(generalRelays(), hints)
 
 // What else belongs to a club once its records are read: the matches of its games and the
 // addresses of its public dates (for their answers).
@@ -18,7 +18,7 @@ export interface ClubExtras {
   dates: readonly string[]
 }
 
-export function clubFilters(club: string, extras: ClubExtras = { matches: [], dates: [] }): Filter[] {
+function clubFilters(club: string, extras: ClubExtras = { matches: [], dates: [] }): Filter[] {
   const filters: Filter[] = [
     { ids: [club] },
     { kinds: [KIND_RECORD], "#e": [club] },
