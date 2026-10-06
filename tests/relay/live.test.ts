@@ -7,7 +7,7 @@ import assert from "node:assert/strict"
 import { Worker } from "node:worker_threads"
 import { bytesToHex } from "@noble/hashes/utils"
 import "../storage-helpers.ts"
-import { startRelay, type NakRelay } from "../support/nak.ts"
+import { freePort, startRelay, type NakRelay } from "../support/nak.ts"
 import { config, dart } from "../helpers.ts"
 import { applyThrow, correctDart, newMatchState, replay, tagThrow, visitBySeq, type MatchState } from "../../lib/game/engine.ts"
 import type { SavedMatch, Throw } from "../../lib/game/types.ts"
@@ -57,10 +57,10 @@ after(async () => {
 })
 
 // Waits until `check` returns something, polling; fails with `what` after `ms`.
-async function until<T>(what: string, check: () => T | null | undefined | false, ms = 15_000): Promise<T> {
+async function until<T>(what: string, check: () => T | null | undefined | false | Promise<T | null | undefined | false>, ms = 15_000): Promise<T> {
   const deadline = Date.now() + ms
   for (;;) {
-    const value = check()
+    const value = await check()
     if (value) return value
     if (Date.now() > deadline) throw new Error(`timed out waiting for ${what}`)
     await new Promise((resolve) => setTimeout(resolve, 100))
@@ -341,4 +341,33 @@ test("an offer closed right after 'Übergeben' is called off: the match stays he
     return now && now.n > first.n && now
   })
   assert.equal(next.sv, 1)
+})
+
+test("spectators get the score while one relay is out of reach; the founding waits for that relay", async () => {
+  const local = "one-relay-down"
+  const port = await freePort()
+  // Nothing listens on the second relay's port yet: the founding can be read on one relay, but
+  // it is not safely stored.
+  process.env.NEXT_PUBLIC_BLUELINE_RELAYS = `${relay.url},ws://127.0.0.1:${port}`
+  let view: import("../../lib/live/board.ts").BoardView
+  try {
+    view = await live.goLive(newGame(local, fullGame.slice(0, 4)))
+  } finally {
+    process.env.NEXT_PUBLIC_BLUELINE_RELAYS = relay.url
+  }
+  opened.push(() => live.stopHere(local))
+  const link = links.decodeLinkPayload("watch", view.watch)
+  assert.equal(link.relays.length, 2)
+  const spectator = watcher({ match: link.match, key: link.key ?? null, relays: link.relays })
+  const first = await until("the first snapshot with one relay down", () => spectator.get()?.state?.live)
+  assert.equal(first.sv, 1)
+  assert.equal((await store.loadBoard(local))?.outbox.length, 1, "the founding stays in the outbox")
+
+  // The relay comes up: the next send stores the founding safely, and the outbox empties.
+  const second = await startRelay({ port })
+  opened.push(() => second.stop())
+  live.updateBoard(newGame(local, fullGame.slice(0, 6)))
+  await until("the founding on both relays", async () => (await store.loadBoard(local))?.outbox.length === 0)
+  const stored = await nostr.query(follow.matchFilters(link.match), [second.url])
+  assert.ok(stored.events.some((e) => e.id === link.match))
 })

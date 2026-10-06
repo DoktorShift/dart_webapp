@@ -53,7 +53,11 @@ interface Board {
   attached: boolean
   // The newest snapshot that no relay has yet.
   snapshot: SignedEvent | null
-  timers: { snapshot?: ReturnType<typeof setTimeout>; result?: ReturnType<typeof setTimeout>; retry?: ReturnType<typeof setTimeout>; detach?: ReturnType<typeof setTimeout> }
+  // Outbox records that at least one relay accepted (readable there, not yet safely stored).
+  accepted: Set<string>
+  timers: { snapshot?: ReturnType<typeof setTimeout>; result?: ReturnType<typeof setTimeout>; detach?: ReturnType<typeof setTimeout> }
+  // The next try while something waits for a relay: after a pause, or as soon as online again.
+  retry: { timer: ReturnType<typeof setTimeout>; again: () => void } | null
   retryMs: number
   // Signing and the record change one step at a time (the result chain depends on it).
   queue: Promise<unknown>
@@ -151,7 +155,9 @@ function register(record: BoardRecord, keys: MatchKeys, game: SavedMatch): Board
     game,
     attached: false,
     snapshot: null,
+    accepted: new Set(),
     timers: {},
+    retry: null,
     retryMs: RETRY_MS.first,
     queue: Promise.resolve(),
     flushing: false,
@@ -302,6 +308,8 @@ async function sign<T extends RecordType>(board: Board, key: MatchKey, type: T, 
 
 async function persist(board: Board, change: Partial<BoardRecord>) {
   board.record = { ...board.record, ...change }
+  // A board dropped meanwhile (handed over while a send was under way) is not written back.
+  if (boards.get(board.record.local) !== board) return
   await saveBoard(board.record).catch(() => {
     // Storage failing: the board goes on from memory for as long as the page is open.
   })
@@ -309,9 +317,12 @@ async function persist(board: Board, change: Partial<BoardRecord>) {
 
 // ---- Sending ---------------------------------------------------------------------------------
 
-// Sends the outbox in order, then the newest snapshot. A record stays in the outbox until relays
-// of two operators have it, or every relay answered for good (no relay that was merely out of
-// reach); an offline board tries again with growing pauses and as soon as it is back online.
+// Two questions about a record: is it readable somewhere (one relay has it), and is it safely
+// stored (relays of two operators have it, or every relay answered for good, none merely out of
+// reach)? The outbox keeps a record until it is safely stored, trying again with growing pauses
+// and as soon as the board is back online. The snapshot needs only the founding and the session
+// it cites to be readable: it goes out as soon as they are, so one relay out of reach never
+// freezes the spectators' score.
 async function flush(board: Board) {
   if (board.flushing) {
     board.flushAgain = true
@@ -321,22 +332,42 @@ async function flush(board: Board) {
   try {
     do {
       board.flushAgain = false
-      for (const event of board.record.outbox) {
-        if (!delivered(await publish(event, board.record.relays))) return retryLater(board)
-        await persist(board, { outbox: board.record.outbox.filter((e) => e.id !== event.id) })
-      }
-      const snapshot = board.snapshot
-      if (snapshot) {
-        const results = await publish(snapshot, board.record.relays)
-        if (!results.some((r) => r.ok)) return retryLater(board)
-        if (board.snapshot === snapshot) board.snapshot = null
-      }
+      await sendOutbox(board)
+      await sendLatestSnapshot(board)
     } while (board.flushAgain)
-    board.retryMs = RETRY_MS.first
   } finally {
     board.flushing = false
   }
+  if (board.record.outbox.length > 0 || board.snapshot) retryLater(board)
+  else {
+    stopRetrying(board)
+    board.retryMs = RETRY_MS.first
+  }
 }
+
+// In order, stopping at the first record no relay took: what follows builds on it.
+async function sendOutbox(board: Board) {
+  for (const event of board.record.outbox) {
+    const results = await publish(event, board.record.relays)
+    if (!results.some((r) => r.ok)) return
+    if (!delivered(results)) {
+      board.accepted.add(event.id)
+      continue
+    }
+    board.accepted.delete(event.id)
+    await persist(board, { outbox: board.record.outbox.filter((e) => e.id !== event.id) })
+  }
+}
+
+async function sendLatestSnapshot(board: Board) {
+  const snapshot = board.snapshot
+  if (!snapshot || !readable(board, board.record.match) || !readable(board, board.record.session.id)) return
+  const results = await publish(snapshot, board.record.relays)
+  if (results.some((r) => r.ok) && board.snapshot === snapshot) board.snapshot = null
+}
+
+// A record out of the outbox is safely stored; one still in it may be on a relay already.
+const readable = (board: Board, id: string) => board.accepted.has(id) || !board.record.outbox.some((e) => e.id === id)
 
 const TRANSIENT = new Set(["timeout", "unreachable", "rate-limited", "auth-required", "error", ""])
 
@@ -344,16 +375,21 @@ const delivered = (results: PublishResult[]) =>
   isPublished(results.filter((r) => r.ok).map((r) => r.url)) || results.every((r) => r.ok || !TRANSIENT.has(r.code))
 
 function retryLater(board: Board) {
-  if (board.timers.retry) return
+  if (board.retry) return
   const again = () => {
-    clearTimeout(board.timers.retry)
-    board.timers.retry = undefined
-    if (typeof window !== "undefined") window.removeEventListener("online", again)
+    stopRetrying(board)
     void flush(board)
   }
-  board.timers.retry = setTimeout(again, board.retryMs)
+  board.retry = { timer: setTimeout(again, board.retryMs), again }
   board.retryMs = Math.min(board.retryMs * 2, RETRY_MS.max)
   if (typeof window !== "undefined") window.addEventListener("online", again)
+}
+
+function stopRetrying(board: Board) {
+  if (!board.retry) return
+  clearTimeout(board.retry.timer)
+  if (typeof window !== "undefined") window.removeEventListener("online", board.retry.again)
+  board.retry = null
 }
 
 // Records that wait for a relay while their game is no longer on the screen (the app was closed
@@ -511,6 +547,7 @@ export async function handedOver(local: string) {
   board.ended = true
   clearTimeout(board.timers.snapshot)
   clearTimeout(board.timers.result)
+  stopRetrying(board)
   board.follower?.close()
   board.follower = null
   boards.delete(local)
