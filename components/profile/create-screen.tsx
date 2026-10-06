@@ -10,6 +10,7 @@ import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
 import { createProfile } from "@/components/profile/create-profile"
 import { pictureProblem, ProfileFields } from "@/components/profile/profile-fields"
 import { useClaimablePlayers } from "@/components/profile/use-profile"
+import { seatName } from "@/lib/storage/players"
 
 const NOBODY = "nobody"
 
@@ -66,7 +67,15 @@ export default function CreateScreen() {
           <p className="mt-2 px-4 text-[0.8125rem] leading-snug text-muted-foreground">{c.whoHint}</p>
         </section>
       )}
-      <ProfileFields seed={name || "blueline"} name={name} onName={setName} picture={picture} onPicture={setPicture} />
+      <ProfileFields
+        seed={name || "blueline"}
+        name={name}
+        // The board keeps the chosen player's name, or takes as much of a new one as a seat holds.
+        nameHint={chosen ? (name.trim() !== chosen.name ? c.boardStays(chosen.name) : undefined) : seatName(name) !== name.trim() ? c.boardShort(seatName(name)) : undefined}
+        onName={setName}
+        picture={picture}
+        onPicture={setPicture}
+      />
       {failed && (
         <InlineStatus tone="error" className="mt-4">
           {f.failed}

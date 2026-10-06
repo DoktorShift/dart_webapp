@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState, type FormEvent } from "react"
-import { Plus, Trash2, Users } from "lucide-react"
+import { Plus, Trash2, UserRoundCheck, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet } from "@/components/ui/sheet"
 import { TextField } from "@/components/ui/text-field"
@@ -21,15 +21,20 @@ import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
 import { setupRowClass } from "@/components/profile/setup-players"
 import { signerProblem } from "@/components/profile/signer-status"
 import { useOwnEvents } from "@/components/profile/use-profile"
+import { profilePlayers } from "@/lib/profile/claim"
+import { readMetadata } from "@/lib/profile/metadata"
+import { OWN } from "@/lib/profile/own-events"
 import { deletedRoundTemplate, newRoundId, roundTemplate, savedRounds, type Round } from "@/lib/profile/rounds"
 import { getSigner, type Session } from "@/lib/profile/session"
 import type { SetupPlayersProps, SetupSeat } from "@/lib/shell/registry"
 import { usePlayers } from "@/lib/storage/hooks"
-import { findByName, isUnnamed } from "@/lib/storage/players"
+import { findByName, isUnnamed, seatName } from "@/lib/storage/players"
 import { publishOwn } from "@/lib/sync/publish"
 
-// The profile's saved rounds as quick picks, and "Runde speichern" for the seats as they are.
-export default function Rounds({ session, players, replacePlayers }: { session: Session } & Pick<SetupPlayersProps, "players" | "replacePlayers">) {
+// The signed-in profile's quick picks in game setup: "Du" (its own seat, linked by the profile
+// rather than by a name anyone could type), its saved rounds, and "Runde speichern" for the
+// seats as they are.
+export default function ProfileSeats({ session, players, canAdd, addPlayer, replacePlayers }: { session: Session } & SetupPlayersProps) {
   const t = useT()
   const tx = useAreaT(PROFILE_TEXTS)
   const s = tx.setup
@@ -51,19 +56,25 @@ export default function Rounds({ session, players, replacePlayers }: { session: 
     }
   }, [events, directory])
 
+  // The profile's own seat: named as its player here, else as its public profile; nothing until
+  // one of them is known. Not offered while it is already in the game.
+  const myName = (directory && profilePlayers(session.pubkey, directory, []).player?.name) || seatName(readMetadata(events?.get(OWN.metadata)).name ?? "")
+  const me = myName && canAdd && !players.some((p) => p.pubkey === session.pubkey) ? { name: myName, pubkey: session.pubkey } : null
+
   return (
     <>
-      {rounds.length > 0 && (
+      {(me || rounds.length > 0) && (
         <div className="mt-2">
-          <p className="mb-2 px-1 text-[0.8125rem] font-medium text-muted-foreground">{s.rounds}</p>
+          <p className="mb-2 px-1 text-[0.8125rem] font-medium text-muted-foreground">{s.quickPick}</p>
           <div className="flex flex-wrap gap-2">
+            {me && (
+              <button type="button" onClick={() => addPlayer(me)} className={chipClass}>
+                <UserRoundCheck className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                {s.me}
+              </button>
+            )}
             {rounds.map((round) => (
-              <button
-                key={round.id}
-                type="button"
-                onClick={() => replacePlayers(round.players.map(({ name, pubkey }) => ({ name, pubkey })))}
-                className="flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-secondary/50 px-4 text-left text-[0.9375rem] active:bg-secondary"
-              >
+              <button key={round.id} type="button" onClick={() => replacePlayers(round.players.map(({ name, pubkey }) => ({ name: seatName(name), pubkey })))} className={chipClass}>
                 <Users className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
                 <span className="[overflow-wrap:anywhere]">{roundLabel(round)}</span>
               </button>
@@ -84,6 +95,9 @@ export default function Rounds({ session, players, replacePlayers }: { session: 
     </>
   )
 }
+
+// Like setup's "Zuletzt gespielt" chips.
+const chipClass = "flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-secondary/50 px-4 text-left text-[0.9375rem] active:bg-secondary"
 
 const roundLabel = (round: Round) => round.title || round.players.map((p) => p.name).filter(Boolean).join(", ")
 

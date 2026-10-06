@@ -11,12 +11,13 @@ import { publishOwn } from "../../lib/sync/publish.ts"
 export type Claim = { matchId: string; seat: number } | { playerId: string } | null
 
 // "Profil anlegen": a new key kept on this device, the chosen player linked to it (only their
-// games), then name, picture and relay list published. Only these two public events leave the
-// device; games, opponents and earlier guests stay here (PLAN.md "Nutzerwege"). A relay that
-// can't be reached doesn't stop anything: the profile is complete on this device first.
+// games, under the name they already play with), then name, picture and relay list published.
+// Only these two public events leave the device; games, opponents and earlier guests stay here
+// (PLAN.md "Nutzerwege"). A relay that can't be reached doesn't stop anything: the profile is
+// complete on this device first.
 export async function createProfile({ name, picture, claim }: { name: string; picture: string; claim: Claim }) {
   const { pubkey } = await startLocalProfile()
-  const claimed = claim === null ? false : "matchId" in claim ? await claimSeat(claim.matchId, claim.seat, pubkey, name) : await claimPlayer(claim.playerId, pubkey, name)
+  const claimed = claim === null ? false : "matchId" in claim ? await claimSeat(claim.matchId, claim.seat, pubkey) : await claimPlayer(claim.playerId, pubkey)
   if (!claimed) await addProfilePlayer(pubkey, name)
   const url = safeImageUrl(picture)
   await publishOwn([relayListTemplate(newRelayList()), metadataTemplate({ name: name.trim(), ...(url ? { picture: url } : {}) })])

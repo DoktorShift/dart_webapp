@@ -15,12 +15,13 @@ export const profileScreensDe = {
     description: "Lege ein Profil an. Deine Spiele bleiben bei dir, auch auf deinem nächsten Handy.",
     seat: "Welcher Spieler bist du?",
     seatHint: "Nur die Spiele dieses Spielers werden Teil deines Profils.",
+    boardStays: (name: string) => `Am Board bleibst du „${name}“.`,
   },
 
   // Name and picture, when a profile is created or changed.
   form: {
     name: "Anzeigename",
-    namePlaceholder: "So heißt du am Board",
+    namePlaceholder: "So heißt du in deinem Profil",
     picture: "Bild (optional)",
     picturePlaceholder: "https://beispiel.de/bild.jpg",
     pictureHint: "Die Adresse eines Bildes im Internet. Hochgeladen wird nichts.",
@@ -37,11 +38,13 @@ export const profileScreensDe = {
     whoHint: "Die Spiele des gewählten Spielers werden Teil deines Profils.",
     nobody: "Keiner davon",
     nobodyHint: "Du startest ohne bisherige Spiele.",
+    boardStays: (name: string) => `Am Board bleibst du „${name}“.`,
+    boardShort: (name: string) => `Am Board heißt du „${name}“.`,
   },
 
   // The signed-in Profile tab.
   home: {
-    publicName: (name: string) => `Öffentlich: ${name}`,
+    boardName: (name: string) => `Am Board: ${name}`,
     // In place of the name while it isn't known yet, or couldn't be loaded.
     nameLoading: "Wird geladen",
     nameNotLoaded: "Nicht geladen",
@@ -118,6 +121,9 @@ export const profileScreensDe = {
   edit: {
     title: "Profil bearbeiten",
     save: "Sichern",
+    boardName: "Name im Spiel",
+    boardHint: (max: number) => `So stehst du am Board und in der Spielerwahl, höchstens ${max} Zeichen.`,
+    publicHint: "So sehen dich andere, auch in anderen Apps.",
     loading: "Dein öffentliches Profil wird geladen.",
     notFound: "Zu deinem Profil wurde nichts gefunden. Speichern legt es neu an.",
     notLoaded: "Dein Profil konnte nicht geladen werden.",
@@ -161,10 +167,13 @@ export const profileScreensDe = {
     notProfile: "Das ist kein Profilcode.",
     nameLabel: "Name im Spiel",
     nameUnknown: "Zu diesem Profil ist kein Name bekannt. Gib ihn selbst ein.",
+    nameShortened: (max: number) => `Im Spiel höchstens ${max} Zeichen. Das Profil behält seinen vollen Namen.`,
     sameName: (id: string) => `Ein anderer Spieler heißt auch so. Dieses Profil: ${id}`,
     alreadyIn: "Dieser Spieler ist schon im Spiel.",
     add: "Zum Spiel hinzufügen",
     full: "Alle sechs Plätze sind belegt.",
+    quickPick: "Mit einem Tipp",
+    me: "Du",
     rounds: "Deine Runden",
     saveRound: "Runde speichern",
     saveRoundDescription: "Speichere diese Spieler, um sie beim nächsten Mal mit einem Tipp zu wählen.",

@@ -62,7 +62,7 @@ export interface OwnProfile {
   metadata: ReturnType<typeof readMetadata>
   // The profile's player on this device (the one it plays as in setup), if it has one.
   player: PlayerRecord | null
-  // How the profile is called at the board: its player here, else the public name.
+  // The name the profile shows: its public name, else the one it plays under here.
   name: string | null
   // This device's games and players.
   history: ReturnType<typeof useMatchHistory>
@@ -85,7 +85,7 @@ export function useOwnProfile(): OwnProfile | null | undefined {
   const metadata = useMemo(() => readMetadata(events?.get(OWN.metadata)), [events])
   if (session === undefined) return undefined
   if (session === null) return null
-  return { session, events, lookup, metadata, player: me?.player ?? null, name: me?.player?.name ?? metadata.name, history, key: me?.key ?? null, sameAs: me?.sameAs ?? NOBODY }
+  return { session, events, lookup, metadata, player: me?.player ?? null, name: metadata.name ?? me?.player?.name ?? null, history, key: me?.key ?? null, sameAs: me?.sameAs ?? NOBODY }
 }
 
 // The profile's games on this device, newest first.

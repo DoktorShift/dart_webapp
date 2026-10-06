@@ -126,6 +126,7 @@ function KeepSheet({
   const [picture, setPicture] = useState("")
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState(false)
+  const chosen = seats.find((s) => s.seat === seat) ?? null
   const ready = seat !== null && name.trim() !== "" && !pictureProblem(picture)
 
   const submit = async (event: FormEvent) => {
@@ -167,6 +168,7 @@ function KeepSheet({
           <ProfileFields
             seed={name || "blueline"}
             name={name}
+            nameHint={chosen && name.trim() !== chosen.name ? k.boardStays(chosen.name) : undefined}
             onName={(value) => {
               setTyped(true)
               setName(value)

@@ -11,12 +11,12 @@ import type { SetupPlayersProps } from "@/lib/shell/registry"
 
 // Ways to fill seats in game setup (registry "setup.players"): a player's profile QR code (for
 // everyone: on a shared tablet the seat gets their name and profile, the tablet's owner stays
-// apart), and with a profile signed in, saved player rounds to pick with one tap (NIP-51 sets,
-// lib/profile/rounds.ts). Setup is on the guest path: only the row itself loads with it; the
-// scanner and the rounds come when they are needed.
+// apart), and with a profile signed in, "Du" and saved player rounds to pick with one tap
+// (NIP-51 sets, lib/profile/rounds.ts). Setup is on the guest path: only the row itself loads
+// with it; the scanner and the profile's picks come when they are needed.
 
 const ScanSheetContent = lazy(() => import("@/components/profile/setup-scan"))
-const Rounds = lazy(() => import("@/components/profile/setup-rounds"))
+const ProfileSeats = lazy(() => import("@/components/profile/setup-profile"))
 
 export const setupRowClass =
   "flex min-h-12 w-full items-center gap-3 rounded-2xl border border-border bg-card px-4 text-left text-[1.0625rem] text-primary transition-colors active:bg-secondary/60 disabled:opacity-40"
@@ -28,7 +28,7 @@ export default function SetupPlayers({ players, canAdd, addPlayer, replacePlayer
       <ScanPlayer players={players} canAdd={canAdd} addPlayer={addPlayer} />
       {session && (
         <Suspense fallback={null}>
-          <Rounds session={session} players={players} replacePlayers={replacePlayers} />
+          <ProfileSeats session={session} players={players} canAdd={canAdd} addPlayer={addPlayer} replacePlayers={replacePlayers} />
         </Suspense>
       )}
     </>
