@@ -1,5 +1,6 @@
 import { ENGINE_VERSION, replay } from "../game/engine.ts"
-import type { GameType, MatchConfig, Throw } from "../game/types.ts"
+import { validConfig } from "../game/storage.ts"
+import type { MatchConfig, Throw } from "../game/types.ts"
 import {
   ARCHIVE_SCHEMA,
   importV1Matches,
@@ -83,27 +84,12 @@ const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "obj
 
 // ---- Checking a file --------------------------------------------------------------------------
 
-const GAME_TYPES: GameType[] = ["x01", "cricket", "clock"]
 const isDate = (v: unknown): v is string => typeof v === "string" && !Number.isNaN(Date.parse(v))
 const isCount = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v) && v >= 0
 
-// The same checks 1.0.0 makes before it resumes a game (lib/game/storage.ts validConfig).
-function isMatchConfig(config: unknown): config is MatchConfig {
-  if (!isObject(config)) return false
-  const players = config.players
-  return (
-    GAME_TYPES.includes(config.type as GameType) &&
-    typeof config.modeId === "string" &&
-    typeof config.modeName === "string" &&
-    typeof config.startScore === "number" &&
-    Array.isArray(players) &&
-    players.length >= 1 &&
-    players.length <= 6 &&
-    players.every((p) => isObject(p) && typeof p.name === "string" && typeof p.id === "string") &&
-    typeof config.legsToWin === "number" &&
-    (config.setsToWin === undefined || typeof config.setsToWin === "number")
-  )
-}
+// The checks 1.0.0 makes before it resumes a game, plus the mode fields an archived game needs.
+const isMatchConfig = (config: unknown): config is MatchConfig =>
+  validConfig(config) && typeof config.modeId === "string" && typeof config.modeName === "string" && typeof config.startScore === "number"
 
 function parsePlayer(value: unknown): ArchivedPlayer | null {
   if (!isObject(value) || typeof value.name !== "string" || value.name.length > 100 || typeof value.won !== "boolean") return null

@@ -50,7 +50,7 @@ const flag = (value: unknown, fallback: boolean) => (typeof value === "boolean" 
 
 // Saved data can be from an older version or damaged. Anything that doesn't look right, or
 // can't be replayed, is dropped quietly: the player just starts a new game.
-function validConfig(config: unknown): config is MatchConfig {
+export function validConfig(config: unknown): config is MatchConfig {
   if (!isObject(config)) return false
   const players = config.players
   return (

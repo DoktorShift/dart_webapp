@@ -17,6 +17,7 @@ import type { ImportResult } from "@/lib/storage/data"
 import { useStorageUnavailable } from "@/lib/storage/hooks"
 import type { Messages } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
+import { saveFile } from "@/lib/save-file"
 
 // Files bigger than this are not an export of this app (a long history is a few megabytes).
 const MAX_IMPORT_BYTES = 50 * 1024 * 1024
@@ -68,17 +69,6 @@ async function shareFile(file: File): Promise<"done" | "blocked" | "failed"> {
   }
 }
 
-function download(blob: Blob, name: string) {
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement("a")
-  link.href = url
-  link.download = name
-  document.body.append(link)
-  link.click()
-  link.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 10_000)
-}
-
 // A row that does something, like the actions in iOS Settings: tinted text, red when destructive.
 function ActionRow({ onClick, disabled, destructive, children }: { onClick: () => void; disabled?: boolean; destructive?: boolean; children: ReactNode }) {
   return (
@@ -127,7 +117,7 @@ export function DataSection() {
         if (shared === "blocked") setPrepared(file)
         if (shared !== "failed") return
       }
-      download(file, name)
+      saveFile(file, name)
     } catch {
       setMessage({ title: d.exportFailedTitle, description: d.exportFailed })
     } finally {
@@ -217,7 +207,7 @@ export function DataSection() {
                 const file = prepared
                 if (!file) return
                 void shareFile(file).then((shared) => {
-                  if (shared !== "done") download(file, file.name)
+                  if (shared !== "done") saveFile(file, file.name)
                 })
               }}
             >

@@ -2,21 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { renderResultImage, type ResultImage } from "@/lib/result-image"
+import { saveFile } from "@/lib/save-file"
 
 const FILE_NAME = "blueline-darts.png"
 const ICON = "/icon/192"
 
 const makeFile = (model: ResultImage) =>
   renderResultImage(model, ICON).then((blob) => new File([blob], FILE_NAME, { type: "image/png" }))
-
-function download(file: File) {
-  const url = URL.createObjectURL(file)
-  const link = document.createElement("a")
-  link.href = url
-  link.download = file.name
-  link.click()
-  setTimeout(() => URL.revokeObjectURL(url), 10_000)
-}
 
 // Shares the result as a picture through the phone's share sheet (Messages, WhatsApp,
 // Instagram). The picture is drawn ahead, once the result screen has settled, because browsers
@@ -44,10 +36,10 @@ export function useShareResult(model: ResultImage, text: string) {
 
   return useCallback(() => {
     const send = (picture: File) => {
-      if (!navigator.canShare?.({ files: [picture] })) return download(picture)
+      if (!navigator.canShare?.({ files: [picture] })) return saveFile(picture, picture.name)
       navigator.share({ files: [picture], text }).catch((error: unknown) => {
         // Closing the share sheet is fine; anything else saves the picture instead.
-        if (!(error instanceof DOMException && error.name === "AbortError")) download(picture)
+        if (!(error instanceof DOMException && error.name === "AbortError")) saveFile(picture, picture.name)
       })
     }
     if (file) send(file)
