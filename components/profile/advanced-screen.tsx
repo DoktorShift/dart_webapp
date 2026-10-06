@@ -3,6 +3,16 @@
 import { useEffect, useState, type FormEvent } from "react"
 import { Check, CircleAlert, CircleCheck, Copy, LoaderCircle, Minus, Plus, Timer } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
 import { TextField } from "@/components/ui/text-field"
@@ -14,15 +24,14 @@ import { SYNC_TEXTS } from "@/lib/i18n/features/sync.screens"
 import { signerProblem, SignerConfirmation } from "@/components/profile/signer-status"
 import { useOwnProfile, type OwnProfile } from "@/components/profile/use-profile"
 import type { RelayEntry } from "@/lib/nostr/ext/lists"
-import type { NostrEvent } from "@/lib/nostr/types"
 import { relayAnswers } from "@/lib/nostr/relay-info"
 import { generalRelays, normalizeRelayUrl } from "@/lib/nostr/relays"
 import { diagnosticsReport } from "@/lib/profile/diagnostics"
-import { OWN } from "@/lib/profile/own-events"
+import { changeBase, lookupOwnEvents, OWN } from "@/lib/profile/own-events"
 import { addRelay, editableRelays, relayListTemplate, removeRelay } from "@/lib/profile/relay-list"
 import { probeRelays, relayHost, type RelayStatus } from "@/lib/profile/relay-status"
 import { copyText } from "@/lib/shell/share"
-import { changeOwnList } from "@/lib/sync/own-lists"
+import { submitOwn } from "@/lib/sync/publish"
 import { cn } from "@/lib/utils"
 import { version } from "@/package.json"
 
@@ -71,7 +80,10 @@ function Advanced({ own }: { own: OwnProfile }) {
   const [keyCopied, copyKey] = useCopied()
   const [reportCopied, copyReport] = useCopied()
   const relayList = events?.get(OWN.relayList) ?? null
-  const entries = editableRelays(relayList)
+  // Without a list here, the app's relays stand in only once a relay has said there is none.
+  const answered = own.lookup?.answered ?? null
+  const listState: ListState = relayList ? "known" : answered === null ? "loading" : answered ? "none" : "failed"
+  const entries = listState === "loading" || listState === "failed" ? [] : editableRelays(relayList)
   const status = useRelayStatus(
     entries.map((e) => e.url),
     session.pubkey,
@@ -80,6 +92,8 @@ function Advanced({ own }: { own: OwnProfile }) {
   useEffect(() => {
     let alive = true
     void import("@/lib/nostr/pointers").then(({ npubOf }) => npubOf(session.pubkey)).then((value) => alive && setNpub(value), () => {})
+    // Changing the list starts from the newest version: looked up again on opening.
+    void lookupOwnEvents(session.pubkey, { again: true })
     return () => {
       alive = false
     }
@@ -98,7 +112,7 @@ function Advanced({ own }: { own: OwnProfile }) {
       },
       {
         title: "Profile",
-        lines: [`access: ${session.kind}`, `npub: ${npub ?? "?"}`, `metadata: ${at(OWN.metadata)}`, `relay list: ${relayList ? at(OWN.relayList) : "none (app relays)"}`, `stats card: ${at(OWN.statsCard)}`],
+        lines: [`access: ${session.kind}`, `npub: ${npub ?? "?"}`, `metadata: ${at(OWN.metadata)}`, `relay list: ${relayList ? at(OWN.relayList) : listState === "none" ? "none (app relays)" : "not loaded"}`, `stats card: ${at(OWN.statsCard)}`],
       },
       {
         title: "Relays",
@@ -131,7 +145,7 @@ function Advanced({ own }: { own: OwnProfile }) {
         </div>
       </Group>
 
-      <RelayList entries={entries} base={relayList} status={status} />
+      <RelayList pubkey={session.pubkey} entries={entries} state={listState} status={status} />
 
       <SlotItems list="profile.advanced" props={() => ({ pubkey: session.pubkey })} />
 
@@ -150,6 +164,10 @@ function Advanced({ own }: { own: OwnProfile }) {
     </>
   )
 }
+
+// "known": the profile's own list. "none": it has none, the app's relays show. "loading" and
+// "failed": not looked up yet, or no relay answered; nothing to edit.
+type ListState = "known" | "none" | "loading" | "failed"
 
 const usage = (tx: ProfileTexts, entry: RelayEntry) => (entry.read && entry.write ? tx.advanced.readWrite : entry.read ? tx.advanced.read : tx.advanced.write)
 
@@ -180,52 +198,81 @@ function RelayState({ status }: { status: RelayStatus | undefined }) {
   )
 }
 
-// The profile's relay list as hosts, with their state. Adding and removing publish a new list at
-// once, made from the newest version on the relays (lib/sync/own-lists.ts); whatever another app
-// wrote into it stays (lib/profile/relay-list.ts). A typed address goes on the list only once a
-// relay answers there (NIP-11). The app's relays not on the list are offered with one tap.
-function RelayList({ entries, base, status }: { entries: RelayEntry[]; base: NostrEvent | null; status: Map<string, RelayStatus> | null }) {
+// The profile's relay list as hosts, with their state. Adding publishes a new list at once,
+// removing after a confirmation (it is a public change); both are made from the newest version
+// known once relays were asked (lib/profile/own-events.ts changeBase), so whatever another device
+// or app put on the list meanwhile stays (lib/profile/relay-list.ts). A typed address goes on the
+// list only once a relay answers there (NIP-11). The app's relays not on the list are offered
+// with one tap.
+function RelayList({ pubkey, entries, state, status }: { pubkey: string; entries: RelayEntry[]; state: ListState; status: Map<string, RelayStatus> | null }) {
+  const t = useT()
   const tx = useAreaT(PROFILE_TEXTS)
   const sx = useAreaT(SYNC_TEXTS)
   const a = tx.advanced
   const [typed, setTyped] = useState("")
   const [invalid, setInvalid] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
+  // The relay being added or removed while the new list is made and signed.
+  const [saving, setSaving] = useState<string | null>(null)
   const [checking, setChecking] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)
-  const recommended = generalRelays().filter((url) => !entries.some((e) => e.url === url))
+  const [removing, setRemoving] = useState<RelayEntry | null>(null)
+  const editable = state === "known" || state === "none"
+  const busy = checking || saving !== null
+  const typedUrl = normalizeRelayUrl(typed)
+  const adding = checking || (saving !== null && saving === typedUrl)
+  const recommended = editable ? generalRelays().filter((url) => !entries.some((e) => e.url === url)) : []
 
-  const save = async (edit: (current: RelayEntry[]) => RelayEntry[] | null) => {
-    setBusy(true)
+  // `edit` gets the newest version and returns the next one, or null when there is nothing to change.
+  const save = async (url: string, edit: (current: RelayEntry[]) => RelayEntry[] | null) => {
+    setSaving(url)
     setProblem(null)
     try {
-      await changeOwnList(OWN.relayList, (latest) => {
-        const next = edit(editableRelays(latest))
-        return next && relayListTemplate(next, latest)
-      })
+      const base = await changeBase(pubkey, OWN.relayList)
+      const next = edit(editableRelays(base))
+      if (next) await submitOwn([relayListTemplate(next, base)])
       return true
     } catch (error) {
       setProblem(signerProblem(tx, error))
       return false
     } finally {
-      setBusy(false)
+      setSaving(null)
     }
+  }
+
+  // A relay just added may hold the profile's events (another app's profile): look there now.
+  const addAndLook = async (url: string) => {
+    const saved = await save(url, (current) => addRelay(current, url))
+    if (saved) void lookupOwnEvents(pubkey, { again: true })
+    return saved
   }
 
   const add = async (event: FormEvent) => {
     event.preventDefault()
-    const url = normalizeRelayUrl(typed)
-    if (!url) return setInvalid(a.invalid)
+    if (!typedUrl) return setInvalid(a.invalid)
     setChecking(true)
-    const answers = await relayAnswers(url)
+    const answers = await relayAnswers(typedUrl)
     setChecking(false)
     if (!answers) return setInvalid(sx.relays.noAnswer)
-    if (await save((current) => addRelay(current, url))) setTyped("")
+    if (await addAndLook(typedUrl)) setTyped("")
   }
 
   return (
     <>
-      <Group title={a.relays} footer={entries.length === 1 ? a.lastRelay : base ? a.relaysFooter : a.defaultRelays}>
+      <Group title={a.relays} footer={!editable ? undefined : entries.length === 1 ? a.lastRelay : state === "known" ? a.relaysFooter : a.defaultRelays}>
+        {state === "loading" && (
+          <p role="status" className="flex min-h-12 items-center gap-2 px-4 text-[1.0625rem] text-muted-foreground">
+            <LoaderCircle className="h-4 w-4 shrink-0 motion-safe:animate-spin" aria-hidden="true" />
+            {a.listLoading}
+          </p>
+        )}
+        {state === "failed" && (
+          <div className="px-4 py-3">
+            <InlineStatus tone="error">{a.listNotLoaded}</InlineStatus>
+            <Button variant="secondary" onClick={() => void lookupOwnEvents(pubkey, { again: true })} className="mt-2 h-11 rounded-xl px-5 text-[1.0625rem]">
+              {tx.public.retry}
+            </Button>
+          </div>
+        )}
         {entries.map((entry) => (
           <div key={entry.url} className="flex min-h-12 items-center gap-2 py-1.5 pl-4 pr-1">
             <div className="min-w-0 flex-1">
@@ -240,12 +287,16 @@ function RelayList({ entries, base, status }: { entries: RelayEntry[]; base: Nos
               type="button"
               disabled={busy || entries.length === 1}
               aria-label={a.remove(relayHost(entry.url))}
-              onClick={() => void save((current) => removeRelay(current, entry.url))}
-              className="flex h-11 w-11 shrink-0 items-center justify-center disabled:opacity-40"
+              onClick={() => setRemoving(entry)}
+              className={cn("flex h-11 w-11 shrink-0 items-center justify-center", saving !== entry.url && "disabled:opacity-40")}
             >
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-danger text-white">
-                <Minus className="h-4 w-4" strokeWidth={3} aria-hidden="true" />
-              </span>
+              {saving === entry.url ? (
+                <LoaderCircle className="h-5 w-5 text-muted-foreground motion-safe:animate-spin" aria-hidden="true" />
+              ) : (
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-danger text-white">
+                  <Minus className="h-4 w-4" strokeWidth={3} aria-hidden="true" />
+                </span>
+              )}
             </button>
           </div>
         ))}
@@ -259,46 +310,72 @@ function RelayList({ entries, base, status }: { entries: RelayEntry[]; base: Nos
                 key={url}
                 type="button"
                 disabled={busy}
-                onClick={() => void save((current) => addRelay(current, url))}
+                onClick={() => void addAndLook(url)}
                 aria-label={a.addHost(relayHost(url))}
-                className="flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-secondary/50 px-4 text-[0.9375rem] active:bg-secondary disabled:opacity-40"
+                className={cn("flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-secondary/50 px-4 text-[0.9375rem] active:bg-secondary", saving !== url && "disabled:opacity-40")}
               >
-                <Plus className="h-4 w-4 text-primary" aria-hidden="true" />
+                {saving === url ? <LoaderCircle className="h-4 w-4 text-primary motion-safe:animate-spin" aria-hidden="true" /> : <Plus className="h-4 w-4 text-primary" aria-hidden="true" />}
                 <span className="[overflow-wrap:anywhere]">{relayHost(url)}</span>
               </button>
             ))}
           </div>
         </div>
       )}
-      <form onSubmit={add}>
-        <TextField
-          label={a.add}
-          value={typed}
-          onChange={(e) => {
-            setTyped(e.target.value)
-            setInvalid(null)
-          }}
-          placeholder={a.addPlaceholder}
-          inputMode="url"
-          autoCapitalize="none"
-          autoCorrect="off"
-          spellCheck={false}
-          enterKeyHint="done"
-          error={invalid ?? undefined}
-          trailing={
-            <Button type="submit" variant="secondary" disabled={busy || checking || !typed.trim()} className="h-11 shrink-0 gap-1.5 rounded-xl px-4 text-[1.0625rem] font-semibold text-primary">
-              {checking && <LoaderCircle className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />}
-              {checking ? sx.relays.checking : a.addButton}
-            </Button>
-          }
-        />
-      </form>
+      {editable && (
+        <form onSubmit={add}>
+          <TextField
+            label={a.add}
+            value={typed}
+            onChange={(e) => {
+              setTyped(e.target.value)
+              setInvalid(null)
+            }}
+            placeholder={a.addPlaceholder}
+            inputMode="url"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            enterKeyHint="done"
+            error={invalid ?? undefined}
+            trailing={
+              <Button type="submit" variant="secondary" disabled={busy || !typed.trim()} className="h-11 shrink-0 gap-1.5 rounded-xl px-4 text-[1.0625rem] font-semibold text-primary">
+                {adding && <LoaderCircle className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />}
+                {checking ? sx.relays.checking : adding ? sx.relays.saving : a.addButton}
+              </Button>
+            }
+          />
+        </form>
+      )}
+      <p role="status" className="sr-only">
+        {saving ? sx.relays.saving : ""}
+      </p>
       <SignerConfirmation />
       {problem && (
         <InlineStatus tone="error" className="mt-4">
           {problem}
         </InlineStatus>
       )}
+      <AlertDialog open={removing !== null} onOpenChange={(open) => !open && setRemoving(null)}>
+        <AlertDialogContent className="max-w-[calc(100vw-2rem)] rounded-2xl sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="[overflow-wrap:anywhere]">{removing && a.removeTitle(relayHost(removing.url))}</AlertDialogTitle>
+            <AlertDialogDescription>{a.removeDescription}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel className="h-11">{t.common.cancel}</AlertDialogCancel>
+            <AlertDialogAction
+              className="h-11 bg-danger text-white hover:bg-danger/90"
+              onClick={() => {
+                const entry = removing
+                setRemoving(null)
+                if (entry) void save(entry.url, (current) => removeRelay(current, entry.url))
+              }}
+            >
+              {a.removeConfirm}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

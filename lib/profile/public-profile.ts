@@ -3,11 +3,11 @@ import { generalRelays, mergeRelays, profileRelays } from "../nostr/relays.ts"
 import type { NostrEvent } from "../nostr/types.ts"
 import { STATS_CARD_D } from "../protocol/profile.ts"
 import { dbGet, dbWrite, type Keyed } from "../storage/db.ts"
-import { RELAY_LIST_KIND, relaySettings } from "./relay-list.ts"
+import { MAX_OWN_RELAYS, RELAY_LIST_KIND, relaySettings } from "./relay-list.ts"
 
 // Someone's public profile as other people see it: metadata (kind 0), relay list (10002) and
 // stats card (31180 "stats"), nothing else. Read at the profile and general relays and the hints
-// of the link that opened it, then at the person's own write relays. The last loaded version is
+// of the link that opened it, then at the first few of the person's own write relays. The last loaded version is
 // kept on the device ("objects", profile:<pubkey>), so the view stays readable without relays,
 // with the time it was loaded (PLAN.md "Profilansicht": fehlende Relays).
 
@@ -45,7 +45,7 @@ export async function loadPublicProfile(pubkey: string, hints: readonly string[]
   const asked = mergeRelays(profileRelays(), generalRelays(), hints)
   const first = await query(filters(pubkey), asked)
   profile = merge(profile, first.events)
-  const more = relaySettings(profile.relayList).write.filter((url) => !asked.includes(url))
+  const more = relaySettings(profile.relayList).write.filter((url) => !asked.includes(url)).slice(0, MAX_OWN_RELAYS)
   const second = more.length > 0 ? await query(filters(pubkey), more) : null
   if (second) profile = merge(profile, second.events)
   const answered = first.answered.length + (second?.answered.length ?? 0)

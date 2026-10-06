@@ -9,7 +9,9 @@ import { useAreaT } from "@/components/i18n-provider"
 import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
 import { createProfile } from "@/components/profile/create-profile"
 import { pictureProblem, ProfileFields } from "@/components/profile/profile-fields"
+import { useSignInGuard } from "@/components/profile/sign-in-guard"
 import { useClaimablePlayers } from "@/components/profile/use-profile"
+import { seatName } from "@/lib/storage/players"
 
 const NOBODY = "nobody"
 
@@ -22,6 +24,7 @@ export default function CreateScreen() {
   const f = tx.form
   const nav = useNav()
   const { candidates, loaded } = useClaimablePlayers()
+  const { signIn, dialog } = useSignInGuard()
   const [choice, setChoice] = useState<string | null>(null)
   const [name, setName] = useState("")
   const [picture, setPicture] = useState("")
@@ -36,8 +39,8 @@ export default function CreateScreen() {
     setBusy(true)
     setFailed(false)
     try {
-      await createProfile({ name, picture, claim: chosen?.playerId ? { playerId: chosen.playerId } : null })
-      nav.popToRoot("profile")
+      if (await signIn((options) => createProfile({ name, picture, claim: chosen?.playerId ? { playerId: chosen.playerId } : null }, options))) nav.popToRoot("profile")
+      else setBusy(false)
     } catch {
       setFailed(true)
       setBusy(false)
@@ -66,7 +69,15 @@ export default function CreateScreen() {
           <p className="mt-2 px-4 text-[0.8125rem] leading-snug text-muted-foreground">{c.whoHint}</p>
         </section>
       )}
-      <ProfileFields seed={name || "blueline"} name={name} onName={setName} picture={picture} onPicture={setPicture} />
+      <ProfileFields
+        seed={name || "blueline"}
+        name={name}
+        // The board keeps the chosen player's name, or takes as much of a new one as a seat holds.
+        nameHint={chosen ? (name.trim() !== chosen.name ? c.boardStays(chosen.name) : undefined) : seatName(name) !== name.trim() ? c.boardShort(seatName(name)) : undefined}
+        onName={setName}
+        picture={picture}
+        onPicture={setPicture}
+      />
       {failed && (
         <InlineStatus tone="error" className="mt-4">
           {f.failed}
@@ -75,6 +86,7 @@ export default function CreateScreen() {
       <Button type="submit" disabled={!ready || busy} className="mt-6 h-14 w-full rounded-2xl text-[1.0625rem] font-semibold">
         {busy ? f.creating : f.create}
       </Button>
+      {dialog}
     </form>
   )
 }

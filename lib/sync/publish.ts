@@ -38,15 +38,25 @@ export async function publish(events: readonly NostrEvent[]): Promise<PublishRep
   })
 }
 
+export interface Submitted {
+  events: NostrEvent[]
+  // The relays' answers, once they come; never rejects for a relay.
+  published: Promise<PublishReport[]>
+}
+
 // Signs changes of the profile (one after another: a signer app asks for each), keeps them as
-// the profile's current version on this device, then publishes them. A change counts as made
-// once it is signed and kept; relays that can't be reached don't undo it.
-export async function publishOwn(templates: readonly EventTemplate[]): Promise<PublishReport[]> {
+// the profile's current version on this device, and sends them on without waiting: a change
+// counts as made once it is signed and kept (decision 0002 §1), and relays that can't be
+// reached don't undo or delay it. Erweitert shows how the relays are doing.
+export async function submitOwn(templates: readonly EventTemplate[]): Promise<Submitted> {
   const session = getSession()
   if (!session) throw new Error("nothing is published without a profile")
   const signer = await getSigner()
   const events: NostrEvent[] = []
   for (const template of templates) events.push(await signer.signEvent(template))
   await rememberOwn(session.pubkey, events)
-  return publish(events)
+  return { events, published: publish(events).catch((): PublishReport[] => []) }
 }
+
+// The same, waiting for the relays' answers.
+export const publishOwn = async (templates: readonly EventTemplate[]): Promise<PublishReport[]> => (await submitOwn(templates)).published

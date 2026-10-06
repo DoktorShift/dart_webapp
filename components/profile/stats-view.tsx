@@ -9,7 +9,7 @@ import { PROFILE_TEXTS, type ProfileTexts } from "@/lib/i18n/features/profile.sc
 import type { GameType } from "@/lib/game/types"
 import { formatNumber, formatPercent, type Messages } from "@/lib/i18n"
 import type { ArchivedMatch } from "@/lib/storage/archive"
-import { summarizePlayer, type PlayerSummary, type StatsOptions } from "@/lib/storage/stats"
+import { playerKey as keyOf, summarizePlayer, type PlayerSummary, type StatsOptions } from "@/lib/storage/stats"
 
 // A player's statistics on this device (PLAN.md "Profilansicht und verständliche Statistiken"):
 // one game type at a time, never mixed into one seeming overall figure, for a chosen period,
@@ -18,6 +18,25 @@ import { summarizePlayer, type PlayerSummary, type StatsOptions } from "@/lib/st
 type Period = "all" | "year" | "month"
 const PERIOD_DAYS: Record<Exclude<Period, "all">, number> = { year: 365, month: 30 }
 const MODES: GameType[] = ["x01", "cricket", "clock"]
+
+// "Verlauf", X01 only: beside the period's average, the average of the newest games (all time)
+// or of the same length of time before the period. Below a few games it is "—", never a trend
+// read into two results.
+const TREND_GAMES = 10
+const TREND_MIN = 5
+
+function trendOf(matches: ArchivedMatch[], key: string, options: Pick<StatsOptions, "aliases" | "sameAs">, period: Period): number | null {
+  if (period === "all") {
+    const mine = matches
+      .filter((m) => m.modeType === "x01" && m.players.some((p) => keyOf(m, p, options.aliases, options.sameAs) === key))
+      .sort((a, b) => (Date.parse(b.finishedAt) || 0) - (Date.parse(a.finishedAt) || 0))
+    if (mine.length < TREND_GAMES + TREND_MIN) return null
+    return summarizePlayer(mine.slice(0, TREND_GAMES), key, { ...options, type: "x01" })?.x01?.average ?? null
+  }
+  const length = PERIOD_DAYS[period] * 86_400_000
+  const before = summarizePlayer(matches, key, { ...options, type: "x01", from: new Date(Date.now() - 2 * length).toISOString(), to: new Date(Date.now() - length).toISOString() })
+  return before && before.games >= TREND_MIN ? (before.x01?.average ?? null) : null
+}
 
 interface Row {
   label: string
@@ -81,8 +100,16 @@ export function StatsView({ matches, playerKey, aliases, sameAs }: { matches: Ar
     const from = period === "all" ? undefined : new Date(Date.now() - PERIOD_DAYS[period] * 86_400_000).toISOString()
     return summarizePlayer(matches, playerKey, { aliases, sameAs, type: mode, from })
   }, [matches, playerKey, aliases, sameAs, mode, period])
+  const trend = useMemo(() => (summary?.x01 ? trendOf(matches, playerKey, { aliases, sameAs }, period) : undefined), [summary, matches, playerKey, aliases, sameAs, period])
 
   const shown = summary ? groups(t, tx, summary) : []
+  if (trend !== undefined) {
+    shown.push({
+      title: p.trend,
+      rows: [{ label: period === "all" ? p.lastGames(TREND_GAMES) : p.beforePeriod[period], value: one(t, trend) }],
+      footer: trend === null ? (period === "all" ? p.trendFromGames(TREND_GAMES + TREND_MIN) : p.trendFromBefore(TREND_MIN)) : undefined,
+    })
+  }
   const unknown = shown.some((g) => g.rows.some((r) => r.value === null))
 
   return (

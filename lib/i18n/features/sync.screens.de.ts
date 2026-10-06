@@ -40,6 +40,7 @@ export const syncScreensDe = {
   // Adding a relay under Profil › Erweitert.
   relays: {
     checking: "Wird geprüft",
+    saving: "Wird gespeichert",
     noAnswer: "Unter dieser Adresse antwortet kein Relay.",
   },
 }

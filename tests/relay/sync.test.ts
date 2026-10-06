@@ -12,7 +12,7 @@ import { relayClient } from "../../lib/nostr/client.ts"
 import { loadCore, type Core } from "../../lib/nostr/core.ts"
 import { relayAnswers } from "../../lib/nostr/relay-info.ts"
 import { connectBunker, startNostrConnect } from "../../lib/nostr/signers.ts"
-import { OWN } from "../../lib/profile/own-events.ts"
+import { changeBase, lookupOwnEvents, OWN } from "../../lib/profile/own-events.ts"
 import { addRelay, editableRelays, relayListTemplate } from "../../lib/profile/relay-list.ts"
 import { connectExternal, importLocalKey, signOut } from "../../lib/profile/session.ts"
 import { dataKeySlot } from "../../lib/protocol/private.ts"
@@ -22,7 +22,7 @@ import { dbGetAll } from "../../lib/storage/db.ts"
 import { newPlayerRecord, savePlayers, type PlayerRecord } from "../../lib/storage/players.ts"
 import { syncHistory } from "../../lib/sync/engine.ts"
 import { deliverNow, flushDue, outboxStatus } from "../../lib/sync/outbox.ts"
-import { changeOwnList } from "../../lib/sync/own-lists.ts"
+import { publishOwn } from "../../lib/sync/publish.ts"
 
 let core: Core
 let a: NakRelay
@@ -75,6 +75,14 @@ async function play101(id: string, finishedAt: string) {
 }
 
 const ids = async () => (await dbGetAll<ArchivedMatch>("matches")).map((m) => m.id).sort()
+
+// Adds a relay the way Profil › Erweitert does: the list is looked up on opening the screen, the
+// change is made on the newest version known (changeBase), then signed and published.
+async function addRelayUnderErweitert(url: string) {
+  await lookupOwnEvents(pubkey, { again: true })
+  const base = await changeBase(pubkey, OWN.relayList)
+  await publishOwn([relayListTemplate(addRelay(editableRelays(base), url)!, base)])
+}
 
 // What nak reads from a relay: the profile's private records, as any outsider sees them.
 async function recordsOn(relay: NakRelay): Promise<{ id: string; kind: number; tags: string[][]; content: string }[]> {
@@ -221,13 +229,11 @@ test("a relay that is gone for good is replaced: adding a relay under Erweitert 
     await on(second)
     await sync()
     // The second device adds a relay to the list...
-    await changeOwnList(OWN.relayList, (latest) => relayListTemplate(addRelay(editableRelays(latest), c.url)!, latest))
-    await send()
+    await addRelayUnderErweitert(c.url)
 
     // ...and the first, whose copy of the list is older, adds another: both end up on the list.
     await on(first)
-    await changeOwnList(OWN.relayList, (latest) => relayListTemplate(addRelay(editableRelays(latest), d.url)!, latest))
-    await send()
+    await addRelayUnderErweitert(d.url)
     const list = JSON.parse(await runNak(["req", "-k", "10002", "-a", pubkey, a.url]))
     assert.deepEqual(list.tags.filter((t: string[]) => t[0] === "r").map((t: string[]) => t[1]), [a.url, b.url, c.url, d.url])
 

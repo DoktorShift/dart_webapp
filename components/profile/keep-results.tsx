@@ -11,6 +11,7 @@ import { useAreaT } from "@/components/i18n-provider"
 import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
 import { createProfile } from "@/components/profile/create-profile"
 import { pictureProblem, ProfileFields } from "@/components/profile/profile-fields"
+import { useSignInGuard } from "@/components/profile/sign-in-guard"
 import { useSession } from "@/lib/profile/session"
 import type { FinishedMatch } from "@/lib/shell/registry"
 import { kvGet, kvSet } from "@/lib/storage/db"
@@ -51,7 +52,9 @@ export default function KeepResults({ match }: { match: FinishedMatch }) {
   }, [match.id])
 
   if (created) return <InlineStatus tone="success">{k.done}</InlineStatus>
-  if (session !== null || dismissed !== false || seats.length === 0) return null
+  // The sheet stays while it is open: the session appears the moment the profile starts, before
+  // the games are taken over, and the row turns into the done line only after that.
+  if (!open && (session !== null || dismissed !== false || seats.length === 0)) return null
 
   const later = async () => {
     setDismissed(true)
@@ -118,6 +121,7 @@ function KeepSheet({
   const tx = useAreaT(PROFILE_TEXTS)
   const k = tx.keep
   const f = tx.form
+  const { signIn, dialog } = useSignInGuard()
   const only = seats.length === 1 ? seats[0] : null
   const [seat, setSeat] = useState<number | null>(only?.seat ?? null)
   const [name, setName] = useState(only?.name ?? "")
@@ -126,6 +130,7 @@ function KeepSheet({
   const [picture, setPicture] = useState("")
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState(false)
+  const chosen = seats.find((s) => s.seat === seat) ?? null
   const ready = seat !== null && name.trim() !== "" && !pictureProblem(picture)
 
   const submit = async (event: FormEvent) => {
@@ -134,8 +139,7 @@ function KeepSheet({
     setBusy(true)
     setFailed(false)
     try {
-      await createProfile({ name, picture, claim: { matchId, seat } })
-      onCreated()
+      if (await signIn((options) => createProfile({ name, picture, claim: { matchId, seat } }, options))) onCreated()
     } catch {
       setFailed(true)
     } finally {
@@ -167,6 +171,7 @@ function KeepSheet({
           <ProfileFields
             seed={name || "blueline"}
             name={name}
+            nameHint={chosen && name.trim() !== chosen.name ? k.boardStays(chosen.name) : undefined}
             onName={(value) => {
               setTyped(true)
               setName(value)
@@ -188,6 +193,7 @@ function KeepSheet({
       <Button variant="ghost" onClick={onLater} className="mt-2 h-12 w-full shrink-0 rounded-2xl text-[1.0625rem] xshort:h-11">
         {k.later}
       </Button>
+      {dialog}
     </Sheet>
   )
 }

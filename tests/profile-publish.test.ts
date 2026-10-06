@@ -8,11 +8,11 @@ import { relayClient } from "../lib/nostr/client.ts"
 import { loadCore } from "../lib/nostr/core.ts"
 import type { NostrEvent } from "../lib/nostr/types.ts"
 import { metadataTemplate } from "../lib/profile/metadata.ts"
-import { rememberOwn } from "../lib/profile/own-events.ts"
+import { ownEvents, rememberOwn } from "../lib/profile/own-events.ts"
 import { getSession, getSigner, signOut, startLocalProfile } from "../lib/profile/session.ts"
 import { archiveFinished, type ArchivedMatch } from "../lib/storage/archive.ts"
 import { dbGetAll } from "../lib/storage/db.ts"
-import { listPlayers, newPlayerRecord, savePlayers } from "../lib/storage/players.ts"
+import { assignPlayers, listPlayers, newPlayerRecord, savePlayers } from "../lib/storage/players.ts"
 import { publish, publishOwn } from "../lib/sync/publish.ts"
 
 // What leaves the device, through the one publishing interface (lib/sync/publish.ts): nothing
@@ -60,8 +60,11 @@ test("a profile publishes only its own events", async () => {
 
 test("creating a profile from a game: name, picture and relays go out; the games stay, and only this seat's become the profile's", async () => {
   await twoGames()
-  await createProfile({ name: "Anna Schmidt", picture: "https://img.example/anna.jpg", claim: { matchId: "match-a", seat: 0 } })
+  const { published } = await createProfile({ name: "Anna Schmidt", picture: "https://img.example/anna.jpg", claim: { matchId: "match-a", seat: 0 } })
   const pubkey = getSession()!.pubkey
+  // The profile is complete here before any relay answered; the events are the profile's own.
+  assert.equal((await ownEvents(pubkey)).size, 2)
+  await published
 
   // Every relay has the two events, signed by the new profile, and nothing else.
   for (const relay of relays) assert.deepEqual(relay.events.map((e) => e.kind).sort((a, b) => a - b), [0, 10002], relay.url)
@@ -70,15 +73,22 @@ test("creating a profile from a game: name, picture and relays go out; the games
   assert.deepEqual(JSON.parse(metadata.content), { name: "Anna Schmidt", display_name: "Anna Schmidt", picture: "https://img.example/anna.jpg" })
   assert.deepEqual(metadata.tags, [])
   assert.deepEqual(relayList.tags, URLS.map((url) => ["r", url]))
-  // No opponent, no game, no score in anything published.
-  const everything = JSON.stringify(received())
+  // No opponent, no game, no score in anything published (ids and signatures are random hex,
+  // so only what the events say is looked at).
+  const everything = JSON.stringify(received().map((e) => [e.kind, e.tags, e.content]))
   for (const secret of ["Ben", "match-a", "match-b", "301"]) assert.ok(!everything.includes(secret), secret)
 
-  // Anna (seat 0) is the profile's player under the new name; Ben is nobody's.
+  // Anna (seat 0) is the profile's player, still named as she plays; Ben is nobody's.
   const players = await listPlayers()
   assert.equal(players.find((p) => p.id === ANNA)?.pubkey, pubkey)
-  assert.equal(players.find((p) => p.id === ANNA)?.name, "Anna Schmidt")
+  assert.equal(players.find((p) => p.id === ANNA)?.name, "Anna")
   assert.equal(players.find((p) => p.id === BEN)?.pubkey, undefined)
+  // The next game counts for the profile: typed as before, or seated as "Du" by the profile.
+  assert.deepEqual(
+    assignPlayers(["Anna", "Ben"], players).players.map((p) => p.id),
+    [ANNA, BEN],
+  )
+  assert.equal(assignPlayers(["Anna"], players, undefined, [pubkey]).players[0].id, ANNA)
   // Anna's games are marked as the profile's, Ben's seats are not.
   const games = await dbGetAll<ArchivedMatch>("matches")
   assert.equal(games.length, 2)
@@ -93,14 +103,14 @@ test("creating a profile from a game: name, picture and relays go out; the games
   }
 })
 
-test("a profile from nobody's games starts with a player of its own", async () => {
+test("a profile from nobody's games starts with a player of its own, named as a seat holds it", async () => {
   await twoGames()
-  await createProfile({ name: "Carla", picture: "", claim: null })
+  await (await createProfile({ name: "Carla Konstantinopoulou", picture: "", claim: null })).published
   const pubkey = getSession()!.pubkey
   const players = await listPlayers()
-  assert.deepEqual(players.filter((p) => p.pubkey === pubkey).map((p) => p.name), ["Carla"])
+  assert.deepEqual(players.filter((p) => p.pubkey === pubkey).map((p) => p.name), ["Carla Konstantin"])
   const metadata = relays[0].events.find((e) => e.kind === 0)!
-  assert.deepEqual(JSON.parse(metadata.content), { name: "Carla", display_name: "Carla" })
+  assert.deepEqual(JSON.parse(metadata.content), { name: "Carla Konstantinopoulou", display_name: "Carla Konstantinopoulou" })
   assert.ok((await dbGetAll<ArchivedMatch>("matches")).every((m) => m.players.every((p) => !p.pubkey)))
 })
 

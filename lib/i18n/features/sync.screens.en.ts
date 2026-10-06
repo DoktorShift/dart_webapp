@@ -36,6 +36,7 @@ export const syncScreensEn: Widen<typeof syncScreensDe> = {
 
   relays: {
     checking: "Checking",
+    saving: "Saving",
     noAnswer: "No relay answers at this address.",
   },
 }
