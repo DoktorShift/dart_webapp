@@ -26,12 +26,20 @@ Sitzung, Tresor und öffentliche Profile der Profilspur (`lib/profile/session.ts
 - `lib/payments/journal.ts`: Zahlungsjournal (IndexedDB `payments`), ID = Payment-Hash, Eintrag vor dem Bezahlen, Web Locks je Aktion, unbekannter Ausgang nur per `lookup_invoice` klären, nie neue Rechnung solange offen, „Vor Ort erledigt“ getrennt.
 - `lib/payments/wallet.ts`: Verbindung mit dem Tresor versiegelt unter kv `profile.wallet` (nicht in Export, Sicherung, Link oder Event; Abmelden löscht sie), offene Verbindungen schließen bei `onSessionEnd`.
 - `lib/payments/{invoices,recipient,zap,stake,hooks}.ts`: Zahlungscodes, Empfangsadresse aus dem Profil, Zaps mit strenger Belegprüfung, Einsatz zwischen zwei Spielern.
-- `components/payments/`: Zahlungen (Profil), Wallet verbinden (Scan, Einfügen, Wallet-App über NWC-07 mit Rückkehr `/#wallet-return`), Erweitert, Einsatz in der Einrichtung, Zahlungszeile im Ergebnis, Bezahlen/Empfangen/Gratulieren als Sheets, Signet aus den unveränderten Originalen.
+- `lib/payments/wallet-return.ts`: „Wallet-App öffnen“ (NWC-07) vermerkt eine zufällige Anfrage (localStorage, 10 Minuten); nur eine Antwort `/#wallet-return=<Anfrage>?value=…` auf diese Anfrage zählt, und nur einmal. Behalten wird die Verbindung erst nach „Diese Wallet verbinden?“ mit Name, Rechten und dem Hinweis, wenn sie die verbundene ersetzt.
+- Journal: Jeder Eintrag nennt die Wallet-Verbindung, die zahlte oder die Rechnung machte (`connection`, Schlüssel der Wallet und der App, nie das Geheimnis). Nur diese Verbindung kann eine Zahlung ausschließen; jede andere kann sie nur bestätigen. Wo die Wallet nicht gefragt werden kann, vermerkt die Person selbst („In deiner Wallet nachgesehen?“, `resolveByHand`; „nicht bezahlt“ erst nach Ablauf). Eine zweite Web-Lock-Sperre je Rechnung verhindert, dass zwei Aktionen dieselbe Rechnung gleichzeitig bezahlen.
+- LNURL-Anfragen haben ein Zeitlimit von 10 s; bis die Wallet die Zahlung hat, heißt es „Zahlungscode wird angefragt“ bzw. „Zahlung wird vorbereitet“ und lässt sich abbrechen (`AbortSignal` in `pay`).
+- `components/payments/`: Zahlungen (Profil), Wallet verbinden (Scan, Einfügen, Wallet-App), Erweitert, Einsatz in der Einrichtung (Zeile mit Texten aus dem Startkatalog, Sheet lädt beim Öffnen), Zahlungszeile im Ergebnis, Bezahlen/Empfangen/Gratulieren als Sheets, Signet aus den unveränderten Originalen. Ergebnis- und Profilzeile stehen hinter `gate.tsx`: Sie laden erst, wenn auf dem Gerät eine Wallet verbunden ist, eine Zahlung im Journal steht oder ein Einsatz vereinbart wurde.
+- Texte: `lib/i18n/features/payments.screens.de/en.ts` (mit `useAreaT(PAYMENTS_TEXTS)`); im Startkatalog nur Bildschirmtitel, die Profilzeile, die Einsatzzeile und „sats“.
 - Gemeinsame Teile, klein gehalten: `LinkKind` „wallet-return“ (`lib/shell/links.ts`, `registry.ts`), `ShareActions` mit `copyLabel`, `SecretPurpose` „wallet-connection“.
 
 ## Fehlerfälle (mit Tests)
 
 Bezahlen, Rechnung erstellen und nachsehen, Timeout nach erfolgter Zahlung (genau eine Zahlung, danach „Status prüfen“), Wallet-Fehler (Guthaben, Budget, Ablehnung), Wallet nur NIP-04, ohne `make_invoice`, Wallet offline, Relay weg, falscher Betrag, abgelaufener Code, Code ohne Betrag, Wallet-Verbindung statt Zahlungscode gescannt, Doppelklick, zweiter Tab, Neustart mitten im Bezahlen, Zap-Belege echt und gefälscht (anderer Signierer, anderer Zap, geändert, anderer Empfänger, anderer Betrag), wiederholte Belege.
+
+## Review-Runde 1
+
+Behoben: unverlangte Wallet-Rückkehr (hoch), „nichts bezahlt“ nach Wallet-Wechsel (hoch), abgeschnittene Ergebniszeile, Sackgasse bei unbekanntem Ausgang ohne `lookup_invoice`, LNURL ohne Zeitlimit, überlappende Abfragen beim Empfangen, Sperre je Rechnung, zweites Fenster bei wiederholbaren Zahlungen, Gastpfad, Großbuchstaben-Rechnungen, doppelte Logik. Browserablauf: [scripts/payments-review1.mjs](../evidence/P7b/scripts/payments-review1.mjs) mit [Bildern](../evidence/P7b/review1/).
 
 ## Ergebnis
 
@@ -41,7 +49,7 @@ Bezahlen, Rechnung erstellen und nachsehen, Timeout nach erfolgter Zahlung (gena
 | nostr-core-Version | 1.0.4 |
 | Ausgeführte Prüfungen | siehe Bericht des Branches: `lint`, `typecheck`, `npm test`, `npm run test:relay`, `build`, Browserablauf [scripts/payments-ui.mjs](../evidence/P7b/scripts/payments-ui.mjs) mit [Bildern](../evidence/P7b/screens/) (320×548 bis 1440×900, hell und dunkel, Deutsch und Englisch) |
 | Nicht ausgeführte Prüfungen | Echte Wallets und echte Beträge (Nutzerfreigabe nötig, OP-19), echter Zap-Empfangsdienst mit CORS (OP-22), Wallet-App-Rücksprung (NWC-07) auf Geräten, Safari/Firefox, VoiceOver |
-| Verbleibende Einschränkungen | Gebühren vor dem Bezahlen sind unbekannt („Je nach Wallet“), da NIP-47 keine Gebührenabfrage kennt. Ein Budget wird nur über Albys `get_budget` angezeigt. Empfang wird nur bei geöffneter App erkannt (F8). |
+| Verbleibende Einschränkungen | Gebühren vor dem Bezahlen sind unbekannt („Je nach Wallet“), da NIP-47 keine Gebührenabfrage kennt. Ein Budget wird nur über Albys `get_budget` angezeigt. Empfang wird nur bei geöffneter App erkannt (F8). Öffnet eine Wallet-App die Antwort in einem anderen Browser als dem, in dem BlueLine läuft (etwa installierte PWA auf iOS), fehlt dort die Anfrage: Die Antwort wird abgelehnt, die Verbindung muss eingefügt werden (auf Geräten nicht geprüft). |
 
 ## Nächster Schritt
 

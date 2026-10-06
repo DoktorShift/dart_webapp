@@ -470,7 +470,12 @@ async function guest(browser) {
     const found = Object.entries(MARKERS).filter(([, marker]) => body.includes(marker)).map(([what]) => what)
     scripts.push({ file: response.url().split("/").pop(), gzip: gzipSync(body).length, payments: found })
   })
-  const phase = (label, from) => log(`guest ${label}:`, scripts.slice(from).map(({ file, gzip, payments }) => `${file} ${gzip}${payments.length ? ` [${payments}]` : ""}`))
+  // Each phase lists only scripts no earlier phase loaded (a reload fetches the same files again).
+  const seen = new Set()
+  const phase = (label, from) => {
+    const added = scripts.slice(from).filter(({ file }) => !seen.has(file) && seen.add(file))
+    log(`guest ${label}:`, added.map(({ file, gzip, payments }) => `${file} ${gzip}${payments.length ? ` [${payments}]` : ""}`))
+  }
   const de = true
   const h = helpers(page, "guest", de)
   await page.goto(BASE)
@@ -487,7 +492,7 @@ async function guest(browser) {
   const beforeResult = scripts.length
   await h.startGame(null)
   await page.waitForTimeout(2000)
-  phase("game and result (setup cached)", beforeResult)
+  phase("game and result", beforeResult)
   await h.shot("result-no-stake")
   log("guest sockets", context.sockets, "foreign", context.foreign)
   await context.close()
