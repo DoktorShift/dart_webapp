@@ -1,36 +1,30 @@
 "use client"
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
+import { lazy, Suspense, useState } from "react"
 import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
-import { Sheet, SheetBody } from "@/components/ui/sheet"
-import { useAreaT, useT } from "@/components/i18n-provider"
-import { AmountPicker } from "@/components/payments/amount-picker"
+import { useT } from "@/components/i18n-provider"
 import { useFormat } from "@/components/payments/format"
-import { LearnMore } from "@/components/payments/learn-more"
-import { PAYMENTS_TEXTS } from "@/lib/i18n/features/payments.screens"
-import { readStake, AMOUNT_PRESETS } from "@/lib/payments/stake"
+import { readStake } from "@/lib/payments/stake"
 import type { SetupExtraProps } from "@/lib/shell/registry"
 
 // "Einsatz" in game setup ("setup.extras"): one row, for two players only. The amount is noted
 // with the game ("Verlierer zahlt"); nothing is paid here, and no wallet is needed to note it.
+// Every two-player setup shows the row, so it carries only its own few texts; the sheet that
+// sets the amount loads when it is first opened.
+const StakeSheet = lazy(() => import("@/components/payments/stake-sheet"))
+
 export default function StakeSetup({ config, value, onChange }: SetupExtraProps) {
   const t = useT()
-  const s = useAreaT(PAYMENTS_TEXTS).stake
+  const s = t.payments.stake
   const format = useFormat()
   const stake = readStake(value)
   const [open, setOpen] = useState(false)
-  const [amount, setAmount] = useState<number | null>(null)
+  const [opened, setOpened] = useState(false)
 
   // A stake is between a winner and a loser: with more players the row steps aside (the value
   // stays, and counts again if it goes back to two).
   if (config.players.length !== 2) return null
-
-  const close = (next: number | null | undefined) => {
-    if (next !== undefined) onChange(next === null ? undefined : { sats: next })
-    setOpen(false)
-  }
 
   return (
     <>
@@ -39,27 +33,16 @@ export default function StakeSetup({ config, value, onChange }: SetupExtraProps)
           title={s.title}
           value={stake ? format.sats(stake.sats) : s.none}
           onClick={() => {
-            setAmount(stake?.sats ?? null)
+            setOpened(true)
             setOpen(true)
           }}
         />
       </Group>
-      <Sheet open={open} onOpenChange={setOpen} title={s.title} description={s.sheetText}>
-        <SheetBody>
-          {open && <AmountPicker label={s.title} presets={AMOUNT_PRESETS} value={amount} onChange={setAmount} />}
-          <div className="mt-4">
-            <LearnMore inline />
-          </div>
-        </SheetBody>
-        <div className="flex shrink-0 flex-col gap-2 pt-4">
-          <Button onClick={() => close(amount)} disabled={amount === null} className="h-12 w-full rounded-xl text-[1.0625rem] font-semibold">
-            {s.apply}
-          </Button>
-          <Button variant="ghost" onClick={() => close(stake ? null : undefined)} className="h-12 w-full rounded-xl text-[1.0625rem]">
-            {stake ? s.remove : t.common.cancel}
-          </Button>
-        </div>
-      </Sheet>
+      {opened && (
+        <Suspense fallback={null}>
+          <StakeSheet open={open} onOpenChange={setOpen} stake={stake} onChange={(next) => onChange(next ?? undefined)} />
+        </Suspense>
+      )}
     </>
   )
 }

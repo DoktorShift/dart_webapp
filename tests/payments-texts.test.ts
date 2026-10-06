@@ -25,7 +25,7 @@ test("payment texts use no protocol words outside Erweitert", () => {
 })
 
 test("one sat, many sats", () => {
-  assert.equal(PAYMENTS_TEXTS.de.sats("1"), "1 sat")
-  assert.equal(PAYMENTS_TEXTS.de.sats("1.000"), "1.000 sats")
-  assert.equal(PAYMENTS_TEXTS.en.sats("21"), "21 sats")
+  assert.equal(MESSAGES.de.payments.sats("1"), "1 sat")
+  assert.equal(MESSAGES.de.payments.sats("1.000"), "1.000 sats")
+  assert.equal(MESSAGES.en.payments.sats("21"), "21 sats")
 })

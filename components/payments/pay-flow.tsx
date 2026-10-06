@@ -254,7 +254,7 @@ export function PayFlow({
             <p className="mt-2 text-[1.0625rem] font-semibold leading-snug [overflow-wrap:anywhere]">{counterpart.name}</p>
             {active && active.kind !== "scan" && !step.scanned && <p className="text-[0.8125rem] text-muted-foreground [overflow-wrap:anywhere]">{p.toAddress(active.address)}</p>}
             <p className="mt-3 font-display text-4xl font-semibold tabular-nums tracking-tight">{amount}</p>
-            {euro && <p className="mt-1 text-[0.8125rem] text-muted-foreground">{format.euro(step.amountMsat / 1000, euro)}</p>}
+            {euro && <p className="mt-1 text-[0.8125rem] text-muted-foreground">{tx.euro(format.euros(step.amountMsat / 1000, euro.rate), format.time(euro.at))}</p>}
           </div>
           <div className="mt-4 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
             <ListRow title={p.fromWallet} value={wallet.alias ?? tx.yourWallet} />

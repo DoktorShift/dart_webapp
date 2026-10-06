@@ -3,7 +3,6 @@ import type { paymentsScreensDe } from "./payments.screens.de.ts"
 
 // English texts of the payments area. Same shape as payments.screens.de.ts.
 export const paymentsScreensEn: Widen<typeof paymentsScreensDe> = {
-  sats: (amount: string) => `${amount} ${amount === "1" ? "sat" : "sats"}`,
   unit: "sats",
   euro: (amount: string, time: string) => `≈ ${amount} · rate from ${time}`,
   amount: {
@@ -234,9 +233,6 @@ export const paymentsScreensEn: Widen<typeof paymentsScreensDe> = {
   },
 
   stake: {
-    title: "Stake",
-    none: "None",
-    hint: "The loser pays the winner.",
     sheetText: "After the game, the loser pays the winner this amount, straight from wallet to wallet. Nothing is paid automatically.",
     apply: "Set Stake",
     remove: "No Stake",

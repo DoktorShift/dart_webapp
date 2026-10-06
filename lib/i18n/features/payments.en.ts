@@ -6,4 +6,10 @@ export const paymentsEn: Messages["payments"] = {
   title: "Payments",
   connectTitle: "Connect Wallet",
   advancedTitle: "Advanced",
+  sats: (amount: string) => `${amount} ${amount === "1" ? "sat" : "sats"}`,
+  stake: {
+    title: "Stake",
+    none: "None",
+    hint: "The loser pays the winner.",
+  },
 }

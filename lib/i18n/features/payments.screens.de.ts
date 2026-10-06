@@ -2,8 +2,6 @@
 // must have the same shape. Normal views name no protocol (no "NWC", "Zap", "Relay"); technical
 // words appear only in `advanced`, the "Erweitert" screen (tests/payments-texts.test.ts).
 export const paymentsScreensDe = {
-  // `amount` comes formatted ("1.000"); one sat is "1 sat".
-  sats: (amount: string) => `${amount} ${amount === "1" ? "sat" : "sats"}`,
   unit: "sats",
   euro: (amount: string, time: string) => `≈ ${amount} · Kurs von ${time} Uhr`,
   // Choosing an amount: a few to tap, or any other typed in.
@@ -250,11 +248,8 @@ export const paymentsScreensDe = {
     otherWallet: "Diesen Code hat eine andere Wallet-Verbindung erstellt. Ob die Zahlung ankam, zeigt die Wallet, die ihn erstellt hat.",
   },
 
-  // The stake: setup and after the game.
+  // The stake: setting it in setup (the row's own texts are in payments.de.ts), and after the game.
   stake: {
-    title: "Einsatz",
-    none: "Keiner",
-    hint: "Der Verlierer zahlt dem Sieger.",
     sheetText: "Der Verlierer zahlt dem Sieger nach dem Spiel diesen Betrag, direkt von Wallet zu Wallet. Nichts wird automatisch bezahlt.",
     apply: "Übernehmen",
     remove: "Kein Einsatz",

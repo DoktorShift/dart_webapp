@@ -110,7 +110,7 @@ function StakeAction({ match, parties, entry }: { match: FinishedMatch; parties:
   return (
     <>
       <PaymentRow label={stakeLabel(tx, format, parties, side, settled)} tone={settled && entryStatus(tx, settled).tone} onClick={() => setOpen(true)} />
-      <Sheet open={open} onOpenChange={(next) => (next ? setOpen(true) : close())} title={s.title} description={s.agreed(parties.payer.name, amount, parties.payee.name)}>
+      <Sheet open={open} onOpenChange={(next) => (next ? setOpen(true) : close())} title={t.payments.stake.title} description={s.agreed(parties.payer.name, amount, parties.payee.name)}>
         <SheetBody>
           {open && shown === "pay" && <PayFlow action={action} once counterpart={payee} amountSats={parties.sats} onDone={close} />}
           {open && shown === "receive" && <ReceiveFlow action={action} once counterpart={payer} amountSats={parties.sats} />}
