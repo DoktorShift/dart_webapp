@@ -7,7 +7,8 @@ import { schnorr } from "@noble/curves/secp256k1"
 import type { NostrEvent } from "nostr-core"
 import { replay } from "../lib/game/engine.ts"
 import { checkBadgeAward, dedupeAwards } from "../lib/protocol/badges.ts"
-import { checkJoin, decodeBoardLink, parseBoardEvent } from "../lib/protocol/board.ts"
+import { checkClaim, checkJoin, decodeBoardLink, parseBoardEvent } from "../lib/protocol/board.ts"
+import { decodeHandoffLink, parseHandoffEvent } from "../lib/protocol/handoff.ts"
 import { assembleChunks, chunkData } from "../lib/protocol/chunks.ts"
 import type { ClubRole } from "../lib/protocol/club.ts"
 import { clubRoleAt, reduceClub } from "../lib/protocol/club-state.ts"
@@ -343,6 +344,12 @@ test("match vectors", async () => {
       assert.deepEqual(Object.fromEntries(Object.entries(s.confirmations).map(([seat, v]) => [seat, v.verdict])), want.confirmations, `${c.name}: confirmations`)
     if (want.stale !== undefined) assert.equal(s.stale.length, want.stale, `${c.name}: stale`)
     if (want.stake) assert.equal(s.agreement.stake?.msat, want.stake, `${c.name}: stake`)
+    if (want.seats)
+      assert.deepEqual(
+        s.seats.map((x) => x && { pubkey: x.pubkey, profile: x.profile }),
+        want.seats.map((x: { key: string; profile: boolean } | null) => x && { pubkey: keys[x.key].pubkey, profile: x.profile }),
+        `${c.name}: seats`,
+      )
     if (want.log) {
       const text = assembleChunks(s.logs[want.log.head], { head: want.log.head, total: want.log.pieces })
       assert.equal(text, want.log.text)
@@ -516,6 +523,53 @@ test("board join vectors", () => {
   assert.equal(smuggled.ok ? "ok" : smuggled.reason, "invalid_content")
   const pkg = open(v.steps.packageToBoard, "board1")
   assert.equal(pkg.ok ? "ok" : pkg.reason, "wrong_flow")
+  const handoffGame = open(v.steps.handoffGameToBoard, "board1")
+  assert.equal(handoffGame.ok ? "ok" : handoffGame.reason, "wrong_flow")
+
+  // Looking at the board: the phone's one-time key asks, the board answers with the seats.
+  const look = open(v.steps.look, "board1")
+  assert.ok(look.ok && look.message.t === "look" && look.from === k.phone2.pubkey)
+  const table = open(v.steps.table, "phone2")
+  assert.ok(table.ok && table.message.t === "table")
+  assert.deepEqual(table.message.seats, [{ alias: "Mia", taken: true }, { alias: "Jonas", taken: false }])
+
+  // A profile joins through its claim on the phone's key: the seat goes to the profile.
+  const claimJoin = open(v.steps.claimJoin, "board1")
+  assert.ok(claimJoin.ok && claimJoin.message.t === "join" && claimJoin.message.profile)
+  const claim = claimJoin.message.profile
+  assert.ok(verifyEvent(claim), "the claim is signed by the profile")
+  const ctx = { board: k.board1.pubkey, sid: v.sid, now: v.now }
+  assert.deepEqual(checkClaim(claim, { ...ctx, from: claimJoin.from }), { ok: true, pubkey: k.p2.pubkey })
+  assert.deepEqual(checkJoin(claimJoin.message, { from: k.p2.pubkey, sid: v.sid, expires: v.expires, now: v.now, seats: [k.p1.pubkey, null] }), { ok: true, seat: 1 })
+  // The same claim from another phone key, at another board, or for another code is worthless.
+  const other = open(v.steps.claimForOtherPhone, "board1")
+  assert.ok(other.ok && other.message.t === "join" && other.message.profile)
+  assert.equal((checkClaim(other.message.profile, { ...ctx, from: other.from }) as { reason: string }).reason, "not_authorized")
+  assert.equal((checkClaim(claim, { ...ctx, board: k.board2.pubkey, from: claimJoin.from }) as { reason: string }).reason, "session_mismatch")
+  assert.equal((checkClaim(claim, { ...ctx, now: v.now + 3601, from: claimJoin.from }) as { reason: string }).reason, "expired_message")
+  const seatWithKey = open(v.steps.seatWithKey, "phone2")
+  assert.ok(seatWithKey.ok && seatWithKey.message.t === "seat")
+  assert.equal(seatWithKey.message.key, k.matchkey.secret)
+
+  // Handing the match to another device: its own code, its own messages.
+  const h = v.handoff
+  assert.equal(decodeHandoffLink(h.link).pubkey, k.board1.pubkey)
+  assert.throws(() => decodeBoardLink(h.link), /wrong_flow/)
+  assert.throws(() => decodeHandoffLink(load("pairing").links.board), /wrong_flow/)
+  assert.equal(h.checkCode, pairingCheckCode(k.board2.pubkey, k.board1.pubkey, h.sid))
+  const openHandoff = (step: Vector, reader: string) => parseHandoffEvent(step.event, { plaintext: decrypt(k[reader].secret, step.event.pubkey, step.event.content), now: v.now })
+  const take = openHandoff(h.take, "board1")
+  assert.ok(take.ok && take.message.t === "take" && take.from === k.board2.pubkey)
+  const game = openHandoff(h.game, "board2")
+  assert.ok(game.ok && game.message.t === "game")
+  const done = openHandoff(h.done, "board1")
+  assert.ok(done.ok && done.message.t === "done")
+  assert.equal(done.message.hash, createHash("sha256").update(JSON.stringify(game.message.data)).digest("hex"))
+  const joinAsHandoff = openHandoff(h.joinAsHandoff, "board1")
+  assert.equal(joinAsHandoff.ok ? "ok" : joinAsHandoff.reason, "wrong_flow")
+  // A handoff message never passes as a board message, nor the other way round.
+  const asBoard = parseBoardEvent(h.take.event, { plaintext: h.take.plaintext, now: v.now })
+  assert.equal(asBoard.ok ? "ok" : asBoard.reason, "wrong_flow")
 })
 
 test("private record vectors", () => {

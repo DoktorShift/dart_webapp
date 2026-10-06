@@ -1,6 +1,6 @@
 # Familie: Sitzungsberechtigung (Match-Gründung und Schreiberwechsel)
 
-Stand: P0.05. Code: [`match.ts`](../../../lib/protocol/match.ts) (`match.session`), [`match-state.ts`](../../../lib/protocol/match-state.ts). Schema: [`schemas/match.schema.json`](../schemas/match.schema.json). Vektoren: [`vectors/match.json`](../vectors/match.json).
+Stand: P4.02 (5. Oktober 2026; P0.05 um den Schreiberwechsel auf ein anderes Gerät ergänzt). Code: [`match.ts`](../../../lib/protocol/match.ts) (`match.session`), [`match-state.ts`](../../../lib/protocol/match-state.ts), [`handoff.ts`](../../../lib/protocol/handoff.ts). Schema: [`schemas/match.schema.json`](../schemas/match.schema.json). Vektoren: [`vectors/match.json`](../vectors/match.json).
 
 ## Zweck
 
@@ -34,10 +34,24 @@ Vereinbarung (`agreement`): `engine` (Regelversion von `lib/game/engine.ts`, heu
 4. **Privat:** `visibility: "private"` verlangt Verschlüsselung mit dem Spielschlüssel aus dem Link (`["enc","nip44",<pubkey>]`), für die Gründung und für jeden weiteren Datensatz des Matches (Live-Stand, Ergebnis, Protokoll, Bestätigung); ein Datensatz im Klartext wird mit `sealing_required` abgelehnt (Vektor `private-match`). Ein Einsatz steht nur in einem privaten, verschlüsselten Match (`stake_requires_private`). Wer den Zuschauerlink hat, kann mitlesen; der Schlüssel lässt sich nicht widerrufen ([privacy.md](../privacy.md)).
 5. **Uhren:** Strfry verwirft Events, die mehr als 900 s in der Zukunft liegen. Ein Tablet mit vorgehender Uhr wäre sonst stumm; Schreiber klemmen `created_at` an die Zeit des Relays ([conflicts.md](../conflicts.md#uhren)). Flüchtige Kinds dienen nie als Warteschlange (PR-11 d).
 
+## Schreiberwechsel auf ein anderes Gerät
+
+„Auf anderem Gerät fortsetzen“ (PLAN.md „Geräte einfach per QR verbinden“): Die Autorität eines Spiels ohne Profil ist ein Schlüssel, den das Board nur für dieses Spiel erzeugt hat. Er zieht mit dem Spiel um, damit das neue Gerät alles kann, was das alte konnte (Plätze verbinden, Ergebnis korrigieren, wieder übergeben).
+
+1. Das schreibende Gerät zeigt einen QR beziehungsweise Link `#handoff=H1.<einmal-pubkey>.<sitzungs-id>.<ablauf>.<relays>`, höchstens 10 Minuten gültig ([pairing.md](pairing.md#links-und-qr-codes)). Ein Board- oder Kopplungscode startet diesen Ablauf nie (`wrong_flow`).
+2. Das andere Gerät öffnet ihn, die Person bestätigt dort „Übernehmen“, und es sendet `take` von einem eigenen Einmalschlüssel.
+3. Beide zeigen dieselbe Prüfkennung aus beiden Einmalschlüsseln und der Sitzungs-ID (dieselbe Rechnung wie beim Koppeln, [pairing.md](pairing.md)). Erst wenn die Person am schreibenden Gerät „Übergeben“ bestätigt, reist das Paket: `game` mit Schlüssel der Autorität, Spielschlüssel, Gründung, aktueller Sitzung, noch nicht verteilten Datensätzen, Stand-Zähler, verbundenen Plätzen und dem Spiel selbst (Regeln, Namen, kompakte Würfe). Den Inhalt bestimmt `lib/live`; er bleibt unter 20 280 Byte.
+4. Das neue Gerät speichert das Spiel und bestätigt mit `done` und dem Hash des Pakets. Erst dann hört das alte Gerät auf zu schreiben und löscht seine Schlüssel des Spiels; ohne `done` behält es das Spiel und zählt weiter.
+5. Das neue Gerät veröffentlicht `match.session` mit `sv` + 1 und einem eigenen neuen Sitzungsschlüssel und schreibt ab dann; ein Ergebnis veröffentlicht die neue Sitzung neu.
+
+Nachrichten (Kind 21180, Label `handoff`, NIP-44 zwischen den Einmalschlüsseln, strikt): `take` (`sid`), `game` (`sid`, `data`), `done` (`sid`, `hash`), `abort` (`sid`, `reason`: `declined`, `expired`, `error`). Kopplungs- und Board-Nachrichten sind hier `wrong_flow`.
+
+Kommt `done` nicht an, obwohl das neue Gerät übernommen hat, zählen beide weiter (zwei Zweige). Das alte Gerät folgt den Sitzungen seines Spiels; sobald es eine höhere Sitzung als die eigene sieht, hört es auf zu schreiben und zeigt, wie weit beide Stände sind ([conflicts.md](../conflicts.md#sitzungen-und-widerruf)). Gültig ist für alle Leser der Zweig der höheren Sitzung.
+
 ## Ablehnungen
 
 `not_authorized`, `stale_predecessor`, `session_unknown`, `session_superseded`, `session_expired`, `session_mismatch`, `sealing_required`, `stake_requires_private`, `wrong_root` (zweite Gründung).
 
 ## Vektoren
 
-`session-handover`, `forged-handover`, `session-window`, `public-stake`, `private-match`; der Versuch eines Sitzungsschlüssels, eine Zahlung anzufordern, steht in [`vectors/payment-request.json`](../vectors/payment-request.json) (`session-key-requests`).
+`session-handover`, `forged-handover`, `session-window`, `public-stake`, `private-match`; Übergabenachrichten in [`vectors/board-join.json`](../vectors/board-join.json) (`handoff`); der Versuch eines Sitzungsschlüssels, eine Zahlung anzufordern, steht in [`vectors/payment-request.json`](../vectors/payment-request.json) (`session-key-requests`).

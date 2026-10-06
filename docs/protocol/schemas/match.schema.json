@@ -402,6 +402,46 @@
       "required": ["set", "seq", "total", "prev", "data"],
       "additionalProperties": true
     },
+    "match.seat": {
+      "description": "Connects a player's phone to a seat after the founding, or frees the seat (player null)",
+      "kind": 1180,
+      "encryption": "link",
+      "type": "object",
+      "properties": {
+        "seat": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5
+        },
+        "player": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "pubkey": {
+                  "type": "string",
+                  "minLength": 64,
+                  "maxLength": 64,
+                  "pattern": "^[0-9a-f]{64}$",
+                  "description": "The key that confirms for this seat from now on"
+                },
+                "profile": {
+                  "type": "boolean",
+                  "description": "The player's profile; false: a key the player's phone made for this match (a guest)"
+                }
+              },
+              "required": ["pubkey", "profile"],
+              "additionalProperties": true
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": ["seat", "player"],
+      "additionalProperties": true
+    },
     "match.confirm": {
       "description": "A player confirms or disputes one exact result",
       "kind": 1180,

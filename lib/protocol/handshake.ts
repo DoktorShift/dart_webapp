@@ -6,13 +6,14 @@ import { SchemaError } from "./schema.ts"
 import type { SignedEvent } from "./tags.ts"
 import { HEX64, isSignedEventShape, oversizedTag, readLabels, tagValue, tagValues } from "./tags.ts"
 
-// Ephemeral handshake messages (kind 21180) shared by device pairing and board join. The
+// Ephemeral handshake messages (kind 21180) shared by device pairing, board join and the writer
+// handoff. The
 // content is NIP-44 encrypted between the two parties (pubkey in the "p" tag); only a pairing
 // announce, which has no recipient yet, is plaintext and carries the lookup tag "x". The
 // message type sits inside the encrypted content; relays see kind, author, recipient and time.
 // Relays do not store these events: senders repeat a message until it is answered.
 
-export type HandshakeDomain = "pair" | "board"
+export type HandshakeDomain = "pair" | "board" | "handoff"
 
 export function handshakeTemplate(domain: HandshakeDomain, opts: { content: string; created_at: number; recipient?: string; lookup?: string }): EventTemplate {
   const tags: string[][] = [
@@ -30,7 +31,7 @@ export type HandshakeParse<M> =
   | { ok: false; reason: Reason; detail: string }
 
 // Checks the envelope and the decrypted (or, for an announce, plain) message. A message from
-// the other domain is "wrong_flow": a board never receives a key package and a pairing never
+// another domain is "wrong_flow": a board never receives a key package and a pairing never
 // takes a seat request.
 export function parseHandshake<M>(
   domain: HandshakeDomain,

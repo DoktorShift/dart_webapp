@@ -3,7 +3,8 @@ import { base64urlnopad } from "@scure/base"
 import { ProtocolError } from "./reasons.ts"
 import { HEX32, HEX64 } from "./tags.ts"
 
-// Payloads of BlueLine links and QR codes (docs/protocol/families/pairing.md, board-join.md).
+// Payloads of BlueLine links and QR codes (docs/protocol/families/pairing.md, board-join.md,
+// session-authorization.md).
 // Links point at "/" and carry everything in the fragment ("#pair=…"), which browsers never
 // send to a server. Each payload starts with its own type letter and format version, so a
 // payload pasted under the wrong key, or a board QR scanned where a pairing QR is expected,
@@ -11,6 +12,7 @@ import { HEX32, HEX64 } from "./tags.ts"
 //
 //   #pair=P1.<one-time pubkey>.<session id>.<expiry>.<relays>
 //   #board=B1.<one-time pubkey>.<session id>.<expiry>.<relays>
+//   #handoff=H1.<one-time pubkey>.<session id>.<expiry>.<relays>
 //   #watch=W1.<match id>.<match key secret or empty>.<relays>
 //   #club=C1.<club id>.<invite event id>.<invite token>.<relays>   (invite parts may be empty)
 //   #tournament=T1.<tournament id>.<relays>
@@ -24,6 +26,7 @@ import { HEX32, HEX64 } from "./tags.ts"
 export type LinkPayload =
   | { type: "pair"; pubkey: string; sid: string; expires: number; relays: string[] }
   | { type: "board"; pubkey: string; sid: string; expires: number; relays: string[] }
+  | { type: "handoff"; pubkey: string; sid: string; expires: number; relays: string[] }
   | { type: "watch"; match: string; key?: string; relays: string[] }
   | { type: "club"; club: string; invite?: string; token?: string; relays: string[] }
   | { type: "tournament"; tournament: string; relays: string[] }
@@ -31,10 +34,10 @@ export type LinkPayload =
 
 export type LinkType = LinkPayload["type"]
 
-const PREFIX: Record<LinkType, string> = { pair: "P1", board: "B1", watch: "W1", club: "C1", tournament: "T1", profile: "U1" }
-const FRAGMENT_KEY: Record<LinkType, string> = { pair: "pair", board: "board", watch: "watch", club: "club", tournament: "tournament", profile: "p" }
+const PREFIX: Record<LinkType, string> = { pair: "P1", board: "B1", handoff: "H1", watch: "W1", club: "C1", tournament: "T1", profile: "U1" }
+const FRAGMENT_KEY: Record<LinkType, string> = { pair: "pair", board: "board", handoff: "handoff", watch: "watch", club: "club", tournament: "tournament", profile: "p" }
 // Fields before the relays, per type.
-const FIELDS: Record<LinkType, number> = { pair: 3, board: 3, watch: 2, club: 3, tournament: 1, profile: 1 }
+const FIELDS: Record<LinkType, number> = { pair: 3, board: 3, handoff: 3, watch: 2, club: 3, tournament: 1, profile: 1 }
 
 export const MAX_LINK_RELAYS = 4
 
@@ -92,6 +95,7 @@ export function encodeLinkPayload(p: LinkPayload): string {
   switch (p.type) {
     case "pair":
     case "board":
+    case "handoff":
       if (!HEX32.test(p.sid)) throw bad("session id")
       fields = [b64(p.pubkey, 32), b64(p.sid, 16), encodeTime(p.expires)]
       break
@@ -130,6 +134,7 @@ export function decodeLinkPayload<T extends LinkType>(expected: T, text: string)
   switch (expected) {
     case "pair":
     case "board":
+    case "handoff":
       payload = { type: expected, pubkey: unb64(fields[0], 32), sid: unb64(fields[1], 16), expires: decodeTime(fields[2]), relays }
       break
     case "watch": {

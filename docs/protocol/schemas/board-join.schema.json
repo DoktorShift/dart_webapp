@@ -1,7 +1,121 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "BlueLine board join messages (decrypted content of kind 21180)",
+  "title": "BlueLine board join and handoff messages (decrypted content of kind 21180, labels board and handoff)",
   "$defs": {
+    "look": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "enum": ["look"]
+        },
+        "sid": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "Session id of the board QR"
+        }
+      },
+      "required": ["t", "sid"],
+      "additionalProperties": false
+    },
+    "table": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "enum": ["table"]
+        },
+        "sid": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "Session id of the board QR"
+        },
+        "match": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Match id"
+        },
+        "rules": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "enum": ["x01", "cricket", "clock"]
+            },
+            "modeId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 16,
+              "pattern": "^[a-z0-9]{1,16}$",
+              "description": "Game mode id, e.g. 501, cricket"
+            },
+            "startScore": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10001,
+              "description": "X01 start score (other games carry what the app set)"
+            },
+            "doubleIn": {
+              "type": "boolean"
+            },
+            "doubleOut": {
+              "type": "boolean"
+            },
+            "cutThroat": {
+              "type": "boolean"
+            },
+            "bullFinish": {
+              "type": "boolean"
+            },
+            "legsToWin": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 11
+            },
+            "setsToWin": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 7,
+              "description": "1 means the match is played in legs only"
+            },
+            "startRule": {
+              "enum": ["alternate", "loser"]
+            }
+          },
+          "required": ["type", "modeId", "startScore", "doubleIn", "doubleOut", "cutThroat", "bullFinish", "legsToWin", "setsToWin", "startRule"],
+          "additionalProperties": true,
+          "description": "Scoring rules (lib/game/types.ts MatchConfig without players and names)"
+        },
+        "seats": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "alias": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40,
+                "pattern": "^\\S(.*\\S)?$",
+                "description": "Public display alias, trimmed"
+              },
+              "taken": {
+                "type": "boolean",
+                "description": "A player's phone is connected to this seat"
+              }
+            },
+            "required": ["alias", "taken"],
+            "additionalProperties": false
+          },
+          "minItems": 1,
+          "maxItems": 6
+        }
+      },
+      "required": ["t", "sid", "match", "rules", "seats"],
+      "additionalProperties": false
+    },
     "join": {
       "type": "object",
       "properties": {
@@ -38,6 +152,60 @@
         "confirm": {
           "type": "boolean",
           "description": "The player wants to confirm the result from the phone"
+        },
+        "profile": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 64,
+              "maxLength": 64,
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "pubkey": {
+              "type": "string",
+              "minLength": 64,
+              "maxLength": 64,
+              "pattern": "^[0-9a-f]{64}$",
+              "description": "Pubkey, lowercase hex"
+            },
+            "created_at": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            "kind": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "maxLength": 1024
+                },
+                "minItems": 1,
+                "maxItems": 16
+              },
+              "maxItems": 32
+            },
+            "content": {
+              "type": "string",
+              "maxLength": 8192
+            },
+            "sig": {
+              "type": "string",
+              "minLength": 128,
+              "maxLength": 128,
+              "pattern": "^[0-9a-f]{128}$",
+              "description": "Schnorr signature"
+            }
+          },
+          "required": ["id", "pubkey", "created_at", "kind", "tags", "content", "sig"],
+          "additionalProperties": true
         }
       },
       "required": ["t", "sid", "seat", "confirm"],
@@ -67,6 +235,13 @@
           "maxLength": 64,
           "pattern": "^[0-9a-f]{64}$",
           "description": "Match id once the match has started"
+        },
+        "key": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Match key of a private match: to follow the match and confirm its result"
         }
       },
       "required": ["t", "sid", "seat"],
@@ -107,6 +282,88 @@
         }
       },
       "required": ["t", "sid"],
+      "additionalProperties": false
+    },
+    "handoff.take": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "enum": ["take"]
+        },
+        "sid": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "Session id of the handoff code"
+        }
+      },
+      "required": ["t", "sid"],
+      "additionalProperties": false
+    },
+    "handoff.game": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "enum": ["game"]
+        },
+        "sid": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "Session id of the handoff code"
+        },
+        "data": {
+          "type": "object",
+          "description": "The match package (lib/live)"
+        }
+      },
+      "required": ["t", "sid", "data"],
+      "additionalProperties": false
+    },
+    "handoff.done": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "enum": ["done"]
+        },
+        "sid": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "Session id of the handoff code"
+        },
+        "hash": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "sha256 of the package data as sent (pairing.ts packageHash)"
+        }
+      },
+      "required": ["t", "sid", "hash"],
+      "additionalProperties": false
+    },
+    "handoff.abort": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "enum": ["abort"]
+        },
+        "sid": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "Session id of the handoff code"
+        },
+        "reason": {
+          "enum": ["declined", "expired", "error"]
+        }
+      },
+      "required": ["t", "sid", "reason"],
       "additionalProperties": false
     }
   }

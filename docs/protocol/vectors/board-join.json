@@ -1,12 +1,46 @@
 {
   "family": "board-join",
-  "description": "Joining a shared board (lib/protocol/board.ts).",
+  "description": "Joining a shared board (lib/protocol/board.ts) and handing a match to another device (lib/protocol/handoff.ts).",
   "generator": "tests/support/make-vectors.ts",
   "format": "Events are signed (BIP-340, zero aux randomness) with keys derived as sha256('blueline-vector:' + name). Content keys, nonces and NIP-44 nonces are fixed. Expected outcomes are written by hand from docs/protocol.",
   "now": 1760000600,
   "sid": "570ca3458c8c450977b7b3979c65dab9",
   "expires": 1760002400,
   "steps": {
+    "look": {
+      "event": {
+        "id": "8a705a758f273f2630a34d0aa5dd4af0b481471ae8457ac9a56af08d9899cff2",
+        "pubkey": "90b1dc9e5dd8065f676e7e6efadc5951ef48d66310172fded825ad212d4dd250",
+        "created_at": 1760000580,
+        "kind": 21180,
+        "tags": [
+          ["L", "blueline"],
+          ["l", "board", "blueline"],
+          ["v", "1"],
+          ["p", "997e2d6c8d07fd802641a6bfc55e8175c8f2eb258c85fbf6864796bf419612de"]
+        ],
+        "content": "AoJjaSycHbTK/N0U+ic13OG7lqXf9jO2i2zEqaR55Ok6tgbU8FRLMQnGkn9UKrIj7So/V6uvm44dOLPPoO/D1Q5ArUX/hyvwuVhkjbs+VT8yWDIBhmaid9Q5JiwVm3LcGNLK5B4od+GYxyqOc/suXDiQvA36mumhH615z7rU/HTISBg=",
+        "sig": "c041b9e248089b008a8a4b9f6c494b1ce2382b190c4741c5266464b637d06a6055220de41df05dfcf59a82b61b2bf5ec02f7588ad8c36461271cf5610cd4ad5f"
+      },
+      "plaintext": "{\"t\":\"look\",\"sid\":\"570ca3458c8c450977b7b3979c65dab9\"}"
+    },
+    "table": {
+      "event": {
+        "id": "ca549fbaebbf70894bbd8e95164fef8638f7bfa8028b3ac0a4fa8d7154bdd971",
+        "pubkey": "997e2d6c8d07fd802641a6bfc55e8175c8f2eb258c85fbf6864796bf419612de",
+        "created_at": 1760000581,
+        "kind": 21180,
+        "tags": [
+          ["L", "blueline"],
+          ["l", "board", "blueline"],
+          ["v", "1"],
+          ["p", "90b1dc9e5dd8065f676e7e6efadc5951ef48d66310172fded825ad212d4dd250"]
+        ],
+        "content": "ApX9yQzeUk1yFsD41fqC5Dj8VeUmiGQ70mKbLWthdcv+RzMC36yOwpXXgcZb1o6323oGMsMEG2zAAavtAbsparAq8R9a+gjzmWjvviMmuByy6TJP3CSwmvYmF42d4bjlUKM3K/OAFBH/a68aBRphwsicCORRFqxndWp775lWm0P/btGkSJa91Iv7zJ1uryHMk2DwwU4tZ4knycnfKQVlGZkHSsxmiqQTyrLf9WhAzXyW0Hzdon1XiVgYG9vC610MM7goANoEwiliCcr1wJ3jK0LTmWHn6h7jg7k9W8TkaqR3mT5Nykxz1RwcVx91THYPhgFKBffsRc/P9Sod8Aj4TJF3fyt9GGHu86evSnXTBir2BslBaBAmLKX64G1J3q4xC6gPBmqYP0jCJy/EyvMOHygBskEk9tAdkCSl1ZG8rNhBujHuZHz94RStOCkHuZne8btz4YJhpE+fmI+kYcQqG1Ra+ZTRnzoAW7ptjbp+b/eBnXtV4GSvSi16HY9AapbaDmvZA6gpXR1tAJAzLpwMO0V4dqx0NCewpS/k7dOL4KSrrflzq0Ycvb1qsRf/Gk3FR6yzFfFQ21Fk8451CwYzhAdBkQ==",
+        "sig": "b9ad46aa3d5f1790e5cf40d8c660e3b25d56919b3e81a79cfc15ed60e3eb52037625d456542618d36d752b5318fe83507d06bbfc7f7369738c44e7304dbeb733"
+      },
+      "plaintext": "{\"t\":\"table\",\"sid\":\"570ca3458c8c450977b7b3979c65dab9\",\"match\":\"42fe1a8cbe49ba60ecbb9226e2cb0b6b80193d80739e14a21536fe83da708b98\",\"rules\":{\"type\":\"x01\",\"modeId\":\"501\",\"startScore\":501,\"doubleIn\":false,\"doubleOut\":true,\"cutThroat\":false,\"bullFinish\":false,\"legsToWin\":1,\"setsToWin\":1,\"startRule\":\"alternate\"},\"seats\":[{\"alias\":\"Mia\",\"taken\":true},{\"alias\":\"Jonas\",\"taken\":false}]}"
+    },
     "join": {
       "event": {
         "id": "b146dd0f2e5cc4b3a419fb331af3f6a3504f27a711ac4172b48d5c3bb0bf1e6b",
@@ -91,12 +125,161 @@
         "sig": "62fc402238e31fdc3c57ee8a405a5642a2528ccaa9dbaeb05eb1efbfdc73a99c1ac290c6ef6e0943337d57029535a98aadd3a709f4a7098fbf6f305a8a5ae2f3"
       },
       "plaintext": "{\"t\":\"package\",\"sid\":\"570ca3458c8c450977b7b3979c65dab9\",\"data\":{\"key\":\"…\"}}"
+    },
+    "claimJoin": {
+      "event": {
+        "id": "95edc6c7fb67a3d416a621557243fadb52d30694ae7bf8e96b5ee18c3349c4b5",
+        "pubkey": "90b1dc9e5dd8065f676e7e6efadc5951ef48d66310172fded825ad212d4dd250",
+        "created_at": 1760000595,
+        "kind": 21180,
+        "tags": [
+          ["L", "blueline"],
+          ["l", "board", "blueline"],
+          ["v", "1"],
+          ["p", "997e2d6c8d07fd802641a6bfc55e8175c8f2eb258c85fbf6864796bf419612de"]
+        ],
+        "content": "ArVZQr4OddsTsLZL3MKIHJ+PdXy/CLwzgMwLWzsPmxEKAeQCvmoFwpwamiCevHZz8MER0XjnjgkfgwEjU2Ok3Id9Dtt9+mh4jDd46S1UdLFCZCYHD5lEK7s0+IeIwYXVhygFc6TVgMCbBR+und+PnWJ7OW12P3Nd0u8LSLHE2BWuUflA2WWxT3cCYHRtD1Rp5jdHiiHR/kiuKj3ueznjyfzKTYfHcMSBgJYksMmWXT1b04KLJ9hPF07nDe6QZhs/ogI7Jciywm100JaNT1hNJegHTSmqIeVDT0JKhXww/Bqn7QKrzClU114guk3/RGI6+sWKB8HSrd3Ik7p1CZqnLJOcB4NXGqME9Q+ecxDbw75SiUoBRhfo4vekCXwne6xcdWuWNnGQbDviM/JNjvfa7E1V1JZ1f6U3/IsatlMVDlyDlltBHj4RAd9qQnA+li024+ke4tQIMeWUul+yx6s8U8Q3l3lF0WxHKKvN3RAH9zanGbSC5ckyOpNISzUHj20APkJP1bDk5gtVt5fu977S1izxe3pZBVyrxA1mzJ2hMm98HkdR/olbrT0RIOwKTYq+sQBGHYtx0BUAH/1wbE9gieVnBx6klrtEdSWPRpbHPm+HOd2rLc21SpwwP2Cxw5U2YQ0mMB6n/Um4FV6fWoqaIwLwl2nIaYZcVSh6+3prg7n+QZw1jX4iiM7twSrOli/A8akPPlcnO+stBNTrXiXhnuYl3yZhAEcJIg/WcIqUwNQPv1k9wwMmFEe1ak1Pt7iIPYJNZHIjyHUaRyGsCn9DHJ1T7RwG6jk72ogGUwz9cLNhzouBdiylZAdfJOrpo3m2MLah1oU0PGvpC79dwojZ+wGsB62WPW5p+kV2sKeOvh9ktmCbjVauMlzoLNbmYsdGzvdnWI6WA0X8q2harXwPwj4jGZUUiMXQ7Bqkx9Zkw5dx3UySvMYfaRS65ganEq91Ed+9aEoQ72K7Oneub4aSQTC07QCR0eu67f7TnUrdvoXpaWaHY3ifTPL8ZGrqwF8jTFC3g9DSTMIcH3xstjljkLBs3J44BT4g0//hy/+fkpM/1hTu7BhfxnO7cgp7GzolxIBT4IDPSI0zOxbaKX7DkF06sA==",
+        "sig": "4fcc6ff653d26b12d260950ce5239709e5856bf649cfc87bf42c903f08bbf631c52b2d035bbd745b85a8ce6f8bd42b8f0cd983bcfdf2f5719f5d46541b867d22"
+      },
+      "plaintext": "{\"t\":\"join\",\"sid\":\"570ca3458c8c450977b7b3979c65dab9\",\"seat\":1,\"confirm\":true,\"profile\":{\"id\":\"74d8eec448ce6972a024502ce549be67acb65b39454de18f84ed08fab50f6bcb\",\"pubkey\":\"a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6\",\"created_at\":1760000585,\"kind\":21180,\"tags\":[[\"L\",\"blueline\"],[\"l\",\"board\",\"blueline\"],[\"v\",\"1\"]],\"content\":\"{\\\"t\\\":\\\"claim\\\",\\\"sid\\\":\\\"570ca3458c8c450977b7b3979c65dab9\\\",\\\"board\\\":\\\"997e2d6c8d07fd802641a6bfc55e8175c8f2eb258c85fbf6864796bf419612de\\\",\\\"key\\\":\\\"90b1dc9e5dd8065f676e7e6efadc5951ef48d66310172fded825ad212d4dd250\\\"}\",\"sig\":\"699928e5bedb9c3c0df73feb893e75b16bdf62b0994df26dea59e6e025e70cd05e1d165dbc4af92f726867185e8ad66b7c0e07a43f5a91a5a9221f19b86319ba\"}}"
+    },
+    "claimForOtherPhone": {
+      "event": {
+        "id": "aba2106513e9d9784624252f249c9d39bae7d7c86db009b10b6f609b4b153ff8",
+        "pubkey": "f3e31fea46fe4eef1ea087baed1c1be063b6b4fd93b8dd670e89128f88b2d8aa",
+        "created_at": 1760000596,
+        "kind": 21180,
+        "tags": [
+          ["L", "blueline"],
+          ["l", "board", "blueline"],
+          ["v", "1"],
+          ["p", "997e2d6c8d07fd802641a6bfc55e8175c8f2eb258c85fbf6864796bf419612de"]
+        ],
+        "content": "Aqd5eMMqR8UrY22ZowHg2t9S8NFWFiWSwOjPYdvTXnDyWkLy73CwyhhI8fwLAma/sdiqgTPpFdyc9FBgCZjNhvvBLNX6sYOs5EC1uhURB9WwaSLHZki1lO0sdYk2aetFZaQUtUJ+ffWeSkeUMasPqwAnBQU7XBEbXorqQ5jZ78TPOYSCM40OL9lWd8znpYiyshSNPzaK9suM7UbVDr4z4NlnRZeFw75n1SHanlMEsGOISzzgPHf+fGl4zz3ovOq7IaRAwzzmzczc0TciXyiFjnt4X+XL+WiL2ammu7gRqwvQ8BUn6a7T72WCIIzTkZQs/eDoCpfanwoWP/4plYaHBc/rxXHfWb35f94pGuyXoCrVffMngUHiFTLp8iRUo7rZr7UvcZsVCS5R17HckP+5uCQyNA5fWXabSgWrsLaQIgagtkyXA0v/w7JpBiEMUYLFstuz4FdRFx3BJHSIuNXo6ysmmlC+n09CU8QEB667jsO3ohq+4lruCdhijpwgmLRqfm2TY1Bs2R/Qokuk4Pl/jRmZjQupQa/T3APR1BX2LKdBJ3PwCZtxvBhRAK39JHydm8BogGsWEm8XWuPShph1u71bqvdyCYxhKC4SjYNCud70cg8PZYIyyIdzIweTDEmOjCvipPOXXVbfx6GYRmpNa0Kb0RpHTd3IhmBogrGDOzevo4Oe5WfITJ8FyLTy6tf5IPPfwH57pXmBlpQhD9rxwcRHZPKctqxqp+CQuo16nYDBi1hdp8DSF3gapZxlN9zOenPJDty4LdHxmjzu/dUocxtLFwN6BeFsKr8qXsaCCo9EanEcT1uI5L3r9jslXKLoQhQtEMDakfs1yiPZpya0FIY2wyjvjM8bOHNOEJpfM8T2BX3Hsg3EctB8mQMfPg1y9dG13lWoQUCQY81LrekTI5p9pH3GZxIbTOrqaPMyxZj0KPNjGPhV3hQI3huMT+hR5xFgh0+2YVAgosn8mcYEPTIVaqnRFUlmdfke2LdWNva3RhCauT1iK85QSKI6dEET7E/nLSiQT0O0Z2w4CAtl+3fV75O7UERJHNrCH3CS4Oo8CK2OPjfHIM/zBeMWV29hs6kzhWArPf6HHlBIUTjutDWNmg==",
+        "sig": "82acad25312f469c595730906637cefc17a30b4f4909142033afa2fb7ce3eafa6c2c59e9c881bcf2283cf12a75739eb7bee6e7922108fac84720504a2fd2368b"
+      },
+      "plaintext": "{\"t\":\"join\",\"sid\":\"570ca3458c8c450977b7b3979c65dab9\",\"seat\":1,\"confirm\":true,\"profile\":{\"id\":\"74d8eec448ce6972a024502ce549be67acb65b39454de18f84ed08fab50f6bcb\",\"pubkey\":\"a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6\",\"created_at\":1760000585,\"kind\":21180,\"tags\":[[\"L\",\"blueline\"],[\"l\",\"board\",\"blueline\"],[\"v\",\"1\"]],\"content\":\"{\\\"t\\\":\\\"claim\\\",\\\"sid\\\":\\\"570ca3458c8c450977b7b3979c65dab9\\\",\\\"board\\\":\\\"997e2d6c8d07fd802641a6bfc55e8175c8f2eb258c85fbf6864796bf419612de\\\",\\\"key\\\":\\\"90b1dc9e5dd8065f676e7e6efadc5951ef48d66310172fded825ad212d4dd250\\\"}\",\"sig\":\"699928e5bedb9c3c0df73feb893e75b16bdf62b0994df26dea59e6e025e70cd05e1d165dbc4af92f726867185e8ad66b7c0e07a43f5a91a5a9221f19b86319ba\"}}"
+    },
+    "seatWithKey": {
+      "event": {
+        "id": "ca535d3b800c74a55f51c4da0285df56feb62faf31f03865b27f81769b0d28ef",
+        "pubkey": "997e2d6c8d07fd802641a6bfc55e8175c8f2eb258c85fbf6864796bf419612de",
+        "created_at": 1760000597,
+        "kind": 21180,
+        "tags": [
+          ["L", "blueline"],
+          ["l", "board", "blueline"],
+          ["v", "1"],
+          ["p", "90b1dc9e5dd8065f676e7e6efadc5951ef48d66310172fded825ad212d4dd250"]
+        ],
+        "content": "Aun4wH4+Wzut4CZ219rRzWspS12cEE/g40UYR8VmUKZvGv49g7rT4ALBZ+sK4NtThPfcv2JzY+kjZPiUfYnDPSWYcZVavIvkmC82JkTRT9wHYvqf0FaAbjk4pf/A+hnq5FJ2RDCxn3verCpsLrkH5zw9lu7BF3YjUSC0/cig6whIpqowvPA4iWyb7MGYwxAfCjsNlUjjXs/e1LWPpJGBpG2pZAzVqzUQK8v0Km27iDZa3j3KmAh6ycoVyrWK7OvKewKwirtwvTHVWbkcxKyq8jFgJ9pUPviFKitEsN2f9b6/f8dRtGyJeoBB2elCCGKC6NnHtAyG0mVg0lgro+/fvnSxjfifmN/LeCXqRh27Tmh+22nztdYV2iQYxn3AjXIhjCgP",
+        "sig": "51a7445cc193f88e92099b13ae53cd070bbe86c77fb8ac14bbf01a9eb84b032617cd7c68d4c890f1f350f0f639d407374552ddc54b144f910f1462e57d7ba746"
+      },
+      "plaintext": "{\"t\":\"seat\",\"sid\":\"570ca3458c8c450977b7b3979c65dab9\",\"seat\":1,\"match\":\"42fe1a8cbe49ba60ecbb9226e2cb0b6b80193d80739e14a21536fe83da708b98\",\"key\":\"c36d92072292f12e780b06c00619020080568e1b1ba01fe1a35f02958a40db3a\"}"
+    },
+    "handoffGameToBoard": {
+      "event": {
+        "id": "4bc73f5ce25a1733de38055e352c3662384095578e92068c3cf8d7133f4802a3",
+        "pubkey": "9b327bd1d88d48198f6dcc47fb34f1242a2eba707e67c55200317f9ca3f7e2bf",
+        "created_at": 1760000598,
+        "kind": 21180,
+        "tags": [
+          ["L", "blueline"],
+          ["l", "board", "blueline"],
+          ["v", "1"],
+          ["p", "997e2d6c8d07fd802641a6bfc55e8175c8f2eb258c85fbf6864796bf419612de"]
+        ],
+        "content": "Aj+Vt2KelLjH/j4R/LLOnV1XVK4j1rh/2UdJmAZ8s5beTpkWJZltgF5C6j5UIolgPQY/vIQWguPGdWRNGYxURHtslE9K4fkbYJa5jeFarNjSmx0zJD07Bc4sB4uZqca/MkDyITMSlfMsq7P0oaRq2HIX96RDkV6WqRNfZbMW1yruFdH2GabQslnGAbdZbZ6tqcL843+N6we0My+0roTVhzkrpCTV+E3QMpH1DGwRRhXcrapmzZjDbSFxDyHYQX9Py0nKx8wJl7HlR2lhg6YguhunCFWpEPLbjnpKoI/5Gzp1Ac8xu79DacDBCpZmsGOSzJW/D/33oV57CSbuIIvCdwm8kw==",
+        "sig": "e8e5533f78549a44c2343cc69a93f66b2f9519b5d29d8ac1818d96251eecac44c5a9ece0a9f87b04dc222e6aa3828d1e20a19769036f10b12e3227b85689d86c"
+      },
+      "plaintext": "{\"t\":\"game\",\"sid\":\"570ca3458c8c450977b7b3979c65dab9\",\"data\":{\"match\":\"f673f3269b8072ced98ca6a2778c49fe44632eee849d26f10d1c3a98d406051c\",\"note\":\"lib/live defines the package\"}}"
+    }
+  },
+  "handoff": {
+    "sid": "fc663434f6673f4eba873eb75420bd42",
+    "link": "H1.mX4tbI0H_YAmQaa_xV6Bdcjy6yWMhfv2hkeWv0GWEt4._GY0NPZnP066hz63VCC9Qg.t3uxdw.nos.lol",
+    "checkCode": "5015 3969",
+    "take": {
+      "event": {
+        "id": "607b9872a37a278974dc7e4c827cded0c48c7d12fb6f1afdbe9897eb1f8a2fba",
+        "pubkey": "9b327bd1d88d48198f6dcc47fb34f1242a2eba707e67c55200317f9ca3f7e2bf",
+        "created_at": 1760000610,
+        "kind": 21180,
+        "tags": [
+          ["L", "blueline"],
+          ["l", "handoff", "blueline"],
+          ["v", "1"],
+          ["p", "997e2d6c8d07fd802641a6bfc55e8175c8f2eb258c85fbf6864796bf419612de"]
+        ],
+        "content": "Ar14siTDJLsyK5A6jlMihH2bsv36f7zfmjjo4cqVFq6cez1g+vdOLTmrUkky2prjCMb60oOZoKAb5kRKnBFpFyjEsRSxuLT0rMK/T8wAG78ASkrzbYTorInqBNDjix2TE77h4ca324tNu78FF7KL4ySo4smGMqP4u/ce3EIRHVJpDtE=",
+        "sig": "c7e31778bb06d411d437f4d0653aaa9c82f3cf37c0a82a5c8384518cda9d25dceedf660da7424be51ef1afa73c035f2197536cadbe700d0239d890534ba4b62d"
+      },
+      "plaintext": "{\"t\":\"take\",\"sid\":\"fc663434f6673f4eba873eb75420bd42\"}"
+    },
+    "game": {
+      "event": {
+        "id": "43ab2ffad8d5489d0e29034197b65d35673dcb4272e986308466d5be8e2d7412",
+        "pubkey": "997e2d6c8d07fd802641a6bfc55e8175c8f2eb258c85fbf6864796bf419612de",
+        "created_at": 1760000611,
+        "kind": 21180,
+        "tags": [
+          ["L", "blueline"],
+          ["l", "handoff", "blueline"],
+          ["v", "1"],
+          ["p", "9b327bd1d88d48198f6dcc47fb34f1242a2eba707e67c55200317f9ca3f7e2bf"]
+        ],
+        "content": "AnHxpNj+wQfRl4cji8mIHZQxt6+L5cj5t1nRH/TBtRTluGFxpJlpIbZR5dTpKR6KZF05JQNXyENBGsmE4c9mtEaL+9ZajiS44L1aA4uVbp9NS+/3NYu+bnfTcNULO/1HP4cFFSZBCOOuaRGnynnYfcskeXH6gvgHn4pLmBaiMyLftK9rsx/0hmtXmPGBL/Sc+7wfMLRxJjY0SLqtRZUQTrPsdMylII88r/Ex105IeGow2hnleXFknt4gXOEmaaZvkEYK5EISbVL7tanANvA3a8QOmx5kU3aLRR41uSWpuuEQrzkNoO/xVRFPyTSvdcUApRGf8HOYTNlBnLLLcGYF+L2z9A==",
+        "sig": "c99be54fe547004619b7fd92050f271fb097b3d526a539eca6966595055c3ed89b2fea0c1206fc4c2899124463d1d38163f25687843e4c53c199ca1bb0eb6c7f"
+      },
+      "plaintext": "{\"t\":\"game\",\"sid\":\"fc663434f6673f4eba873eb75420bd42\",\"data\":{\"match\":\"f673f3269b8072ced98ca6a2778c49fe44632eee849d26f10d1c3a98d406051c\",\"note\":\"lib/live defines the package\"}}"
+    },
+    "done": {
+      "event": {
+        "id": "5c286a0b4166007fe337b457f20d8fc6b1808f856caa4f1164c1e33ef27d8740",
+        "pubkey": "9b327bd1d88d48198f6dcc47fb34f1242a2eba707e67c55200317f9ca3f7e2bf",
+        "created_at": 1760000612,
+        "kind": 21180,
+        "tags": [
+          ["L", "blueline"],
+          ["l", "handoff", "blueline"],
+          ["v", "1"],
+          ["p", "997e2d6c8d07fd802641a6bfc55e8175c8f2eb258c85fbf6864796bf419612de"]
+        ],
+        "content": "AvbYdKXlYsIjuGO+gESbO3PmPBibtylmjb7qeFwwKkJTT1cmw49ssqkLlirq3n2dFRIJbHpjqKgFG4uweCx4RVcpq4IeuJasAUoNrkuxtZBiQFLqGFppM7iAqWTGHXN7Bp4BZtF7v5uu2giZrLMEPsbYBYx0UdVokldqdjx3+LtzJU82Qhs9kysKywi5XZT09avfJ+M+g2kh5QBPbzcg0ADMIhU/utjR7tz904GK4UB4aXchdlwE/mvk28nyd/OyXmS4",
+        "sig": "1b5a94c52b05409b609c0f5cabc541295092954e90d9da63dda355a67e79a2780d302c131fff70f94c776abac3d5731147f84ecc444f912b8b1e0016bd2116a3"
+      },
+      "plaintext": "{\"t\":\"done\",\"sid\":\"fc663434f6673f4eba873eb75420bd42\",\"hash\":\"3822a0177a3fdf8075f8b14f8227f09c8716d59a990c93a3156fcca49cac67c9\"}"
+    },
+    "joinAsHandoff": {
+      "event": {
+        "id": "0fa4d08e958c3981e3876e895e6f7ec0b56d1a61635c9bc19d0165fb9f3a16f9",
+        "pubkey": "9b327bd1d88d48198f6dcc47fb34f1242a2eba707e67c55200317f9ca3f7e2bf",
+        "created_at": 1760000613,
+        "kind": 21180,
+        "tags": [
+          ["L", "blueline"],
+          ["l", "handoff", "blueline"],
+          ["v", "1"],
+          ["p", "997e2d6c8d07fd802641a6bfc55e8175c8f2eb258c85fbf6864796bf419612de"]
+        ],
+        "content": "AtFTyhFk8ZefFendFIw/cTku7Qr2WuxwOXDvD6jCH5Dz9R6usI2WbbOiXFdjoCqiAYVtgE48cr6FCyO1OEZ7GAWedHQ5Sn8YWuCAHpimCPah/3beAfv8It9jEkPkUkKf0/fS/8Fg9HpOKFaaIaYwAHt02QmCgbl0ZDececykcoHy0m/Ous05W6G9uiQMcF+u3T+4NTTOoXkXfS8FQxvAd7Iv9g==",
+        "sig": "1d70bcc443b1c280370e86bf54fda6e07188381f0c52b1a7a8c940418870668c871479d24cd650fae6fba0437f3778115e7575bede2e7a5c72c9624391e645e3"
+      },
+      "plaintext": "{\"t\":\"join\",\"sid\":\"fc663434f6673f4eba873eb75420bd42\",\"seat\":0,\"confirm\":true}"
     }
   },
   "keys": {
     "board1": {
       "secret": "a4230859fd70476858b95381afa37a69c93d5c95f0dc86b1f0b3780c44b52860",
       "pubkey": "997e2d6c8d07fd802641a6bfc55e8175c8f2eb258c85fbf6864796bf419612de"
+    },
+    "board2": {
+      "secret": "e1d0f7a6fe111cf9c6705ed7ed15313b3b84e642442ec7960a18b30b0cd43bcd",
+      "pubkey": "9b327bd1d88d48198f6dcc47fb34f1242a2eba707e67c55200317f9ca3f7e2bf"
+    },
+    "matchkey": {
+      "secret": "c36d92072292f12e780b06c00619020080568e1b1ba01fe1a35f02958a40db3a",
+      "pubkey": "3a908ceddf7b64be138028bb48aa105acbb9e22b83ed7d869ea5391c7b0e067d"
     },
     "p1": {
       "secret": "5f376707328cb0702d59a27465f39f418af2e6d728638ec9416ffc415b55aa31",
@@ -105,6 +288,14 @@
     "p2": {
       "secret": "6fa792f67001e89db0f94b1d158b5b87f43ce5a7f68a551bf2684f9373dc0be9",
       "pubkey": "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6"
+    },
+    "phone2": {
+      "secret": "8080af770296177c9b924619e060579ec5b1599c5cffd904d286c22dea1481fd",
+      "pubkey": "90b1dc9e5dd8065f676e7e6efadc5951ef48d66310172fded825ad212d4dd250"
+    },
+    "phone3": {
+      "secret": "9c43a376bbec36e5aeac535c441b9f7c5e42545f3a74c92481d69c1705535df3",
+      "pubkey": "f3e31fea46fe4eef1ea087baed1c1be063b6b4fd93b8dd670e89128f88b2d8aa"
     }
   }
 }
