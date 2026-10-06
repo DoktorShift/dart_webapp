@@ -86,6 +86,7 @@ test("canOpenLink tells handled links from ones this version can't open", () => 
 test("slot lists are empty until an area registers a piece", () => {
   assert.deepEqual(getSlotItems("result.actions"), [])
   assert.deepEqual(getSlotItems("setup.extras"), [])
+  assert.deepEqual(getSlotItems("play.rows"), [])
 })
 
 test("slot list pieces keep their registration order; the same id again replaces in place", () => {

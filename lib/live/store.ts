@@ -1,3 +1,4 @@
+import { MAX_SESSION_SECONDS, type Agreement } from "../protocol/match.ts"
 import type { SeatHolder } from "../protocol/match-state.ts"
 import type { SignedEvent } from "../protocol/tags.ts"
 import { openSecret, sealSecret, type SealedSecret } from "../profile/vault.ts"
@@ -47,6 +48,11 @@ export interface JoinedRecord extends Keyed {
   match: string
   relays: string[]
   seat: number
+  // When the seat was given (ms), and the game as the board offered it, so the Play tab can name
+  // it without the relays.
+  at: number
+  rules: Agreement["rules"]
+  aliases: string[]
   // The profile the phone joined with; null: as a guest, with the key in `keys`.
   profile: string | null
   // The match key, and a guest's own key (JoinedSecrets), sealed.
@@ -63,6 +69,9 @@ export interface JoinedSecrets {
 const boardId = (local: string) => `live:board:${local}`
 const joinedId = (match: string) => `live:joined:${match}`
 const BOARD_PREFIX = "live:board:"
+const JOINED_PREFIX = "live:joined:"
+// A seat is remembered as long as a match's session can last; afterwards the game is long over.
+const JOINED_KEEP_MS = MAX_SESSION_SECONDS * 1000
 
 export const sealKeys = async (secrets: BoardSecrets | JoinedSecrets) => sealSecret(new TextEncoder().encode(JSON.stringify(secrets)), "match-keys")
 
@@ -82,3 +91,11 @@ export const listBoards = async () => (await dbGetAll<BoardRecord>("pending")).f
 export const loadJoined = async (match: string) => (await dbGet<JoinedRecord>("pending", joinedId(match))) ?? null
 export const saveJoined = (record: Omit<JoinedRecord, "id">) => dbPut("pending", { ...record, id: joinedId(record.match) })
 export const dropJoined = (match: string) => dbDelete("pending", joinedId(match))
+
+// The seats this phone holds, newest first; seats older than a day are forgotten on the way.
+export async function recentJoined(now = Date.now()): Promise<JoinedRecord[]> {
+  const all = (await dbGetAll<JoinedRecord>("pending")).filter((r) => r.id.startsWith(JOINED_PREFIX))
+  const stale = all.filter((r) => !(r.at > now - JOINED_KEEP_MS))
+  if (stale.length > 0) await dbDelete("pending", stale.map((r) => r.id)).catch(() => {})
+  return all.filter((r) => !stale.includes(r)).sort((a, b) => b.at - a.at)
+}

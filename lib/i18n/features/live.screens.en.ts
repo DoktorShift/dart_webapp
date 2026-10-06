@@ -69,6 +69,11 @@ export const liveScreensEn: Widen<typeof liveScreensDe> = {
   confirmations: (confirmed, connected) => `${confirmed} of ${connected} confirmed`,
   disputes: (count) => (count === 1 ? "1 dispute" : `${count} disputes`),
 
+  joined: {
+    title: (game) => `At the board: ${game}`,
+    confirmed: "Result confirmed",
+  },
+
   watch: {
     invalid: "This link doesn't lead to a game.",
     connecting: "Loading the game",
@@ -117,6 +122,8 @@ export const liveScreensEn: Widen<typeof liveScreensDe> = {
     leave: "Pick another seat",
     leaveRefused: "The request wasn't approved. You keep your seat.",
     freed: "The board disconnected you from your seat.",
+    lost: "No longer connected to the board",
+    lostText: "The board disconnected your seat. Ask the board to show its code to connect again.",
     otherProfile: "You're now signed in with a different profile than when you connected. Only the profile you connected with can confirm.",
   },
 

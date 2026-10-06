@@ -69,6 +69,12 @@ export const liveScreensDe = {
   confirmations: (confirmed: number, connected: number) => `${confirmed} von ${connected} bestätigt`,
   disputes: (count: number) => (count === 1 ? "1 Widerspruch" : `${count} Widersprüche`),
 
+  // The Play tab's row for a seat at a board: "Am Board: 301, Double Out" with the seat's state.
+  joined: {
+    title: (game: string) => `Am Board: ${game}`,
+    confirmed: "Ergebnis bestätigt",
+  },
+
   watch: {
     invalid: "Dieser Link führt zu keinem Spiel.",
     connecting: "Spiel wird geladen",
@@ -117,6 +123,8 @@ export const liveScreensDe = {
     leave: "Anderen Platz wählen",
     leaveRefused: "Die Anfrage wurde nicht bestätigt. Du bleibst auf deinem Platz.",
     freed: "Das Board hat dich von deinem Platz getrennt.",
+    lost: "Nicht mehr mit dem Board verbunden",
+    lostText: "Das Board hat deinen Platz getrennt. Lass dir am Board den Code zeigen, um dich neu zu verbinden.",
     otherProfile: "Du bist jetzt mit einem anderen Profil angemeldet als beim Verbinden. Bestätigen kann nur das Profil, mit dem du verbunden bist.",
   },
 

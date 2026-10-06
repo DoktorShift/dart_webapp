@@ -2,12 +2,14 @@
 
 import { lazy, useEffect, useState, useSyncExternalStore } from "react"
 import type { SavedMatch } from "@/lib/game/types"
-import { listBoards, loadBoard } from "@/lib/live/store"
+import { listBoards, loadBoard, recentJoined, type JoinedRecord } from "@/lib/live/store"
 import type { FinishedMatch } from "@/lib/shell/registry"
+import { onStorageChange } from "@/lib/storage/db"
 
-// The always-loaded part of the live area on the game screen: it decides whether the live code
-// is needed at all. A game that was never made live, the guest's usual game, costs one small
-// read from the device's database and nothing else: no live code, no connection.
+// The always-loaded part of the live area on the game screen and the Play tab: it decides
+// whether the live code is needed at all. A game that was never made live, the guest's usual
+// game, costs one small read from the device's database and nothing else: no live code, no
+// connection. The same for a device that never joined a board.
 
 export type LiveSheet = "watch" | "players" | "handoff"
 
@@ -62,8 +64,27 @@ function useLeftoverBoards(match: string) {
   }, [match])
 }
 
+// The seats this phone holds at boards, read once and again whenever the records change.
+function useJoinedSeats(): JoinedRecord[] {
+  const [records, setRecords] = useState<JoinedRecord[]>([])
+  useEffect(() => {
+    let current = true
+    const load = () => void recentJoined().then((found) => current && setRecords(found), () => {})
+    load()
+    const stop = onStorageChange((message) => {
+      if (message.type === "wipe" || message.stores.includes("pending")) load()
+    })
+    return () => {
+      current = false
+      stop()
+    }
+  }, [])
+  return records
+}
+
 const LiveGame = lazy(() => import("@/components/live/live-game"))
 const Confirmations = lazy(() => import("@/components/live/confirmations"))
+const JoinedRows = lazy(() => import("@/components/live/joined-rows"))
 
 // "game.attachments": the live game with its sheets, once the game is live or a sheet is asked for.
 export function LiveGate({ match, close }: { match: SavedMatch; close: () => void }) {
@@ -78,4 +99,10 @@ export function LiveGate({ match, close }: { match: SavedMatch; close: () => voi
 export function LiveResultGate({ match }: { match: FinishedMatch }) {
   const [live] = useLiveHere(match.id)
   return live ? <Confirmations match={match} /> : null
+}
+
+// "play.rows": the way back to a seat at a board, once this phone holds one.
+export function JoinedGate() {
+  const records = useJoinedSeats()
+  return records.length > 0 ? <JoinedRows records={records} /> : null
 }

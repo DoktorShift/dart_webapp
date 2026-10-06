@@ -309,7 +309,8 @@ test("a seat given back after a reload is freed on the board; a seat someone els
   await until("the other phone on the board", () => holders()?.[0] === otherKey)
   // The first phone's memory, as its own database would keep it (one database here stands for
   // both phones, so the other phone's record has to give way).
-  await store.saveJoined({ match: mine.joined.match, relays: mine.joined.relays, seat: 0, profile: null, keys: await store.sealKeys({ match: bytesToHex(mine.joined.key!.secret), guest: bytesToHex(mine.joined.guest!.secret) }), archived: null })
+  const theirs = (await store.loadJoined(mine.joined.match))!
+  await store.saveJoined({ ...theirs, seat: 0, profile: null, keys: await store.sealKeys({ match: bytesToHex(mine.joined.key!.secret), guest: bytesToHex(mine.joined.guest!.secret) }), archived: null })
   const fourth = visit()
   const restored = await until("the seat restored for the first phone", () => seatedAs(fourth.get()))
   assert.equal(restored.restored, true)
@@ -323,6 +324,15 @@ test("a seat given back after a reload is freed on the board; a seat someone els
   const chosen = await until("the seats with the hint", () => tableOf(fourth.get()))
   assert.equal(chosen.freed, true)
   assert.equal(chosen.table.seats[0].taken, true)
+  assert.equal(await store.loadJoined(restored.joined.match), null)
+
+  // The Play tab lists a seat with the game as the board offered it, for as long as the match
+  // can run; a day later it is forgotten.
+  await fourth.control.join(1, null)
+  const listed = await until("the seat on the Play tab", async () => (await store.recentJoined()).find((r) => r.match === restored.joined.match))
+  assert.deepEqual(listed.aliases, ["Mia", "Jonas"])
+  assert.equal(listed.seat, 1)
+  assert.deepEqual(await store.recentJoined(Date.now() + 2 * 24 * 60 * 60 * 1000), [])
   assert.equal(await store.loadJoined(restored.joined.match), null)
 })
 

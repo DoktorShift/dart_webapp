@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Clock, Smartphone, WifiOff } from "lucide-react"
 import { InlineStatus } from "@/components/common/inline-status"
 import { readPayload } from "@/components/live/link-payload"
-import { MatchView, useFollowed } from "@/components/live/match-view"
+import { MatchView } from "@/components/live/match-view"
+import { useSeat } from "@/components/live/use-seat"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { LIVE_TEXTS } from "@/lib/i18n/features/live.screens"
 import {
@@ -23,26 +24,35 @@ import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
 import { rulesSummary } from "@/lib/game/words"
 import { offeredGame } from "@/lib/live/content"
-import { giveVerdict, holdsSeat, keepConfirmed, seatKey, visitBoard, type BoardSeats, type BoardVisit, type BoardVisitControl, type JoinedMatch } from "@/lib/live/join"
-import { toHex } from "@/lib/live/keys"
+import { giveVerdict, loadSeat, seatKey, visitBoard, type BoardSeats, type BoardVisit, type BoardVisitControl, type JoinedMatch } from "@/lib/live/join"
+import { dropJoined } from "@/lib/live/store"
 import type { Followed } from "@/lib/live/follow"
 import type { Signer } from "@/lib/nostr/types"
 import { getSigner, useSession } from "@/lib/profile/session"
+import type { BoardLink } from "@/lib/protocol/board"
 import type { ScreenProps } from "@/lib/shell/registry"
 
-// "Am Board mitspielen" (/#board=…), on a player's own phone: pick a seat at the board, follow
-// the game there, and give the seat's verdict on the result. With a profile the profile only
-// signs (a claim, a verdict); its key and wallet never leave the phone.
+// "Am Board mitspielen", on a player's own phone: pick a seat at the board, follow the game
+// there, and give the seat's verdict on the result. With a profile the profile only signs (a
+// claim, a verdict); its key and wallet never leave the phone. Opened with a board code
+// (/#board=…, params.payload), or from the Play tab's row for a seat this phone already holds
+// (params.match).
 export default function BoardScreen({ params }: ScreenProps) {
   const tx = useAreaT(LIVE_TEXTS)
-  const b = tx.board
   const link = useMemo(() => readPayload("board", params.payload), [params.payload])
+  if (link) return <VisitScreen link={link} />
+  if (params.match) return <StoredSeatScreen match={params.match} />
+  return <EmptyState icon={Smartphone} title={tx.board.invalid} />
+}
+
+function VisitScreen({ link }: { link: BoardLink }) {
+  const tx = useAreaT(LIVE_TEXTS)
+  const b = tx.board
   const [visit, setVisit] = useState<BoardVisit>({ step: "looking" })
   const [attempt, setAttempt] = useState(0)
   const control = useRef<BoardVisitControl | null>(null)
 
   useEffect(() => {
-    if (!link) return
     const current = visitBoard(link, setVisit)
     control.current = current
     return () => {
@@ -53,7 +63,6 @@ export default function BoardScreen({ params }: ScreenProps) {
   const leave = useCallback((profile: Signer | null) => control.current?.leave(profile) ?? Promise.resolve(), [])
   const lost = useCallback(() => void control.current?.forget(), [])
 
-  if (!link) return <EmptyState icon={Smartphone} title={b.invalid} />
   switch (visit.step) {
     case "looking":
       return (
@@ -70,6 +79,36 @@ export default function BoardScreen({ params }: ScreenProps) {
     default:
       return <SeatPicker visit={visit} control={control} />
   }
+}
+
+// The seat from this phone's memory: without the board's code at hand it can be followed and
+// the result confirmed, not changed.
+function StoredSeatScreen({ match }: { match: string }) {
+  const tx = useAreaT(LIVE_TEXTS)
+  const [joined, setJoined] = useState<JoinedMatch | null | undefined>(undefined)
+  useEffect(() => {
+    let current = true
+    void loadSeat(match).then(
+      (seat) => current && setJoined(seat),
+      () => current && setJoined(null),
+    )
+    return () => {
+      current = false
+    }
+  }, [match])
+  const lost = useCallback(() => {
+    void dropJoined(match).catch(() => {})
+    setJoined(null)
+  }, [match])
+
+  if (joined === undefined)
+    return (
+      <p role="status" className="py-12 text-center text-[0.9375rem] text-muted-foreground">
+        {tx.watch.connecting}
+      </p>
+    )
+  if (joined === null) return <EmptyState icon={Smartphone} title={tx.board.lost} description={tx.board.lostText} />
+  return <Seated joined={joined} restored onLost={lost} />
 }
 
 function SeatPicker({ visit, control }: { visit: Extract<BoardVisit, { step: "table" | "joining" }>; control: { current: BoardVisitControl | null } }) {
@@ -115,8 +154,8 @@ function SeatPicker({ visit, control }: { visit: Extract<BoardVisit, { step: "ta
   )
 }
 
-// The seat with the game at the board. `restored`: the seat comes from this phone's memory.
-// Without `onLeave` (opened from the Play tab, no board code at hand) the seat can't be changed.
+// The seat with the game at the board (useSeat). `restored`: the seat comes from this phone's
+// memory. Without `onLeave` the seat can't be changed.
 function Seated({
   joined: initial,
   restored,
@@ -130,24 +169,9 @@ function Seated({
 }) {
   const tx = useAreaT(LIVE_TEXTS)
   const b = tx.board
-  const [joined, setJoined] = useState(initial)
   const [refused, setRefused] = useState(false)
-  const followed = useFollowed({ match: joined.match, key: joined.key ? toHex(joined.key.secret) : null, relays: joined.relays })
+  const { joined, followed, lost } = useSeat(initial, restored)
   const state = followed.state
-
-  // The player's own games follow the result they confirmed (lib/live/join.ts).
-  useEffect(() => {
-    if (state) void keepConfirmed(joined, state).then(setJoined, () => {})
-  }, [state, joined])
-
-  // The board's answer is proof enough for a seat given just now; the match shows it a moment
-  // later. A seat restored from memory counts only once the match shows this phone's key on it:
-  // the board's "taken" says nothing about whose it is. Either way, the seat is lost once the
-  // relays have told everything and the key on it is not this phone's.
-  const holds = state !== null && holdsSeat(joined, state)
-  const [held, setHeld] = useState(restored)
-  if (holds && !held) setHeld(true)
-  const lost = followed.settled && held && state !== null && !holds
   useEffect(() => {
     if (lost) onLost()
   }, [lost, onLost])

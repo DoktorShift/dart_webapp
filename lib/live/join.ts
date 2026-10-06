@@ -134,7 +134,7 @@ export function visitBoard(link: BoardLink, onChange: (visit: BoardVisit) => voi
       stop()
       const key = message.key ? await keyOf(fromHex(message.key)) : null
       const guest = pending.profile ? null : (channel?.key ?? null)
-      seated = await rememberJoined({ match: table.match, relays: link.relays, seat: message.seat, profile: pending.profile, key, guest, archived: null })
+      seated = await rememberJoined({ match: table.match, relays: link.relays, seat: message.seat, profile: pending.profile, key, guest, archived: null }, table)
       pending = null
       left = null
       freed = false
@@ -213,12 +213,14 @@ export function visitBoard(link: BoardLink, onChange: (visit: BoardVisit) => voi
   }
 }
 
-// Keeps the seat for coming back to it (and, as a guest, its key); what this device put into its
-// own games of the match stays known.
-async function rememberJoined(joined: JoinedMatch): Promise<JoinedMatch> {
+// Keeps the seat for coming back to it (and, as a guest, its key) with the game as the board
+// offered it; what this device put into its own games of the match stays known.
+async function rememberJoined(joined: JoinedMatch, table: BoardSeats): Promise<JoinedMatch> {
   const secrets: JoinedSecrets = { ...(joined.key ? { match: toHex(joined.key.secret) } : {}), ...(joined.guest ? { guest: toHex(joined.guest.secret) } : {}) }
   const archived = (await loadJoined(joined.match).catch(() => null))?.archived ?? null
-  await saveJoined({ match: joined.match, relays: joined.relays, seat: joined.seat, profile: joined.profile, keys: await sealKeys(secrets), archived }).catch(() => {})
+  const { match, relays, seat, profile } = joined
+  const game = { at: Date.now(), rules: table.rules, aliases: table.seats.map((s) => s.alias) }
+  await saveJoined({ match, relays, seat, profile, ...game, keys: await sealKeys(secrets), archived }).catch(() => {})
   return { ...joined, archived }
 }
 

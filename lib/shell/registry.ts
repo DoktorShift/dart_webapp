@@ -41,6 +41,12 @@
 //                       their game menu item, say) and effects that follow the game (sending it
 //                       to spectators). Gets { match, close }: the game as saved, and a way to
 //                       leave it for good without keeping it here (it went on on another device).
+//     "play.rows"       On the Play tab, between the last game's card and the kinds of game: a
+//                       game that goes on elsewhere and still concerns this device (a seat at a
+//                       board). No props. One Group of rows, or nothing at all; the practice
+//                       board above gives way to it. Nothing here may slow the tab down: read
+//                       the device's database once, and load the rest only when there is
+//                       something to show.
 // - Game menu items: entries at the end of the running game's options menu (the "…" button), each
 //   { id, label, icon?, onSelect }. onSelect gets the running game; the menu closes first.
 //   Nothing else on the game screen can be changed from outside.
@@ -277,6 +283,7 @@ export interface SetupPlayersProps {
 export interface SlotListProps {
   "result.actions": { match: FinishedMatch }
   "game.attachments": { match: SavedMatch; close: () => void }
+  "play.rows": Record<string, never>
   "setup.extras": SetupExtraProps
   "setup.players": SetupPlayersProps
   "profile.rows": Record<string, never>
@@ -293,6 +300,7 @@ export interface SlotItem<K extends SlotListId> {
 const slotLists: { [K in SlotListId]: Map<string, ComponentType<SlotListProps[K]>> } = {
   "result.actions": new Map(),
   "game.attachments": new Map(),
+  "play.rows": new Map(),
   "setup.extras": new Map(),
   "setup.players": new Map(),
   "profile.rows": new Map(),
