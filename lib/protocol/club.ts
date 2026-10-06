@@ -107,6 +107,20 @@ const date = refine(
   (v) => (v.ends !== undefined && v.ends <= v.starts ? "ends before it starts" : null),
 )
 
+// A game members played for the club (lib/clubs): its match, and in a closed club the secret of
+// that private match's key, so every member reads it. Any member names the games they hosted;
+// whether one counts for a season follows the season's rules and the leaders' decisions
+// (club.result). Without these records a club's matches could not be found: match records name
+// their match, not the club.
+const game = obj({
+  match: eventId("Match id: the match.session (sv 1) that founded it"),
+  key: opt(hex(32, "Secret of the private match's key (link key); only sealed, in a closed club")),
+})
+
+// A member's answer to a club date; their newest answer counts. Public clubs answer their
+// NIP-52 dates with NIP-52 RSVPs instead (lib/clubs).
+const rsvp = obj({ date: objectId("club.date id"), answer: oneOf(["yes", "maybe", "no"]) })
+
 const rec = <S extends Schema<unknown>>(schema: S, description: string, extra: Partial<Pick<RecordSpec, "root" | "encryption" | "encrypted">> = {}) => ({
   kind: KIND_RECORD,
   root: "required" as const,
@@ -160,6 +174,8 @@ export const CLUB_TYPES = {
   "club.season.end": rec(obj({ season: objectId() }), "Ends a season"),
   "club.result": rec(result, "Decides whether a match result counts for a season"),
   "club.date": rec(date, "Creates, changes or cancels a club date"),
+  "club.game": rec(game, "Names a game members played for the club, with the key of a private match"),
+  "club.rsvp": rec(rsvp, "A member answers a club date"),
 } satisfies Record<string, RecordSpec>
 
 // Records a closed club may carry in the clear: a join comes from someone who is not a member

@@ -210,3 +210,41 @@ test("demotion: the pin covers the admin's records since their appointment, neve
     [[about2.id, "superseded"]],
   )
 })
+
+test("members name club games and answer dates; outsiders, repeats and keys in the clear count for nothing", () => {
+  const found = signed(owner, "club.found", { name: "Dartfreunde Nord", visibility: "public" }, 0)
+  const ask = signed(alice, "club.join", {}, 10, found.id)
+  const accept = signed(owner, "club.accept", { request: ask.id, member: alice.pubkey }, 20, found.id)
+  const match = "ab".repeat(32)
+  const game = signed(alice, "club.game", { match }, 30, found.id)
+  const again = signed(owner, "club.game", { match }, 31, found.id)
+  const stranger = signed(other, "club.game", { match: "cd".repeat(32) }, 32, found.id)
+  const leaked = signed(owner, "club.game", { match: "ef".repeat(32), key: "11".repeat(32) }, 33, found.id)
+  const day = "0a".repeat(16)
+  const early = signed(alice, "club.rsvp", { date: day, answer: "yes" }, 35, found.id)
+  const date = signed(owner, "club.date", { date: day, title: "Clubabend", starts: NOW + 86400, prev: found.id }, 40, found.id)
+  const yes = signed(alice, "club.rsvp", { date: day, answer: "yes" }, 50, found.id)
+  const no = signed(alice, "club.rsvp", { date: day, answer: "no" }, 60, found.id)
+  const moved = signed(owner, "club.date", { date: day, title: "Clubabend", starts: NOW + 90000, prev: date.id }, 70, found.id)
+  const outsider = signed(other, "club.rsvp", { date: day, answer: "yes" }, 80, found.id)
+  const result = reduceClub([found, ask, accept, game, again, stranger, leaked, early, date, yes, no, moved, outsider], found.id, { now: NOW + 100 })
+  assert.ok(result.state)
+  const s = result.state
+  assert.deepEqual(Object.keys(s.games), [match])
+  assert.equal(s.games[match].by, alice.pubkey)
+  const reason = (id: string) => s.log.rejected.find((r) => r.id === id)?.reason
+  assert.equal(reason(again.id), "duplicate")
+  assert.equal(reason(stranger.id), "not_member")
+  assert.equal(reason(leaked.id), "invalid_content")
+  assert.equal(reason(outsider.id), "not_member")
+  // An answer to a date this reader doesn't have yet waits; the newest answer counts and stays
+  // when the date moves.
+  assert.equal(s.log.unapplied.find((u) => u.id === early.id)?.why, "waiting")
+  assert.equal(s.dates[day].starts, NOW + 90000)
+  assert.deepEqual(s.dates[day].answers[alice.pubkey], { answer: "no", at: NOW + 60, event: no.id })
+
+  const archive = signed(owner, "club.update", { prev: found.id, archived: true }, 90, found.id)
+  const late = signed(alice, "club.game", { match: "12".repeat(32) }, 95, found.id)
+  const archived = reduceClub([found, ask, accept, archive, late], found.id, { now: NOW + 100 })
+  assert.equal(archived.state?.log.rejected.find((r) => r.id === late.id)?.reason, "club_archived")
+})

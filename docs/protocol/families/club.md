@@ -41,11 +41,19 @@ Versiegelt wird nach dem Umschlag in [kinds.md](../kinds.md#versiegelter-umschla
 | `club.season.rules` | Eigentümer, Admin | `season`, `version` (+1), `rules`, `reason?` | nach Saisonbeginn nur mit sichtbarer Begründung; nicht nach dem Ende |
 | `club.season.end` | Eigentümer, Admin | `season` | |
 | `club.result` | Eigentümer, Admin, Turnierleiter | `season`, `match`, `result` (Event-ID), `count` (zählt / zählt nicht), `prev`, `reason?` | `prev` = letzte Entscheidung zu diesem Match oder Club-ID; nicht nach Saisonende |
-| `club.date` | Eigentümer, Admin, Turnierleiter | `date` (16 Byte), `title`, `starts`, `ends?`, `place?`, `note?`, `cancelled?`, `prev` | `prev` = letzte Fassung des Termins oder Club-ID |
+| `club.date` | Eigentümer, Admin, Turnierleiter | `date` (16 Byte), `title`, `starts`, `ends?`, `place?`, `note?`, `cancelled?`, `prev` | `prev` = letzte Fassung des Termins oder Club-ID; Antworten bleiben bei einer neuen Fassung |
+| `club.rsvp` | Mitglied (jede Rolle) | `date`, `answer` (`yes` / `maybe` / `no`) | die neueste Antwort je Mitglied zählt; ein Termin, den der Leser nicht hat: wartet |
+| `club.game` | Mitglied (jede Rolle) | `match` (Match-ID), `key?` (Geheimnis des Spielschlüssels eines privaten Spiels) | je Match einmal (`duplicate`); `key` nur versiegelt, also nur im geschlossenen Club (sonst `invalid_content`) |
 
 Saisonregeln (`rules`): `modes` (zählende Spielarten), `points` (Sieg, Remis, Niederlage), `confirmations` (`none` / `opponent` / `all`), `minGames`, `tiebreak` (`wins`, `legDifference`, `headToHead`, `average`). Die Tabelle selbst berechnet `lib/clubs` aus den Matchergebnissen; `club.result` hält die Entscheidungen fest, die die Regeln nicht selbst treffen (etwa ein bestrittenes Ergebnis).
 
-Öffentliche Termine laufen über NIP-52; `club.date` ist der Termin des geschlossenen Clubs, den NIP-52 nicht verschlüsselt anbietet (Recherche PR-13).
+Öffentliche Termine laufen über NIP-52; `club.date` ist der Termin des geschlossenen Clubs, den NIP-52 nicht verschlüsselt anbietet (Recherche PR-13). Ebenso antworten Mitglieder eines geschlossenen Clubs mit `club.rsvp`, die eines öffentlichen mit NIP-52-RSVPs. `lib/clubs` schreibt öffentliche Termine als Kind 31923 mit `["e", <Club-ID>]` und wertet nur Termine, deren Autor zu ihrem `created_at` Eigentümer, Admin oder Turnierleiter war (`clubRoleAt`); eine Absage ist eine neue Fassung mit `["status", "cancelled"]`.
+
+## Clubspiele
+
+Matchdatensätze nennen ihr Match, nicht den Club. Damit Mitglieder die Spiele ihres Clubs finden, nennt das Mitglied, das ein Clubspiel aufgezeichnet hat, es mit `club.game` (Nachtrag P5.01). In einem geschlossenen Club ist das Spiel privat (`visibility: "private"`, [session-authorization.md](session-authorization.md)) und `club.game` trägt versiegelt das Geheimnis seines Spielschlüssels: Jedes Mitglied liest es, Außenstehende sehen nur Match-ID, Autoren und Zeitpunkte. In einem öffentlichen Club ist das Spiel öffentlich und `club.game` trägt keinen Schlüssel. Die Vereinbarung des Spiels nennt den Club (`agreement.club`); ein Spiel, dessen Vereinbarung einen anderen Club nennt, zählt nicht. Ob ein Spiel für eine Saison zählt, entscheiden die Saisonregeln (Spielart, Zeitraum, Bestätigungen) und `club.result`; Gäste spielen unter ihrem Alias mit und stehen nicht in der Tabelle.
+
+Bestätigungen (`confirmations` der Saisonregeln) liest `lib/clubs` so: `none` zählt jedes Ergebnis; `opponent` braucht die Bestätigung mindestens eines Spielers mit Profil, der das Ergebnis nicht selbst aufgezeichnet hat; `all` die Bestätigung jedes solchen Spielers. Ein bestrittenes Ergebnis zählt nie von selbst; `club.result` entscheidet darüber und über jedes andere Ergebnis, das die Regeln nicht werten.
 
 ## Einladungen und Beitritt
 
@@ -89,7 +97,7 @@ Vorgaben für `lib/clubs`: Angebote gelten 24 Stunden; angeboten und angenommen 
 
 ## Zustand
 
-`reduceClub(events, clubId, { now, open })` liefert `ClubState`: Eigentümer, Angaben, Mitglieder mit Rolle, Seit und Weg (`founder`, `group` = dieser Leser hat den Nachweis selbst geprüft, `accepted`), Einladungen mit Einladungsschlüssel, Nutzungen und Ende (`ended`: `revoked` oder `maker_role`), wartende Anfragen mit Prüfstatus, ehemalige Mitglieder (`left` / `removed`), offenes Eigentümerangebot, Saisons mit allen Regelversionen, Ergebnisentscheidungen je Saison und Match, Termine, Schlüsselfreigaben, Rollenverlauf (`clubRoleAt` für Club-Turniere) und das Protokoll (`applied`, `rejected` mit Grund, `unapplied` als „versiegelt“, „unbekannte Version“ oder „wartet“). Einladungs-Tokens kommen in keinem Datensatz vor.
+`reduceClub(events, clubId, { now, open })` liefert `ClubState`: Eigentümer, Angaben, Mitglieder mit Rolle, Seit und Weg (`founder`, `group` = dieser Leser hat den Nachweis selbst geprüft, `accepted`), Einladungen mit Einladungsschlüssel, Nutzungen und Ende (`ended`: `revoked` oder `maker_role`), wartende Anfragen mit Prüfstatus, ehemalige Mitglieder (`left` / `removed`), offenes Eigentümerangebot, Saisons mit allen Regelversionen, Ergebnisentscheidungen je Saison und Match, Termine mit Antworten, Clubspiele, Schlüsselfreigaben, Rollenverlauf (`clubRoleAt` für Club-Turniere) und das Protokoll (`applied`, `rejected` mit Grund, `unapplied` als „versiegelt“, „unbekannte Version“ oder „wartet“). Einladungs-Tokens kommen in keinem Datensatz vor.
 
 ## Aufbewahrung und Löschung
 

@@ -25,6 +25,8 @@ Jede Änderung wird **gegen die Rolle des Autors zu dem Zeitpunkt geprüft, an d
 | Saison anlegen, Regeln ändern, beenden (`club.season*`) | ✓ | ✓ | – | – | – |
 | Ergebnis für die Saison zählen lassen oder nicht (`club.result`) | ✓ | ✓ | ✓ | – | – |
 | Termine anlegen, ändern, absagen (`club.date`) | ✓ | ✓ | ✓ | – | – |
+| Auf einen Termin antworten (`club.rsvp`, zählt die neueste Antwort) | ✓ | ✓ | ✓ | ✓ | – |
+| Ein Clubspiel nennen (`club.game`, mit dem Schlüssel eines privaten Spiels) | ✓ | ✓ | ✓ | ✓ | – |
 | Turnier für den Club gründen (zählt als Turnier des Clubs) | ✓ | ✓ | ✓ | – | – |
 | Clubauszeichnung vergeben (`mayIssueClubBadge`) | ✓ | ✓ | – | – | – |
 | Austreten (`club.leave`) | – (erst übergeben) | ✓ | ✓ | ✓ | Anfrage zurückziehen |

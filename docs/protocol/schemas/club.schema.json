@@ -711,6 +711,50 @@
       "required": ["date", "title", "starts", "prev"],
       "additionalProperties": true
     },
+    "club.game": {
+      "description": "Names a game members played for the club, with the key of a private match",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "match": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Match id: the match.session (sv 1) that founded it"
+        },
+        "key": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Secret of the private match's key (link key); only sealed, in a closed club"
+        }
+      },
+      "required": ["match"],
+      "additionalProperties": true
+    },
+    "club.rsvp": {
+      "description": "A member answers a club date",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "date": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "club.date id"
+        },
+        "answer": {
+          "enum": ["yes", "maybe", "no"]
+        }
+      },
+      "required": ["date", "answer"],
+      "additionalProperties": true
+    },
     "club.invite#preview": {
       "description": "Preview in the invite's envelope, opened with the link token (invite.ts)",
       "type": "object",

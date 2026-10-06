@@ -74,7 +74,7 @@ Die vollständigen Inhaltsschemas stehen maschinenlesbar in [`schemas/`](schemas
 
 | Familie | Typen |
 | --- | --- |
-| Club (1180) | `club.found`, `club.update`, `club.invite`, `club.invite.revoke`, `club.join`, `club.accept`, `club.decline`, `club.leave`, `club.remove`, `club.role`, `club.owner.offer`, `club.owner.cancel`, `club.owner.accept`, `club.keys`, `club.season`, `club.season.rules`, `club.season.end`, `club.result`, `club.date` |
+| Club (1180) | `club.found`, `club.update`, `club.invite`, `club.invite.revoke`, `club.join`, `club.accept`, `club.decline`, `club.leave`, `club.remove`, `club.role`, `club.owner.offer`, `club.owner.cancel`, `club.owner.accept`, `club.keys`, `club.season`, `club.season.rules`, `club.season.end`, `club.result`, `club.date`, `club.game`, `club.rsvp` |
 | Turnier (1180) | `tournament.found`, `tournament.update`, `tournament.phase`, `tournament.seed`, `tournament.draw`, `tournament.register`, `tournament.withdraw`, `tournament.admit`, `tournament.waitlist`, `tournament.remove`, `tournament.guest`, `tournament.claim`, `tournament.link`, `tournament.checkin`, `tournament.board`, `tournament.board.revoke`, `tournament.assign`, `tournament.result`, `tournament.approve`, `tournament.correct`, `tournament.handover.offer`, `tournament.handover.cancel`, `tournament.handover.accept` |
 | Match (1180) | `match.session`, `match.result`, `match.log`, `match.confirm` |
 | Match (31180) | `match.live` |
