@@ -26,13 +26,14 @@ export const EMPTY_SELECTION: Selection = { badges: [], other: [], base: null }
 
 export const isSelectionEvent = (event: NostrEvent) => readProfileBadges(event) !== null
 
+// The list in its base event; empty without one.
+export const selectionOf = (base: NostrEvent | null): Selection => (base ? { badges: readProfileBadges(base) ?? [], other: otherProfileTags(base) ?? [], base } : EMPTY_SELECTION)
+
 // The profile's list among `events` (any copies, both formats): the newest current one, else
 // the newest former one.
 export function currentSelection(events: readonly NostrEvent[], pubkey: string): Selection {
   const own = events.filter((e) => e.pubkey === pubkey && isSelectionEvent(e))
-  const base = latestEvents(own.filter((e) => e.kind === KIND_PROFILE_BADGES))[0] ?? latestEvents(own.filter((e) => e.kind === KIND_PROFILE_BADGES_LEGACY))[0] ?? null
-  if (!base) return EMPTY_SELECTION
-  return { badges: readProfileBadges(base) ?? [], other: otherProfileTags(base) ?? [], base }
+  return selectionOf(latestEvents(own.filter((e) => e.kind === KIND_PROFILE_BADGES))[0] ?? latestEvents(own.filter((e) => e.kind === KIND_PROFILE_BADGES_LEGACY))[0] ?? null)
 }
 
 // First in the list, so it shows on the card right away.

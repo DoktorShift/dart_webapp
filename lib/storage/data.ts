@@ -12,6 +12,7 @@ import {
   type V1Snapshot,
 } from "./archive.ts"
 import { announce, announceElsewhere, dbClear, dbGetAll, dbWrite, kvGet, STORES, type WriteOp } from "./db.ts"
+import { exportSections } from "./export-sections.ts"
 import { listPlayers, parsePlayerRecord, type PlayerRecord } from "./players.ts"
 import { isV1Record, mergeV1Records, readAllRaw, removeAllV1Data } from "./v1.ts"
 
@@ -36,6 +37,8 @@ export interface ExportFile {
   v1: Record<string, string | null>
   // The same keys before this version first wrote to the archive (see archive.ts).
   v1Snapshot: V1Snapshot | null
+  // What other areas keep on this device (badges), by section name (export-sections.ts).
+  sections: Record<string, unknown>
 }
 
 export async function buildExport(now = new Date()): Promise<ExportFile> {
@@ -43,6 +46,8 @@ export async function buildExport(now = new Date()): Promise<ExportFile> {
   const [matches, players, v1Snapshot] = await withArchive(() =>
     Promise.all([loadArchive(), listPlayers().catch((): PlayerRecord[] => []), kvGet<V1Snapshot>(V1_SNAPSHOT_KEY).catch(() => undefined)]),
   )
+  const sections: Record<string, unknown> = {}
+  for (const [name, section] of exportSections()) sections[name] = await section.build()
   return {
     format: EXPORT_FORMAT,
     version: EXPORT_VERSION,
@@ -51,6 +56,7 @@ export async function buildExport(now = new Date()): Promise<ExportFile> {
     players,
     v1: readAllRaw(),
     v1Snapshot: v1Snapshot ?? null,
+    sections,
   }
 }
 
@@ -198,8 +204,9 @@ export async function importData(text: string): Promise<ImportResult> {
 
   // 1.0.0 results first, so they count as already here.
   await importV1Matches().catch(() => 0)
+  let result: ImportResult
   try {
-    return await withArchive(async () => {
+    result = await withArchive(async () => {
       const [stored, directory] = await Promise.all([dbGetAll<ArchivedMatch>("matches"), listPlayers()])
       const here = new Map(stored.map((m) => [m.id, m]))
       const ops: WriteOp[] = []
@@ -235,6 +242,11 @@ export async function importData(text: string): Promise<ImportResult> {
   } catch {
     return { ok: false, reason: "storage" }
   }
+  // The areas' sections, each on its own: the games are in either way, and a section that
+  // fails is taken in by the next import of the file.
+  const sections = isObject(file.sections) ? file.sections : {}
+  for (const [name, section] of exportSections()) if (name in sections) await section.apply(sections[name]).catch(() => {})
+  return result
 }
 
 // Deletes every key of version 1.0.0 (the running game, settings, language, appearance, the

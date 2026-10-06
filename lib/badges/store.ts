@@ -2,24 +2,24 @@ import { isAddressableKind, isReplaceableKind, query } from "../nostr/client.ts"
 import { loadCore } from "../nostr/core.ts"
 import { generalRelays, mergeRelays, profileRelays } from "../nostr/relays.ts"
 import type { EventTemplate, Filter, NostrEvent } from "../nostr/types.ts"
-import { ownEvents, ownRelaySettings, rememberOwn } from "../profile/own-events.ts"
+import { changeBase, OWN, ownEvents, OwnEventsError, ownRelaySettings, rememberOwn } from "../profile/own-events.ts"
 import type { LoadStatus } from "../profile/public-profile.ts"
 import { ownReadRelays } from "../profile/relay-list.ts"
-import { OWN_OBJECT_PREFIX } from "../profile/session.ts"
+import { onSessionEnd, OWN_OBJECT_PREFIX } from "../profile/session.ts"
 import { KIND_PROFILE_BADGES_LEGACY, type ProfileBadge } from "../protocol/badges.ts"
 import { KIND_BADGE_AWARD, KIND_BADGE_DEFINITION, KIND_PROFILE_BADGES, KIND_RECORD } from "../protocol/kinds.ts"
 import { tagValue, tagValues } from "../protocol/tags.ts"
-import { dbGetAll, dbWrite, type Keyed } from "../storage/db.ts"
-import { publishOwn } from "../sync/publish.ts"
+import { dbGetAll, dbWrite, kvGet, kvSet, type Keyed } from "../storage/db.ts"
+import { submitOwn } from "../sync/publish.ts"
 import { validAwards, withoutDeleted, type ValidAward } from "./awards.ts"
-import { currentSelection, isSelectionEvent, selectionTemplate, type Selection } from "./selection.ts"
+import { currentSelection, isSelectionEvent, selectionOf, selectionTemplate, type Selection } from "./selection.ts"
 
 // The badges of the signed-in profile, on this device and on relays: what it was given and what
-// it gave, the definitions behind them, its evidence records, deletion requests and its list
-// (kind 10008, or the former 30008). Its own replaceable events (its definitions, its list) are
-// kept as the profile's own events (lib/profile/own-events.ts); everything else under
-// "own:badge:<event id>". So all of it goes with the profile when it signs out (session.ts),
-// and with the device's data file (lib/storage/data.ts).
+// it gave, the definitions behind them, its evidence records and deletion requests. Its own
+// replaceable events (its definitions, its list of shown badges) are the profile's own events
+// (lib/profile/own-events.ts); everything else is kept under "own:badge:<event id>". So all of
+// it goes with the profile when it signs out (session.ts), and into the device's data file
+// (./export.ts).
 //
 // Everything that is published goes through lib/sync/publish.ts. A change counts once it is
 // signed and kept here; relays that can't be reached don't undo it.
@@ -44,6 +44,7 @@ async function signedOnly(events: readonly NostrEvent[]): Promise<NostrEvent[]> 
   return events.filter((e) => checked.has(e.id))
 }
 
+const isReplaceable = (event: NostrEvent) => isReplaceableKind(event.kind) || isAddressableKind(event.kind)
 const isBadgeKind = (event: NostrEvent) => event.kind === KIND_BADGE_DEFINITION || isSelectionEvent(event)
 
 // Everything this device keeps about the profile's badges, without what was asked to be deleted.
@@ -53,10 +54,11 @@ export async function storedBadgeEvents(pubkey: string): Promise<NostrEvent[]> {
   return withoutDeleted(await signedOnly([...records, ...[...own.values()].filter(isBadgeKind)]))
 }
 
-async function keep(pubkey: string, events: readonly NostrEvent[]) {
-  const replaceable = (e: NostrEvent) => isReplaceableKind(e.kind) || isAddressableKind(e.kind)
-  await rememberOwn(pubkey, events.filter((e) => e.pubkey === pubkey && replaceable(e)))
-  await dbWrite(events.filter((e) => e.pubkey !== pubkey || !replaceable(e)).map((event) => ({ store: "objects", put: { id: `${PREFIX}${event.id}`, event } as Keyed })))
+// Keeps events about the profile's badges: its own replaceable ones as its own events, the rest
+// as badge records.
+export async function keepBadgeEvents(pubkey: string, events: readonly NostrEvent[]) {
+  await rememberOwn(pubkey, events.filter((e) => e.pubkey === pubkey && isReplaceable(e)))
+  await dbWrite(events.filter((e) => e.pubkey !== pubkey || !isReplaceable(e)).map((event) => ({ store: "objects", put: { id: `${PREFIX}${event.id}`, event } as Keyed })))
 }
 
 // Where the profile's badges may be: every relay its own events may be on.
@@ -79,14 +81,14 @@ function behind(awards: readonly NostrEvent[]): Filter[] {
 const loadStatus = (answered: number, failed: number): LoadStatus => (answered === 0 ? "offline" : failed > 0 ? "partial" : "complete")
 
 // Looks for the profile's badges on relays and keeps what it finds: on a new device this is how
-// they arrive, on a known one what changed elsewhere (a badge given, another app's change to the
-// list). Deletion requests are kept only for badge events.
+// they arrive, on a known one what changed elsewhere (a badge given). The list of shown badges
+// comes with the profile's own events (own-events.ts lookupOwnEvents). Deletion requests are
+// kept only for badge events.
 export async function fetchBadges(pubkey: string): Promise<LoadStatus> {
   const relays = await relaysOf(pubkey)
   const first = await query(
     [
-      { authors: [pubkey], kinds: [KIND_BADGE_AWARD, KIND_BADGE_DEFINITION, KIND_PROFILE_BADGES, KIND_DELETION] },
-      { authors: [pubkey], kinds: [KIND_PROFILE_BADGES_LEGACY], "#d": ["profile_badges"] },
+      { authors: [pubkey], kinds: [KIND_BADGE_AWARD, KIND_BADGE_DEFINITION, KIND_DELETION] },
       { authors: [pubkey], kinds: [KIND_RECORD], "#l": ["badge.evidence"] },
       { kinds: [KIND_BADGE_AWARD], "#p": [pubkey] },
     ],
@@ -96,12 +98,40 @@ export async function fetchBadges(pubkey: string): Promise<LoadStatus> {
   const second = received.length > 0 ? await query(behind(received), relays) : null
   const found = [...first.events, ...(second?.events ?? [])]
   const badgeIds = new Set(found.filter((e) => e.kind !== KIND_DELETION).map((e) => e.id))
-  await keep(
+  await keepBadgeEvents(
     pubkey,
     found.filter((e) => e.kind !== KIND_DELETION || tagValues(e.tags, "e").some((id) => badgeIds.has(id))),
   )
   return loadStatus(first.answered.length, first.failed.length + (second?.failed.length ?? 0))
 }
+
+// Fetched once per profile and page load, like the profile's own events; again when nothing
+// answered, or when asked (`again`, on opening the badges).
+const fetched = new Map<string, Promise<LoadStatus>>()
+onSessionEnd(() => fetched.clear())
+export function lookupBadges(pubkey: string, { again = false } = {}): Promise<LoadStatus> {
+  const running = fetched.get(pubkey)
+  if (running && !again) return running
+  const next = fetchBadges(pubkey).then(
+    (status) => {
+      if (status === "offline") fetched.delete(pubkey)
+      return status
+    },
+    (): LoadStatus => {
+      fetched.delete(pubkey)
+      return "offline"
+    },
+  )
+  fetched.set(pubkey, next)
+  return next
+}
+
+// ---- Other players' badges --------------------------------------------------------------------
+
+// Another profile's badges, seen once on this page: what its profile card showed, for the
+// badge's own screen. Never stored.
+const seen = new Map<string, ValidAward>()
+export const seenAward = (id: string): ValidAward | undefined => seen.get(id)
 
 // Another profile's shown badges, in its order, each checked before it is shown; at most `limit`.
 export async function shownBadges(pubkey: string, hints: readonly string[] = [], limit = Infinity): Promise<{ awards: ValidAward[]; status: LoadStatus }> {
@@ -117,7 +147,9 @@ export async function shownBadges(pubkey: string, hints: readonly string[] = [],
   if (selection.badges.length === 0) return { awards: [], status: loadStatus(lists.answered.length, lists.failed.length) }
   const awards = await query([{ ids: selection.badges.map((b) => b.award), kinds: [KIND_BADGE_AWARD] }], mergeRelays(relays, selection.badges.flatMap((b) => b.awardRelay ?? [])))
   const more = await query(behind(awards.events), mergeRelays(relays, selection.badges.flatMap((b) => b.addressRelay ?? [])))
-  return { awards: inListOrder(selection, await validAwards([...awards.events, ...more.events], pubkey)).slice(0, limit), status: loadStatus(lists.answered.length, lists.failed.length + awards.failed.length + more.failed.length) }
+  const shown = inListOrder(selection, await validAwards([...awards.events, ...more.events], pubkey)).slice(0, limit)
+  for (const award of shown) seen.set(award.award.id, award)
+  return { awards: shown, status: loadStatus(lists.answered.length, lists.failed.length + awards.failed.length + more.failed.length) }
 }
 
 // The valid awards a list names, in the list's order (each once).
@@ -126,32 +158,36 @@ export function inListOrder(selection: Selection, awards: readonly ValidAward[])
   return [...new Set(selection.badges.map((b) => byId.get(b.award)).filter((a): a is ValidAward => a !== undefined))]
 }
 
-// ---- Changes ------------------------------------------------------------------------------
+// ---- What the person has seen -----------------------------------------------------------------
 
-// Signs, keeps and publishes new badge events of the profile (definitions, evidence, awards,
-// deletion requests, its list); the signed events come back.
+// Awards from others the person has looked at (kv, gone with the profile): the rest are new.
+const SEEN_KEY = "profile.badges.seen"
+export const seenAwardIds = async (): Promise<string[]> => (await kvGet<string[]>(SEEN_KEY).catch(() => undefined)) ?? []
+export const markAwardsSeen = (ids: readonly string[]) => kvSet(SEEN_KEY, [...ids])
+
+// ---- Changes ----------------------------------------------------------------------------------
+
+// Signs, keeps and sends new badge events of the profile (definitions, evidence, awards, deletion
+// requests, its list); the signed events come back as soon as they are signed and kept.
 export async function publishBadgeEvents(pubkey: string, templates: readonly EventTemplate[]): Promise<NostrEvent[]> {
   if (templates.length === 0) return []
-  const events = (await publishOwn(templates)).map((report) => report.event)
-  await keep(pubkey, events)
+  const { events } = await submitOwn(templates)
+  await keepBadgeEvents(pubkey, events)
   return events
 }
 
-// The profile's list as it is now: the newest of relays and this device. Changes start from it,
-// so a change made in another app meanwhile is kept (PLAN.md: "Die globale Profilauswahl wird
-// nur nach Lesen und Zusammenführen verändert"). null when no relay answered: then nothing is
-// changed.
+// The profile's list as a change builds on it: the current one once relays were asked (own-events.ts
+// changeBase, so a change made in another app meanwhile is kept, PLAN.md: "Die globale
+// Profilauswahl wird nur nach Lesen und Zusammenführen verändert"), else the former one. null
+// when nothing is known here and no relay answered: then nothing is changed.
 export async function latestSelection(pubkey: string): Promise<Selection | null> {
-  const latest = await query(
-    [
-      { authors: [pubkey], kinds: [KIND_PROFILE_BADGES] },
-      { authors: [pubkey], kinds: [KIND_PROFILE_BADGES_LEGACY], "#d": ["profile_badges"] },
-    ],
-    await relaysOf(pubkey),
-  )
-  if (latest.answered.length === 0) return null
-  await keep(pubkey, latest.events)
-  return currentSelection([...latest.events, ...(await storedBadgeEvents(pubkey))], pubkey)
+  try {
+    const base = (await changeBase(pubkey, OWN.profileBadges)) ?? (await ownEvents(pubkey)).get(OWN.legacyProfileBadges) ?? null
+    return selectionOf(base)
+  } catch (error) {
+    if (error instanceof OwnEventsError) return null
+    throw error
+  }
 }
 
 // Publishes the list with these badges, if that changes it.

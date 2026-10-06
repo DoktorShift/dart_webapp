@@ -14,6 +14,7 @@ import { evaluateMilestones } from "../lib/badges/milestones.ts"
 import { currentSelection } from "../lib/badges/selection.ts"
 import { readEvidence, selfAwardHolds } from "../lib/badges/self-award.ts"
 import { fetchBadges, storedBadgeEvents } from "../lib/badges/store.ts"
+import { lookupOwnEvents } from "../lib/profile/own-events.ts"
 import { importLocalKey, signOut } from "../lib/profile/session.ts"
 import { archiveFinished, loadArchive } from "../lib/storage/archive.ts"
 import { newPlayerRecord, savePlayers } from "../lib/storage/players.ts"
@@ -140,6 +141,8 @@ test("a second device finds the badges on relays, each once however often it is 
   await resetStorage()
   await importLocalKey(secret)
   assert.deepEqual(await storedBadgeEvents(pubkey), [])
+  // The list of shown badges comes with the profile's own events, the rest with the badges.
+  await lookupOwnEvents(pubkey)
   assert.equal(await fetchBadges(pubkey), "complete")
   assert.equal(await fetchBadges(pubkey), "complete")
   const stored = await storedBadgeEvents(pubkey)

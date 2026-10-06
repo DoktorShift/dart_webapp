@@ -1,13 +1,16 @@
 import { isAddressableKind, isReplaceableKind, query } from "../nostr/client.ts"
 import type { NostrEvent } from "../nostr/types.ts"
 import { dbGetAll, dbWrite, type Keyed } from "../storage/db.ts"
+import { KIND_PROFILE_BADGES_LEGACY } from "../protocol/badges.ts"
+import { KIND_PROFILE_BADGES } from "../protocol/kinds.ts"
 import { STATS_CARD_D } from "../protocol/profile.ts"
 import { ROUND_D_PREFIX } from "./rounds.ts"
 import { BLOCKED_RELAYS_KIND, ownReadRelays, RELAY_LIST_KIND, relaySettings, type RelaySettings } from "./relay-list.ts"
 import { onSessionEnd, OWN_OBJECT_PREFIX } from "./session.ts"
 
 // The signed-in profile's own replaceable events, as last seen: its metadata (0), relay list
-// (10002), blocked relays (10006), stats card (31180 "stats") and player rounds (30000). Kept in
+// (10002), blocked relays (10006), stats card (31180 "stats"), player rounds (30000) and the
+// badges it shows (10008, or the former 30008 "profile_badges"; lib/badges/selection.ts). Kept in
 // the "objects" store, so the profile shows at once and offline; the local copy comes first
 // (decision 0002 §1). An event signed here is kept before it is published, so a change is never
 // lost to a missing connection; relays only ever replace it with a newer version.
@@ -56,6 +59,8 @@ export const OWN = {
   relayList: `${RELAY_LIST_KIND}:`,
   blockedRelays: `${BLOCKED_RELAYS_KIND}:`,
   statsCard: `31180:${STATS_CARD_D}`,
+  profileBadges: `${KIND_PROFILE_BADGES}:`,
+  legacyProfileBadges: `${KIND_PROFILE_BADGES_LEGACY}:profile_badges`,
 } as const
 
 export const ownRelaySettings = (events: Map<string, NostrEvent>): RelaySettings => relaySettings(events.get(OWN.relayList), events.get(OWN.blockedRelays))
@@ -67,9 +72,10 @@ export interface FetchResult {
 }
 
 const ownFilters = (pubkey: string) => [
-  { authors: [pubkey], kinds: [0, RELAY_LIST_KIND, BLOCKED_RELAYS_KIND] },
+  { authors: [pubkey], kinds: [0, RELAY_LIST_KIND, BLOCKED_RELAYS_KIND, KIND_PROFILE_BADGES] },
   { authors: [pubkey], kinds: [31180], "#d": [STATS_CARD_D] },
   { authors: [pubkey], kinds: [30000] },
+  { authors: [pubkey], kinds: [KIND_PROFILE_BADGES_LEGACY], "#d": ["profile_badges"] },
 ]
 
 // Looks for the profile's events on every relay they may be on, and keeps what is newer here.

@@ -1,6 +1,7 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { MESSAGES } from "../lib/i18n/index.ts"
+import { BADGES_TEXTS } from "../lib/i18n/features/badges.screens.ts"
 import { PROFILE_TEXTS } from "../lib/i18n/features/profile.screens.ts"
 import { INSTALL_PICTURES, INSTALL_PLATFORMS } from "../lib/install.ts"
 
@@ -34,4 +35,5 @@ test("no text is left empty", () => {
   }
   for (const [locale, t] of Object.entries(MESSAGES)) walk(t, locale)
   for (const [locale, t] of Object.entries(PROFILE_TEXTS)) walk(t, `${locale}.profile.screens`)
+  for (const [locale, t] of Object.entries(BADGES_TEXTS)) walk(t, `${locale}.badges.screens`)
 })
