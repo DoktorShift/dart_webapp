@@ -236,6 +236,13 @@ export const profileScreensDe = {
     failed: "Das hat nicht geklappt. Versuch es noch einmal.",
   },
 
+  // Signing in while another profile is signed in on this device.
+  replace: {
+    title: (name: string) => `Damit wird „${name}“ auf diesem Gerät abgemeldet`,
+    description: "Die Spiele auf diesem Gerät bleiben.",
+    confirm: "Abmelden und wechseln",
+  },
+
   signOut: {
     title: "Abmelden?",
     description: "Auf einem Gerät, das andere mitbenutzen, kannst du deine Spiele hier gleich mit löschen.",

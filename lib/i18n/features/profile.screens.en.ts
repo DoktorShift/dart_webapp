@@ -222,6 +222,12 @@ export const profileScreensEn: Widen<typeof profileScreensDe> = {
     failed: "That didn't work. Please try again.",
   },
 
+  replace: {
+    title: (name) => `This signs "${name}" out on this device`,
+    description: "The games on this device stay.",
+    confirm: "Sign out and switch",
+  },
+
   signOut: {
     title: "Sign out?",
     description: "On a device others use too, you can delete your games here as well.",

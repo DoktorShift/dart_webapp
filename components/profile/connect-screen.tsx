@@ -13,12 +13,13 @@ import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
 import { AccountConfirm } from "@/components/profile/account-confirm"
+import { useSignInGuard } from "@/components/profile/sign-in-guard"
 import { signerProblem } from "@/components/profile/signer-status"
 import { useClaimablePlayers } from "@/components/profile/use-profile"
 import { generalRelays } from "@/lib/nostr/relays"
 import type { Nip46Connection, NostrConnectStart } from "@/lib/nostr/signers"
 import { claimPlayer } from "@/lib/profile/claim"
-import { connectExternal, type ExternalParams } from "@/lib/profile/session"
+import { connectExternal, type ExternalParams, type SessionOptions } from "@/lib/profile/session"
 import type { ScreenProps } from "@/lib/shell/registry"
 import { SITE } from "@/lib/site"
 
@@ -28,8 +29,10 @@ import { SITE } from "@/lib/site"
 // - Signer app (NIP-46): a code to scan (Amber and others), or a link to paste.
 // - Android signer (NIP-55): only on Android; the answer comes back as /#signer-return…,
 //   which reopens this screen with the key (params.androidKey, see ./signer-return.ts).
-// Before anything is kept, the person confirms the account the signer named. Then, optionally,
-// which games on this device are theirs. The existing profile is only read, never overwritten.
+// Before anything is kept, the person confirms the account the signer named, and, if another
+// profile is signed in here meanwhile, that it is signed out (./sign-in-guard.tsx). Then,
+// optionally, which games on this device are theirs. The existing profile is only read, never
+// overwritten.
 
 // What a signer app is asked to allow right away, so it doesn't ask for each of these.
 const PERMISSIONS = ["sign_event:0", "sign_event:10002", "sign_event:30000", "sign_event:31180", "nip44_encrypt", "nip44_decrypt"]
@@ -81,25 +84,28 @@ export default function ConnectScreen({ params }: ScreenProps) {
 // The account to confirm, and what keeping it means.
 interface Candidate {
   pubkey: string
-  keep: () => Promise<unknown>
+  keep: (options: SessionOptions) => Promise<unknown>
   drop?: () => void
 }
 
-// Shows the account a signer named and keeps it only after "Ja, das bin ich".
+// Shows the account a signer named and keeps it only after "Ja, das bin ich". Keeping it while
+// another profile is signed in here is a second question; "no" to that drops the account too.
 function Confirm({ candidate, onConnected, onDeclined }: { candidate: Candidate; onConnected: (pubkey: string) => void; onDeclined: () => void }) {
   const tx = useAreaT(PROFILE_TEXTS)
+  const { signIn, dialog } = useSignInGuard()
   const [busy, setBusy] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)
+  const decline = () => {
+    candidate.drop?.()
+    onDeclined()
+  }
   const answer = async (yes: boolean) => {
-    if (!yes) {
-      candidate.drop?.()
-      return onDeclined()
-    }
+    if (!yes) return decline()
     setBusy(true)
     setProblem(null)
     try {
-      await candidate.keep()
-      onConnected(candidate.pubkey)
+      if (await signIn(candidate.keep)) onConnected(candidate.pubkey)
+      else decline()
     } catch (error) {
       setProblem(signerProblem(tx, error))
       setBusy(false)
@@ -108,6 +114,7 @@ function Confirm({ candidate, onConnected, onDeclined }: { candidate: Candidate;
   return (
     <>
       <AccountConfirm pubkey={candidate.pubkey} busy={busy} onAnswer={(yes) => void answer(yes)} />
+      {dialog}
       {busy && (
         <p role="status" className="mt-3 text-center text-[0.9375rem] text-muted-foreground">
           {tx.connect.connecting}
@@ -142,7 +149,7 @@ function ExtensionStep({ onConnected, onBack }: { onConnected: (pubkey: string) 
     void import("@/lib/nostr/signers")
       .then(({ connectNip07 }) => connectNip07())
       .then(
-        ({ pubkey }) => alive && setCandidate({ pubkey, keep: () => connectExternal("nip07", { pubkey }) }),
+        ({ pubkey }) => alive && setCandidate({ pubkey, keep: (options) => connectExternal("nip07", { pubkey }, options) }),
         (error: unknown) => alive && setProblem((error as { code?: string })?.code === "unavailable" ? c.noExtension : signerProblem(tx, error)),
       )
     return () => {
@@ -202,14 +209,19 @@ function SignerAppStep({ onConnected, onBack }: { onConnected: (pubkey: string) 
               if (alive) setCandidate(null)
             })
             if (!alive) return resolve(false)
+            // The code is on screen, so the start has finished and its connection follows the
+            // confirmation. Dropped after that, the connection is closed again.
+            const connection = () => started!.connection
             setCandidate({
               pubkey: account.userPubkey,
-              keep: async () => {
+              keep: async (options) => {
                 resolve(true)
-                // The code is on screen, so the start has finished.
-                await connectExternal("nip46", { connection: await started!.connection })
+                await connectExternal("nip46", { connection: await connection() }, options)
               },
-              drop: () => resolve(false),
+              drop: () => {
+                resolve(false)
+                void connection().then((c) => c.remote.close(), () => {})
+              },
             })
           }),
       })
@@ -239,7 +251,7 @@ function SignerAppStep({ onConnected, onBack }: { onConnected: (pubkey: string) 
     try {
       const { connectBunker } = await import("@/lib/nostr/signers")
       const connection: Nip46Connection = await connectBunker(pasted.trim(), { perms: PERMISSIONS, onAuthUrl: setAuthUrl })
-      setCandidate({ pubkey: connection.pubkey, keep: () => connectExternal("nip46", { connection } satisfies ExternalParams["nip46"]), drop: () => connection.remote.close() })
+      setCandidate({ pubkey: connection.pubkey, keep: (options) => connectExternal("nip46", { connection } satisfies ExternalParams["nip46"], options), drop: () => connection.remote.close() })
     } catch (error) {
       setPasteProblem((error as { code?: string })?.code === "invalid" ? c.pasteInvalid : signerProblem(tx, error))
     } finally {
@@ -329,7 +341,7 @@ function AndroidStep({ returnedKey, onConnected, onBack }: { returnedKey: string
   }, [returnedKey, declined])
 
   if (returnedKey && !declined) {
-    return <Confirm candidate={{ pubkey: returnedKey, keep: () => connectExternal("nip55", { pubkey: returnedKey }) }} onConnected={onConnected} onDeclined={() => setDeclined(true)} />
+    return <Confirm candidate={{ pubkey: returnedKey, keep: (options) => connectExternal("nip55", { pubkey: returnedKey }, options) }} onConnected={onConnected} onDeclined={() => setDeclined(true)} />
   }
   return (
     <>

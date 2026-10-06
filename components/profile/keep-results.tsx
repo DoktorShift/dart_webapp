@@ -11,6 +11,7 @@ import { useAreaT } from "@/components/i18n-provider"
 import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
 import { createProfile } from "@/components/profile/create-profile"
 import { pictureProblem, ProfileFields } from "@/components/profile/profile-fields"
+import { useSignInGuard } from "@/components/profile/sign-in-guard"
 import { useSession } from "@/lib/profile/session"
 import type { FinishedMatch } from "@/lib/shell/registry"
 import { kvGet, kvSet } from "@/lib/storage/db"
@@ -118,6 +119,7 @@ function KeepSheet({
   const tx = useAreaT(PROFILE_TEXTS)
   const k = tx.keep
   const f = tx.form
+  const { signIn, dialog } = useSignInGuard()
   const only = seats.length === 1 ? seats[0] : null
   const [seat, setSeat] = useState<number | null>(only?.seat ?? null)
   const [name, setName] = useState(only?.name ?? "")
@@ -135,8 +137,7 @@ function KeepSheet({
     setBusy(true)
     setFailed(false)
     try {
-      await createProfile({ name, picture, claim: { matchId, seat } })
-      onCreated()
+      if (await signIn((options) => createProfile({ name, picture, claim: { matchId, seat } }, options))) onCreated()
     } catch {
       setFailed(true)
     } finally {
@@ -190,6 +191,7 @@ function KeepSheet({
       <Button variant="ghost" onClick={onLater} className="mt-2 h-12 w-full shrink-0 rounded-2xl text-[1.0625rem] xshort:h-11">
         {k.later}
       </Button>
+      {dialog}
     </Sheet>
   )
 }

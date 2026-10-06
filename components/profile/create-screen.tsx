@@ -9,6 +9,7 @@ import { useAreaT } from "@/components/i18n-provider"
 import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
 import { createProfile } from "@/components/profile/create-profile"
 import { pictureProblem, ProfileFields } from "@/components/profile/profile-fields"
+import { useSignInGuard } from "@/components/profile/sign-in-guard"
 import { useClaimablePlayers } from "@/components/profile/use-profile"
 import { seatName } from "@/lib/storage/players"
 
@@ -23,6 +24,7 @@ export default function CreateScreen() {
   const f = tx.form
   const nav = useNav()
   const { candidates, loaded } = useClaimablePlayers()
+  const { signIn, dialog } = useSignInGuard()
   const [choice, setChoice] = useState<string | null>(null)
   const [name, setName] = useState("")
   const [picture, setPicture] = useState("")
@@ -37,8 +39,8 @@ export default function CreateScreen() {
     setBusy(true)
     setFailed(false)
     try {
-      await createProfile({ name, picture, claim: chosen?.playerId ? { playerId: chosen.playerId } : null })
-      nav.popToRoot("profile")
+      if (await signIn((options) => createProfile({ name, picture, claim: chosen?.playerId ? { playerId: chosen.playerId } : null }, options))) nav.popToRoot("profile")
+      else setBusy(false)
     } catch {
       setFailed(true)
       setBusy(false)
@@ -84,6 +86,7 @@ export default function CreateScreen() {
       <Button type="submit" disabled={!ready || busy} className="mt-6 h-14 w-full rounded-2xl text-[1.0625rem] font-semibold">
         {busy ? f.creating : f.create}
       </Button>
+      {dialog}
     </form>
   )
 }
