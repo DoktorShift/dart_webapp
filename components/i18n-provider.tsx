@@ -3,6 +3,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
 import {
   DEFAULT_LOCALE,
+  type AreaTexts,
+  type Widen,
   MESSAGES,
   deviceLocale,
   loadLocalePreference,
@@ -59,3 +61,8 @@ export function useI18n(): I18n {
 
 // The texts of the current language: `const t = useT()`, then `t.setup.start`.
 export const useT = () => useI18n().t
+
+// An area's texts in the current language (lib/i18n/index.ts, areaTexts): `const tx = useAreaT(PAYMENTS_TEXTS)`.
+export function useAreaT<T>(texts: AreaTexts<T>): Widen<T> {
+  return texts[useI18n().locale] as Widen<T>
+}
