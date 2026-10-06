@@ -27,6 +27,8 @@ export const liveDe = {
     qrLabel: "QR-Code zum Verbinden",
     seats: "Plätze",
     connectedProfile: "Mit Profil verbunden",
+    connectedAs: (name: string) => `Mit Profil verbunden: ${name}`,
+    keyHint: (key: string) => `Kennung ${key}`,
     connectedGuest: "Als Gast verbunden",
     notConnected: "Nicht verbunden",
     confirmed: "Hat das Ergebnis bestätigt",
@@ -85,6 +87,7 @@ export const liveDe = {
     waiting: "Der erste Spielstand kommt gleich.",
     status: { playing: "Läuft", paused: "Pausiert", finished: "Beendet", abandoned: "Abgebrochen" },
     interrupted: "Verbindung unterbrochen",
+    lastUpdated: (time: string) => `zuletzt aktualisiert ${time} Uhr`,
     updatedAt: (time: string) => `Stand von ${time} Uhr`,
     current: "Aktuelle Aufnahme",
     throwing: (name: string) => `${name} wirft`,
@@ -124,6 +127,7 @@ export const liveDe = {
   },
 
   result: {
+    summary: (legs: string) => `Ergebnis: Legs ${legs}`,
     confirm: "Ergebnis bestätigen",
     dispute: "Widersprechen",
     disputeTitle: "Dem Ergebnis widersprechen?",

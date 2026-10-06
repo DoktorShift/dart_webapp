@@ -52,7 +52,8 @@ export function MatchProblem({ followed }: { followed: Followed }) {
   )
 }
 
-export function MatchView({ followed, actions }: { followed: Followed; actions?: ReactNode }) {
+// `compact`: a smaller board, so the actions below it (a verdict) stay in view.
+export function MatchView({ followed, actions, compact }: { followed: Followed; actions?: ReactNode; compact?: boolean }) {
   const t = useT()
   const [fullScreen, setFullScreen] = useState(false)
   const state = followed.state
@@ -61,6 +62,8 @@ export function MatchView({ followed, actions }: { followed: Followed; actions?:
   const config = agreementToConfig(state.agreement)
   const game = live ? watchedGame(state.agreement, live.content) : null
   const status = live?.content.status ?? null
+  // A score that may be out of date is shown as such, never as the current one.
+  const stale = followed.connection === "interrupted"
 
   return (
     <div className="mt-2">
@@ -84,9 +87,11 @@ export function MatchView({ followed, actions }: { followed: Followed; actions?:
       {!live ? (
         <p className="mt-6 text-[0.9375rem] text-muted-foreground">{t.live.watch.waiting}</p>
       ) : game?.state ? (
-        !fullScreen && <Board state={game.state} className="mt-4 h-[clamp(13rem,52dvh,30rem)]" />
+        !fullScreen && <Board state={game.state} stale={stale} className={cn("mt-4", compact ? "h-[clamp(11rem,34dvh,20rem)]" : "h-[clamp(13rem,52dvh,30rem)]")} />
       ) : (
-        <Standing config={config} snapshot={live.content} />
+        <div className={cn("transition-opacity", stale && "opacity-50")}>
+          <Standing config={config} snapshot={live.content} />
+        </div>
       )}
 
       {actions}
@@ -97,15 +102,16 @@ export function MatchView({ followed, actions }: { followed: Followed; actions?:
             <p className="text-2xl font-semibold leading-tight tablet:text-4xl [overflow-wrap:anywhere]">{rulesSummary(t, config)}</p>
             <Freshness followed={followed} status={status} large />
           </div>
-          <Board state={game.state} className="min-h-0 flex-1" large />
+          <Board state={game.state} stale={stale} className="min-h-0 flex-1" large />
         </FullScreen>
       )}
     </div>
   )
 }
 
-// Status in words with a symbol, and how current the score is: when the connection broke, the
-// time of the last score; otherwise the time it was signed on the board.
+// Status in words with a symbol, and how current the score is: the time the board signed it, or,
+// when the connection broke, since when nothing new came ("Verbindung unterbrochen · zuletzt
+// aktualisiert 21:14").
 function Freshness({ followed, status, large }: { followed: Followed; status: LiveSnapshot["status"] | null; large?: boolean }) {
   const t = useT()
   const w = t.live.watch
@@ -113,23 +119,23 @@ function Freshness({ followed, status, large }: { followed: Followed; status: Li
   const at = followed.state?.live ? followed.state.live.at * 1000 : followed.heardAt
   const Icon = interrupted ? WifiOff : status === "finished" ? Trophy : status === "playing" ? CircleDot : Pause
   return (
-    <p className={cn("mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.9375rem] text-muted-foreground", large && "tablet:text-xl")}>
-      <span className={cn("inline-flex items-center gap-1.5 font-medium", interrupted ? "text-warning" : status === "playing" ? "text-danger" : "text-foreground")}>
-        <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+    <p className={cn("mt-1 text-[0.9375rem] leading-snug text-muted-foreground", large && "tablet:text-xl")}>
+      <span className={cn("font-medium", interrupted ? "text-warning" : status === "playing" ? "text-danger" : "text-foreground")}>
+        <Icon className="mr-1.5 inline h-4 w-4 -translate-y-px align-middle" aria-hidden="true" />
         {interrupted ? w.interrupted : status ? w.status[status] : w.connecting}
       </span>
-      {at !== null && <span>{w.updatedAt(clock(t, at))}</span>}
+      {at !== null && ` · ${interrupted ? w.lastUpdated(clock(t, at)) : w.updatedAt(clock(t, at))}`}
     </p>
   )
 }
 
-// The board's scoreboard, the current visit under it, and who won once someone has.
-function Board({ state, className, large }: { state: MatchState; className?: string; large?: boolean }) {
+// A stale board is faded, so an old score never reads as the current one.
+function Board({ state, stale, className, large }: { state: MatchState; stale: boolean; className?: string; large?: boolean }) {
   const t = useT()
   const players = state.config.players
   const winner = state.winner !== null ? players[state.winner].name : null
   return (
-    <section aria-label={gameSubtitle(t, state)} className={cn("flex flex-col gap-2", className)}>
+    <section aria-label={gameSubtitle(t, state)} className={cn("flex flex-col gap-2 transition-opacity", stale && "opacity-50", className)}>
       <div className="relative min-h-0 flex-1 [container-type:size]">
         {state.config.type === "x01" && <X01Scoreboard state={state} />}
         {state.config.type === "cricket" && <CricketScoreboard state={state} />}

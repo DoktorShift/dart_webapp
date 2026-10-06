@@ -98,6 +98,14 @@ export function visitBoard(link: BoardLink, onChange: (visit: BoardVisit) => voi
     if (message.t === "table" && !pending && !seated) {
       stop()
       table = message
+      // This phone sat here before (a fresh code, a reload): back to its seat while the board
+      // still has it taken.
+      const known = await joinedMatch(message.match)
+      if (known && message.seats[known.seat]?.taken) {
+        seated = known
+        return set({ step: "seated", joined: known })
+      }
+      if (known) await dropJoined(known.match).catch(() => {})
       set({ step: "table", table, ...(declined ? { declined } : {}) })
     } else if (message.t === "seat" && pending && table) {
       stop()
@@ -175,7 +183,7 @@ async function rememberJoined(joined: JoinedMatch): Promise<JoinedMatch> {
 }
 
 // A seat this phone joined before, with its keys, or null.
-export async function joinedMatch(match: string): Promise<JoinedMatch | null> {
+async function joinedMatch(match: string): Promise<JoinedMatch | null> {
   const record = await loadJoined(match).catch(() => null)
   if (!record) return null
   const secrets = await openKeys<JoinedSecrets>(record.keys)
@@ -228,7 +236,7 @@ export async function keepConfirmed(joined: JoinedMatch, state: MatchStateP): Pr
 export const seatKey = (joined: JoinedMatch) => joined.profile ?? joined.guest?.pubkey ?? null
 
 // The result's throws, from the result itself or its pieces; null while pieces are missing.
-export function resultThrows(state: MatchStateP, result: MatchResultEntry): string | null {
+function resultThrows(state: MatchStateP, result: MatchResultEntry): string | null {
   if (result.throws !== undefined) return result.throws
   if (!result.log) return null
   try {

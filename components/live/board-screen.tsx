@@ -131,7 +131,7 @@ function Seated({ joined: initial, onLeave }: { joined: JoinedMatch; onLeave: ()
   return (
     <>
       <p className="mt-2 text-[1.0625rem] font-semibold leading-snug [overflow-wrap:anywhere]">{b.seated(alias)}</p>
-      <MatchView followed={followed} actions={freed ? <InlineStatus className="mt-4">{b.freed}</InlineStatus> : <Verdict joined={joined} followed={followed} />} />
+      <MatchView followed={followed} compact={state?.result != null} actions={freed ? <InlineStatus className="mt-4">{b.freed}</InlineStatus> : <Verdict joined={joined} followed={followed} />} />
       <Button variant="ghost" onClick={onLeave} className="mt-4 h-11 w-full rounded-xl text-[1.0625rem] text-primary hover:bg-primary/10 hover:text-primary">
         {b.leave}
       </Button>
@@ -168,12 +168,9 @@ function Verdict({ joined, followed }: { joined: JoinedMatch; followed: Followed
     }
   }
 
-  const winner = result.winner !== null ? state.agreement.seats[result.winner]?.alias : null
   return (
     <section aria-label={r.confirm} className="mt-4 grid gap-2">
-      <p className="text-[1.0625rem] font-semibold leading-snug [overflow-wrap:anywhere]">
-        {[winner ? t.live.watch.wins(winner) : null, t.live.watch.legs(result.legs.join(":"))].filter(Boolean).join(" · ")}
-      </p>
+      <p className="text-[1.0625rem] font-semibold leading-snug">{r.summary(result.legs.join(":"))}</p>
       {mine?.verdict === "confirm" && <InlineStatus tone="success">{r.confirmed}</InlineStatus>}
       {mine?.verdict === "dispute" && <InlineStatus tone="error">{r.disputed}</InlineStatus>}
       {corrected && <InlineStatus>{r.corrected}</InlineStatus>}

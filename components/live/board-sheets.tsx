@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import { QRCodeView } from "@/components/common/qr-code-view"
 import { InlineStatus } from "@/components/common/inline-status"
-import { usePublicName } from "@/components/live/use-public-name"
+import { sameNamed, shortKey, usePublicNames, type PublicName } from "@/components/live/use-public-names"
 import { useT } from "@/components/i18n-provider"
 import {
   AlertDialog,
@@ -126,6 +126,7 @@ export function PlayersSheet({ open, onClose, match, view, start }: SheetProps) 
   const started = useStarted(open, start)
   const [seating, setSeating] = useState<Seating | null>(null)
   const [failed, setFailed] = useState(false)
+  const [round, setRound] = useState(0)
   const [freeing, setFreeing] = useState<number | null>(null)
   const ready = started.state === "ready" && view !== null
   // The board code is answered while the game is on the screen, sheet open or not, and replaced
@@ -141,7 +142,7 @@ export function PlayersSheet({ open, onClose, match, view, start }: SheetProps) 
     return () => {
       current = false
     }
-  }, [open, ready, seating, match.id])
+  }, [open, ready, seating, round, match.id])
   useEffect(() => {
     if (!seating) return
     const expiry = setTimeout(() => setSeating(null), Math.max(0, seating.expires - nowSeconds()) * 1000)
@@ -152,22 +153,36 @@ export function PlayersSheet({ open, onClose, match, view, start }: SheetProps) 
   }, [seating])
 
   const names = match.config.players.map((p) => p.name)
+  const holders = view?.seats.map((seat) => seat.holder) ?? []
+  const profiles = usePublicNames(holders.map((h) => (h?.profile ? h.pubkey : null)))
+  // The name each connected phone shows: its profile's, else the seat's.
+  const shown = holders.map((h, i) => (h ? (profiles.get(h.pubkey)?.name ?? names[i]) : null))
+  const twins = sameNamed(holders.flatMap((h, i) => (h ? [{ pubkey: h.pubkey, name: shown[i] as string }] : [])))
+  const boardLink = seating ? linkFor("board", seating.code) : null
   return (
     <Sheet open={open} onOpenChange={(next) => !next && onClose()} title={s.title} description={s.description}>
       <div className="min-h-0 overflow-y-auto overscroll-contain">
         {!ready ? (
           <Starting state={started.state === "failed" ? "failed" : "starting"} retry={started.retry} />
         ) : failed ? (
-          <InlineStatus tone="error">{t.live.startFailed}</InlineStatus>
-        ) : seating ? (
-          <QRCodeView value={linkFor("board", seating.code)} label={s.qrLabel} caption={s.codeValid(clock(t, seating.expires))} />
+          <Starting state="failed" retry={() => setRound((n) => n + 1)} />
+        ) : boardLink && seating ? (
+          <QRCodeView value={boardLink} label={s.qrLabel} caption={s.codeValid(clock(t, seating.expires))} share={{ url: boardLink, title: s.title }} />
         ) : (
           <Starting state="starting" retry={started.retry} />
         )}
         {ready && (
           <Group title={s.seats} className="mt-6 first:mt-6">
             {view.seats.map((seat, i) => (
-              <SeatRow key={i} name={names[i]} holder={seat.holder} verdict={seat.verdict} onFree={() => setFreeing(i)} />
+              <SeatRow
+                key={i}
+                name={names[i]}
+                holder={seat.holder}
+                profile={seat.holder ? (profiles.get(seat.holder.pubkey) ?? null) : null}
+                twin={seat.holder !== null && twins.has(seat.holder.pubkey)}
+                verdict={seat.verdict}
+                onFree={() => setFreeing(i)}
+              />
             ))}
           </Group>
         )}
@@ -192,14 +207,31 @@ export function PlayersSheet({ open, onClose, match, view, start }: SheetProps) 
   )
 }
 
-function SeatRow({ name, holder, verdict, onFree }: { name: string; holder: SeatHolder | null; verdict: "confirm" | "dispute" | null; onFree: () => void }) {
+// A seat: the board's name, how a phone is connected to it (with the profile's own name and
+// picture, and the key's first characters when another connected player shows the same name),
+// and the player's verdict on the result.
+function SeatRow({
+  name,
+  holder,
+  profile,
+  twin,
+  verdict,
+  onFree,
+}: {
+  name: string
+  holder: SeatHolder | null
+  profile: PublicName | null
+  twin: boolean
+  verdict: "confirm" | "dispute" | null
+  onFree: () => void
+}) {
   const t = useT()
   const s = t.live.playersSheet
-  const profile = usePublicName(holder?.profile ? holder.pubkey : null)
-  const connection = !holder ? s.notConnected : holder.profile ? (profile?.name ? `${s.connectedProfile}: ${profile.name}` : s.connectedProfile) : s.connectedGuest
+  const connection = !holder ? s.notConnected : holder.profile ? (profile?.name ? s.connectedAs(profile.name) : s.connectedProfile) : s.connectedGuest
   const subtitle: ReactNode = (
     <>
       <span className="block">{connection}</span>
+      {holder && twin && <span className="block tabular-nums">{s.keyHint(shortKey(holder.pubkey))}</span>}
       {verdict && <span className={cn("block", verdict === "dispute" && "text-danger")}>{verdict === "confirm" ? s.confirmed : s.disputed}</span>}
     </>
   )
@@ -208,14 +240,14 @@ function SeatRow({ name, holder, verdict, onFree }: { name: string; holder: Seat
       title={name}
       subtitle={subtitle}
       trailing={
-        <span className="flex items-center gap-2">
-          {holder && <Avatar seed={holder.pubkey} name={profile?.name ?? name} src={profile?.picture} size={32} />}
-          {holder && (
+        holder && (
+          <span className="flex items-center gap-1">
+            <Avatar seed={holder.pubkey} name={profile?.name ?? name} src={profile?.picture} size={32} />
             <Button variant="ghost" onClick={onFree} aria-label={s.disconnectLabel(name)} className="h-11 rounded-xl px-3 text-[1.0625rem] text-danger hover:bg-danger/10 hover:text-danger">
               {s.disconnect}
             </Button>
-          )}
-        </span>
+          </span>
+        )
       }
     />
   )
@@ -260,7 +292,7 @@ export function HandoffSheet({ open, onClose, match, start, closeGame }: SheetPr
   else if (offer.step === "waiting")
     body = (
       <>
-        <QRCodeView value={linkFor("handoff", offer.code)} label={s.qrLabel} />
+        <QRCodeView value={linkFor("handoff", offer.code)} label={s.qrLabel} share={{ url: linkFor("handoff", offer.code), title: s.title }} />
         <p className="mt-4 px-1 text-[0.8125rem] text-muted-foreground">{s.footnote}</p>
       </>
     )

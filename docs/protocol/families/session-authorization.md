@@ -14,6 +14,8 @@ Die Match-ID ist die Event-ID des ersten `match.session` (`sv: 1`). Dessen Autor
 - ein vom Veranstalter zugelassenes Board (`tournament.board`) oder der Veranstalter selbst (Turnierspiel; der Veranstalter wird `lib/live` als weitere Autorität übergeben, `authorities`),
 - der Geräteschlüssel eines Boards, an dem nur Gäste spielen.
 
+Die App (`lib/live`, P4) gründet Freundschaftsspiele immer mit einem Schlüssel, den das Board nur für dieses Spiel erzeugt, auch wenn dort ein Profil angemeldet ist: Die Autorität verbindet jedes Handy mit seinem Platz (`match.seat`) und zieht bei „Auf anderem Gerät fortsetzen“ mit dem Spiel um. Mit dem Profil als Autorität müsste ein externer Signer jeden Platz bestätigen, und das neue Gerät könnte ohne dieses Profil weder Plätze verbinden noch weitergeben. Das Profil eines Spielers steht über `match.seat` und seine Bestätigung im Match.
+
 ## Inhalt (`match.session`, Kind 1180)
 
 | Feld | Bedeutung |

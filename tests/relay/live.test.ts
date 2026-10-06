@@ -42,7 +42,16 @@ before(async () => {
   ])
 })
 
+// What a test opened (followers, board codes, boards, a worker), closed after the tests even
+// when one fails, so nothing keeps the process running.
+const opened: (() => unknown)[] = []
+const keep = <T extends { close: () => unknown }>(handle: T) => {
+  opened.push(() => handle.close())
+  return handle
+}
+
 after(async () => {
+  for (const close of opened) await close()
   nostr.relayClient().close()
   await relay?.stop()
 })
@@ -84,13 +93,14 @@ const shown = (s: MatchState) => ({ scores: s.scores, current: s.current, visitD
 
 function watcher(source: { match: string; key: string | null; relays: string[] }) {
   let latest: import("../../lib/live/follow.ts").Followed | null = null
-  const handle = follow.followMatch(source, (f) => (latest = f))
+  const handle = keep(follow.followMatch(source, (f) => (latest = f)))
   return { get: () => latest, close: handle.close }
 }
 
 test("a spectator replays the board's newest snapshot; without the match key nothing is readable", async () => {
   const game = newGame("watch-game", fullGame.slice(0, 4))
   const view = await live.goLive(game)
+  opened.push(() => live.stopHere(game.id))
   const link = links.decodeLinkPayload("watch", view.watch)
   assert.deepEqual(link.relays, [relay.url])
   assert.ok(link.key)
@@ -118,37 +128,50 @@ test("a spectator replays the board's newest snapshot; without the match key not
   assert.ok(!JSON.stringify(stored.events).includes("Mia"))
   const blind = watcher({ match: link.match, key: null, relays: link.relays })
   await until("the founding as sealed", () => blind.get()?.problem === "sealed")
-  spectator.close()
-  blind.close()
-  await live.stopHere(game.id)
 })
 
 test("players join from their phones without any key leaving them; their verdicts count until a correction", async () => {
   const local = "join-game"
   const game = newGame(local, fullGame.slice(0, 3))
   await live.goLive(game)
-  const seats = await seating.openSeating(local)
+  opened.push(() => live.stopHere(local))
+  const seats = keep(await seating.openSeating(local))
   const board = links.decodeLinkPayload("board", seats.code)
 
   // Everything the handshake sends, as anyone on the relay sees it.
   const seen: unknown[] = []
-  const spy = nostr.subscribe([{ kinds: [21180] }], [relay.url], { onevent: (event) => seen.push(event) })
+  const spy = keep(nostr.subscribe([{ kinds: [21180] }], [relay.url], { onevent: (event) => seen.push(event) }))
 
   const profileSecret = crypto.getRandomValues(new Uint8Array(32))
   const profile = await signers.createLocalSigner(profileSecret)
   const profilePubkey = await profile.getPublicKey()
 
+  type Visit = import("../../lib/live/join.ts").BoardVisit
+  const tableOf = (v: Visit) => (v.step === "table" ? v.table : null)
+  const seatOf = (v: Visit) => (v.step === "seated" ? v.joined : null)
+  const visit = () => {
+    let current: Visit = { step: "looking" }
+    const control = keep(join.visitBoard(board, (next) => (current = next)))
+    return { control, get: () => current }
+  }
   const sit = async (seat: number, signer: typeof profile | null) => {
-    let visit: import("../../lib/live/join.ts").BoardVisit = { step: "looking" }
-    const control = join.visitBoard(board, (next) => (visit = next))
-    const table = await until("the seats", () => visit.step === "table" && visit.table)
+    const phone = visit()
+    const table = await until("the seats", () => tableOf(phone.get()))
     assert.deepEqual(table.seats.map((s) => s.alias), ["Mia", "Jonas"])
-    await control.join(seat, signer)
-    const seated = await until("the seat", () => visit.step === "seated" && visit.joined)
-    return { seated, control }
+    await phone.control.join(seat, signer)
+    const seated = await until("the seat", () => seatOf(phone.get()))
+    return { seated, control: phone.control }
   }
   const mia = await sit(0, null)
+  // One database stands in for both phones here: Mia's phone keeps its seat in memory, and its
+  // stored seat goes before Jonas's phone looks (each real phone has a database of its own).
+  await store.dropJoined(mia.seated.match)
   const jonas = await sit(1, profile)
+  // Opened again (a reload, a fresh code), the phone is back on its seat without asking.
+  const again = visit()
+  const back = await until("the seat again", () => seatOf(again.get()))
+  assert.equal(back.seat, 1)
+  assert.equal(back.profile, profilePubkey)
   assert.equal(jonas.seated.profile, profilePubkey)
   assert.equal(jonas.seated.guest, null)
   assert.ok(mia.seated.guest)
@@ -214,17 +237,13 @@ test("players join from their phones without any key leaving them; their verdict
   assert.deepEqual(kept?.throws, JSON.parse(JSON.stringify(corrected)))
   assert.equal(kept?.players[1].name, "Jonas")
 
-  mia.control.close()
-  jonas.control.close()
-  phone.close()
-  seats.close()
-  await live.stopHere(local)
 })
 
 test("the writer hands the match to another device only after confirming; the old session counts no more", async () => {
   const local = "handoff-game"
   const game = newGame(local, fullGame.slice(0, 5))
   const view = await live.goLive(game)
+  opened.push(() => live.stopHere(local))
   const link = links.decodeLinkPayload("watch", view.watch)
   const spectator = watcher({ match: link.match, key: link.key ?? null, relays: link.relays })
   await until("the board's snapshot", () => spectator.get()?.state?.live)
@@ -233,12 +252,13 @@ test("the writer hands the match to another device only after confirming; the ol
   const oldKeys = await store.openKeys<import("../../lib/live/store.ts").BoardSecrets>(sealed!.keys)
 
   const device = new Worker(new URL("./live-device.ts", import.meta.url), { workerData: { relay: relay.url } })
+  opened.push(() => device.terminate())
   const messages: { type: string; step?: string; checkCode?: string; game?: SavedMatch; live?: boolean }[] = []
   device.on("message", (m) => messages.push(m))
   await until("the other device", () => messages.some((m) => m.type === "ready"))
 
   let offer: import("../../lib/live/handoff.ts").HandoffOffer | null = null
-  const control = await handoff.offerHandoff(local, (next) => (offer = next))
+  const control = keep(await handoff.offerHandoff(local, (next) => (offer = next)))
   const waiting = await until("the handoff code", () => offer?.step === "waiting" && offer)
   device.postMessage({ type: "take", code: waiting.code })
 
@@ -282,7 +302,4 @@ test("the writer hands the match to another device only after confirming; the ol
   assert.equal(after.log.rejected.find((r) => r.id === lateEvent.id)?.reason, "session_superseded")
   assert.equal(after.live?.sv, 2)
 
-  control.close()
-  spectator.close()
-  await device.terminate()
 })

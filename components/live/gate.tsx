@@ -2,7 +2,7 @@
 
 import { lazy, useEffect, useState, useSyncExternalStore } from "react"
 import type { SavedMatch } from "@/lib/game/types"
-import { loadBoard } from "@/lib/live/store"
+import { listBoards, loadBoard } from "@/lib/live/store"
 import type { FinishedMatch } from "@/lib/shell/registry"
 
 // The always-loaded part of the live area on the game screen: it decides whether the live code
@@ -49,6 +49,19 @@ function useLiveHere(match: string): [boolean, () => void] {
   return [live, () => setLive(true)]
 }
 
+// Records of an earlier live game that never reached a relay (the app was closed right after
+// it): sent now that a game is on the screen again.
+function useLeftoverBoards(match: string) {
+  useEffect(() => {
+    void listBoards().then(
+      (records) => {
+        if (records.some((r) => r.local !== match)) void import("@/lib/live/board").then((board) => board.settleBoards(match))
+      },
+      () => {},
+    )
+  }, [match])
+}
+
 const LiveGame = lazy(() => import("@/components/live/live-game"))
 const Confirmations = lazy(() => import("@/components/live/confirmations"))
 
@@ -56,6 +69,7 @@ const Confirmations = lazy(() => import("@/components/live/confirmations"))
 export function LiveGate({ match, close }: { match: SavedMatch; close: () => void }) {
   const sheet = useRequestedSheet(match.id)
   const [live, wentLive] = useLiveHere(match.id)
+  useLeftoverBoards(match.id)
   if (!live && !sheet) return null
   return <LiveGame match={match} close={close} sheet={sheet} onSheetClose={() => setRequested(null)} onLive={wentLive} />
 }

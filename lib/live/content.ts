@@ -42,6 +42,9 @@ type ResultContent = ContentOf<"match.result">
 const RESULT_OVERHEAD_BYTES = 4096
 const LOG_PIECE_BYTES = 16000
 
+// What a result states: the same game always gives the same key, a corrected one another.
+const resultKey = (winner: number, legs: readonly number[], throws: string) => `${winner}|${legs.join(",")}|${throws}`
+
 // The result of a won game: winner, legs (and sets) per seat and the whole throw log, inline or
 // in pieces. `key` says what the result states, to tell whether a published one still holds.
 export function resultFor(match: SavedMatch, state: MatchState, at: { sv: number; auth: SignedEvent; finishedAt: number }): { content: ResultContent; pieces: Chunk[]; key: string } {
@@ -55,8 +58,6 @@ export function resultFor(match: SavedMatch, state: MatchState, at: { sv: number
   const { chunks, head, bytes } = chunkData(throws, LOG_PIECE_BYTES)
   return { content: { ...base, log: { head, total: chunks.length, bytes } }, pieces: chunks, key }
 }
-
-export const resultKey = (winner: number, legs: readonly number[], throws: string) => `${winner}|${legs.join(",")}|${throws}`
 
 // The game a board offers before a player has a seat: its rules with the seats' names.
 export const offeredGame = (rules: Agreement["rules"], aliases: readonly string[]): MatchConfig =>

@@ -27,6 +27,8 @@ export const liveEn: Messages["live"] = {
     qrLabel: "QR code for connecting",
     seats: "Seats",
     connectedProfile: "Connected with a profile",
+    connectedAs: (name) => `Connected with a profile: ${name}`,
+    keyHint: (key) => `ID ${key}`,
     connectedGuest: "Connected as a guest",
     notConnected: "Not connected",
     confirmed: "Confirmed the result",
@@ -85,6 +87,7 @@ export const liveEn: Messages["live"] = {
     waiting: "The first score is on its way.",
     status: { playing: "In progress", paused: "Paused", finished: "Finished", abandoned: "Abandoned" },
     interrupted: "Connection lost",
+    lastUpdated: (time) => `last updated ${time}`,
     updatedAt: (time) => `Score as of ${time}`,
     current: "Current visit",
     throwing: (name) => `${name} to throw`,
@@ -124,6 +127,7 @@ export const liveEn: Messages["live"] = {
   },
 
   result: {
+    summary: (legs) => `Result: legs ${legs}`,
     confirm: "Confirm result",
     dispute: "Dispute",
     disputeTitle: "Dispute the result?",

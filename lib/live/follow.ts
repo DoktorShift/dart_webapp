@@ -40,7 +40,7 @@ export const matchFilters = (match: string): Filter[] => [
   { kinds: [KIND_STATE], "#d": [match] },
 ]
 
-export function followMatch(source: MatchSource, onChange: (followed: Followed) => void): { refresh: () => void; close: () => void } {
+export function followMatch(source: MatchSource, onChange: (followed: Followed) => void): { close: () => void } {
   const key = source.key ? keyOf(fromHex(source.key)) : null
   const events = new Map<string, SignedEvent>()
   const opened = new Map<string, string | null>()
@@ -113,7 +113,6 @@ export function followMatch(source: MatchSource, onChange: (followed: Followed) 
   }
 
   return {
-    refresh: () => void check(),
     close() {
       closed = true
       clearInterval(timer)
