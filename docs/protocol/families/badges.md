@@ -14,6 +14,18 @@ Tags: `d` = `blueline:<scope>[:<scope-id>]:<badge>:v<version>`, `name`, `descrip
 
 Tags: `["a","30009:<aussteller>:<d>"]`, genau ein `["p",<empfänger>]`, genau ein `["e",<nachweis>]` (Ergebnis oder Entscheidung, auf der sie beruht), `["occasion",<anlass>]` (Turnier-, Saison- oder Ergebnis-ID oder `once`), Labels wie oben mit `badge.award`.
 
+## Nachweis (Kind 1180, `badge.evidence`)
+
+Wo kein anderer Datensatz der Nachweis ist, schreibt ihn der Aussteller selbst (PLAN.md „Auszeichnungsnachweis“: versionierte Bedingung, konkretes Ergebnis, Aussteller = Autor): für einen selbst erreichten Meilenstein das eigene Spiel, für eine Anerkennung die Worte des Ausstellers. Gründung ohne `e`-Tag, nie verschlüsselt, Pflicht-Tags nach [kinds.md](../kinds.md).
+
+| Feld | Inhalt |
+| --- | --- |
+| `badge` | `d` der Definition: die versionierte Bedingung |
+| `result?` | `game` (ID des Spiels auf den Geräten des Spielers), `finishedAt`, `mode` (Spielart-ID), `value` (die Zahl, mit der die Bedingung erfüllt wurde, in der Einheit der Auszeichnung) |
+| `note?` | Klartext des Ausstellers (Anerkennung), höchstens 280 Zeichen |
+
+Mindestens eines von `result` und `note`. Nie Gegner, Namen oder andere Spiele. Die Vergabe nennt den Nachweis in ihrem `e`-Tag.
+
 ## Prüfung (`checkBadgeAward`)
 
 Signaturen prüft vorher `lib/nostr`. Dann: Kinds und Labels, **Autor der Vergabe = Autor der Definition = Aussteller in der `a`-Adresse** (nostr-core 1.0.4 prüft das nicht, PR-04: eine gefälschte Vergabe würde sonst angenommen), genau ein Empfänger, Nachweis und Anlass vorhanden; `self` nur an den Aussteller selbst; `club`/`tournament` nur, wenn der Zustand des Clubs beziehungsweise Turniers den Aussteller dazu berechtigt (`mayIssue`); ein korrigierter oder aufgehobener Nachweis macht die Vergabe ungültig (`evidence_revoked`). Doppelte Vergaben (gleicher Aussteller, Definition, Empfänger, Anlass) zählen einmal: die erste in Abspielreihenfolge (`dedupeAwards`).

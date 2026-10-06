@@ -34,6 +34,7 @@ import type { ReplayLog } from "../lib/protocol/replay.ts"
 import { openEnvelope, openSealedEvents, parseEnvelope, wrapsFor } from "../lib/protocol/seal.ts"
 import type { SignedEvent } from "../lib/protocol/tags.ts"
 import { decodeThrows, encodeThrows } from "../lib/protocol/throws.ts"
+import { parseRecord, type BlueLineRecord } from "../lib/protocol/records.ts"
 import { reduceTournament, waitingList } from "../lib/protocol/tournament-state.ts"
 import { buildSchemas, buildVectors, serialize } from "./support/make-vectors.ts"
 
@@ -394,6 +395,15 @@ test("badge vectors", () => {
       assert.ok(result.ok, `${c.name}: ${JSON.stringify(result)}`)
       assert.equal(result.self, c.expect.self, c.name)
     } else assert.equal(result.ok ? "ok" : result.reason, c.expect.reason, c.name)
+    if (c.evidence) {
+      // The evidence record: the issuer's own, about this very badge, and the one the award names.
+      const parsed = parseRecord(c.evidence, { now: c.evidence.created_at })
+      assert.equal(parsed.status, "ok", c.name)
+      const record = (parsed as { record: BlueLineRecord<"badge.evidence"> }).record
+      assert.equal(record.pubkey, c.award.pubkey, c.name)
+      assert.equal(`30009:${record.pubkey}:${record.content.badge}`, c.award.tags.find((t: string[]) => t[0] === "a")[1], c.name)
+      assert.equal(c.award.tags.find((t: string[]) => t[0] === "e")[1], c.evidence.id, c.name)
+    }
     if (c.duplicateOf) {
       const original = file.cases.find((x: Vector) => x.award.id === c.duplicateOf)
       const checked = [original, c].map((x: Vector) => ({ award: x.award, ...(checkBadgeAward(x.award, x.definition, ctx) as { key: string }) }))

@@ -1,4 +1,5 @@
 import type { EventTemplate } from "../nostr/types.ts"
+import { BADGE_TYPES } from "./badges.ts"
 import { CLUB_TYPES, MAX_SHARED_KEYS } from "./club.ts"
 import type { RecordSpec } from "./common.ts"
 import type { InvitePreview } from "./invite.ts"
@@ -22,7 +23,7 @@ import { TOURNAMENT_TYPES } from "./tournament.ts"
 // event into a typed record (or say exactly why not). Signatures are checked by lib/nostr
 // before parsing; authority is checked by the state reducers after it.
 
-export const RECORD_TYPES = { ...CLUB_TYPES, ...TOURNAMENT_TYPES, ...MATCH_TYPES, ...LIVE_TYPES, ...PAYMENT_TYPES, ...PROFILE_TYPES }
+export const RECORD_TYPES = { ...CLUB_TYPES, ...TOURNAMENT_TYPES, ...MATCH_TYPES, ...LIVE_TYPES, ...PAYMENT_TYPES, ...PROFILE_TYPES, ...BADGE_TYPES }
 export type RecordType = keyof typeof RECORD_TYPES
 export type ContentOf<T extends RecordType> = Infer<(typeof RECORD_TYPES)[T]["schema"]>
 
