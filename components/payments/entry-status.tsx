@@ -4,9 +4,9 @@ import type { ComponentType, ReactNode } from "react"
 import { useReducedMotion } from "framer-motion"
 import { CircleAlert, CircleCheck, CircleX, Clock, LoaderCircle } from "lucide-react"
 import { ListRow } from "@/components/ui/list-row"
-import { useT } from "@/components/i18n-provider"
-import { formatMsat } from "@/components/payments/format"
-import type { Messages } from "@/lib/i18n"
+import { useAreaT } from "@/components/i18n-provider"
+import { useFormat } from "@/components/payments/format"
+import { PAYMENTS_TEXTS, type PaymentTexts } from "@/lib/i18n/features/payments.screens"
 import type { PaymentEntry } from "@/lib/payments/journal"
 import { cn } from "@/lib/utils"
 
@@ -14,15 +14,16 @@ import { cn } from "@/lib/utils"
 
 export type Tone = "success" | "progress" | "warning" | "error" | "neutral"
 
-export function entryStatus(t: Messages, entry: PaymentEntry): { label: string; tone: Tone } {
-  const s = t.payments.state
+export function entryStatus(tx: PaymentTexts, entry: PaymentEntry): { label: string; tone: Tone } {
+  const s = tx.state
   switch (entry.state) {
     case "paid":
       if (entry.via === "manual") return { label: s.settledHere, tone: "success" }
+      if (entry.resolvedByHand) return { label: s.paidByHand, tone: "success" }
       if (entry.zap) return entry.zap.receipt ? { label: s.receiptConfirmed, tone: "success" } : { label: s.receiptPending, tone: "success" }
       return { label: s.paid, tone: "success" }
     case "received":
-      return { label: entry.via === "manual" ? s.settledHere : s.received, tone: "success" }
+      return { label: entry.via === "manual" ? s.settledHere : entry.resolvedByHand ? s.receivedByHand : s.received, tone: "success" }
     case "sending":
       return { label: s.sending, tone: "progress" }
     case "waiting":
@@ -30,9 +31,9 @@ export function entryStatus(t: Messages, entry: PaymentEntry): { label: string; 
     case "unknown":
       return { label: s.unknown, tone: "warning" }
     case "failed":
-      return { label: s.failed, tone: "error" }
+      return entry.resolvedByHand ? { label: s.notPaidByHand, tone: "neutral" } : { label: s.failed, tone: "error" }
     case "expired":
-      return { label: s.expired, tone: "neutral" }
+      return { label: entry.resolvedByHand ? s.notReceivedByHand : s.expired, tone: "neutral" }
   }
 }
 
@@ -44,7 +45,7 @@ const ICONS: Record<Tone, ComponentType<{ className?: string; "aria-hidden"?: bo
   neutral: Clock,
 }
 
-const COLORS: Record<Tone, string> = {
+export const TONE_COLORS: Record<Tone, string> = {
   success: "text-success",
   progress: "text-primary",
   warning: "text-warning",
@@ -60,12 +61,17 @@ const CIRCLES: Record<Tone, string> = {
   neutral: "bg-secondary",
 }
 
+// The small symbol of a status, in its colour, next to text that says it.
+export function StatusIcon({ tone, className }: { tone: Tone; className?: string }) {
+  const Icon = ICONS[tone]
+  return <Icon className={cn("h-3.5 w-3.5 shrink-0", TONE_COLORS[tone], className)} aria-hidden />
+}
+
 // A small symbol with the status text, for rows and lists.
 export function StatusLabel({ tone, children, className }: { tone: Tone; children: ReactNode; className?: string }) {
-  const Icon = ICONS[tone]
   return (
-    <span className={cn("inline-flex items-start gap-1.5", COLORS[tone], className)}>
-      <Icon className="mt-[0.1875rem] h-3.5 w-3.5 shrink-0" aria-hidden />
+    <span className={cn("inline-flex items-start gap-1.5", TONE_COLORS[tone], className)}>
+      <StatusIcon tone={tone} className="mt-[0.1875rem]" />
       <span>{children}</span>
     </span>
   )
@@ -78,7 +84,7 @@ export function OutcomeHeader({ tone, title, text, working = false }: { tone: To
   const Icon = working ? LoaderCircle : ICONS[tone]
   return (
     <div role="status" className="flex flex-col items-center px-2 pt-2 text-center">
-      <span className={cn("flex h-14 w-14 items-center justify-center rounded-full", CIRCLES[tone], COLORS[tone])}>
+      <span className={cn("flex h-14 w-14 items-center justify-center rounded-full", CIRCLES[tone], TONE_COLORS[tone])}>
         <Icon className={cn("h-8 w-8", working && !reduceMotion && "animate-spin")} aria-hidden />
       </span>
       <h3 className="mt-3 text-xl font-semibold leading-tight text-foreground">{title}</h3>
@@ -88,21 +94,15 @@ export function OutcomeHeader({ tone, title, text, working = false }: { tone: To
 }
 
 // Who a payment went to or came from; an invoice from Zahlungen names nobody.
-function counterpartTitle(t: Messages, { direction, counterpart }: PaymentEntry) {
-  if (direction === "out") return counterpart.name ? t.payments.to(counterpart.name) : t.payments.pay.invoice
-  return counterpart.name ? t.payments.from(counterpart.name) : t.payments.receive.title
+function counterpartTitle(tx: PaymentTexts, { direction, counterpart }: PaymentEntry) {
+  if (direction === "out") return counterpart.name ? tx.to(counterpart.name) : tx.pay.invoice
+  return counterpart.name ? tx.from(counterpart.name) : tx.receive.title
 }
 
 // A payment in a list: who, how it stands, how much.
 export function EntryRow({ entry, onClick }: { entry: PaymentEntry; onClick: () => void }) {
-  const t = useT()
-  const { label, tone } = entryStatus(t, entry)
-  return (
-    <ListRow
-      title={counterpartTitle(t, entry)}
-      subtitle={<StatusLabel tone={tone}>{label}</StatusLabel>}
-      value={formatMsat(t, entry.amountMsat)}
-      onClick={onClick}
-    />
-  )
+  const tx = useAreaT(PAYMENTS_TEXTS)
+  const format = useFormat()
+  const { label, tone } = entryStatus(tx, entry)
+  return <ListRow title={counterpartTitle(tx, entry)} subtitle={<StatusLabel tone={tone}>{label}</StatusLabel>} value={format.msat(entry.amountMsat)} onClick={onClick} />
 }

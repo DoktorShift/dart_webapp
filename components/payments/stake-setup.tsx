@@ -4,11 +4,12 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
-import { Sheet } from "@/components/ui/sheet"
-import { useT } from "@/components/i18n-provider"
+import { Sheet, SheetBody } from "@/components/ui/sheet"
+import { useAreaT, useT } from "@/components/i18n-provider"
 import { AmountPicker } from "@/components/payments/amount-picker"
-import { formatSats } from "@/components/payments/format"
+import { useFormat } from "@/components/payments/format"
 import { LearnMore } from "@/components/payments/learn-more"
+import { PAYMENTS_TEXTS } from "@/lib/i18n/features/payments.screens"
 import { readStake, AMOUNT_PRESETS } from "@/lib/payments/stake"
 import type { SetupExtraProps } from "@/lib/shell/registry"
 
@@ -16,7 +17,8 @@ import type { SetupExtraProps } from "@/lib/shell/registry"
 // with the game ("Verlierer zahlt"); nothing is paid here, and no wallet is needed to note it.
 export default function StakeSetup({ config, value, onChange }: SetupExtraProps) {
   const t = useT()
-  const s = t.payments.stake
+  const s = useAreaT(PAYMENTS_TEXTS).stake
+  const format = useFormat()
   const stake = readStake(value)
   const [open, setOpen] = useState(false)
   const [amount, setAmount] = useState<number | null>(null)
@@ -35,7 +37,7 @@ export default function StakeSetup({ config, value, onChange }: SetupExtraProps)
       <Group footer={s.hint}>
         <ListRow
           title={s.title}
-          value={stake ? formatSats(t, stake.sats) : s.none}
+          value={stake ? format.sats(stake.sats) : s.none}
           onClick={() => {
             setAmount(stake?.sats ?? null)
             setOpen(true)
@@ -43,12 +45,12 @@ export default function StakeSetup({ config, value, onChange }: SetupExtraProps)
         />
       </Group>
       <Sheet open={open} onOpenChange={setOpen} title={s.title} description={s.sheetText}>
-        <div className="min-h-0 overflow-y-auto overscroll-contain pb-1">
+        <SheetBody>
           {open && <AmountPicker label={s.title} presets={AMOUNT_PRESETS} value={amount} onChange={setAmount} />}
           <div className="mt-4">
             <LearnMore inline />
           </div>
-        </div>
+        </SheetBody>
         <div className="flex shrink-0 flex-col gap-2 pt-4">
           <Button onClick={() => close(amount)} disabled={amount === null} className="h-12 w-full rounded-xl text-[1.0625rem] font-semibold">
             {s.apply}

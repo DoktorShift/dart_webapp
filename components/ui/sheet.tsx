@@ -35,3 +35,9 @@ export function Sheet({
     </Drawer>
   )
 }
+
+// The sheet's content when it can be longer than the sheet: it scrolls on its own, and buttons
+// placed after it stay in view.
+export function SheetBody({ children }: { children: ReactNode }) {
+  return <div className="min-h-0 overflow-y-auto overscroll-contain pb-1">{children}</div>
+}

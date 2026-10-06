@@ -103,7 +103,8 @@ test("after switching wallets, Status prüfen never calls a payment of the old o
   const unknown = entryOf(await withWallet((w) => pay(stake(invoice()), w), { replyTimeoutMs: 1500 }))
   assert.equal(first.paid.get(unknown.id), 1, "the first wallet paid, its answer was lost")
   // The invoice runs out; "Verbindung entfernen", then another wallet is connected.
-  await dbPut("payments", { ...unknown, expiresAt: Math.floor(Date.now() / 1000) - 1 })
+  const expired: PaymentEntry = { ...unknown, expiresAt: Math.floor(Date.now() / 1000) - 1 }
+  await dbPut("payments", expired)
   await removeWallet()
   const second = await fakeWallet()
   const info = await connectNewWallet(second.uri)

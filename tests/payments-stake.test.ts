@@ -3,7 +3,7 @@ import assert from "node:assert/strict"
 import { randomBytes } from "@noble/hashes/utils.js"
 import { encodeInvoice } from "./support/bolt11.ts"
 import { invoiceIn, scanKind, scannedInvoice } from "../lib/payments/invoices.ts"
-import { deviceSide, MAX_SATS, readStake, STAKE_EXTRA, stakeParties } from "../lib/payments/stake.ts"
+import { deviceSide, MAX_SATS, readStake, resultOffer, STAKE_EXTRA, stakeParties } from "../lib/payments/stake.ts"
 
 // The stake noted in setup ("Verlierer zahlt"), who pays whom after the game, and what the
 // payment scanners take: an invoice only, never a wallet connection.
@@ -24,6 +24,14 @@ test("the loser pays the winner, only between two players", () => {
   assert.equal(stakeParties(withStake(500, 0, [TOM, MIA, { id: "pl_ben", name: "Ben" }])), null)
   assert.equal(stakeParties(withStake(500, 0, [TOM])), null)
   assert.equal(stakeParties({ players: [TOM, MIA], winner: 1 }), null)
+})
+
+test("a result offers its stake to anyone, paying freely only with a wallet and someone to pay", () => {
+  const finished = (extras: Record<string, unknown> | undefined, players = [TOM, MIA]) => ({ players, winner: 1, solo: players.length === 1, config: { extras } })
+  assert.deepEqual(resultOffer(finished({ [STAKE_EXTRA]: { sats: 500 } }), false), { kind: "stake", parties: { payer: TOM, payee: MIA, sats: 500 } })
+  assert.equal(resultOffer(finished(undefined), false), null, "a guest who never used payments sees nothing")
+  assert.deepEqual(resultOffer(finished(undefined), true), { kind: "free" })
+  assert.equal(resultOffer(finished(undefined, [TOM]), true), null, "nobody to pay in a solo game")
 })
 
 test("this device's side, when a player is linked to the signed-in profile", () => {

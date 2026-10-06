@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react"
 import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
-import { useT } from "@/components/i18n-provider"
-import { formatMsat, formatNumber } from "@/components/payments/format"
-import type { Messages } from "@/lib/i18n"
+import { useAreaT } from "@/components/i18n-provider"
+import { useFormat } from "@/components/payments/format"
+import { PaymentSignet } from "@/components/payments/signet"
+import { PAYMENTS_TEXTS, type PaymentTexts } from "@/lib/i18n/features/payments.screens"
 import type { Budget } from "@/lib/nostr/wallet"
 import { useJournal } from "@/lib/payments/hooks"
 import { capabilities, withWallet, type WalletInfo } from "@/lib/payments/wallet"
@@ -15,10 +16,24 @@ import { capabilities, withWallet, type WalletInfo } from "@/lib/payments/wallet
 // balance, and no limit of BlueLine's own passed off as the wallet's (PLAN.md "Wallet-seitige
 // Limits").
 
-export function capabilityText(t: Messages, info: WalletInfo) {
+export function capabilityText(tx: PaymentTexts, info: WalletInfo) {
   const { pay, receive } = capabilities(info)
-  const c = t.payments.capability
+  const c = tx.capability
   return pay && receive ? c.both : pay ? c.pay : receive ? c.receive : c.none
+}
+
+// The wallet by its name, with what it allows.
+export function WalletCard({ info }: { info: WalletInfo }) {
+  const tx = useAreaT(PAYMENTS_TEXTS)
+  return (
+    <section className="mt-6 flex items-center gap-4 rounded-2xl border border-border bg-card px-4 py-4">
+      <PaymentSignet size="large" />
+      <div className="min-w-0">
+        <h2 className="text-xl font-semibold leading-tight [overflow-wrap:anywhere]">{info.alias ?? tx.yourWallet}</h2>
+        <p className="mt-0.5 text-[0.9375rem] leading-snug text-muted-foreground">{capabilityText(tx, info)}</p>
+      </div>
+    </section>
+  )
 }
 
 type Live<T> = { state: "loading" } | { state: "known"; value: T } | { state: "unavailable" }
@@ -55,14 +70,15 @@ function useWalletFigures(info: WalletInfo, ask: boolean, asOf: number) {
 export function WalletRights({ info, figures = false }: { info: WalletInfo; figures?: boolean }) {
   const journal = useJournal()
   const asOf = journal?.reduce((latest, entry) => Math.max(latest, entry.updatedAt), 0) ?? 0
-  const t = useT()
-  const w = t.payments.wallet
+  const tx = useAreaT(PAYMENTS_TEXTS)
+  const format = useFormat()
+  const w = tx.wallet
   const can = capabilities(info)
   const { balance, budget } = useWalletFigures(info, figures, asOf)
   // A figure as shown: while it loads, when the wallet couldn't say, or its value (null: none).
   const figure = <T,>(live: Live<T>, show: (value: T) => string | null) => (live.state === "loading" ? w.loading : live.state === "unavailable" ? w.unavailable : show(live.value))
-  const balanceText = balance && figure(balance, (msat) => formatMsat(t, msat))
-  const limitText = budget && figure(budget, (limit) => limit && w.limitOf(formatNumber(t, Math.max(0, limit.totalMsat - limit.usedMsat) / 1000), formatMsat(t, limit.totalMsat)))
+  const balanceText = balance && figure(balance, (msat) => format.msat(msat))
+  const limitText = budget && figure(budget, (limit) => limit && w.limitOf(format.number(Math.max(0, limit.totalMsat - limit.usedMsat) / 1000), format.msat(limit.totalMsat)))
   const enforced = budget?.state === "known" && budget.value !== null
   const hints = [!can.pay && w.cantPay, !can.receive && w.cantReceive, enforced ? w.limitFooter : w.noLimitFooter].filter(Boolean).join(" ")
 

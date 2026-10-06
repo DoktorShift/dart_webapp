@@ -2,14 +2,15 @@
 
 import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
-import { useT } from "@/components/i18n-provider"
+import { useAreaT, useT } from "@/components/i18n-provider"
+import { PAYMENTS_TEXTS } from "@/lib/i18n/features/payments.screens"
 import { useWallet } from "@/lib/payments/hooks"
 
 // Zahlungen › Erweitert: how the wallet connection works, for those who want to know. The only
 // place in the payments area that names the protocol. The connection's secret is never shown.
 export default function PaymentsAdvancedScreen() {
   const t = useT()
-  const a = t.payments.advanced
+  const a = useAreaT(PAYMENTS_TEXTS).advanced
   const wallet = useWallet()
   if (!wallet) return null
   const list = (values: string[]) => (values.length > 0 ? values.join(", ") : a.none)

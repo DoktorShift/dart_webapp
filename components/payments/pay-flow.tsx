@@ -6,19 +6,20 @@ import { QRScanner, type ScanVerdict } from "@/components/common/qr-scanner"
 import { Avatar } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { ListRow } from "@/components/ui/list-row"
-import { useT } from "@/components/i18n-provider"
+import { useAreaT, useT } from "@/components/i18n-provider"
 import { ConnectPanel } from "@/components/payments/connect"
 import { EntryOutcome } from "@/components/payments/entry-outcome"
 import { OutcomeHeader } from "@/components/payments/entry-status"
-import { formatEuro, formatSats } from "@/components/payments/format"
+import { useFormat } from "@/components/payments/format"
 import { LearnMore } from "@/components/payments/learn-more"
 import { problemText } from "@/components/payments/problem"
 import { SheetActions } from "@/components/payments/sheet-actions"
+import { PAYMENTS_TEXTS } from "@/lib/i18n/features/payments.screens"
 import type { PayEndpoint } from "@/lib/nostr/ext/lnurl"
 import { getSigner } from "@/lib/profile/session"
 import { useEuroRate, useJournal, useWallet } from "@/lib/payments/hooks"
 import { addressInvoice, InvoiceError, scanKind, scannedInvoice } from "@/lib/payments/invoices"
-import { blockingEntry, pay, type Counterpart, type InvoiceSource } from "@/lib/payments/journal"
+import { blockingEntry, isDone, pay, type Counterpart, type InvoiceSource } from "@/lib/payments/journal"
 import { lookupRecipient } from "@/lib/payments/recipient"
 import { capabilities, withWallet } from "@/lib/payments/wallet"
 import { zapInvoice } from "@/lib/payments/zap"
@@ -27,8 +28,9 @@ import { zapInvoice } from "@/lib/payments/zap"
 // and at what fees, are on screen before the one button that pays ("Bestätigung erforderlich").
 // The invoice comes from the person's Lightning address, or is scanned from their device
 // ("Geld empfangen"); it is checked before anything is paid, and the journal
-// (lib/payments/journal.ts) makes sure an action is never paid twice. Afterwards the outcome stays
-// on screen, followed in the journal.
+// (lib/payments/journal.ts) makes sure an action is never paid twice. "Zahlung läuft" shows only
+// once the wallet has the payment; until then it can be cancelled and nothing is paid. Afterwards
+// the outcome stays on screen, followed in the journal.
 
 export type PayRoute =
   // The other player shows an invoice; this device scans it.
@@ -41,14 +43,16 @@ type Step =
   | { kind: "route" }
   | { kind: "scan"; problem?: string }
   | { kind: "review"; scanned?: string; amountMsat: number; problem?: string }
-  | { kind: "paying" }
+  // Confirmed at `since` (ms): the invoice is asked for (`fetching`) and the wallet opened, then
+  // the wallet pays.
+  | { kind: "paying"; since: number; fetching: boolean }
   | { kind: "outcome"; id: string }
   | { kind: "busy" }
 
 // Where the invoice comes from when the caller doesn't say: the Lightning address in the person's
 // profile, else scanning. `note` says why it is scanning.
 function useRoute(counterpart: Counterpart, given: PayRoute | undefined) {
-  const t = useT()
+  const tx = useAreaT(PAYMENTS_TEXTS)
   const [found, setFound] = useState<{ route: PayRoute; note: string | null } | null>(() =>
     given ? { route: given, note: null } : counterpart.pubkey ? null : { route: { kind: "scan" }, note: null },
   )
@@ -58,13 +62,13 @@ function useRoute(counterpart: Counterpart, given: PayRoute | undefined) {
     void lookupRecipient(counterpart.pubkey).then(({ address, status }) => {
       if (!alive) return
       if (address?.endpoint) setFound({ route: { kind: "address", address: address.address, endpoint: address.endpoint }, note: null })
-      else if (address) setFound({ route: { kind: "scan" }, note: t.payments.invoice.addressUnreachable(address.address) })
-      else setFound({ route: { kind: "scan" }, note: status === "complete" ? t.payments.pay.noAddress(counterpart.name) : t.payments.pay.profilePartial(counterpart.name) })
+      else if (address) setFound({ route: { kind: "scan" }, note: tx.invoice.addressUnreachable(address.address) })
+      else setFound({ route: { kind: "scan" }, note: status === "complete" ? tx.pay.noAddress(counterpart.name) : tx.pay.profilePartial(counterpart.name) })
     })
     return () => {
       alive = false
     }
-  }, [found, counterpart.pubkey, counterpart.name, t])
+  }, [found, counterpart.pubkey, counterpart.name, tx])
   return found
 }
 
@@ -85,7 +89,9 @@ export function PayFlow({
   onDone: () => void
 }) {
   const t = useT()
-  const p = t.payments.pay
+  const tx = useAreaT(PAYMENTS_TEXTS)
+  const p = tx.pay
+  const format = useFormat()
   const wallet = useWallet()
   const journal = useJournal()
   const euro = useEuroRate()
@@ -97,6 +103,13 @@ export function PayFlow({
   const active = route ?? found?.route ?? null
 
   const reviewTop = useRef<HTMLDivElement>(null)
+  // Cancels a confirmed payment until the wallet has it, also when the sheet is closed.
+  const cancelling = useRef<AbortController | null>(null)
+  useEffect(() => () => cancelling.current?.abort(), [])
+  // The payments for this action done when the flow opened. One done since was made in another
+  // window: it is shown before this one pays again (for payments that may be repeated).
+  const doneBefore = useRef<Set<string> | null>(null)
+  if (journal && doneBefore.current === null) doneBefore.current = new Set(journal.filter((entry) => entry.action === action && isDone(entry)).map((entry) => entry.id))
 
   // Once the route is known: review straight away, or scan first.
   useEffect(() => {
@@ -112,24 +125,58 @@ export function PayFlow({
   if (wallet === undefined || journal === undefined) return null
   if (!wallet || reconnect) return <ConnectPanel titled onConnected={() => setReconnect(false)} onCancel={onDone} />
 
+  const cancel = () => {
+    cancelling.current?.abort()
+    onDone()
+  }
+  const cancelButton = (
+    <Button variant="ghost" onClick={cancel} className="mt-4 h-12 w-full rounded-xl text-[1.0625rem]">
+      {t.common.cancel}
+    </Button>
+  )
+
+  if (step.kind === "paying") {
+    // The journal entry is written right before the wallet is asked: from then on it pays.
+    const handedOver = journal.some((entry) => entry.action === action && entry.updatedAt >= step.since)
+    if (handedOver) return <OutcomeHeader tone="progress" working title={p.sending} text={p.sendingText} />
+    return (
+      <>
+        <OutcomeHeader tone="progress" working title={step.fetching ? p.requesting : p.preparing} text={p.nothingYet} />
+        {cancelButton}
+      </>
+    )
+  }
+  if (step.kind === "outcome") {
+    const entry = journal.find((item) => item.id === step.id)
+    // The entry is on its way into the journal.
+    if (!entry) return <OutcomeHeader tone="progress" working title={p.sending} />
+    return <EntryOutcome entry={entry} onRetry={() => setStep({ kind: "route" })} onDone={onDone} />
+  }
+
   // An earlier payment for this action that is open or done is shown instead of paying again.
   const earlier = blockingEntry(journal, action)
-  const shown = step.kind === "outcome" ? journal.find((entry) => entry.id === step.id) : earlier
-  if (shown) return <EntryOutcome entry={shown} onRetry={() => setStep({ kind: "route" })} onDone={onDone} />
+  if (earlier) return <EntryOutcome entry={earlier} onDone={onDone} />
+  const paidElsewhere = journal.find((entry) => entry.action === action && isDone(entry) && !doneBefore.current?.has(entry.id))
+  if (paidElsewhere) {
+    const payAgain = () => {
+      doneBefore.current?.add(paidElsewhere.id)
+      setStep({ kind: "route" })
+    }
+    return <EntryOutcome entry={paidElsewhere} reason={p.paidMeanwhile} onPayAgain={payAgain} onDone={onDone} />
+  }
 
   if (!capabilities(wallet).pay) {
     return (
       <>
-        <InlineStatus>{t.payments.wallet.cantPay}</InlineStatus>
+        <InlineStatus>{tx.wallet.cantPay}</InlineStatus>
         <Button variant="secondary" onClick={() => setReconnect(true)} className="mt-4 h-12 w-full rounded-xl text-[1.0625rem] font-semibold text-primary">
-          {t.payments.wallet.reconnect}
+          {tx.wallet.reconnect}
         </Button>
       </>
     )
   }
 
-  const amountText = (msat: number) => formatSats(t, msat / 1000)
-  const context = { amount: amountMsat === null ? undefined : amountText(amountMsat), address: active && active.kind !== "scan" ? active.address : undefined }
+  const context = { amount: amountMsat === null ? undefined : format.msat(amountMsat), address: active && active.kind !== "scan" ? active.address : undefined }
 
   const source = async (review: Extract<Step, { kind: "review" }>): Promise<InvoiceSource> => {
     if (review.scanned) return scannedInvoice(review.scanned, review.amountMsat)
@@ -141,34 +188,40 @@ export function PayFlow({
   }
 
   const confirm = async (review: Extract<Step, { kind: "review" }>) => {
-    setStep({ kind: "paying" })
+    const controller = new AbortController()
+    cancelling.current = controller
+    setStep({ kind: "paying", since: Date.now(), fetching: !review.scanned })
     try {
-      const result = await withWallet((client) => pay({ action, once, counterpart, invoice: () => source(review) }, client))
+      const result = await withWallet((client) => pay({ action, once, counterpart, invoice: () => source(review), signal: controller.signal }, client))
       setStep(result === "busy" ? { kind: "busy" } : { kind: "outcome", id: result.id })
     } catch (error) {
+      if (controller.signal.aborted) return
       // Nothing was paid: an expired scanned invoice means scanning a new one.
-      if (review.scanned && error instanceof InvoiceError) setStep({ kind: "scan", problem: problemText(t, error, context) })
-      else setStep({ ...review, problem: problemText(t, error, context) })
+      if (review.scanned && error instanceof InvoiceError) setStep({ kind: "scan", problem: problemText(tx, error, context) })
+      else setStep({ ...review, problem: problemText(tx, error, context) })
     }
   }
 
   const onScan = async (text: string): Promise<ScanVerdict> => {
     const kind = scanKind(text)
-    if (kind === "wallet") return t.payments.invoice.isWallet
-    if (kind !== "invoice") return t.payments.invoice.invalid
+    if (kind === "wallet") return tx.invoice.isWallet
+    if (kind !== "invoice") return tx.invoice.invalid
     try {
       const { checked } = await scannedInvoice(text, amountMsat ?? undefined)
       setStep({ kind: "review", scanned: text, amountMsat: checked.amountMsat })
     } catch (error) {
-      return problemText(t, error, context)
+      return problemText(tx, error, context)
     }
   }
 
   switch (step.kind) {
     case "route":
-      return <OutcomeHeader tone="progress" working title={p.findRecipient} />
-    case "paying":
-      return <OutcomeHeader tone="progress" working title={p.sending} text={p.sendingText} />
+      return (
+        <>
+          <OutcomeHeader tone="progress" working title={p.findRecipient} />
+          {cancelButton}
+        </>
+      )
     case "busy":
       return (
         <>
@@ -188,13 +241,11 @@ export function PayFlow({
           )}
           <p className="text-[1.0625rem] leading-snug text-muted-foreground">{p.scanIntro(counterpart.name)}</p>
           <QRScanner className="mt-5" onResult={onScan} manualLabel={p.scanManual} manualPlaceholder={p.scanPlaceholder} inputMode="text" />
-          <Button variant="ghost" onClick={onDone} className="mt-4 h-12 w-full rounded-xl text-[1.0625rem]">
-            {t.common.cancel}
-          </Button>
+          {cancelButton}
         </>
       )
     case "review": {
-      const amount = amountText(step.amountMsat)
+      const amount = format.msat(step.amountMsat)
       const zap = active?.kind === "zap"
       return (
         <>
@@ -203,16 +254,16 @@ export function PayFlow({
             <p className="mt-2 text-[1.0625rem] font-semibold leading-snug [overflow-wrap:anywhere]">{counterpart.name}</p>
             {active && active.kind !== "scan" && !step.scanned && <p className="text-[0.8125rem] text-muted-foreground [overflow-wrap:anywhere]">{p.toAddress(active.address)}</p>}
             <p className="mt-3 font-display text-4xl font-semibold tabular-nums tracking-tight">{amount}</p>
-            {euro && <p className="mt-1 text-[0.8125rem] text-muted-foreground">{formatEuro(t, step.amountMsat / 1000, euro)}</p>}
+            {euro && <p className="mt-1 text-[0.8125rem] text-muted-foreground">{format.euro(step.amountMsat / 1000, euro)}</p>}
           </div>
           <div className="mt-4 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
-            <ListRow title={p.fromWallet} value={wallet.alias ?? t.payments.yourWallet} />
+            <ListRow title={p.fromWallet} value={wallet.alias ?? tx.yourWallet} />
             <ListRow title={p.fees} value={p.feesUnknown} />
           </div>
           {zap ? (
-            <InlineStatus className="mt-3">{t.payments.congratulate.publicHint(counterpart.name)}</InlineStatus>
+            <InlineStatus className="mt-3">{tx.congratulate.publicHint(counterpart.name)}</InlineStatus>
           ) : (
-            <p className="mt-2 px-4 text-[0.8125rem] leading-snug text-muted-foreground">{t.payments.explain.pay(counterpart.name)}</p>
+            <p className="mt-2 px-4 text-[0.8125rem] leading-snug text-muted-foreground">{tx.explain.pay(counterpart.name)}</p>
           )}
           <div className="mt-3">
             <LearnMore inline />
@@ -224,7 +275,7 @@ export function PayFlow({
           )}
           <SheetActions>
             <Button onClick={() => void confirm(step)} className="h-auto min-h-12 w-full whitespace-normal rounded-xl py-2 text-[1.0625rem] font-semibold">
-              {zap ? t.payments.congratulate.send(amount, counterpart.name) : p.confirm(amount, counterpart.name)}
+              {zap ? tx.congratulate.send(amount, counterpart.name) : p.confirm(amount, counterpart.name)}
             </Button>
             {active?.kind === "address" && !step.scanned && (
               <Button
@@ -245,8 +296,5 @@ export function PayFlow({
         </>
       )
     }
-    case "outcome":
-      // The entry is on its way into the journal.
-      return <OutcomeHeader tone="progress" working title={p.sending} />
   }
 }

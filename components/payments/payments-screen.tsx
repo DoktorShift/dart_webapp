@@ -14,9 +14,9 @@ import {
 import { Button } from "@/components/ui/button"
 import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
-import { Sheet } from "@/components/ui/sheet"
+import { Sheet, SheetBody } from "@/components/ui/sheet"
 import { useNav } from "@/components/nav/nav-context"
-import { useT } from "@/components/i18n-provider"
+import { useAreaT, useT } from "@/components/i18n-provider"
 import { EntryOutcome } from "@/components/payments/entry-outcome"
 import { EntryRow } from "@/components/payments/entry-status"
 import { PayFlow } from "@/components/payments/pay-flow"
@@ -24,7 +24,8 @@ import { ReceiveFlow } from "@/components/payments/receive-flow"
 import { PAYMENT_SCREENS } from "@/components/payments/screens"
 import { LearnMore } from "@/components/payments/learn-more"
 import { PaymentSignet } from "@/components/payments/signet"
-import { capabilityText, WalletRights } from "@/components/payments/wallet-details"
+import { WalletCard, WalletRights } from "@/components/payments/wallet-details"
+import { PAYMENTS_TEXTS } from "@/lib/i18n/features/payments.screens"
 import { useJournal, useWallet } from "@/lib/payments/hooks"
 import { actions } from "@/lib/payments/journal"
 import { capabilities, removeWallet } from "@/lib/payments/wallet"
@@ -42,7 +43,7 @@ type Open = { kind: "receive"; action: string } | { kind: "pay"; action: string 
 export default function PaymentsScreen() {
   const t = useT()
   const nav = useNav()
-  const p = t.payments
+  const p = useAreaT(PAYMENTS_TEXTS)
   const w = p.wallet
   const wallet = useWallet()
   const journal = useJournal()
@@ -54,19 +55,13 @@ export default function PaymentsScreen() {
   const can = wallet ? capabilities(wallet) : null
   const close = () => setOpen(null)
   const entry = open?.kind === "entry" ? journal.find((e) => e.id === open.id) : undefined
-  const sheetTitle = open?.kind === "receive" ? p.receive.title : open?.kind === "pay" ? w.payInvoice : p.title
+  const sheetTitle = open?.kind === "receive" ? p.receive.title : open?.kind === "pay" ? w.payInvoice : t.payments.title
 
   return (
     <>
       {wallet ? (
         <>
-          <section className="mt-6 flex items-center gap-4 rounded-2xl border border-border bg-card px-4 py-4">
-            <PaymentSignet size="large" />
-            <div className="min-w-0">
-              <h2 className="text-xl font-semibold leading-tight [overflow-wrap:anywhere]">{wallet.alias ?? p.yourWallet}</h2>
-              <p className="mt-0.5 text-[0.9375rem] leading-snug text-muted-foreground">{capabilityText(t, wallet)}</p>
-            </div>
-          </section>
+          <WalletCard info={wallet} />
           <WalletRights info={wallet} figures />
           {(can?.receive || can?.pay) && (
             <Group>
@@ -81,7 +76,7 @@ export default function PaymentsScreen() {
           <h2 className="mt-4 text-xl font-semibold leading-tight">{p.intro.title}</h2>
           <p className="mt-2 max-w-sm text-[1.0625rem] leading-snug text-muted-foreground">{p.intro.text}</p>
           <Button onClick={() => nav.push(PAYMENT_SCREENS.connect)} className="mt-5 h-12 w-full max-w-xs rounded-xl text-[1.0625rem] font-semibold">
-            {p.intro.connect}
+            {t.payments.connectTitle}
           </Button>
           <Button variant="ghost" onClick={() => setHelpOpen(true)} className="mt-1 h-11 w-full max-w-xs whitespace-normal rounded-xl text-[1.0625rem] text-primary hover:bg-primary/10 hover:text-primary">
             {p.intro.noWallet}
@@ -107,7 +102,7 @@ export default function PaymentsScreen() {
       {wallet && (
         <>
           <Group>
-            <ListRow title={w.advanced} onClick={() => nav.push(PAYMENT_SCREENS.advanced)} />
+            <ListRow title={t.payments.advancedTitle} onClick={() => nav.push(PAYMENT_SCREENS.advanced)} />
           </Group>
           <Group footer={w.privacy}>
             <ListRow title={w.remove} destructive onClick={() => setConfirmRemove(true)} />
@@ -116,11 +111,11 @@ export default function PaymentsScreen() {
       )}
 
       <Sheet open={open !== null} onOpenChange={(next) => !next && close()} title={sheetTitle}>
-        <div className="min-h-0 overflow-y-auto overscroll-contain pb-1">
+        <SheetBody>
           {open?.kind === "receive" && <ReceiveFlow action={open.action} once={false} counterpart={{ name: "" }} amountSats={null} />}
           {open?.kind === "pay" && <PayFlow action={open.action} once counterpart={{ name: "" }} amountSats={null} route={{ kind: "scan" }} onDone={close} />}
           {entry && <EntryOutcome entry={entry} onDone={close} />}
-        </div>
+        </SheetBody>
         {(open?.kind === "receive" || entry?.direction === "in") && (
           <Button variant="ghost" onClick={close} className="mt-2 h-12 w-full shrink-0 rounded-2xl text-[1.0625rem]">
             {t.common.done}

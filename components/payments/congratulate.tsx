@@ -6,14 +6,15 @@ import { InlineStatus } from "@/components/common/inline-status"
 import { Button } from "@/components/ui/button"
 import { SwitchRow } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
-import { Sheet } from "@/components/ui/sheet"
-import { useT } from "@/components/i18n-provider"
+import { Sheet, SheetBody } from "@/components/ui/sheet"
+import { useAreaT, useT } from "@/components/i18n-provider"
 import { AmountPicker } from "@/components/payments/amount-picker"
 import { ConnectPanel } from "@/components/payments/connect"
 import { OutcomeHeader } from "@/components/payments/entry-status"
 import { LearnMore } from "@/components/payments/learn-more"
 import { PayFlow, type PayRoute } from "@/components/payments/pay-flow"
 import { SheetActions } from "@/components/payments/sheet-actions"
+import { PAYMENTS_TEXTS } from "@/lib/i18n/features/payments.screens"
 import { useSession } from "@/lib/profile/session"
 import { useJournal, useWallet } from "@/lib/payments/hooks"
 import { actions, blockingEntry } from "@/lib/payments/journal"
@@ -30,7 +31,8 @@ const MAX_MESSAGE = 140
 
 export function CongratulateFlow({ pubkey, name, action, onDone }: { pubkey: string; name: string; action: string; onDone: () => void }) {
   const t = useT()
-  const c = t.payments.congratulate
+  const tx = useAreaT(PAYMENTS_TEXTS)
+  const c = tx.congratulate
   const messageId = useId()
   const session = useSession()
   const wallet = useWallet()
@@ -55,7 +57,7 @@ export function CongratulateFlow({ pubkey, name, action, onDone }: { pubkey: str
   const counterpart = { name, pubkey }
   // A congratulation still open (or the one just made) is shown, not offered again.
   if (route || blockingEntry(journal, action)) return <PayFlow action={action} once={false} counterpart={counterpart} amountSats={amount} route={route ?? undefined} onDone={onDone} />
-  if (!recipient) return <OutcomeHeader tone="progress" working title={t.payments.pay.findRecipient} />
+  if (!recipient) return <OutcomeHeader tone="progress" working title={tx.pay.findRecipient} />
 
   const endpoint = recipient.address?.endpoint ?? null
   const zapPossible = !!session && !!endpoint?.zapPubkey
@@ -65,7 +67,7 @@ export function CongratulateFlow({ pubkey, name, action, onDone }: { pubkey: str
     <>
       {!endpoint && (
         <InlineStatus className="mb-4">
-          {recipient.address ? t.payments.invoice.addressUnreachable(recipient.address.address) : c.noAddress(name)}
+          {recipient.address ? tx.invoice.addressUnreachable(recipient.address.address) : c.noAddress(name)}
         </InlineStatus>
       )}
       <AmountPicker label={c.amount} presets={PRESETS} value={amount} onChange={setAmount} />
@@ -111,17 +113,17 @@ export function CongratulateFlow({ pubkey, name, action, onDone }: { pubkey: str
 
 // On another player's public profile ("profile.actions"): "Gratulieren", opening the sheet.
 export default function CongratulateAction({ pubkey, name }: { pubkey: string; name: string }) {
-  const t = useT()
+  const c = useAreaT(PAYMENTS_TEXTS).congratulate
   const [open, setOpen] = useState(false)
   return (
     <>
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
-        <ListRow icon={Gift} iconTone="orange" title={t.payments.congratulate.button} onClick={() => setOpen(true)} />
+        <ListRow icon={Gift} iconTone="orange" title={c.button} onClick={() => setOpen(true)} />
       </div>
-      <Sheet open={open} onOpenChange={setOpen} title={t.payments.congratulate.title(name)}>
-        <div className="min-h-0 overflow-y-auto overscroll-contain pb-1">
+      <Sheet open={open} onOpenChange={setOpen} title={c.title(name)}>
+        <SheetBody>
           {open && <CongratulateFlow pubkey={pubkey} name={name} action={actions.congratulate(pubkey)} onDone={() => setOpen(false)} />}
-        </div>
+        </SheetBody>
       </Sheet>
     </>
   )

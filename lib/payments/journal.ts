@@ -247,9 +247,10 @@ export function afterLookup(entry: PaymentEntry, status: InvoiceStatus | "not-fo
 
 export type Lookup = Pick<WalletClient, "lookupInvoice" | "connection">
 
-// "Status prüfen": asks the wallet about an open entry and records the answer. "busy": the
-// payment is still being sent in another tab. Throws WalletError when the wallet can't be asked.
-export async function checkStatus(id: string, wallet: Lookup): Promise<PaymentEntry | "busy" | null> {
+// "Status prüfen": asks the wallet about an open entry and records the answer. Without a wallet
+// that can be asked (null), it only clears up a payment a closed page left "sending". "busy": the
+// payment is still being sent in another tab. Throws WalletError when the wallet doesn't answer.
+export async function checkStatus(id: string, wallet: Lookup | null): Promise<PaymentEntry | "busy" | null> {
   const current = await dbGet<PaymentEntry>("payments", id)
   if (!current?.invoice || !isOpen(current)) return current ?? null
   const result = await exclusive(current.action, async () => {
@@ -257,6 +258,7 @@ export async function checkStatus(id: string, wallet: Lookup): Promise<PaymentEn
     if (!stored?.invoice || !isOpen(stored)) return stored ?? null
     // Holding the lock, a payment still "sending" was left by a page that closed.
     const entry = stored.state === "sending" ? await save({ ...stored, state: "unknown" }) : stored
+    if (!wallet) return entry
     let status: InvoiceStatus | "not-found"
     try {
       status = await wallet.lookupInvoice(entry.id)

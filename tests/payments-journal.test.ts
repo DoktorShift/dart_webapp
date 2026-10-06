@@ -71,6 +71,34 @@ const entryOf = (result: PaymentEntry | "busy" | null) => {
   return result
 }
 
+// What a page that closed while paying left behind: an entry still "sending", whose lock is free.
+async function leftSending(): Promise<PaymentEntry> {
+  const { checked } = await scannedInvoice(newInvoice(), 500_000)
+  const entry: PaymentEntry = {
+    id: checked.paymentHash,
+    direction: "out",
+    action: "stake:m1",
+    once: true,
+    state: "sending",
+    amountMsat: 500_000,
+    counterpart: MIA,
+    via: "invoice",
+    invoice: checked.invoice,
+    expiresAt: checked.expiresAt,
+    connection: CONNECTION,
+    createdAt: Date.now() - 60_000,
+    updatedAt: Date.now() - 60_000,
+  }
+  await dbPut("payments", entry)
+  return entry
+}
+
+// The stored entry with its invoice run out.
+async function expire(entry: PaymentEntry) {
+  const expired: PaymentEntry = { ...entry, expiresAt: now() - 1 }
+  await dbPut("payments", expired)
+}
+
 test("the entry is written before the wallet is asked, then holds the wallet's answer", async () => {
   const invoice = newInvoice()
   const { request } = requestFor(invoice)
@@ -164,24 +192,7 @@ test("an invoice that fails its checks is never paid and leaves no entry", async
 })
 
 test("journal across a restart: a page that closed while paying leaves the outcome unknown", async () => {
-  const invoice = newInvoice()
-  const left = await scannedInvoice(invoice, 500_000)
-  // What a page that closed mid-payment left behind.
-  const orphan: PaymentEntry = {
-    id: left.checked.paymentHash,
-    direction: "out",
-    action: "stake:m1",
-    once: true,
-    state: "sending",
-    amountMsat: 500_000,
-    counterpart: MIA,
-    via: "invoice",
-    invoice,
-    expiresAt: left.checked.expiresAt,
-    createdAt: Date.now() - 60_000,
-    updatedAt: Date.now() - 60_000,
-  }
-  await dbPut("payments", orphan)
+  await leftSending()
   await closeDatabase()
 
   await recoverInterrupted()
@@ -258,7 +269,7 @@ test("Status prüfen through another connection after the invoice expired: still
   const unknown = entryOf(await pay(requestFor(newInvoice()).request, wallet("no-answer")))
   assert.equal(unknown.connection, CONNECTION)
   // The invoice runs out; then another wallet is connected and asked.
-  await dbPut("payments", { ...unknown, expiresAt: now() - 1 })
+  await expire(unknown)
   const other: Lookup = {
     connection: OTHER_CONNECTION,
     lookupInvoice: async () => {
@@ -275,24 +286,15 @@ test("Status prüfen through another connection after the invoice expired: still
 })
 
 test("Status prüfen on a payment a closed page left sending: unknown, then the wallet's answer", async () => {
-  const left = await scannedInvoice(newInvoice(), 500_000)
-  await dbPut("payments", {
-    id: left.checked.paymentHash,
-    direction: "out",
-    action: "stake:m1",
-    once: true,
-    state: "sending",
-    amountMsat: 500_000,
-    counterpart: MIA,
-    via: "invoice",
-    invoice: left.checked.invoice,
-    expiresAt: left.checked.expiresAt,
-    connection: CONNECTION,
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  } satisfies PaymentEntry)
+  const left = await leftSending()
   const pending: Lookup = { connection: CONNECTION, lookupInvoice: async () => ({ state: "pending", feesMsat: null }) }
-  assert.equal(entryOf(await checkStatus(left.checked.paymentHash, pending)).state, "unknown")
+  assert.equal(entryOf(await checkStatus(left.id, pending)).state, "unknown")
+})
+
+test("Status prüfen without a wallet that can look up: a payment left sending becomes unknown, nothing else changes", async () => {
+  const orphan = await leftSending()
+  assert.equal(entryOf(await checkStatus(orphan.id, null)).state, "unknown")
+  assert.equal(entryOf(await checkStatus(orphan.id, null)).state, "unknown")
 })
 
 test("the same invoice from two actions at once is paid once", async () => {

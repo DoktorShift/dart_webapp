@@ -36,6 +36,14 @@ export function stakeParties(match: { players: readonly MatchPlayer[]; winner: n
   return payee && payer ? { payer, payee, sats: stake.sats } : null
 }
 
+// What the result of a finished game offers: its stake, or, with a wallet connected and someone
+// else in the game, paying or receiving freely. Null: nothing (the result looks as before).
+export function resultOffer(match: { players: readonly MatchPlayer[]; winner: number; solo: boolean; config: { extras?: Readonly<Record<string, unknown>> } }, walletConnected: boolean): { kind: "stake"; parties: StakeParties } | { kind: "free" } | null {
+  const parties = stakeParties({ players: match.players, winner: match.winner, extras: match.config.extras })
+  if (parties) return { kind: "stake", parties }
+  return walletConnected && !match.solo ? { kind: "free" } : null
+}
+
 // Which side of the stake this device is on, when a player is linked to the signed-in profile
 // (`linked` gives a player's profile key). Null when it can't tell: then both sides are offered.
 export function deviceSide(parties: StakeParties, linked: (playerId: string) => string | undefined, me: string | null): "payer" | "payee" | null {
