@@ -231,7 +231,14 @@ function RelayList({ pubkey, entries, state, status }: { pubkey: string; entries
     event.preventDefault()
     const next = addRelay(entries, typed)
     if (!next) return setInvalid(true)
-    if (await save(next)) setTyped("")
+    if (await addAndLook(next)) setTyped("")
+  }
+
+  // A relay just added may hold the profile's events (another app's profile): look there now.
+  const addAndLook = async (next: RelayEntry[] | null) => {
+    const saved = await save(next)
+    if (saved) void lookupOwnEvents(pubkey, { again: true })
+    return saved
   }
 
   return (
@@ -284,7 +291,7 @@ function RelayList({ pubkey, entries, state, status }: { pubkey: string; entries
                 key={url}
                 type="button"
                 disabled={busy}
-                onClick={() => void save(addRelay(entries, url))}
+                onClick={() => void addAndLook(addRelay(entries, url))}
                 aria-label={a.addHost(relayHost(url))}
                 className="flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-secondary/50 px-4 text-[0.9375rem] active:bg-secondary disabled:opacity-40"
               >
