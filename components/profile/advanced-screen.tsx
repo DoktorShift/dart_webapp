@@ -8,10 +8,10 @@ import { ListRow } from "@/components/ui/list-row"
 import { TextField } from "@/components/ui/text-field"
 import { InlineStatus } from "@/components/common/inline-status"
 import { SlotItems } from "@/components/shell/slot-items"
-import { useT } from "@/components/i18n-provider"
+import { useAreaT, useT } from "@/components/i18n-provider"
+import { PROFILE_TEXTS, type ProfileTexts } from "@/lib/i18n/features/profile.screens"
 import { signerProblem, SignerConfirmation } from "@/components/profile/signer-status"
 import { useOwnProfile, type OwnProfile } from "@/components/profile/use-profile"
-import type { Messages } from "@/lib/i18n"
 import type { RelayEntry } from "@/lib/nostr/ext/lists"
 import type { NostrEvent } from "@/lib/nostr/types"
 import { generalRelays } from "@/lib/nostr/relays"
@@ -62,7 +62,8 @@ function useRelayStatus(urls: readonly string[], pubkey: string) {
 
 function Advanced({ own }: { own: OwnProfile }) {
   const t = useT()
-  const a = t.profile.advanced
+  const tx = useAreaT(PROFILE_TEXTS)
+  const a = tx.advanced
   const { session, events } = own
   const [npub, setNpub] = useState<string | null>(null)
   const [keyCopied, copyKey] = useCopied()
@@ -148,7 +149,7 @@ function Advanced({ own }: { own: OwnProfile }) {
   )
 }
 
-const usage = (t: Messages, entry: RelayEntry) => (entry.read && entry.write ? t.profile.advanced.readWrite : entry.read ? t.profile.advanced.read : t.profile.advanced.write)
+const usage = (tx: ProfileTexts, entry: RelayEntry) => (entry.read && entry.write ? tx.advanced.readWrite : entry.read ? tx.advanced.read : tx.advanced.write)
 
 const STATES = {
   connected: { icon: CircleCheck, className: "text-success" },
@@ -158,8 +159,8 @@ const STATES = {
 
 // A relay's state in words, with a symbol: never colour alone. Without a status yet: being asked.
 function RelayState({ status }: { status: RelayStatus | undefined }) {
-  const t = useT()
-  const a = t.profile.advanced
+  const tx = useAreaT(PROFILE_TEXTS)
+  const a = tx.advanced
   if (!status) {
     return (
       <span className="flex items-center gap-1 text-muted-foreground">
@@ -181,8 +182,8 @@ function RelayState({ status }: { status: RelayStatus | undefined }) {
 // once; whatever another app wrote into it stays (lib/profile/relay-list.ts). The app's relays
 // not on the list are offered with one tap.
 function RelayList({ entries, base, status }: { entries: RelayEntry[]; base: NostrEvent | null; status: Map<string, RelayStatus> | null }) {
-  const t = useT()
-  const a = t.profile.advanced
+  const tx = useAreaT(PROFILE_TEXTS)
+  const a = tx.advanced
   const [typed, setTyped] = useState("")
   const [invalid, setInvalid] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -197,7 +198,7 @@ function RelayList({ entries, base, status }: { entries: RelayEntry[]; base: Nos
       await publishOwn([relayListTemplate(next, base)])
       return true
     } catch (error) {
-      setProblem(signerProblem(t, error))
+      setProblem(signerProblem(tx, error))
       return false
     } finally {
       setBusy(false)
@@ -221,7 +222,7 @@ function RelayList({ entries, base, status }: { entries: RelayEntry[]; base: Nos
               <p className="flex flex-wrap items-center gap-x-1.5 text-[0.8125rem] text-muted-foreground">
                 <RelayState status={status?.get(entry.url)} />
                 <span aria-hidden="true">·</span>
-                {usage(t, entry)}
+                {usage(tx, entry)}
               </p>
             </div>
             <button

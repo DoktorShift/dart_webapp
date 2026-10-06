@@ -10,7 +10,8 @@ import { TextField } from "@/components/ui/text-field"
 import { InlineStatus } from "@/components/common/inline-status"
 import { QRCodeView } from "@/components/common/qr-code-view"
 import { useNav } from "@/components/nav/nav-context"
-import { useT } from "@/components/i18n-provider"
+import { useAreaT, useT } from "@/components/i18n-provider"
+import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
 import { AccountConfirm } from "@/components/profile/account-confirm"
 import { signerProblem } from "@/components/profile/signer-status"
 import { useClaimablePlayers } from "@/components/profile/use-profile"
@@ -49,8 +50,8 @@ function platform() {
 }
 
 export default function ConnectScreen({ params }: ScreenProps) {
-  const t = useT()
-  const c = t.profile.connect
+  const tx = useAreaT(PROFILE_TEXTS)
+  const c = tx.connect
   const androidKey = isHexKey(params.androidKey) ? params.androidKey : null
   const [method, setMethod] = useState<Method | null>(androidKey ? "android" : null)
   const [connected, setConnected] = useState<string | null>(null)
@@ -86,7 +87,7 @@ interface Candidate {
 
 // Shows the account a signer named and keeps it only after "Ja, das bin ich".
 function Confirm({ candidate, onConnected, onDeclined }: { candidate: Candidate; onConnected: (pubkey: string) => void; onDeclined: () => void }) {
-  const t = useT()
+  const tx = useAreaT(PROFILE_TEXTS)
   const [busy, setBusy] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)
   const answer = async (yes: boolean) => {
@@ -100,7 +101,7 @@ function Confirm({ candidate, onConnected, onDeclined }: { candidate: Candidate;
       await candidate.keep()
       onConnected(candidate.pubkey)
     } catch (error) {
-      setProblem(signerProblem(t, error))
+      setProblem(signerProblem(tx, error))
       setBusy(false)
     }
   }
@@ -109,7 +110,7 @@ function Confirm({ candidate, onConnected, onDeclined }: { candidate: Candidate;
       <AccountConfirm pubkey={candidate.pubkey} busy={busy} onAnswer={(yes) => void answer(yes)} />
       {busy && (
         <p role="status" className="mt-3 text-center text-[0.9375rem] text-muted-foreground">
-          {t.profile.connect.connecting}
+          {tx.connect.connecting}
         </p>
       )}
       {problem && (
@@ -131,8 +132,8 @@ function BackButton({ onBack }: { onBack: () => void }) {
 }
 
 function ExtensionStep({ onConnected, onBack }: { onConnected: (pubkey: string) => void; onBack: () => void }) {
-  const t = useT()
-  const c = t.profile.connect
+  const tx = useAreaT(PROFILE_TEXTS)
+  const c = tx.connect
   const [candidate, setCandidate] = useState<Candidate | null>(null)
   const [problem, setProblem] = useState<string | null>(null)
 
@@ -142,7 +143,7 @@ function ExtensionStep({ onConnected, onBack }: { onConnected: (pubkey: string) 
       .then(({ connectNip07 }) => connectNip07())
       .then(
         ({ pubkey }) => alive && setCandidate({ pubkey, keep: () => connectExternal("nip07", { pubkey }) }),
-        (error: unknown) => alive && setProblem((error as { code?: string })?.code === "unavailable" ? c.noExtension : signerProblem(t, error)),
+        (error: unknown) => alive && setProblem((error as { code?: string })?.code === "unavailable" ? c.noExtension : signerProblem(tx, error)),
       )
     return () => {
       alive = false
@@ -172,7 +173,8 @@ function ExtensionStep({ onConnected, onBack }: { onConnected: (pubkey: string) 
 // device answering the same code means someone else saw it: a new code replaces it.
 function SignerAppStep({ onConnected, onBack }: { onConnected: (pubkey: string) => void; onBack: () => void }) {
   const t = useT()
-  const c = t.profile.connect
+  const tx = useAreaT(PROFILE_TEXTS)
+  const c = tx.connect
   const [round, setRound] = useState(0)
   const [uri, setUri] = useState<string | null>(null)
   const [candidate, setCandidate] = useState<Candidate | null>(null)
@@ -239,7 +241,7 @@ function SignerAppStep({ onConnected, onBack }: { onConnected: (pubkey: string) 
       const connection: Nip46Connection = await connectBunker(pasted.trim(), { perms: PERMISSIONS, onAuthUrl: setAuthUrl })
       setCandidate({ pubkey: connection.pubkey, keep: () => connectExternal("nip46", { connection } satisfies ExternalParams["nip46"]), drop: () => connection.remote.close() })
     } catch (error) {
-      setPasteProblem((error as { code?: string })?.code === "invalid" ? c.pasteInvalid : signerProblem(t, error))
+      setPasteProblem((error as { code?: string })?.code === "invalid" ? c.pasteInvalid : signerProblem(tx, error))
     } finally {
       setPasting(false)
     }
@@ -297,12 +299,12 @@ function SignerAppStep({ onConnected, onBack }: { onConnected: (pubkey: string) 
 
 // A signer app that wants the person to confirm on its own web page.
 function AuthPage({ url }: { url: string }) {
-  const t = useT()
+  const tx = useAreaT(PROFILE_TEXTS)
   return (
     <InlineStatus className="mt-4">
-      {t.profile.connect.confirmPage}{" "}
+      {tx.connect.confirmPage}{" "}
       <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-1 font-semibold text-primary">
-        {t.profile.connect.openConfirmPage}
+        {tx.connect.openConfirmPage}
         <ExternalLink className="h-4 w-4" aria-hidden="true" />
       </a>
     </InlineStatus>
@@ -311,8 +313,8 @@ function AuthPage({ url }: { url: string }) {
 
 // Android: a link opens the signer app, whose answer comes back as a new address of this app.
 function AndroidStep({ returnedKey, onConnected, onBack }: { returnedKey: string | null; onConnected: (pubkey: string) => void; onBack: () => void }) {
-  const t = useT()
-  const c = t.profile.connect
+  const tx = useAreaT(PROFILE_TEXTS)
+  const c = tx.connect
   const [url, setUrl] = useState<string | null>(null)
   const [opened, setOpened] = useState(false)
   const [declined, setDeclined] = useState(false)
@@ -350,8 +352,8 @@ function AndroidStep({ returnedKey, onConnected, onBack }: { returnedKey: string
 // After signing in: which games on this device are the person's, if any (PLAN.md: local results
 // are taken over deliberately, never by name). "Später" keeps them apart.
 function ClaimStep({ pubkey }: { pubkey: string }) {
-  const t = useT()
-  const c = t.profile.connect
+  const tx = useAreaT(PROFILE_TEXTS)
+  const c = tx.connect
   const nav = useNav()
   const { candidates, loaded } = useClaimablePlayers()
   const [choice, setChoice] = useState<string | null>(null)
@@ -379,7 +381,7 @@ function ClaimStep({ pubkey }: { pubkey: string }) {
       <ChoiceList
         className="mt-4"
         label={c.claimTitle}
-        options={candidates.map((s) => ({ value: s.playerId as string, title: s.name, subtitle: t.profile.gamesCount(s.games) }))}
+        options={candidates.map((s) => ({ value: s.playerId as string, title: s.name, subtitle: tx.gamesCount(s.games) }))}
         value={choice}
         onChange={setChoice}
       />

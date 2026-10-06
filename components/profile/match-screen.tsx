@@ -6,13 +6,13 @@ import { ListRow } from "@/components/ui/list-row"
 import { InlineStatus } from "@/components/common/inline-status"
 import { StatsTable, allRows } from "@/components/game/result-stats"
 import { LegVisits } from "@/components/game/visit-list"
-import { formatWhen } from "@/components/leaderboard-screen"
 import { useNav } from "@/components/nav/nav-context"
-import { useT } from "@/components/i18n-provider"
+import { useAreaT, useT } from "@/components/i18n-provider"
+import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
 import { PROFILE_SCREENS } from "@/components/profile/screens"
 import { legsWonInGame, playsSets } from "@/lib/game/engine"
 import { rulesSummary } from "@/lib/game/words"
-import { formatNumber, modeName } from "@/lib/i18n"
+import { formatNumber, formatWhen, modeName } from "@/lib/i18n"
 import { useMatchHistory } from "@/lib/leaderboard"
 import { SCREENS, type ScreenProps } from "@/lib/shell/registry"
 import { matchState, playerKey } from "@/lib/storage/stats"
@@ -22,11 +22,12 @@ import { matchState, playerKey } from "@/lib/storage/stats"
 // totals, and say so. A player opens their profile, or what this device knows about them.
 export default function MatchScreen({ params }: ScreenProps) {
   const t = useT()
+  const tx = useAreaT(PROFILE_TEXTS)
   const nav = useNav()
   const { all, aliases, loaded } = useMatchHistory()
   const match = all.find((m) => m.id === params.id)
   if (!loaded) return null
-  if (!match) return <InlineStatus className="mt-6">{t.profile.games.notFound}</InlineStatus>
+  if (!match) return <InlineStatus className="mt-6">{tx.games.notFound}</InlineStatus>
 
   const state = matchState(match)
   const solo = match.players.length === 1
@@ -55,12 +56,12 @@ export default function MatchScreen({ params }: ScreenProps) {
         {match.config && <p className="mt-1 text-[0.9375rem] leading-snug text-muted-foreground">{rulesSummary(t, match.config)}</p>}
       </section>
 
-      <Group title={t.profile.games.players}>
+      <Group title={tx.games.players}>
         {match.players.map((player, i) => (
           <ListRow
             key={`${i}-${player.playerId ?? player.name}`}
             title={player.name}
-            subtitle={!solo && player.won ? t.profile.games.winner : undefined}
+            subtitle={!solo && player.won ? tx.games.winner : undefined}
             trailing={!solo && player.won ? <Trophy className="h-5 w-5 shrink-0 text-amber-500" aria-hidden="true" /> : undefined}
             onClick={open(i)}
           />
@@ -74,19 +75,19 @@ export default function MatchScreen({ params }: ScreenProps) {
             <StatsTable state={state} rows={allRows(state, t)} />
           </section>
           <section className="mt-8 space-y-4">
-            <h2 className="px-4 text-[0.8125rem] text-muted-foreground">{t.profile.games.visits}</h2>
+            <h2 className="px-4 text-[0.8125rem] text-muted-foreground">{tx.games.visits}</h2>
             <LegVisits state={state} />
           </section>
         </>
       ) : (
         <>
-          <InlineStatus className="mt-6">{t.profile.games.imported}</InlineStatus>
-          <Group title={t.profile.games.totals}>
+          <InlineStatus className="mt-6">{tx.games.imported}</InlineStatus>
+          <Group title={tx.games.totals}>
             {match.players.map((player, i) => (
               <ListRow
                 key={`${i}-${player.name}`}
                 title={player.name}
-                value={match.modeType === "x01" ? t.profile.games.totalsX01(formatNumber(t, player.darts), formatNumber(t, player.points)) : t.profile.games.totalsDarts(formatNumber(t, player.darts))}
+                value={match.modeType === "x01" ? tx.games.totalsX01(formatNumber(t, player.darts), formatNumber(t, player.points)) : tx.games.totalsDarts(formatNumber(t, player.darts))}
               />
             ))}
           </Group>

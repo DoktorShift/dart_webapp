@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button"
 import { ChoiceList } from "@/components/ui/choice-list"
 import { InlineStatus } from "@/components/common/inline-status"
 import { useNav } from "@/components/nav/nav-context"
-import { useT } from "@/components/i18n-provider"
+import { useAreaT } from "@/components/i18n-provider"
+import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
 import { createProfile } from "@/components/profile/create-profile"
 import { pictureProblem, ProfileFields } from "@/components/profile/profile-fields"
 import { useClaimablePlayers } from "@/components/profile/use-profile"
@@ -16,9 +17,9 @@ const NOBODY = "nobody"
 // choice, never guessed from a name; players linked to another profile aren't offered. Done,
 // the Profile tab shows the new profile.
 export default function CreateScreen() {
-  const t = useT()
-  const c = t.profile.create
-  const f = t.profile.form
+  const tx = useAreaT(PROFILE_TEXTS)
+  const c = tx.create
+  const f = tx.form
   const nav = useNav()
   const { candidates, loaded } = useClaimablePlayers()
   const [choice, setChoice] = useState<string | null>(null)
@@ -52,7 +53,7 @@ export default function CreateScreen() {
           <ChoiceList
             label={c.who}
             options={[
-              ...candidates.map((s) => ({ value: s.playerId as string, title: s.name, subtitle: t.profile.gamesCount(s.games) })),
+              ...candidates.map((s) => ({ value: s.playerId as string, title: s.name, subtitle: tx.gamesCount(s.games) })),
               { value: NOBODY, title: c.nobody, subtitle: c.nobodyHint },
             ]}
             value={choice}

@@ -4,7 +4,8 @@ import { lazy, Suspense, useState } from "react"
 import { QrCode } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet } from "@/components/ui/sheet"
-import { useT } from "@/components/i18n-provider"
+import { useAreaT, useT } from "@/components/i18n-provider"
+import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
 import { useSession } from "@/lib/profile/session"
 import type { SetupPlayersProps } from "@/lib/shell/registry"
 
@@ -36,7 +37,8 @@ export default function SetupPlayers({ players, canAdd, addPlayer, replacePlayer
 
 function ScanPlayer({ players, canAdd, addPlayer }: Pick<SetupPlayersProps, "players" | "canAdd" | "addPlayer">) {
   const t = useT()
-  const s = t.profile.setup
+  const tx = useAreaT(PROFILE_TEXTS)
+  const s = tx.setup
   // Each opening starts with the camera, not with the last player.
   const [sheet, setSheet] = useState({ open: false, round: 0 })
   const close = () => setSheet((v) => ({ ...v, open: false }))

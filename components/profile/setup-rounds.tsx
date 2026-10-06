@@ -16,7 +16,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { InlineStatus } from "@/components/common/inline-status"
-import { useT } from "@/components/i18n-provider"
+import { useAreaT, useT } from "@/components/i18n-provider"
+import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
 import { setupRowClass } from "@/components/profile/setup-players"
 import { signerProblem } from "@/components/profile/signer-status"
 import { useOwnEvents } from "@/components/profile/use-profile"
@@ -30,7 +31,8 @@ import { publishOwn } from "@/lib/sync/publish"
 // The profile's saved rounds as quick picks, and "Runde speichern" for the seats as they are.
 export default function Rounds({ session, players, replacePlayers }: { session: Session } & Pick<SetupPlayersProps, "players" | "replacePlayers">) {
   const t = useT()
-  const s = t.profile.setup
+  const tx = useAreaT(PROFILE_TEXTS)
+  const s = tx.setup
   const events = useOwnEvents(session.pubkey)
   const directory = usePlayers()
   const [rounds, setRounds] = useState<Round[]>([])
@@ -87,7 +89,8 @@ const roundLabel = (round: Round) => round.title || round.players.map((p) => p.n
 
 function SaveRound({ session, players, rounds, onSaved }: { session: Session; players: readonly SetupSeat[]; rounds: Round[]; onSaved: () => void }) {
   const t = useT()
-  const s = t.profile.setup
+  const tx = useAreaT(PROFILE_TEXTS)
+  const s = tx.setup
   const directory = usePlayers()
   const [title, setTitle] = useState("")
   const [busy, setBusy] = useState(false)
@@ -109,7 +112,7 @@ function SaveRound({ session, players, rounds, onSaved }: { session: Session; pl
       await action()
       onSaved()
     } catch (error) {
-      setProblem((error as { code?: string })?.code === "private-unreadable" ? s.readOnly : signerProblem(t, error))
+      setProblem((error as { code?: string })?.code === "private-unreadable" ? s.readOnly : signerProblem(tx, error))
     } finally {
       setBusy(false)
     }

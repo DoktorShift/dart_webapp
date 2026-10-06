@@ -14,7 +14,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { InlineStatus } from "@/components/common/inline-status"
-import { useT } from "@/components/i18n-provider"
+import { useAreaT, useT } from "@/components/i18n-provider"
+import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
 import { pictureProblem, ProfileFields } from "@/components/profile/profile-fields"
 import { signerProblem, SignerConfirmation } from "@/components/profile/signer-status"
 import type { OwnProfile } from "@/components/profile/use-profile"
@@ -31,7 +32,8 @@ import { publishOwn } from "@/lib/sync/publish"
 // publicly, so changing it publishes it, as the form says.
 export function EditSheet({ own, open, onOpenChange }: { own: OwnProfile; open: boolean; onOpenChange: (open: boolean) => void }) {
   const t = useT()
-  const e = t.profile.edit
+  const tx = useAreaT(PROFILE_TEXTS)
+  const e = tx.edit
   const [name, setName] = useState(own.name ?? "")
   const [picture, setPicture] = useState(own.metadata.picture ?? "")
   const [asking, setAsking] = useState(false)
@@ -58,7 +60,7 @@ export function EditSheet({ own, open, onOpenChange }: { own: OwnProfile; open: 
       if (Object.keys(change).length > 0) await publishOwn([metadataTemplate(change, own.events?.get(OWN.metadata))])
       onOpenChange(false)
     } catch (error) {
-      setProblem(signerProblem(t, error))
+      setProblem(signerProblem(tx, error))
     } finally {
       setBusy(false)
     }

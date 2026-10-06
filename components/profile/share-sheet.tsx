@@ -3,7 +3,8 @@
 import { Button } from "@/components/ui/button"
 import { Sheet } from "@/components/ui/sheet"
 import { QRCodeView } from "@/components/common/qr-code-view"
-import { useT } from "@/components/i18n-provider"
+import { useAreaT, useT } from "@/components/i18n-provider"
+import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
 import { profileLink } from "@/lib/profile/profile-link"
 import { SITE } from "@/lib/site"
 
@@ -23,7 +24,8 @@ export function ShareSheet({
   writeRelays?: readonly string[]
 }) {
   const t = useT()
-  const s = t.profile.share
+  const tx = useAreaT(PROFILE_TEXTS)
+  const s = tx.share
   const link = profileLink(SITE.url, pubkey, writeRelays)
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title={s.title} description={s.description}>

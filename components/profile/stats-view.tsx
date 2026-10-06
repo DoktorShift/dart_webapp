@@ -4,7 +4,8 @@ import { useMemo, useState } from "react"
 import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
 import { Segmented } from "@/components/ui/segmented"
-import { useT } from "@/components/i18n-provider"
+import { useAreaT, useT } from "@/components/i18n-provider"
+import { PROFILE_TEXTS, type ProfileTexts } from "@/lib/i18n/features/profile.screens"
 import type { GameType } from "@/lib/game/types"
 import { formatNumber, formatPercent, type Messages } from "@/lib/i18n"
 import type { ArchivedMatch } from "@/lib/storage/archive"
@@ -27,27 +28,27 @@ const one = (t: Messages, n: number | null, digits = 1) => (n === null ? null : 
 const percent = (t: Messages, n: number | null) => (n === null ? null : formatPercent(t, n))
 const count = (t: Messages, n: number | null) => (n === null ? null : formatNumber(t, n))
 
-function resultRows(t: Messages, s: PlayerSummary): Row[] {
-  const p = t.profile.stats
+function resultRows(t: Messages, tx: ProfileTexts, s: PlayerSummary): Row[] {
+  const p = tx.stats
   return [
-    { label: t.profile.figures.games, value: count(t, s.games) },
-    { label: t.profile.figures.won, value: s.versus > 0 ? p.ofTotal(s.wins, s.versus) : null },
+    { label: tx.figures.games, value: count(t, s.games) },
+    { label: tx.figures.won, value: s.versus > 0 ? p.ofTotal(s.wins, s.versus) : null },
     { label: p.winRate, value: percent(t, s.winRate) },
     { label: p.legsWon, value: s.legsWon === null || s.legsPlayed === null ? null : p.ofTotal(s.legsWon, s.legsPlayed) },
   ]
 }
 
-function groups(t: Messages, s: PlayerSummary): { title: string; rows: Row[]; footer?: string }[] {
+function groups(t: Messages, tx: ProfileTexts, s: PlayerSummary): { title: string; rows: Row[]; footer?: string }[] {
   const label = t.result.stats
-  const p = t.profile.stats
+  const p = tx.stats
   if (s.x01) {
     const x = s.x01
     return [
-      { title: p.results, rows: resultRows(t, s) },
+      { title: p.results, rows: resultRows(t, tx, s) },
       {
         title: p.scoring,
         rows: [
-          { label: t.profile.figures.average, value: one(t, x.average) },
+          { label: tx.figures.average, value: one(t, x.average) },
           { label: label.first9, value: one(t, x.first9) },
           { label: label.checkoutRate, value: percent(t, x.checkoutRate) },
         ],
@@ -66,13 +67,14 @@ function groups(t: Messages, s: PlayerSummary): { title: string; rows: Row[]; fo
       },
     ]
   }
-  if (s.cricket) return [{ title: p.results, rows: resultRows(t, s) }, { title: p.scoring, rows: [{ label: label.marksPerRound, value: one(t, s.cricket.marksPerRound, 2) }] }]
-  return [{ title: p.results, rows: resultRows(t, s) }, { title: p.scoring, rows: [{ label: label.hitRate, value: percent(t, s.clock?.hitRate ?? null) }] }]
+  if (s.cricket) return [{ title: p.results, rows: resultRows(t, tx, s) }, { title: p.scoring, rows: [{ label: label.marksPerRound, value: one(t, s.cricket.marksPerRound, 2) }] }]
+  return [{ title: p.results, rows: resultRows(t, tx, s) }, { title: p.scoring, rows: [{ label: label.hitRate, value: percent(t, s.clock?.hitRate ?? null) }] }]
 }
 
 export function StatsView({ matches, playerKey, aliases, sameAs }: { matches: ArchivedMatch[]; playerKey: string } & Pick<StatsOptions, "aliases" | "sameAs">) {
   const t = useT()
-  const p = t.profile.stats
+  const tx = useAreaT(PROFILE_TEXTS)
+  const p = tx.stats
   const [mode, setMode] = useState<GameType>("x01")
   const [period, setPeriod] = useState<Period>("all")
   const summary = useMemo(() => {
@@ -80,7 +82,7 @@ export function StatsView({ matches, playerKey, aliases, sameAs }: { matches: Ar
     return summarizePlayer(matches, playerKey, { aliases, sameAs, type: mode, from })
   }, [matches, playerKey, aliases, sameAs, mode, period])
 
-  const shown = summary ? groups(t, summary) : []
+  const shown = summary ? groups(t, tx, summary) : []
   const unknown = shown.some((g) => g.rows.some((r) => r.value === null))
 
   return (
@@ -104,7 +106,7 @@ export function StatsView({ matches, playerKey, aliases, sameAs }: { matches: Ar
                     row.value ?? (
                       <>
                         <span aria-hidden="true">—</span>
-                        <span className="sr-only">{t.profile.figures.unknownShort}</span>
+                        <span className="sr-only">{tx.figures.unknownShort}</span>
                       </>
                     )
                   }

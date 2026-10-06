@@ -3,8 +3,10 @@
 import { useId, type ReactNode } from "react"
 import { Avatar } from "@/components/ui/avatar"
 import { SlotItems } from "@/components/shell/slot-items"
-import { useT } from "@/components/i18n-provider"
+import { useAreaT } from "@/components/i18n-provider"
+import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
 import { formatNumber, type Messages } from "@/lib/i18n"
+import type { ProfileTexts } from "@/lib/i18n/features/profile.screens"
 import { cn } from "@/lib/utils"
 
 // The head of a profile, like a sports card: picture, name, a line about it, then its figures
@@ -27,7 +29,7 @@ export function ProfileCard({
   slot?: { pubkey: string; own: boolean }
   children?: ReactNode
 }) {
-  const t = useT()
+  const tx = useAreaT(PROFILE_TEXTS)
   const id = useId()
   return (
     <section aria-labelledby={id} className="mt-6 rounded-2xl border border-border bg-card px-4 py-4">
@@ -35,7 +37,7 @@ export function ProfileCard({
         <Avatar seed={seed} name={name ?? undefined} src={picture} size={64} />
         <div className="min-w-0">
           <h2 id={id} className="text-xl font-semibold leading-tight [overflow-wrap:anywhere]">
-            {name ?? t.profile.unnamed}
+            {name ?? tx.unnamed}
           </h2>
           {subtitle && <p className="mt-0.5 text-[0.9375rem] leading-snug text-muted-foreground [overflow-wrap:anywhere]">{subtitle}</p>}
         </div>
@@ -56,11 +58,11 @@ export interface Figure {
 // Up to three figures side by side, with what they cover (caption). Unknown is "—" and
 // explained, never 0 (PLAN.md "Kennzahlen").
 export function Figures({ figures, caption }: { figures: Figure[]; caption: ReactNode }) {
-  const t = useT()
+  const tx = useAreaT(PROFILE_TEXTS)
   const unknown = figures.some((f) => f.value === null)
   return (
     <>
-      <dl aria-label={t.profile.figures.label} className="mt-4 grid grid-cols-3 border-t border-border pt-3">
+      <dl aria-label={tx.figures.label} className="mt-4 grid grid-cols-3 border-t border-border pt-3">
         {figures.map((f, i) => (
           <div key={f.label} className={cn("flex min-w-0 flex-col", i > 0 && "border-l border-border pl-3", i < figures.length - 1 && "pr-2")}>
             <dt className="order-2 text-[0.8125rem] leading-snug text-muted-foreground">{f.label}</dt>
@@ -68,7 +70,7 @@ export function Figures({ figures, caption }: { figures: Figure[]; caption: Reac
               {f.value ?? (
                 <>
                   <span aria-hidden="true">—</span>
-                  <span className="sr-only">{t.profile.figures.unknownShort}</span>
+                  <span className="sr-only">{tx.figures.unknownShort}</span>
                 </>
               )}
             </dd>
@@ -78,7 +80,7 @@ export function Figures({ figures, caption }: { figures: Figure[]; caption: Reac
       </dl>
       <p className="mt-3 text-[0.8125rem] leading-snug text-muted-foreground">
         {caption}
-        {unknown && ` ${t.profile.figures.unknown}`}
+        {unknown && ` ${tx.figures.unknown}`}
       </p>
     </>
   )
@@ -86,14 +88,14 @@ export function Figures({ figures, caption }: { figures: Figure[]; caption: Reac
 
 // The three X01 figures of a profile (PLAN.md: Spiele, Gewonnen, Ø Punkte pro 3 Darts), from
 // raw counts: this device's archive or a shared stats card. Wins exist only against others.
-export function x01Figures(t: Messages, x: { games: number; versus: number; wins: number; points: number; darts: number }): Figure[] {
+export function x01Figures(t: Messages, tx: ProfileTexts, x: { games: number; versus: number; wins: number; points: number; darts: number }): Figure[] {
   return [
-    { label: t.profile.figures.games, value: formatNumber(t, x.games) },
+    { label: tx.figures.games, value: formatNumber(t, x.games) },
     {
-      label: t.profile.figures.won,
+      label: tx.figures.won,
       value: x.versus > 0 ? formatNumber(t, x.wins) : null,
-      detail: x.versus > 0 && x.versus < x.games ? t.profile.figures.ofVersus(x.versus) : undefined,
+      detail: x.versus > 0 && x.versus < x.games ? tx.figures.ofVersus(x.versus) : undefined,
     },
-    { label: t.profile.figures.average, value: x.darts > 0 ? formatNumber(t, Math.round((x.points / x.darts) * 30) / 10) : null },
+    { label: tx.figures.average, value: x.darts > 0 ? formatNumber(t, Math.round((x.points / x.darts) * 30) / 10) : null },
   ]
 }

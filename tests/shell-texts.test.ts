@@ -1,6 +1,7 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { MESSAGES } from "../lib/i18n/index.ts"
+import { PROFILE_TEXTS } from "../lib/i18n/features/profile.screens.ts"
 
 // Normal views never use protocol words (decision 0002 §1 and §9, PLAN.md "Einfach sprechen");
 // technical details belong behind an explicit "Erweitert" / "Advanced" screen only. This checks
@@ -17,9 +18,9 @@ function texts(value: unknown, path: string, out: [string, string][]) {
 
 test("shell and profile texts use no protocol words, except under Erweitert", () => {
   for (const [locale, t] of Object.entries(MESSAGES)) {
-    const { advanced, ...profile } = t.profile
+    const { advanced, ...screens } = PROFILE_TEXTS[locale as keyof typeof PROFILE_TEXTS]
     assert.ok(advanced, "the technical texts are kept apart")
-    for (const [path, text] of [...texts(t.shell, `${locale}.shell`, []), ...texts(profile, `${locale}.profile`, [])]) {
+    for (const [path, text] of [...texts(t.shell, `${locale}.shell`, []), ...texts(t.profile, `${locale}.profile`, []), ...texts(screens, `${locale}.profile.screens`, [])]) {
       assert.doesNotMatch(text, PROTOCOL, `${path}: ${text}`)
     }
   }

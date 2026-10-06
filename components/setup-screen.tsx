@@ -108,7 +108,7 @@ function PlayerRow({
         )}
       />
       {player.pubkey && (
-        <span role="img" aria-label={t.profile.setup.linked} title={t.profile.setup.linked} className="flex h-11 w-7 shrink-0 items-center justify-center text-primary">
+        <span role="img" aria-label={t.profile.seatLinked} title={t.profile.seatLinked} className="flex h-11 w-7 shrink-0 items-center justify-center text-primary">
           <UserRoundCheck className="h-5 w-5" aria-hidden="true" />
         </span>
       )}

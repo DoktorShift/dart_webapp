@@ -4,7 +4,8 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Group, SwitchRow } from "@/components/ui/group"
 import { InlineStatus } from "@/components/common/inline-status"
-import { useT } from "@/components/i18n-provider"
+import { useAreaT } from "@/components/i18n-provider"
+import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
 import { PublicProfileView } from "@/components/profile/public-view"
 import { signerProblem, SignerConfirmation } from "@/components/profile/signer-status"
 import { useStatsCard } from "@/components/profile/use-stats-card"
@@ -21,8 +22,8 @@ export default function PreviewScreen() {
 }
 
 function Preview({ own }: { own: OwnProfile }) {
-  const t = useT()
-  const p = t.profile.preview
+  const tx = useAreaT(PROFILE_TEXTS)
+  const p = tx.preview
   const card = useStatsCard(own)
   const published = usePublicProfile(own.session.pubkey, own.events ? ownRelaySettings(own.events).write : [])
   const [busy, setBusy] = useState(false)
@@ -35,7 +36,7 @@ function Preview({ own }: { own: OwnProfile }) {
       await action()
       published.reload()
     } catch (error) {
-      setProblem(signerProblem(t, error))
+      setProblem(signerProblem(tx, error))
     } finally {
       setBusy(false)
     }

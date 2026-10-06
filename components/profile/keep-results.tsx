@@ -7,7 +7,8 @@ import { ChoiceList } from "@/components/ui/choice-list"
 import { Sheet } from "@/components/ui/sheet"
 import { InlineStatus } from "@/components/common/inline-status"
 import { FitText } from "@/components/fit-text"
-import { useT } from "@/components/i18n-provider"
+import { useAreaT } from "@/components/i18n-provider"
+import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
 import { createProfile } from "@/components/profile/create-profile"
 import { pictureProblem, ProfileFields } from "@/components/profile/profile-fields"
 import { useSession } from "@/lib/profile/session"
@@ -30,8 +31,8 @@ interface Seat {
 }
 
 export default function KeepResults({ match }: { match: FinishedMatch }) {
-  const t = useT()
-  const k = t.profile.keep
+  const tx = useAreaT(PROFILE_TEXTS)
+  const k = tx.keep
   const session = useSession()
   const [dismissed, setDismissed] = useState<boolean | null>(null)
   const [open, setOpen] = useState(false)
@@ -114,9 +115,9 @@ function KeepSheet({
   onLater: () => void
   onCreated: () => void
 }) {
-  const t = useT()
-  const k = t.profile.keep
-  const f = t.profile.form
+  const tx = useAreaT(PROFILE_TEXTS)
+  const k = tx.keep
+  const f = tx.form
   const only = seats.length === 1 ? seats[0] : null
   const [seat, setSeat] = useState<number | null>(only?.seat ?? null)
   const [name, setName] = useState(only?.name ?? "")

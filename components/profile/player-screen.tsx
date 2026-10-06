@@ -3,7 +3,8 @@
 import { useMemo } from "react"
 import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
-import { useT } from "@/components/i18n-provider"
+import { useAreaT, useT } from "@/components/i18n-provider"
+import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
 import { Figures, ProfileCard, x01Figures } from "@/components/profile/profile-card"
 import { StatsView } from "@/components/profile/stats-view"
 import { useOwnProfile } from "@/components/profile/use-profile"
@@ -16,6 +17,7 @@ import { headToHead, summarizePlayer } from "@/lib/storage/stats"
 // also how the two played against each other.
 export default function PlayerScreen({ params }: ScreenProps) {
   const t = useT()
+  const tx = useAreaT(PROFILE_TEXTS)
   const { all, aliases, loaded } = useMatchHistory()
   const own = useOwnProfile()
   const key = params.key ?? ""
@@ -24,14 +26,14 @@ export default function PlayerScreen({ params }: ScreenProps) {
   if (!loaded) return null
   return (
     <>
-      <ProfileCard seed={key} name={params.name ?? summary?.name ?? null} subtitle={t.profile.player.onDevice}>
+      <ProfileCard seed={key} name={params.name ?? summary?.name ?? null} subtitle={tx.player.onDevice}>
         {summary?.x01 && (
-          <Figures figures={x01Figures(t, { ...summary, points: summary.x01.points, darts: summary.x01.darts })} caption={t.profile.figures.allTime} />
+          <Figures figures={x01Figures(t, tx, { ...summary, points: summary.x01.points, darts: summary.x01.darts })} caption={tx.figures.allTime} />
         )}
       </ProfileCard>
       {together && together.games > 0 && (
         <Group>
-          <ListRow title={t.profile.player.together} value={t.profile.player.togetherValue(together.wins[0], together.wins[1])} />
+          <ListRow title={tx.player.together} value={tx.player.togetherValue(together.wins[0], together.wins[1])} />
         </Group>
       )}
       <StatsView matches={all} playerKey={key} aliases={aliases} />

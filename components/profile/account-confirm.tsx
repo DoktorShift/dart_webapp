@@ -4,7 +4,8 @@ import { useEffect, useState } from "react"
 import { Avatar } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { DisclosureRow } from "@/components/ui/group"
-import { useT } from "@/components/i18n-provider"
+import { useAreaT, useT } from "@/components/i18n-provider"
+import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
 import { usePublicProfile } from "@/components/profile/use-profile"
 import { readMetadata } from "@/lib/profile/metadata"
 
@@ -14,7 +15,8 @@ import { readMetadata } from "@/lib/profile/metadata"
 // their own; this is where the person notices (lib/nostr/signers.ts, startNostrConnect).
 export function AccountConfirm({ pubkey, busy, onAnswer }: { pubkey: string; busy?: boolean; onAnswer: (yes: boolean) => void }) {
   const t = useT()
-  const c = t.profile.connect
+  const tx = useAreaT(PROFILE_TEXTS)
+  const c = tx.connect
   const { profile, status } = usePublicProfile(pubkey)
   const metadata = readMetadata(profile?.metadata)
   const [npub, setNpub] = useState("")
@@ -41,8 +43,8 @@ export function AccountConfirm({ pubkey, busy, onAnswer }: { pubkey: string; bus
           </p>
         </div>
         <div className="border-t border-border">
-          <DisclosureRow title={t.profile.home.advanced}>
-            <span className="block">{t.profile.advanced.fingerprint}</span>
+          <DisclosureRow title={t.profile.titles.advanced}>
+            <span className="block">{tx.advanced.fingerprint}</span>
             <span className="mt-1 block select-all break-all font-mono text-[0.8125rem]">{npub}</span>
           </DisclosureRow>
         </div>

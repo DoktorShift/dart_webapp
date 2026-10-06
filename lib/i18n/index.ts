@@ -82,6 +82,18 @@ export const formatNumber = (t: Messages, value: number) => value.toLocaleString
 
 export const formatPercent = (t: Messages, ratio: number) => ratio.toLocaleString(t.intl, { style: "percent", maximumFractionDigits: 0 })
 
+// When something happened, as lists say it: "Heute, 20:15", "Gestern, 18:02", or the date.
+export function formatWhen(iso: string, t: Messages) {
+  const date = new Date(iso)
+  const now = new Date()
+  const time = date.toLocaleTimeString(t.intl, { hour: "2-digit", minute: "2-digit" })
+  if (date.toDateString() === now.toDateString()) return t.leaderboard.today(time)
+  const yesterday = new Date(now)
+  yesterday.setDate(now.getDate() - 1)
+  if (date.toDateString() === yesterday.toDateString()) return t.leaderboard.yesterday(time)
+  return date.toLocaleDateString(t.intl, { day: "numeric", month: "short", year: "numeric" })
+}
+
 // The mode's name in the current language; saved games and results keep their stored name
 // for modes this version doesn't know.
 export function modeName(t: Messages, modeId: string, fallback: string) {

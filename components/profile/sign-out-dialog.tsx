@@ -11,7 +11,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
-import { useT } from "@/components/i18n-provider"
+import { useAreaT, useT } from "@/components/i18n-provider"
+import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
 import { signOut, type SessionKind } from "@/lib/profile/session"
 
 // "Abmelden": ends the session on this device and removes its keys and connections (session.ts).
@@ -19,7 +20,8 @@ import { signOut, type SessionKind } from "@/lib/profile/session"
 // lost with it, and the dialog says so before it happens.
 export function SignOutDialog({ open, onOpenChange, kind }: { open: boolean; onOpenChange: (open: boolean) => void; kind: SessionKind }) {
   const t = useT()
-  const s = t.profile.signOut
+  const tx = useAreaT(PROFILE_TEXTS)
+  const s = tx.signOut
   const [busy, setBusy] = useState(false)
 
   const leave = async (keepLocalData: boolean) => {

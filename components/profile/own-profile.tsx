@@ -7,7 +7,8 @@ import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
 import { useNav } from "@/components/nav/nav-context"
 import { SlotItems } from "@/components/shell/slot-items"
-import { useT } from "@/components/i18n-provider"
+import { useAreaT, useT } from "@/components/i18n-provider"
+import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
 import { EditSheet } from "@/components/profile/edit-sheet"
 import { GameRow } from "@/components/profile/game-row"
 import { Figures, ProfileCard, x01Figures } from "@/components/profile/profile-card"
@@ -28,7 +29,8 @@ import { summarizePlayer } from "@/lib/storage/stats"
 // public preview, settings, technical details, sign out.
 export function OwnProfileView({ own }: { own: OwnProfile }) {
   const t = useT()
-  const h = t.profile.home
+  const tx = useAreaT(PROFILE_TEXTS)
+  const h = tx.home
   const nav = useNav()
   const { session, metadata, name, history, key, sameAs } = own
   const games = useProfileGames(own)
@@ -50,7 +52,7 @@ export function OwnProfileView({ own }: { own: OwnProfile }) {
         slot={{ pubkey: session.pubkey, own: true }}
       >
         {summary?.x01 ? (
-          <Figures figures={x01Figures(t, { ...summary, points: summary.x01.points, darts: summary.x01.darts })} caption={t.profile.figures.allTime} />
+          <Figures figures={x01Figures(t, tx, { ...summary, points: summary.x01.points, darts: summary.x01.darts })} caption={tx.figures.allTime} />
         ) : (
           <p className="mt-4 border-t border-border pt-3 text-[0.9375rem] leading-snug text-muted-foreground">{h.noGames}</p>
         )}
@@ -79,16 +81,16 @@ export function OwnProfileView({ own }: { own: OwnProfile }) {
       )}
 
       <Group>
-        <ListRow icon={ChartColumn} iconTone="blue" title={h.stats} onClick={() => nav.push(PROFILE_SCREENS.stats)} />
-        <ListRow icon={History} iconTone="teal" title={h.games} value={games.length} onClick={() => nav.push(PROFILE_SCREENS.games)} />
+        <ListRow icon={ChartColumn} iconTone="blue" title={t.profile.titles.stats} onClick={() => nav.push(PROFILE_SCREENS.stats)} />
+        <ListRow icon={History} iconTone="teal" title={t.profile.titles.games} value={games.length} onClick={() => nav.push(PROFILE_SCREENS.games)} />
         <SlotItems list="profile.rows" props={() => ({})} />
       </Group>
 
       <Group>
-        <ListRow icon={Eye} iconTone="purple" title={h.preview} onClick={() => nav.push(PROFILE_SCREENS.preview)} />
+        <ListRow icon={Eye} iconTone="purple" title={t.profile.titles.preview} onClick={() => nav.push(PROFILE_SCREENS.preview)} />
         <ListRow icon={Settings} iconTone="gray" title={t.settings.title} onClick={() => nav.push(SCREENS.settings)} />
         <ListRow icon={Info} iconTone="blue" title={t.nav.about} onClick={() => nav.push(SCREENS.about)} />
-        <ListRow icon={Wrench} iconTone="gray" title={h.advanced} onClick={() => nav.push(PROFILE_SCREENS.advanced)} />
+        <ListRow icon={Wrench} iconTone="gray" title={t.profile.titles.advanced} onClick={() => nav.push(PROFILE_SCREENS.advanced)} />
       </Group>
 
       <Group>

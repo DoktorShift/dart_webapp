@@ -3,8 +3,9 @@
 import type { ReactNode } from "react"
 import { Button } from "@/components/ui/button"
 import { InlineStatus } from "@/components/common/inline-status"
-import { formatWhen } from "@/components/leaderboard-screen"
-import { useT } from "@/components/i18n-provider"
+import { useAreaT, useT } from "@/components/i18n-provider"
+import { formatWhen } from "@/lib/i18n"
+import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
 import { Figures, ProfileCard, x01Figures } from "@/components/profile/profile-card"
 import { useVerifiedNip05, type PublicProfileState } from "@/components/profile/use-profile"
 import { readMetadata } from "@/lib/profile/metadata"
@@ -28,7 +29,8 @@ export function PublicProfileView({
   children?: (name: string | null) => ReactNode
 }) {
   const t = useT()
-  const p = t.profile.public
+  const tx = useAreaT(PROFILE_TEXTS)
+  const p = tx.public
   const { profile, status, reload } = state
   const metadata = readMetadata(profile?.metadata)
   const address = useVerifiedNip05(metadata.nip05, pubkey)
@@ -46,7 +48,7 @@ export function PublicProfileView({
 
   // Shared figures are the player's own statement, so they always say so, with their date.
   const caption = card ? `${p.sharedBy}, ${p.asOf(formatWhen(new Date(card.createdAt * 1000).toISOString(), t))}` : ""
-  const others = card ? [card.card.cricket && `${t.profile.stats.modes.cricket}: ${t.profile.gamesCount(card.card.cricket.games)}`, card.card.clock && `${t.profile.stats.modes.clock}: ${t.profile.gamesCount(card.card.clock.games)}`].filter(Boolean) : []
+  const others = card ? [card.card.cricket && `${tx.stats.modes.cricket}: ${tx.gamesCount(card.card.cricket.games)}`, card.card.clock && `${tx.stats.modes.clock}: ${tx.gamesCount(card.card.clock.games)}`].filter(Boolean) : []
 
   return (
     <>
@@ -79,7 +81,7 @@ export function PublicProfileView({
           {card ? (
             <>
               {card.card.x01 ? (
-                <Figures figures={x01Figures(t, card.card.x01)} caption={`${t.profile.figures.allTime} · ${caption}`} />
+                <Figures figures={x01Figures(t, tx, card.card.x01)} caption={`${tx.figures.allTime} · ${caption}`} />
               ) : (
                 <p className="mt-4 border-t border-border pt-3 text-[0.8125rem] text-muted-foreground">{caption}</p>
               )}
