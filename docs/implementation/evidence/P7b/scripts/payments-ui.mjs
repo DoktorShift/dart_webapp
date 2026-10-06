@@ -71,10 +71,16 @@ const audit = () => {
   }
   const all = Array.from(document.querySelectorAll("body *")).filter(shown)
   const describe = (el) => `${el.tagName.toLowerCase()}:${(el.getAttribute("aria-label") || el.textContent || "").trim().slice(0, 30)}`
+  const hidesOverflow = (el) => ["hidden", "clip"].includes(getComputedStyle(el).overflowX)
   return {
     pageScroll: document.scrollingElement.scrollWidth > vw + 1,
     offscreen: all.filter((el) => { const r = el.getBoundingClientRect(); return r.right > vw + 1 || r.left < -1 }).map(describe).slice(0, 5),
     ellipsis: all.filter((el) => getComputedStyle(el).textOverflow === "ellipsis" && el.scrollWidth > el.clientWidth + 1).map(describe),
+    // Text wider than an element that hides what doesn't fit: cut off without an ellipsis. Neither
+    // text for VoiceOver only (1 px wide) nor the viewport-wide layers of the navigation stack count.
+    clipped: all
+      .filter((el) => hidesOverflow(el) && el.clientWidth > 1 && el.clientWidth < vw - 1 && el.scrollWidth > el.clientWidth + 1 && (el.textContent ?? "").trim() !== "")
+      .map((el) => `${describe(el)} ${el.scrollWidth}>${el.clientWidth}`),
     small: all
       .filter((el) => el.matches("button, a[href], input, [role=radio], summary") && !el.closest("[data-vaul-drawer] [data-vaul-handle]"))
       .map((el) => (el.matches("[role=switch]") && el.closest("label") ? el.closest("label") : el))
@@ -291,4 +297,4 @@ try {
 }
 
 writeFileSync(`${OUT}/report.json`, JSON.stringify(report, null, 2))
-console.log(JSON.stringify(report.filter((r) => r.run || r.pageScroll || r.offscreen.length || r.ellipsis.length || r.small.length), null, 2))
+console.log(JSON.stringify(report.filter((r) => r.run || r.pageScroll || r.offscreen.length || r.ellipsis.length || r.clipped.length || r.small.length), null, 2))

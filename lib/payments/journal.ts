@@ -164,9 +164,21 @@ export interface PaymentRequest {
   // The checked invoice to pay. Called only when nothing for this action is open, so no new
   // invoice is ever fetched while an earlier payment's outcome is unknown. May throw.
   invoice: () => Promise<InvoiceSource>
-  // Cancelled while the invoice was being fetched: nothing is written and nothing paid (pay()
-  // throws the signal's reason). Once the payment is handed to the wallet it can't be cancelled.
+  // Cancelled while the invoice was being fetched: nothing is written and nothing paid, pay()
+  // throws the signal's reason at once and frees the action (the fetch's late result is ignored).
+  // Once the payment is handed to the wallet it can't be cancelled.
   signal?: AbortSignal
+}
+
+// `promise`, unless `signal` aborts first.
+function untilAborted<T>(promise: Promise<T>, signal: AbortSignal | undefined): Promise<T> {
+  if (!signal) return promise
+  return new Promise<T>((resolve, reject) => {
+    const abort = () => reject(signal.reason)
+    if (signal.aborted) return abort()
+    signal.addEventListener("abort", abort, { once: true })
+    promise.then(resolve, reject).finally(() => signal.removeEventListener("abort", abort))
+  })
 }
 
 // One lock per invoice besides the one per action: two actions (two tabs that scanned the same
@@ -181,8 +193,7 @@ export async function pay(request: PaymentRequest, payer: Payer): Promise<Paymen
     const earlier = blockingEntry(await loadJournal(), request.action)
     // Holding the lock, an entry still "sending" can only be from a page that closed meanwhile.
     if (earlier) return earlier.state === "sending" ? save({ ...earlier, state: "unknown" }) : earlier
-    const source = await request.invoice()
-    request.signal?.throwIfAborted()
+    const source = await untilAborted(request.invoice(), request.signal)
     return exclusive(invoiceLock(source.checked.paymentHash), () => send(request, source, payer))
   })
   return result ?? "busy"

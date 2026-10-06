@@ -89,8 +89,11 @@ const audit = () => {
     offscreen: all.filter((el) => { const r = el.getBoundingClientRect(); return r.right > vw + 1 || r.left < -1 }).map(describe).slice(0, 5),
     ellipsis: all.filter((el) => getComputedStyle(el).textOverflow === "ellipsis" && el.scrollWidth > el.clientWidth + 1).map(describe),
     // Text wider than an element that hides what doesn't fit: cut off without an ellipsis.
-    // (Visually hidden text for VoiceOver, 1 px wide, doesn't count.)
-    clipped: all.filter((el) => hidesOverflow(el) && el.clientWidth > 1 && el.scrollWidth > el.clientWidth + 1 && (el.textContent ?? "").trim() !== "").map((el) => `${describe(el)} ${el.scrollWidth}>${el.clientWidth}`),
+    // Neither text hidden for VoiceOver only (1 px wide) nor the viewport-wide layers that keep
+    // the hidden screens of the navigation stack off to the side count.
+    clipped: all
+      .filter((el) => hidesOverflow(el) && el.clientWidth > 1 && el.clientWidth < vw - 1 && el.scrollWidth > el.clientWidth + 1 && (el.textContent ?? "").trim() !== "")
+      .map((el) => `${describe(el)} ${el.scrollWidth}>${el.clientWidth}`),
     small: all
       .filter((el) => el.matches("button, a[href], input, [role=radio], summary") && !el.closest("[data-vaul-handle]"))
       .map((el) => (el.matches("[role=switch]") && el.closest("label") ? el.closest("label") : el))
@@ -136,8 +139,8 @@ function helpers(page, name, de) {
   const dialog = () => page.getByRole("dialog")
   const shot = async (step) => {
     await page.waitForTimeout(500)
-    const file = `${name}-${step}.png`
-    await page.screenshot({ path: `${OUT}/${file}` })
+    const file = `${name}-${step}.jpg`
+    await page.screenshot({ path: `${OUT}/${file}`, quality: 70 })
     const a = await page.evaluate(audit)
     log(file, a.pageScroll || a.offscreen.length || a.ellipsis.length || a.clipped.length || a.small.length ? a : "layout ok")
   }
@@ -390,13 +393,14 @@ async function address(browser) {
   await h.startGame(500, true)
   context.lnurlHang = "endpoint"
   await page.getByRole("button", { name: "500 sats an Mia zahlen" }).click()
+  // The address is looked up from the moment the payment opens, while the wallet is connected.
+  const started = Date.now()
   await h.dialog().getByRole("button", { name: "500 sats an Mia zahlen" }).click()
   await h.paste("Verbindung einfügen", payer.uri)
   await h.dialog().getByText("Empfangsadresse wird gesucht").waitFor({ timeout: 20_000 })
   await h.shot("01-looking-up")
-  const started = Date.now()
   await h.dialog().getByText("mia@wallet.test ist gerade nicht erreichbar").waitFor({ timeout: 30_000 })
-  log(name, "lookup given up after", Math.round((Date.now() - started) / 1000), "s (lab value)")
+  log(name, "lookup given up after", Math.round((Date.now() - started) / 1000), "s from opening the payment (lab value)")
   await h.shot("02-unreachable")
   await h.dialog().getByRole("button", { name: "Abbrechen" }).last().click()
   await page.waitForTimeout(800)

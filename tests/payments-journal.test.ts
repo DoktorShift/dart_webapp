@@ -307,7 +307,7 @@ test("the same invoice from two actions at once is paid once", async () => {
   for (const result of results) assert.ok(result === "busy" || result.id === entry.id)
 })
 
-test("cancelled while the invoice was being fetched: nothing written, nothing paid", async () => {
+test("cancelled while the invoice was being fetched: nothing written, nothing paid, the action free again", async () => {
   const controller = new AbortController()
   const w = wallet()
   const request: PaymentRequest = {
@@ -315,14 +315,17 @@ test("cancelled while the invoice was being fetched: nothing written, nothing pa
     once: false,
     counterpart: MIA,
     signal: controller.signal,
-    invoice: async () => {
+    // A Lightning address that never answers; the person cancels meanwhile.
+    invoice: () => {
       controller.abort()
-      return scannedInvoice(newInvoice(), 500_000)
+      return new Promise<never>(() => {})
     },
   }
   await assert.rejects(pay(request, w), { name: "AbortError" })
   assert.equal(w.paid.length, 0)
   assert.deepEqual(await loadJournal(), [])
+  // Right away, not only once the address gives up.
+  assert.equal(entryOf(await pay(requestFor(newInvoice(), "pay:m1:p2", false).request, w)).state, "paid")
 })
 
 test("settled by hand: paid as the wallet shows it, kept apart from the wallet's answer", async () => {
