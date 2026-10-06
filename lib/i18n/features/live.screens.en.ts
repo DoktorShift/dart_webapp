@@ -66,8 +66,8 @@ export const liveScreensEn: Widen<typeof liveScreensDe> = {
     keep: "Keep scoring here without sharing",
   },
 
-  confirmations: (confirmed, connected) => `Result confirmed: ${confirmed} of ${connected}`,
-  disputedBy: (names) => `Disputed by ${names}`,
+  confirmations: (confirmed, connected) => `${confirmed} of ${connected} confirmed`,
+  disputes: (count) => (count === 1 ? "1 dispute" : `${count} disputes`),
 
   watch: {
     invalid: "This link doesn't lead to a game.",

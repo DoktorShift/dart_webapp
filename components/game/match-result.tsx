@@ -75,14 +75,19 @@ function SmallAction({
   )
 }
 
-// Tailwind's `split` (side by side in landscape). Areas' pieces ("result.actions") are rendered
-// once, next to the buttons on screen, not in both copies of them.
+// Tailwind's `split` (side by side in landscape) and `xshort` (a phone in landscape), as in
+// tailwind.config.js. Areas' pieces ("result.actions") are rendered once, next to the buttons on
+// screen, not in both copies of them; at xshort heights the hero and the buttons alone fill the
+// screen, so the pieces sit in the free middle of the top bar instead.
 const SPLIT = "(orientation: landscape) and (min-width: 560px)"
-const subscribeSplit = (onChange: () => void) => {
-  const query = window.matchMedia(SPLIT)
+const XSHORT = "(max-height: 500px)"
+const subscribeTo = (media: string) => (onChange: () => void) => {
+  const query = window.matchMedia(media)
   query.addEventListener("change", onChange)
   return () => query.removeEventListener("change", onChange)
 }
+const subscribeSplit = subscribeTo(SPLIT)
+const subscribeXshort = subscribeTo(XSHORT)
 
 // One fixed screen worth a screenshot: the winner, the key numbers per player, then Rematch.
 // Everything else is a small tap away: the full statistics, sharing a picture of the result,
@@ -93,6 +98,7 @@ export function MatchResult({ state, match, onRematch, onNewGame, onHome, onLead
   const [statsOpen, setStatsOpen] = useState(false)
   const { title, subtitle, badges } = useMemo(() => headline(state, t), [state, t])
   const split = useSyncExternalStore(subscribeSplit, () => window.matchMedia(SPLIT).matches, () => false)
+  const xshort = useSyncExternalStore(subscribeXshort, () => window.matchMedia(XSHORT).matches, () => false)
   const finished = useMemo<FinishedMatch>(
     () => ({
       id: match.id,
@@ -142,9 +148,10 @@ export function MatchResult({ state, match, onRematch, onNewGame, onHome, onLead
     </motion.div>
   )
 
+  const pieces = <SlotItems list="result.actions" props={() => ({ match: finished })} className={xshort ? "flex min-w-0 flex-1 items-center justify-center gap-2 px-2" : "mb-2 grid gap-2"} />
   const actions = (withPieces: boolean) => (
     <div>
-      {withPieces && <SlotItems list="result.actions" props={() => ({ match: finished })} className="mb-2 grid gap-2" />}
+      {withPieces && !xshort && pieces}
       <Button onClick={onRematch} className="h-14 w-full gap-2 rounded-2xl text-[1.0625rem] font-semibold xshort:h-12">
         <RotateCcw className="h-5 w-5" aria-hidden="true" />
         {t.result.rematch}
@@ -172,6 +179,7 @@ export function MatchResult({ state, match, onRematch, onNewGame, onHome, onLead
             <Undo2 className="h-5 w-5" aria-hidden="true" />
             {t.result.undoDart}
           </Button>
+          {xshort && pieces}
           <Button variant="ghost" onClick={onHome} className="-mr-3 h-11 px-3 text-[1.0625rem] font-semibold text-primary">
             {t.common.done}
           </Button>

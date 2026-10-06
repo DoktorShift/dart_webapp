@@ -65,8 +65,9 @@ export const liveScreensDe = {
     keep: "Hier ohne Übertragung weiterzählen",
   },
 
-  confirmations: (confirmed: number, connected: number) => `Ergebnis bestätigt: ${confirmed} von ${connected}`,
-  disputedBy: (names: string) => `Widerspruch von ${names}`,
+  // On the result: "1 von 2 bestätigt · 1 Widerspruch".
+  confirmations: (confirmed: number, connected: number) => `${confirmed} von ${connected} bestätigt`,
+  disputes: (count: number) => (count === 1 ? "1 Widerspruch" : `${count} Widersprüche`),
 
   watch: {
     invalid: "Dieser Link führt zu keinem Spiel.",
