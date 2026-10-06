@@ -1,6 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { MAX_PAYLOAD_LENGTH, buildLink, parseAppLink, parseHash } from "../lib/shell/links.ts"
+import { MAX_PAYLOAD_LENGTH, buildLink, containsSecretKey, parseAppLink, parseHash } from "../lib/shell/links.ts"
 
 // Expected values follow the link format in docs/decisions/0002 §9 and the task card P0.02:
 // "#<kind>=<payload>", payload opaque, only on the app's own start page.
@@ -70,4 +70,12 @@ test("links are built on the site's origin and read back unchanged", () => {
   assert.throws(() => buildLink(SITE, "club", ""))
   assert.throws(() => buildLink(SITE, "club", "a b"))
   assert.throws(() => buildLink("not a url", "club", "c1"))
+})
+
+test("a profile's secret key is recognised wherever it is pasted, and nothing else is taken for one", () => {
+  const nsec = "nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5"
+  for (const text of [nsec, ` ${nsec} `, `nostr:${nsec}`, `Hier mein Code: ${nsec.toUpperCase()}`]) assert.equal(containsSecretKey(text), true, text)
+  for (const text of ["npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m", "Anna", "nsec", "nsec1abc", "https://blueline21.netlify.app/#p=U1.abc"]) {
+    assert.equal(containsSecretKey(text), false, text)
+  }
 })

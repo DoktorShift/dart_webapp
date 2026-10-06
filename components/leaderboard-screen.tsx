@@ -19,7 +19,7 @@ const PODIUM_HEIGHT = ["h-28", "h-20", "h-14"]
 const PODIUM_COLUMN = ["col-start-2", "col-start-1", "col-start-3"]
 const PODIUM_ORDER = [1, 0, 2]
 
-function formatWhen(iso: string, t: Messages) {
+export function formatWhen(iso: string, t: Messages) {
   const date = new Date(iso)
   const now = new Date()
   const time = date.toLocaleTimeString(t.intl, { hour: "2-digit", minute: "2-digit" })

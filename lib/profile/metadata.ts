@@ -12,6 +12,8 @@ export interface ProfileMetadata {
   picture: string | null
   // A Lightning address (lud16), for payments.
   lightningAddress: string | null
+  // A NIP-05 address (name@domain), as written: show it only once verified (lib/nostr/ext/nip05.ts).
+  nip05: string | null
 }
 
 // Room enough for any real name; the 16-character limit of a seat name in setup doesn't apply.
@@ -31,7 +33,7 @@ function fields(content: string): Record<string, unknown> | null {
 
 export function readMetadata(event: Pick<NostrEvent, "content"> | null | undefined): ProfileMetadata {
   const f = event ? (fields(event.content) ?? {}) : {}
-  return { name: text(f.display_name) ?? text(f.name), picture: text(f.picture), lightningAddress: text(f.lud16) }
+  return { name: text(f.display_name) ?? text(f.name), picture: text(f.picture), lightningAddress: text(f.lud16), nip05: text(f.nip05) }
 }
 
 export interface MetadataChange {

@@ -21,8 +21,8 @@ const ANSWER_WAIT_MS = 15 * 60 * 1000
 interface PendingRequest {
   id: string
   request: Nip55Request
-  // Set when the answer arrived, for a tab still waiting for it.
-  answer?: { event: VerifiedEvent } | { refused: true }
+  // Set when the answer arrived, for a tab still waiting for it: the checked event, or why not.
+  answer?: { event: VerifiedEvent } | { failed: "rejected" | "mismatch" }
 }
 
 // Requests this page is waiting for (signEvent below).
@@ -61,7 +61,7 @@ function waitForAnswer(requestId: string): Promise<VerifiedEvent> {
       const answer = pending?.answer
       if (!answer) return
       const { SignerError } = await import("../nostr/signers.ts")
-      void finish(() => ("event" in answer ? resolve(answer.event) : reject(new SignerError("rejected", "the signer app declined"))))
+      void finish(() => ("event" in answer ? resolve(answer.event) : reject(new SignerError(answer.failed, `the signer app's answer: ${answer.failed}`))))
     }
     const stop = onStorageChange((message) => {
       if (message.type === "change" && message.stores.includes("pending")) void check()
@@ -122,9 +122,11 @@ export async function completeAnswer(payload: string): Promise<SignerAnswer | nu
     await dbWrite([{ store: "pending", put: { ...pending, answer: { event } } as Keyed }])
     return { type: "signed", event, awaited: waiting.has(callback.id) }
   } catch (error) {
-    // Declined, too old, or not what was asked for: the request is over either way.
+    // Declined, too old, or not what was asked for: the request is over either way, and a page
+    // waiting for a signature hears why.
     const refused = (error as { code?: string }).code === "rejected"
-    await dbWrite([pending.request.type === "sign_event" && refused ? { store: "pending", put: { ...pending, answer: { refused: true } } as Keyed } : { store: "pending", delete: id }])
+    const failed = refused ? "rejected" : "mismatch"
+    await dbWrite([pending.request.type === "sign_event" ? { store: "pending", put: { ...pending, answer: { failed } } as Keyed } : { store: "pending", delete: id }])
     return refused ? { type: "refused" } : null
   }
 }

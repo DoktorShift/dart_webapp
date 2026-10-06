@@ -1,0 +1,90 @@
+import { isAddressableKind, isReplaceableKind, query } from "../nostr/client.ts"
+import type { NostrEvent } from "../nostr/types.ts"
+import { dbGetAll, dbWrite, type Keyed } from "../storage/db.ts"
+import { STATS_CARD_D } from "../protocol/profile.ts"
+import { ROUND_D_PREFIX } from "./rounds.ts"
+import { BLOCKED_RELAYS_KIND, ownReadRelays, RELAY_LIST_KIND, relaySettings, type RelaySettings } from "./relay-list.ts"
+import { OWN_OBJECT_PREFIX } from "./session.ts"
+
+// The signed-in profile's own replaceable events, as last seen: its metadata (0), relay list
+// (10002), blocked relays (10006), stats card (31180 "stats") and player rounds (30000). Kept in
+// the "objects" store, so the profile shows at once and offline; the local copy comes first
+// (decision 0002 §1). An event signed here is kept before it is published, so a change is never
+// lost to a missing connection; relays only ever replace it with a newer version.
+// Everything here goes with the profile when it signs out (session.ts, "own:*").
+
+interface StoredEvent {
+  id: string
+  event: NostrEvent
+}
+
+// One entry per replaceable kind, or per kind and d tag ("0:", "31180:stats").
+function coordinate(event: Pick<NostrEvent, "kind" | "tags">): string {
+  const d = event.kind >= 30_000 && event.kind < 40_000 ? (event.tags.find((tag) => tag[0] === "d")?.[1] ?? "") : ""
+  return `${event.kind}:${d}`
+}
+
+// NIP-01: the newer created_at wins; on a tie, the lower id.
+const newer = (a: NostrEvent, b: NostrEvent) => a.created_at > b.created_at || (a.created_at === b.created_at && a.id < b.id)
+
+export async function ownEvents(pubkey: string): Promise<Map<string, NostrEvent>> {
+  const stored = await dbGetAll<StoredEvent>("objects")
+  return new Map(stored.filter((s) => s.id.startsWith(OWN_OBJECT_PREFIX) && s.event.pubkey === pubkey).map((s) => [coordinate(s.event), s.event]))
+}
+
+// Keeps the newest version of each of the profile's replaceable events; older ones, other
+// people's and regular events are ignored.
+export async function rememberOwn(pubkey: string, events: readonly NostrEvent[]) {
+  const known = await ownEvents(pubkey)
+  const fresh = new Map<string, NostrEvent>()
+  for (const event of events) {
+    if (event.pubkey !== pubkey || !(isReplaceableKind(event.kind) || isAddressableKind(event.kind))) continue
+    const key = coordinate(event)
+    const current = fresh.get(key) ?? known.get(key)
+    if (!current || newer(event, current)) fresh.set(key, event)
+  }
+  await dbWrite([...fresh].map(([key, event]) => ({ store: "objects", put: { id: `${OWN_OBJECT_PREFIX}${key}`, event } as Keyed })))
+}
+
+// Where to find each in ownEvents().
+export const OWN = {
+  metadata: "0:",
+  relayList: `${RELAY_LIST_KIND}:`,
+  blockedRelays: `${BLOCKED_RELAYS_KIND}:`,
+  statsCard: `31180:${STATS_CARD_D}`,
+} as const
+
+export const ownRelaySettings = (events: Map<string, NostrEvent>): RelaySettings => relaySettings(events.get(OWN.relayList), events.get(OWN.blockedRelays))
+
+export interface FetchResult {
+  // Relays that answered completely; none means the result is unknown, not empty.
+  answered: string[]
+  failed: string[]
+}
+
+const ownFilters = (pubkey: string) => [
+  { authors: [pubkey], kinds: [0, RELAY_LIST_KIND, BLOCKED_RELAYS_KIND] },
+  { authors: [pubkey], kinds: [31180], "#d": [STATS_CARD_D] },
+  { authors: [pubkey], kinds: [30000] },
+]
+
+// Looks for the profile's events on every relay they may be on, and keeps what is newer here.
+// A relay list found on the way (a new device) names more relays to look at.
+export async function fetchOwnEvents(pubkey: string): Promise<FetchResult> {
+  const answered: string[] = []
+  const failed: string[] = []
+  const asked = new Set<string>()
+  for (let round = 0; round < 2; round++) {
+    const relays = ownReadRelays(ownRelaySettings(await ownEvents(pubkey))).filter((url) => !asked.has(url))
+    if (relays.length === 0) break
+    for (const url of relays) asked.add(url)
+    const result = await query(ownFilters(pubkey), relays)
+    answered.push(...result.answered)
+    failed.push(...result.failed.map((f) => f.url))
+    await rememberOwn(
+      pubkey,
+      result.events.filter((event) => event.kind !== 30000 || coordinate(event).startsWith(`30000:${ROUND_D_PREFIX}`)),
+    )
+  }
+  return { answered, failed }
+}

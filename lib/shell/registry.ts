@@ -24,9 +24,12 @@
 //     "setup.players"   Right below setup's player list: ways to fill seats (a profile's QR code,
 //                       saved rounds). Gets the seats and can add one or replace them all; a seat
 //                       may carry the pubkey of the profile it was filled from.
-//     "profile.rows"    Rows in the signed-in Profile tab's list after Statistik and Spiele:
-//                       Auszeichnungen, Geräte, Sicherung, Zahlungen. No props; each piece is one
-//                       ListRow (components/ui/list-row.tsx) that pushes its area's screen.
+//     "profile.rows"    Rows in the Profile tab's list: signed in after Statistik and Spiele, as
+//                       a guest above Einstellungen. Auszeichnungen, Geräte, Sicherung,
+//                       Zahlungen. No props; each piece is one ListRow (components/ui/list-row.tsx)
+//                       that pushes its area's screen. Rendered for guests and signed-in players
+//                       alike: a row that needs a profile (Geräte, Sicherung, Auszeichnungen)
+//                       renders nothing while useSession() (lib/profile/session.ts) is null.
 //     "profile.card"    On a profile (own or someone else's), below its figures: badges, a club
 //                       hint. Gets { pubkey, own }. Keep it to one line.
 //     "profile.actions" On another player's public profile, below "Profil teilen": e.g.

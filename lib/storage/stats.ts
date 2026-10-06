@@ -22,21 +22,24 @@ export interface StatsOptions {
   includeSolo?: boolean
   // Imported 1.0.0 name groups the players assigned to someone: name key -> player id.
   aliases?: Map<string, string>
+  // Players who are the same person: player id -> the id they count as. Several devices give one
+  // profile several player ids; their games add up as one player's.
+  sameAs?: Map<string, string>
 }
 
 // Who a line of a result belongs to. Players of this version: their stable id. Imported 1.0.0
 // results know only names, so each name stays a group of its own ("imported:anna") until the
 // players assign it to someone. Empty seats ("Spieler 1") are grouped by that label, as 1.0.0
 // did, and never belong to a person. Null for a line without any name.
-export function playerKey(match: ArchivedMatch, player: ArchivedPlayer, aliases?: Map<string, string>): string | null {
+export function playerKey(match: ArchivedMatch, player: ArchivedPlayer, aliases?: Map<string, string>, sameAs?: Map<string, string>): string | null {
   const key = nameKey(player.name)
   if (!key) return null
   if (player.unnamed || isUnnamed(player.name)) return `unnamed:${key}`
   if (match.source === "imported-v1" || !player.playerId) {
     const alias = aliases?.get(key)
-    return alias ? `id:${alias}` : `imported:${key}`
+    return alias ? `id:${sameAs?.get(alias) ?? alias}` : `imported:${key}`
   }
-  return `id:${player.playerId}`
+  return `id:${sameAs?.get(player.playerId) ?? player.playerId}`
 }
 
 const keyKind = (key: string) => key.slice(0, key.indexOf(":"))
@@ -331,7 +334,7 @@ export function summarizePlayers(matches: ArchivedMatch[], options: StatsOptions
   for (const match of matches) {
     if (!inSelection(match, options)) continue
     match.players.forEach((player, i) => {
-      const key = playerKey(match, player, options.aliases)
+      const key = playerKey(match, player, options.aliases, options.sameAs)
       if (!key) return
       let tally = tallies.get(key)
       if (!tally) tallies.set(key, (tally = emptyTally(key)))
@@ -362,7 +365,7 @@ export function headToHead(matches: ArchivedMatch[], a: string, b: string, optio
   const legs: [number, number] = [0, 0]
   for (const match of matches) {
     if (!inSelection(match, { ...options, includeSolo: false })) continue
-    const keys = match.players.map((p) => playerKey(match, p, options.aliases))
+    const keys = match.players.map((p) => playerKey(match, p, options.aliases, options.sameAs))
     const ia = keys.indexOf(a)
     const ib = keys.indexOf(b)
     if (ia < 0 || ib < 0 || ia === ib) continue

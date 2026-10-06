@@ -28,6 +28,7 @@ export const shellEn: Messages["shell"] = {
   loadFailed: "This screen couldn't be loaded. Check your connection.",
   retry: "Try again",
   loading: "Loading",
+  secretKey: "This is the secret access code of a profile. Anyone who has it can take the profile over. Never give it to anyone or paste it anywhere. It was not used.",
 
   clubs: {
     emptyTitle: "No clubs yet",

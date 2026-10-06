@@ -55,12 +55,13 @@ export function editableRelays(relayList?: NostrEvent | null): RelayEntry[] {
   return entries.length > 0 ? entries : newRelayList()
 }
 
-// The list with one relay more (read and write) or one less. Everything else of the previous
-// version stays (lib/nostr/ext/lists.ts): unknown tags and entries this app can't use.
+// The kind 10002 template for edited entries. Everything else of the previous version stays
+// (lib/nostr/ext/lists.ts): unknown tags and entries this app can't use.
 export function relayListTemplate(entries: readonly RelayEntry[], base?: NostrEvent | null): EventTemplate {
   return buildRelayListTemplate(entries, base ? { list: parseRelayListSafe(base), event: base } : undefined)
 }
 
+// The entries with one relay more (read and write); null when the input is no relay address.
 export function addRelay(entries: readonly RelayEntry[], input: string): RelayEntry[] | null {
   const url = normalizeRelayUrl(input)
   if (!url) return null

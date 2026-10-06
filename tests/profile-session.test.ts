@@ -185,3 +185,25 @@ test("an external session needs a real public key", async () => {
   await assert.rejects(connectExternal("nip07", { pubkey: "npub1xyz" }))
   assert.equal(await loadSession(), null)
 })
+
+test("a browser extension that now uses another account is never signed with", async () => {
+  const core = await loadCore()
+  const keys = [core.generateSecretKey(), core.generateSecretKey()]
+  let account = 0
+  // The extension as a page sees it (window.nostr); the person can switch its account any time.
+  const extension = {
+    getPublicKey: async () => core.getPublicKey(keys[account]),
+    signEvent: async (t: Parameters<Signer["signEvent"]>[0]) => core.finalizeEvent({ ...t }, keys[account]),
+  }
+  const page = globalThis.window as unknown as { nostr?: unknown }
+  page.nostr = extension
+  try {
+    const session = await connectExternal("nip07", { pubkey: core.getPublicKey(keys[0]) })
+    assert.equal((await (await getSigner()).signEvent(template())).pubkey, session.pubkey)
+    // Switched in the extension: nothing it signs now gets out under this profile.
+    account = 1
+    await assert.rejects((await getSigner()).signEvent(template()), { name: "SignerError", code: "mismatch" })
+  } finally {
+    delete page.nostr
+  }
+})

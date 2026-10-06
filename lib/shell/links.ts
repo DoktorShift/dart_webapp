@@ -88,3 +88,7 @@ export function buildLink(site: string, kind: LinkKind, payload: string): string
   if (!origin) throw new Error(`Not an address: ${site}`)
   return `${origin}/#${kind}=${payload}`
 }
+
+// A profile's secret key (nsec…), pasted or scanned where a link, code or name belongs. Whoever has
+// it owns the profile, so it is never taken anywhere: fields drop it and say why.
+export const containsSecretKey = (text: string) => /nsec1[02-9ac-hj-np-z]{20,}/i.test(text)

@@ -18,17 +18,18 @@ const event = (content: unknown, over: Partial<NostrEvent> = {}): NostrEvent => 
 })
 
 test("reads the shown name, the picture and the Lightning address", () => {
-  assert.deepEqual(readMetadata(event({ name: "lena_s", display_name: " Lena Schmidt ", picture: "https://img.example/l.jpg", lud16: "lena@wallet.example" })), {
+  assert.deepEqual(readMetadata(event({ name: "lena_s", display_name: " Lena Schmidt ", picture: "https://img.example/l.jpg", lud16: "lena@wallet.example", nip05: "lena@example.com" })), {
     name: "Lena Schmidt",
     picture: "https://img.example/l.jpg",
     lightningAddress: "lena@wallet.example",
+    nip05: "lena@example.com",
   })
   assert.equal(readMetadata(event({ name: "lena" })).name, "lena")
   assert.equal(readMetadata(event({ display_name: "  ", name: "lena" })).name, "lena")
 })
 
 test("damaged or missing metadata reads as unknown, not as an error", () => {
-  const empty = { name: null, picture: null, lightningAddress: null }
+  const empty = { name: null, picture: null, lightningAddress: null, nip05: null }
   assert.deepEqual(readMetadata(event("{not json")), empty)
   assert.deepEqual(readMetadata(event("[1,2]")), empty)
   assert.deepEqual(readMetadata(event({ name: 42, picture: false })), empty)
