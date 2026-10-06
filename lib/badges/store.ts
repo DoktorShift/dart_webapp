@@ -128,10 +128,10 @@ export function lookupBadges(pubkey: string, { again = false } = {}): Promise<Lo
 
 // ---- Other players' badges --------------------------------------------------------------------
 
-// Another profile's badges, seen once on this page: what its profile card showed, for the
-// badge's own screen. Never stored.
-const seen = new Map<string, ValidAward>()
-export const seenAward = (id: string): ValidAward | undefined => seen.get(id)
+// Other profiles' badges shown on this page (their profile cards), for a badge's own screen.
+// Never stored.
+const shownElsewhere = new Map<string, ValidAward>()
+export const shownElsewhereAward = (id: string): ValidAward | undefined => shownElsewhere.get(id)
 
 // Another profile's shown badges, in its order, each checked before it is shown; at most `limit`.
 export async function shownBadges(pubkey: string, hints: readonly string[] = [], limit = Infinity): Promise<{ awards: ValidAward[]; status: LoadStatus }> {
@@ -148,7 +148,7 @@ export async function shownBadges(pubkey: string, hints: readonly string[] = [],
   const awards = await query([{ ids: selection.badges.map((b) => b.award), kinds: [KIND_BADGE_AWARD] }], mergeRelays(relays, selection.badges.flatMap((b) => b.awardRelay ?? [])))
   const more = await query(behind(awards.events), mergeRelays(relays, selection.badges.flatMap((b) => b.addressRelay ?? [])))
   const shown = inListOrder(selection, await validAwards([...awards.events, ...more.events], pubkey)).slice(0, limit)
-  for (const award of shown) seen.set(award.award.id, award)
+  for (const award of shown) shownElsewhere.set(award.award.id, award)
   return { awards: shown, status: loadStatus(lists.answered.length, lists.failed.length + awards.failed.length + more.failed.length) }
 }
 

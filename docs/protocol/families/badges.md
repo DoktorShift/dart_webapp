@@ -1,6 +1,6 @@
 # Familie: Auszeichnungen
 
-Stand: P0.05. Code: [`badges.ts`](../../../lib/protocol/badges.ts). Vektoren: [`vectors/badges.json`](../vectors/badges.json). Grundlage: Entscheidung 0001 F3, Entscheidung 0002 §6, PLAN.md „Auszeichnungen“, Recherche PR-03, PR-04, PR-09.
+Stand: P0.05, Nachweisdatensatz seit P7a.01. Code: [`badges.ts`](../../../lib/protocol/badges.ts); Verwendung in der App: `lib/badges/`. Vektoren: [`vectors/badges.json`](../vectors/badges.json), Schema: [`schemas/badges.schema.json`](../schemas/badges.schema.json). Grundlage: Entscheidung 0001 F3, Entscheidung 0002 §6, PLAN.md „Auszeichnungen“, Recherche PR-03, PR-04, PR-09.
 
 ## Zweck
 

@@ -14,8 +14,6 @@ import type { GameType } from "../game/types.ts"
 // (decision 0001, F3). Club and tournament badges come from the named organizer, recognitions
 // from whoever gives them (lib/badges/organizer.ts).
 
-export const CATALOG_VERSION = 1
-
 // "results": who played and who won, which 1.0.0 results know too. "throws": the full throw log,
 // scored by the game engine; imported totals never reach such a milestone.
 export type DataBasis = "results" | "throws"

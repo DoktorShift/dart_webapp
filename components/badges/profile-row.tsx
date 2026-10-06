@@ -40,7 +40,8 @@ function OwnRow() {
   const seen = useSeenAwardIds()
   if (!own || badges.awards === null || seen === null) return <Row />
   const unseen = badges.received.filter((a) => !seen.includes(a.award.id)).length
-  const reached = new Set([...statuses.filter((s) => s.achieved).map((s) => s.milestone.id), ...badges.awards.map((a) => a.award.id)]).size
+  // Milestones reached here (published as the profile's own awards or not) plus awards from others.
+  const reached = statuses.filter((s) => s.achieved).length + badges.received.length
   return <Row value={unseen > 0 ? tx.list.rowNew(unseen) : reached > 0 ? String(reached) : undefined} />
 }
 

@@ -27,7 +27,7 @@ import type { ValidAward } from "@/lib/badges/awards"
 import { milestoneById } from "@/lib/badges/catalog"
 import type { Achievement } from "@/lib/badges/milestones"
 import { selfAwardHolds } from "@/lib/badges/self-award"
-import { seenAward } from "@/lib/badges/store"
+import { shownElsewhereAward } from "@/lib/badges/store"
 import { formatWhen, modeName } from "@/lib/i18n"
 import { BADGES_TEXTS } from "@/lib/i18n/features/badges.screens"
 import { useMatchHistory } from "@/lib/leaderboard"
@@ -292,7 +292,7 @@ function ForeignAwardView({ id }: { id: string }) {
   const t = useT()
   const tx = useAreaT(BADGES_TEXTS)
   const d = tx.detail
-  const award = seenAward(id)
+  const award = shownElsewhereAward(id)
   if (!award) return <InlineStatus tone="error" className="mt-6">{d.unavailable}</InlineStatus>
   const words = awardTexts(tx, award)
   const self = award.issuer === award.recipient

@@ -26,7 +26,7 @@ import { deletionTemplate, KIND_DELETION, publishBadgeEvents, relaysOf, storedBa
 // withdrawn with a deletion request; the ones now missing are given like before.
 
 // The end of a tournament or a club season, as the tournaments and clubs areas hand it over
-// (registry slot list "occasion.finished").
+// from their closing screens (issueAwards).
 export interface BadgeOccasion {
   scope: "tournament" | "club"
   // The tournament id, or the club id.
