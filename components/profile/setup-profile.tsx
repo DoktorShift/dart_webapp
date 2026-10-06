@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState, type FormEvent } from "react"
-import { Plus, Trash2, Users } from "lucide-react"
+import { Plus, Trash2, UserRoundCheck, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet } from "@/components/ui/sheet"
 import { TextField } from "@/components/ui/text-field"
@@ -21,15 +21,20 @@ import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
 import { setupRowClass } from "@/components/profile/setup-players"
 import { signerProblem } from "@/components/profile/signer-status"
 import { useOwnEvents } from "@/components/profile/use-profile"
+import { profilePlayers } from "@/lib/profile/claim"
+import { readMetadata } from "@/lib/profile/metadata"
+import { OWN } from "@/lib/profile/own-events"
 import { deletedRoundTemplate, newRoundId, roundTemplate, savedRounds, type Round } from "@/lib/profile/rounds"
 import { getSigner, type Session } from "@/lib/profile/session"
 import type { SetupPlayersProps, SetupSeat } from "@/lib/shell/registry"
 import { usePlayers } from "@/lib/storage/hooks"
-import { findByName, isUnnamed } from "@/lib/storage/players"
-import { publishOwn } from "@/lib/sync/publish"
+import { isUnnamed, seatName } from "@/lib/storage/players"
+import { submitOwn } from "@/lib/sync/publish"
 
-// The profile's saved rounds as quick picks, and "Runde speichern" for the seats as they are.
-export default function Rounds({ session, players, replacePlayers }: { session: Session } & Pick<SetupPlayersProps, "players" | "replacePlayers">) {
+// The signed-in profile's quick picks in game setup: "Du" (its own seat, linked by the profile
+// rather than by a name anyone could type), its saved rounds, and "Runde speichern" for the
+// seats as they are.
+export default function ProfileSeats({ session, players, canAdd, addPlayer, replacePlayers }: { session: Session } & SetupPlayersProps) {
   const t = useT()
   const tx = useAreaT(PROFILE_TEXTS)
   const s = tx.setup
@@ -41,29 +46,33 @@ export default function Rounds({ session, players, replacePlayers }: { session: 
   useEffect(() => {
     if (!events || !directory) return
     let alive = true
-    // Decrypting may ask a signer app; without a signer the public part still shows.
-    void getSigner()
-      .catch(() => null)
-      .then((signer) => savedRounds(events.values(), signer, directory))
-      .then((found) => alive && setRounds(found), () => {})
+    // A round not read before may need the signer to decrypt its guests; without one the public
+    // part still shows.
+    void savedRounds(events.values(), () => getSigner().catch(() => null), directory).then((found) => alive && setRounds(found), () => {})
     return () => {
       alive = false
     }
   }, [events, directory])
 
+  // The profile's own seat: named as its player here, else as its public profile; nothing until
+  // one of them is known. Not offered while it is already in the game.
+  const myName = (directory && profilePlayers(session.pubkey, directory, []).player?.name) || seatName(readMetadata(events?.get(OWN.metadata)).name ?? "")
+  const me = myName && canAdd && !players.some((p) => p.pubkey === session.pubkey) ? { name: myName, pubkey: session.pubkey } : null
+
   return (
     <>
-      {rounds.length > 0 && (
+      {(me || rounds.length > 0) && (
         <div className="mt-2">
-          <p className="mb-2 px-1 text-[0.8125rem] font-medium text-muted-foreground">{s.rounds}</p>
+          <p className="mb-2 px-1 text-[0.8125rem] font-medium text-muted-foreground">{s.quickPick}</p>
           <div className="flex flex-wrap gap-2">
+            {me && (
+              <button type="button" onClick={() => addPlayer(me)} className={chipClass}>
+                <UserRoundCheck className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                {s.me}
+              </button>
+            )}
             {rounds.map((round) => (
-              <button
-                key={round.id}
-                type="button"
-                onClick={() => replacePlayers(round.players.map(({ name, pubkey }) => ({ name, pubkey })))}
-                className="flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-secondary/50 px-4 text-left text-[0.9375rem] active:bg-secondary"
-              >
+              <button key={round.id} type="button" onClick={() => replacePlayers(round.players.map(({ name, pubkey }) => ({ name: seatName(name), pubkey })))} className={chipClass}>
                 <Users className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
                 <span className="[overflow-wrap:anywhere]">{roundLabel(round)}</span>
               </button>
@@ -85,23 +94,23 @@ export default function Rounds({ session, players, replacePlayers }: { session: 
   )
 }
 
+// Like setup's "Zuletzt gespielt" chips.
+const chipClass = "flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-secondary/50 px-4 text-left text-[0.9375rem] active:bg-secondary"
+
 const roundLabel = (round: Round) => round.title || round.players.map((p) => p.name).filter(Boolean).join(", ")
 
 function SaveRound({ session, players, rounds, onSaved }: { session: Session; players: readonly SetupSeat[]; rounds: Round[]; onSaved: () => void }) {
   const t = useT()
   const tx = useAreaT(PROFILE_TEXTS)
   const s = tx.setup
-  const directory = usePlayers()
   const [title, setTitle] = useState("")
   const [busy, setBusy] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<Round | null>(null)
 
-  // The named seats, each with the profile it was filled from or the one its name stands for here.
-  const seats = useMemo(
-    () => players.filter((p) => !isUnnamed(p.name)).map((p) => ({ name: p.name.trim(), pubkey: p.pubkey ?? findByName(directory ?? [], p.name)?.pubkey })),
-    [players, directory],
-  )
+  // The named seats, each with the profile it was filled from (a scan, a round, "Du"); a typed
+  // name stands for nobody's profile, however familiar it is (PLAN.md: names never decide).
+  const seats = useMemo(() => players.filter((p) => !isUnnamed(p.name)).map((p) => ({ name: p.name.trim(), pubkey: p.pubkey })), [players])
   // An Android signer can't encrypt: guests' names would have to go public, so they stay out.
   const guestsLeftOut = session.kind === "nip55"
 
@@ -121,7 +130,7 @@ function SaveRound({ session, players, rounds, onSaved }: { session: Session; pl
   const save = (event: FormEvent) => {
     event.preventDefault()
     if (seats.length === 0 || busy) return
-    void run(async () => publishOwn([await roundTemplate({ id: newRoundId(), title, players: seats }, null, await getSigner())]))
+    void run(async () => submitOwn([await roundTemplate({ id: newRoundId(), title, players: seats }, null, await getSigner())]))
   }
 
   return (
@@ -168,7 +177,7 @@ function SaveRound({ session, players, rounds, onSaved }: { session: Session; pl
               className="h-11 bg-danger text-white hover:bg-danger/90"
               onClick={() => {
                 const round = deleting
-                if (round) void run(async () => publishOwn([await deletedRoundTemplate(round.event, await getSigner())]))
+                if (round) void run(async () => submitOwn([await deletedRoundTemplate(round.event, await getSigner())]))
               }}
             >
               {s.deleteConfirm}

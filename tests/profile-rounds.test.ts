@@ -100,3 +100,18 @@ test("on the device, each version is decrypted once, and profiles get the names 
   const again = await savedRounds([withNames], null, [])
   assert.deepEqual(again[0].players, tuesday.players)
 })
+
+test("the signer is asked for only when a round still has to be read, and once", async () => {
+  const one = await sign(me, await roundTemplate(tuesday, null, me))
+  const two = await sign(me, await roundTemplate({ id: "c".repeat(32), title: "Freitag", players: [{ name: "Gast Ole" }] }, null, me))
+  let asked = 0
+  const signer = () => {
+    asked++
+    return Promise.resolve(me)
+  }
+  assert.equal((await savedRounds([one, two], signer, [])).length, 2)
+  assert.equal(asked, 1)
+  // Both remembered now: opening setup again wakes no signer.
+  assert.equal((await savedRounds([one, two], signer, [])).length, 2)
+  assert.equal(asked, 1)
+})

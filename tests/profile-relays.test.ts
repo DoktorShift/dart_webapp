@@ -39,6 +39,13 @@ test("profile kinds go to the five profile relays, everything else to the genera
   assert.ok(!publishTargets(30000, settings).includes("wss://purplepag.es"))
 })
 
+test("of someone's own write relays, the first four are used: a long list opens no socket per entry", () => {
+  const mine = Array.from({ length: 7 }, (_, i) => `wss://r${i}.example`)
+  const settings = relaySettings(list(10002, mine.map((url) => ["r", url])))
+  assert.deepEqual(publishTargets(0, settings), [...profileRelays(), ...mine.slice(0, 4)])
+  assert.deepEqual(ownReadRelays(settings).filter((url) => mine.includes(url)), mine.slice(0, 4))
+})
+
 test("blocked relays (kind 10006) are never written to or read from", () => {
   const settings = relaySettings(list(10002, [["r", "wss://mine.example"]]), list(10006, [["relay", "wss://nos.lol"], ["relay", "wss://mine.example/"]]))
   assert.deepEqual(settings.blocked, ["wss://nos.lol", "wss://mine.example"])

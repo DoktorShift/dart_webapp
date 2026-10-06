@@ -41,6 +41,11 @@ export const isPlaceholderName = (name: string) => PLACEHOLDER.test(nameKey(name
 // No name, or only a seat number: not a known person.
 export const isUnnamed = (name: string) => nameKey(name) === "" || isPlaceholderName(name)
 
+// The longest name a seat takes in setup: the game screen shows six of them side by side without
+// cutting any off. A longer name from elsewhere (a profile, a scan) is shortened to it there.
+export const MAX_SEAT_NAME = 16
+export const seatName = (name: string) => name.trim().slice(0, MAX_SEAT_NAME).trim()
+
 const time = (iso: string | undefined) => (iso ? Date.parse(iso) || 0 : 0)
 const lastSeen = (p: PlayerRecord) => Math.max(time(p.lastPlayedAt), time(p.updatedAt), time(p.createdAt))
 

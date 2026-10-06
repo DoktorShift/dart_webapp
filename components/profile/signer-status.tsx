@@ -7,9 +7,10 @@ import { PROFILE_TEXTS, type ProfileTexts } from "@/lib/i18n/features/profile.sc
 import { dismissSignerConfirmation, useSignerConfirmation } from "@/lib/profile/session"
 
 type SignerTexts = ProfileTexts["signer"]
-const CODES = ["rejected", "unknown", "mismatch", "unavailable", "unsupported"] as const satisfies readonly (keyof SignerTexts)[]
+const CODES = ["rejected", "unknown", "mismatch", "unavailable", "unsupported", "unreachable"] as const satisfies readonly (keyof SignerTexts)[]
 
-// What to tell the person when signing or publishing didn't work (lib/nostr SignerError codes).
+// What to tell the person when signing or publishing didn't work (lib/nostr SignerError codes,
+// and "unreachable" when the version to change couldn't be loaded, lib/profile/own-events.ts).
 // A refusal is never asked again on its own; "unknown" may still arrive (decision 0002 §4).
 export function signerProblem(tx: ProfileTexts, error: unknown): string {
   const code = (error as { code?: unknown } | null)?.code

@@ -125,7 +125,7 @@ test("another profile signing in clears the previous one's data, but not the dev
   })
   const core = await loadCore()
   const second = core.getPublicKey(core.generateSecretKey())
-  await connectExternal("nip07", { pubkey: second })
+  await connectExternal("nip07", { pubkey: second }, { replace: true })
   stop()
   assert.equal(ended, 1)
   assert.equal(getSession()?.pubkey, second)
@@ -133,6 +133,37 @@ test("another profile signing in clears the previous one's data, but not the dev
   assert.deepEqual(await dbKeys("objects"), [])
   assert.deepEqual((await dbKeys("kv")).sort(), [SESSION_KEY, "profile.vault-key"].sort())
   assert.deepEqual(await dbKeys("matches"), ["m1"])
+})
+
+test("another profile signs in only with replace: without it, nothing changes and the key stays", async () => {
+  const first = await startLocalProfile()
+  await dbPut("objects", { id: "own:0:" })
+  const core = await loadCore()
+  const second = core.getPublicKey(core.generateSecretKey())
+  let ended = 0
+  const stop = onSessionEnd(() => {
+    ended++
+  })
+  await assert.rejects(connectExternal("nip07", { pubkey: second }), { name: "SessionError", code: "occupied", session: first })
+  await assert.rejects(startLocalProfile(), { name: "SessionError", code: "occupied" })
+  await assert.rejects(importLocalKey(core.generateSecretKey()), { name: "SessionError", code: "occupied" })
+  stop()
+  assert.equal(ended, 0)
+  assert.deepEqual(getSession(), first)
+  assert.deepEqual(await loadSession(), first)
+  assert.deepEqual(await dbKeys("objects"), ["own:0:"])
+  assert.equal((await (await getSigner()).signEvent(template())).pubkey, first.pubkey)
+  // Told what it means, the person may replace it.
+  const session = await connectExternal("nip07", { pubkey: second }, { replace: true })
+  assert.equal(session.pubkey, second)
+  assert.deepEqual(await dbKeys("objects"), [])
+})
+
+test("a sign-in request started as a guest does not survive a profile signing in", async () => {
+  // An Android signer was asked for its key; before it answers, a local profile is created.
+  await dbPut("pending", { id: "signer:request-1" })
+  await startLocalProfile()
+  assert.deepEqual(await dbKeys("pending"), [])
 })
 
 test("signing in again with the same profile keeps its data", async () => {
