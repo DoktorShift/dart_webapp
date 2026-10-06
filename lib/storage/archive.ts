@@ -9,6 +9,7 @@ import {
   readAllRaw,
   readV1Records,
   removeV1Record,
+  replaceV1Records,
   upsertV1Record,
   V1_KEYS,
   type V1MatchRecord,
@@ -197,6 +198,22 @@ export function unarchive(id: string) {
       ok = false
     }
     return ok
+  })
+}
+
+// Games changed on another device of the profile (lib/sync), with the players they name: stored
+// as they come, and kept in 1.0.0's history like games played here; deleted ones leave both, so
+// no later start takes them over from there again. Throws when the archive can't be written;
+// false when only 1.0.0's history couldn't.
+export function applySynced(changes: { put: ArchivedMatch[]; remove: readonly string[]; players: readonly PlayerRecord[] }) {
+  return serial(async () => {
+    const { put, remove, players } = changes
+    await dbWrite([
+      ...put.map((m): WriteOp => ({ store: "matches", put: m })),
+      ...remove.map((id): WriteOp => ({ store: "matches", delete: id })),
+      ...players.map((p): WriteOp => ({ store: "players", put: p })),
+    ])
+    return replaceV1Records(put.filter((m) => m.players.length >= 2).map(toV1Record), remove)
   })
 }
 

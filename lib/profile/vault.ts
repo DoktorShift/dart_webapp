@@ -1,7 +1,7 @@
 import { dbGet, dbWrite, type Keyed, type WriteOp } from "../storage/db.ts"
 
 // The session's secrets at rest (docs/decisions/0002 §4): a local profile key, a signer app
-// connection's own key. They are stored only encrypted with AES-GCM under a key that WebCrypto
+// connection's own key, the profile's data key for private records (lib/sync/data-key.ts). They are stored only encrypted with AES-GCM under a key that WebCrypto
 // keeps non-extractable: code on this device can use it, but can't read it out, so a copy of the
 // database alone reveals no profile key. Code running on this very site could still use it;
 // a web app promises no hardware isolation (decision 0002 §10, PLAN "Schutz privater Daten").
@@ -9,7 +9,7 @@ import { dbGet, dbWrite, type Keyed, type WriteOp } from "../storage/db.ts"
 const VAULT_KEY_ID = "profile.vault-key"
 
 // What a secret is for, bound into the encryption, so one secret can't stand in for another.
-export type SecretPurpose = "local-key" | "connection-key"
+export type SecretPurpose = "local-key" | "connection-key" | "data-key"
 
 export interface SealedSecret {
   iv: Uint8Array<ArrayBuffer>
