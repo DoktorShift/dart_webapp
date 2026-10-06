@@ -179,13 +179,16 @@ function ConfirmReturned({ uri, onConnected, onDismiss }: { uri: string; onConne
 }
 
 // Zahlungen › Wallet verbinden. Opened by a wallet app's answer too (params.returned): one to this
-// device's request is shown for confirmation, any other is refused and said so.
+// device's request is shown for confirmation, any other is refused and said so (and with a wallet
+// connected, nothing else is offered).
 export default function ConnectScreen({ params }: ScreenProps) {
   const t = useT()
   const tx = useAreaT(PAYMENTS_TEXTS)
   const nav = useNav()
+  const wallet = useWallet()
   const [returned] = useState(() => (params.returned === "connection" ? returnedConnection() : null))
   const [connected, setConnected] = useState<WalletInfo | null>(null)
+  const refused = params.returned === "unrequested"
 
   // The connection lives on in this screen only.
   useEffect(() => forgetReturnedConnection(), [])
@@ -201,15 +204,22 @@ export default function ConnectScreen({ params }: ScreenProps) {
     )
   }
   if (returned) return <ConfirmReturned uri={returned} onConnected={setConnected} onDismiss={() => nav.pop()} />
+  if (wallet === undefined) return null
   return (
     <>
       <PaymentSignet size="large" className="mx-auto mb-5 mt-2 flex w-fit" />
-      {params.returned === "unrequested" && (
+      {refused && (
         <InlineStatus tone="error" className="mb-5">
           {tx.connect.unrequested}
         </InlineStatus>
       )}
-      <ConnectPanel onConnected={setConnected} />
+      {refused && wallet ? (
+        <Button onClick={() => nav.pop()} className="mt-3 h-12 w-full rounded-xl text-[1.0625rem] font-semibold">
+          {t.common.done}
+        </Button>
+      ) : (
+        <ConnectPanel onConnected={setConnected} />
+      )}
     </>
   )
 }
