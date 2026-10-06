@@ -23,7 +23,8 @@ const AFTER_CHANGE_MS = 15_000
 let started = false
 let pubkey: string | null = null
 let lastRun = 0
-let again = false
+// A sync asked for while one runs: done right after it, full if any request was.
+let again: false | "incremental" | "full" = false
 let changeTimer: ReturnType<typeof setTimeout> | undefined
 
 const loadEngine = () => import("./engine.ts")
@@ -38,7 +39,7 @@ async function run(full: boolean) {
   const current = pubkey
   if (!current) return
   if (getSyncStatus().running) {
-    again = true
+    again = full || again === "full" ? "full" : "incremental"
     return
   }
   lastRun = Date.now()
@@ -53,15 +54,16 @@ async function run(full: boolean) {
   } finally {
     if (pubkey === current) setSyncStatus({ running: false })
     if (again) {
+      const next = again
       again = false
-      soon()
+      soon(next === "full")
     }
   }
 }
 
-function soon() {
+function soon(full = false) {
   clearTimeout(changeTimer)
-  changeTimer = setTimeout(() => void run(false), AFTER_CHANGE_MS)
+  changeTimer = setTimeout(() => void run(full), AFTER_CHANGE_MS)
 }
 
 // What this device knows of the profile's last syncs, also those another tab ran.
@@ -108,7 +110,7 @@ export function startSyncService() {
     if (!pubkey || message.type !== "change") return
     if (message.stores.includes("matches") || message.stores.includes("players")) {
       // This sync's own changes come back here too; one more quick sync then finds nothing.
-      if (getSyncStatus().running) again = true
+      if (getSyncStatus().running) again = again || "incremental"
       else soon()
     } else if (message.stores.includes("kv") && !getSyncStatus().running) void refresh(pubkey)
   })

@@ -10,7 +10,7 @@ import { dataKeySlot } from "../protocol/private.ts"
 import { applySynced, type ArchivedMatch } from "../storage/archive.ts"
 import { dbGetAll, kvGet, kvSet } from "../storage/db.ts"
 import { randomHex } from "../storage/ids.ts"
-import { listPlayers } from "../storage/players.ts"
+import { listPlayers, type PlayerRecord } from "../storage/players.ts"
 import { createDataKey, DataKeyError, keepDataKey, settleDataKey, storedDataKey, unwrapDataKey } from "./data-key.ts"
 import {
   decideMatch,
@@ -28,7 +28,7 @@ import {
   type Version,
 } from "./history.ts"
 import { enqueue, outboxStatus, type Delivery } from "./outbox.ts"
-import { compareVersions, openRecords, sealRecord, type OpenedRecords } from "./records.ts"
+import { compareVersions, openRecords, sealRecord, type OpenedRecords, type RecordVersion } from "./records.ts"
 import type { SyncProblem, SyncState } from "./status.ts"
 
 // One sync of the signed-in profile's private history with its relays (P3b.01, P3b.02):
@@ -102,8 +102,13 @@ async function loadCopies(pubkey: string): Promise<Copies> {
 
 // ---- Reading relays ---------------------------------------------------------------------------
 
+interface Answer {
+  url: string
+  events: NostrEvent[]
+}
+
 // Every event matching the filter on one relay, newest pages first; null when it didn't answer.
-async function readRelay(url: string, filter: Filter): Promise<NostrEvent[] | null> {
+async function readRelay(url: string, filter: Filter): Promise<Answer | null> {
   const found = new Map<string, NostrEvent>()
   let until: number | undefined
   for (let page = 0; page < MAX_PAGES; page++) {
@@ -114,7 +119,27 @@ async function readRelay(url: string, filter: Filter): Promise<NostrEvent[] | nu
     for (const e of fresh) found.set(e.id, e)
     until = Math.min(...result.events.map((e) => e.created_at))
   }
-  return [...found.values()]
+  return { url, events: [...found.values()] }
+}
+
+// The relays that answered, each with everything it holds for the filter.
+async function readRelays(targets: readonly string[], filter: Filter): Promise<Answer[]> {
+  const answers = await Promise.all(targets.map((url) => readRelay(url, filter)))
+  return answers.filter((a): a is Answer => a !== null)
+}
+
+// The players record: the version found on relays when it is newer than the one last synced
+// (then it becomes the base), merged with this device's entries. `changed` is what the merge
+// changes on this device.
+function mergePlayersRecord(found: RecordVersion | undefined, copy: Copy | undefined, here: readonly PlayerRecord[], directory: readonly PlayerRecord[]) {
+  let base = copy
+  if (found && !found.record.deleted && (!copy || compareVersions(found.record, copy) > 0)) {
+    const data = playersData(playersFromData(found.data ?? {}))
+    base = { rev: found.record.rev, device: found.record.device, deleted: false, hash: hashOf(data), ids: found.events.map((e) => e.id), createdAt: found.events[0].created_at, data }
+  }
+  const merged = mergePlayers(playersFromData(base?.data ?? {}), here)
+  const known = new Map(directory.map((p) => [p.id, p]))
+  return { base, merged, changed: merged.filter((p) => !sameContent(p, known.get(p.id))) }
 }
 
 // ---- One sync ---------------------------------------------------------------------------------
@@ -148,8 +173,7 @@ export async function syncHistory(pubkey: string, options: { full: boolean }, no
   if (full) await fetchOwnEvents(pubkey).catch(() => null)
   const targets = publishTargets(KIND_PRIVATE, ownRelaySettings(await ownEvents(pubkey)))
   const since = full || meta.lastSync === null ? undefined : Math.floor(meta.lastSync / 1000) - OVERLAP_SECONDS
-  const reads = await Promise.all(targets.map(async (url) => ({ url, events: await readRelay(url, { kinds: [KIND_PRIVATE], authors: [pubkey], ...(since ? { since } : {}) }) })))
-  const answered = reads.filter((r): r is { url: string; events: NostrEvent[] } => r.events !== null)
+  const answered = await readRelays(targets, { kinds: [KIND_PRIVATE], authors: [pubkey], ...(since ? { since } : {}) })
   if (answered.length === 0) return finish("unavailable", "offline", false)
   const events = new Map(answered.flatMap((r) => r.events.map((e) => [e.id, e] as const)))
   // Enough answers to say "there is none": every relay, or relays of two operators.
@@ -203,18 +227,9 @@ export async function syncHistory(pubkey: string, options: { full: boolean }, no
     copies[id] = { rev, device, deleted: found.deleted, hash: found.hash, ids: found.ids, createdAt: found.createdAt }
   }
 
-  // The players record: entries found on relays (or as last synced) merged with this device's.
   const playersVersion = opened.versions.get(PLAYERS_RECORD)
-  const playersCopy = copies[PLAYERS_RECORD]
-  const playersNewer = playersVersion && !playersVersion.record.deleted && (!playersCopy || compareVersions(playersVersion.record, playersCopy) > 0)
-  if (playersNewer) {
-    const data = playersData(playersFromData(playersVersion.data ?? {}))
-    copies[PLAYERS_RECORD] = { rev: playersVersion.record.rev, device: playersVersion.record.device, deleted: false, hash: hashOf(data), ids: playersVersion.events.map((e) => e.id), createdAt: playersVersion.events[0].created_at, data }
-  }
-  const base = copies[PLAYERS_RECORD]
-  const merged = mergePlayers(playersFromData(base?.data ?? {}), playersFromData(local.get(PLAYERS_RECORD)?.data ?? {}))
-  const byId = new Map(directory.map((p) => [p.id, p]))
-  const players = merged.filter((p) => !sameContent(p, byId.get(p.id)))
+  const { base, merged, changed: players } = mergePlayersRecord(playersVersion, copies[PLAYERS_RECORD], playersFromData(local.get(PLAYERS_RECORD)?.data ?? {}), directory)
+  if (base) copies[PLAYERS_RECORD] = base
 
   if (put.length > 0 || remove.length > 0 || players.length > 0) {
     await applySynced({ put, remove, players })
@@ -225,6 +240,7 @@ export async function syncHistory(pubkey: string, options: { full: boolean }, no
   // 3b. Write what changed here.
   const writes: Write[] = []
   const latest = (id: string) => Math.max(copies[id]?.createdAt ?? 0, remote.get(id)?.createdAt ?? 0)
+  // Above every version seen: this device's, the relays' (a deleted players record included).
   const nextRev = (id: string) => Math.max(copies[id]?.rev ?? 0, remote.get(id)?.rev ?? 0, id === PLAYERS_RECORD ? (playersVersion?.record.rev ?? 0) : 0) + 1
   // A version no relay that answered holds, and the outbox doesn't either, is lost: written anew.
   const waiting = full ? new Set((await outboxStatus()).map((s) => s.id)) : new Set<string>()
