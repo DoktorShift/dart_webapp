@@ -10,17 +10,19 @@ import { InlineStatus } from "@/components/common/inline-status"
 import { SlotItems } from "@/components/shell/slot-items"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { PROFILE_TEXTS, type ProfileTexts } from "@/lib/i18n/features/profile.screens"
+import { SYNC_TEXTS } from "@/lib/i18n/features/sync.screens"
 import { signerProblem, SignerConfirmation } from "@/components/profile/signer-status"
 import { useOwnProfile, type OwnProfile } from "@/components/profile/use-profile"
 import type { RelayEntry } from "@/lib/nostr/ext/lists"
 import type { NostrEvent } from "@/lib/nostr/types"
-import { generalRelays } from "@/lib/nostr/relays"
+import { relayAnswers } from "@/lib/nostr/relay-info"
+import { generalRelays, normalizeRelayUrl } from "@/lib/nostr/relays"
 import { diagnosticsReport } from "@/lib/profile/diagnostics"
 import { OWN } from "@/lib/profile/own-events"
 import { addRelay, editableRelays, relayListTemplate, removeRelay } from "@/lib/profile/relay-list"
 import { probeRelays, relayHost, type RelayStatus } from "@/lib/profile/relay-status"
 import { copyText } from "@/lib/shell/share"
-import { publishOwn } from "@/lib/sync/publish"
+import { changeOwnList } from "@/lib/sync/own-lists"
 import { cn } from "@/lib/utils"
 import { version } from "@/package.json"
 
@@ -179,23 +181,28 @@ function RelayState({ status }: { status: RelayStatus | undefined }) {
 }
 
 // The profile's relay list as hosts, with their state. Adding and removing publish a new list at
-// once; whatever another app wrote into it stays (lib/profile/relay-list.ts). The app's relays
-// not on the list are offered with one tap.
+// once, made from the newest version on the relays (lib/sync/own-lists.ts); whatever another app
+// wrote into it stays (lib/profile/relay-list.ts). A typed address goes on the list only once a
+// relay answers there (NIP-11). The app's relays not on the list are offered with one tap.
 function RelayList({ entries, base, status }: { entries: RelayEntry[]; base: NostrEvent | null; status: Map<string, RelayStatus> | null }) {
   const tx = useAreaT(PROFILE_TEXTS)
+  const sx = useAreaT(SYNC_TEXTS)
   const a = tx.advanced
   const [typed, setTyped] = useState("")
-  const [invalid, setInvalid] = useState(false)
+  const [invalid, setInvalid] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [checking, setChecking] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)
   const recommended = generalRelays().filter((url) => !entries.some((e) => e.url === url))
 
-  const save = async (next: RelayEntry[] | null) => {
-    if (!next) return false
+  const save = async (edit: (current: RelayEntry[]) => RelayEntry[] | null) => {
     setBusy(true)
     setProblem(null)
     try {
-      await publishOwn([relayListTemplate(next, base)])
+      await changeOwnList(OWN.relayList, (latest) => {
+        const next = edit(editableRelays(latest))
+        return next && relayListTemplate(next, latest)
+      })
       return true
     } catch (error) {
       setProblem(signerProblem(tx, error))
@@ -207,9 +214,13 @@ function RelayList({ entries, base, status }: { entries: RelayEntry[]; base: Nos
 
   const add = async (event: FormEvent) => {
     event.preventDefault()
-    const next = addRelay(entries, typed)
-    if (!next) return setInvalid(true)
-    if (await save(next)) setTyped("")
+    const url = normalizeRelayUrl(typed)
+    if (!url) return setInvalid(a.invalid)
+    setChecking(true)
+    const answers = await relayAnswers(url)
+    setChecking(false)
+    if (!answers) return setInvalid(sx.relays.noAnswer)
+    if (await save((current) => addRelay(current, url))) setTyped("")
   }
 
   return (
@@ -229,7 +240,7 @@ function RelayList({ entries, base, status }: { entries: RelayEntry[]; base: Nos
               type="button"
               disabled={busy || entries.length === 1}
               aria-label={a.remove(relayHost(entry.url))}
-              onClick={() => void save(removeRelay(entries, entry.url))}
+              onClick={() => void save((current) => removeRelay(current, entry.url))}
               className="flex h-11 w-11 shrink-0 items-center justify-center disabled:opacity-40"
             >
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-danger text-white">
@@ -248,7 +259,7 @@ function RelayList({ entries, base, status }: { entries: RelayEntry[]; base: Nos
                 key={url}
                 type="button"
                 disabled={busy}
-                onClick={() => void save(addRelay(entries, url))}
+                onClick={() => void save((current) => addRelay(current, url))}
                 aria-label={a.addHost(relayHost(url))}
                 className="flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-secondary/50 px-4 text-[0.9375rem] active:bg-secondary disabled:opacity-40"
               >
@@ -265,7 +276,7 @@ function RelayList({ entries, base, status }: { entries: RelayEntry[]; base: Nos
           value={typed}
           onChange={(e) => {
             setTyped(e.target.value)
-            setInvalid(false)
+            setInvalid(null)
           }}
           placeholder={a.addPlaceholder}
           inputMode="url"
@@ -273,10 +284,11 @@ function RelayList({ entries, base, status }: { entries: RelayEntry[]; base: Nos
           autoCorrect="off"
           spellCheck={false}
           enterKeyHint="done"
-          error={invalid ? a.invalid : undefined}
+          error={invalid ?? undefined}
           trailing={
-            <Button type="submit" variant="secondary" disabled={busy || !typed.trim()} className="h-11 shrink-0 rounded-xl px-4 text-[1.0625rem] font-semibold text-primary">
-              {a.addButton}
+            <Button type="submit" variant="secondary" disabled={busy || checking || !typed.trim()} className="h-11 shrink-0 gap-1.5 rounded-xl px-4 text-[1.0625rem] font-semibold text-primary">
+              {checking && <LoaderCircle className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />}
+              {checking ? sx.relays.checking : a.addButton}
             </Button>
           }
         />

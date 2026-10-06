@@ -273,6 +273,24 @@ export async function outboxStatus(): Promise<DeliveryStatus[]> {
   return (await readEntries()).sort((a, b) => a.queuedAt - b.queuedAt).map(statusOf)
 }
 
+export interface OutboxCounts {
+  // Entries whose rule isn't met yet.
+  waiting: number
+  // Entries meant for two operators (decision 0002 §5) that fewer than two confirmed so far.
+  fewCopies: number
+  // Everything kept, missing copies included.
+  kept: number
+}
+
+export async function outboxCounts(): Promise<OutboxCounts> {
+  const entries = await outboxStatus()
+  return {
+    waiting: entries.filter((e) => e.state === "waiting").length,
+    fewCopies: entries.filter((e) => e.rule === "published" && e.operators < 2).length,
+    kept: entries.length,
+  }
+}
+
 // ---- Running in the background ----------------------------------------------------------------
 
 let timer: ReturnType<typeof setTimeout> | undefined

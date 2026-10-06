@@ -39,6 +39,9 @@
 // - Game menu items: entries at the end of the running game's options menu (the "…" button), each
 //   { id, label, icon?, onSelect }. onSelect gets the running game; the menu closes first.
 //   Nothing else on the game screen can be changed from outside.
+// - Start tasks: work an area does once per page, after the first screen is up and the browser is
+//   idle (the shell picks the moment): resuming a queue, catching up with relays. Load the code
+//   behind an import() inside the task, so the start page carries only the call.
 //
 //   registerSlotItem("result.actions", "profile.keep", KeepResultCard)
 //   registerSlotItem("setup.extras", "live", LiveSwitch)
@@ -334,3 +337,22 @@ export function registerGameMenuItem(item: GameMenuItem) {
 
 // The game menu's entries from areas, in registration order.
 export const getGameMenuItems = (): GameMenuItem[] => [...gameMenu.values()]
+
+const startTasks = new Set<() => void>()
+
+export function registerStartTask(task: () => void) {
+  startTasks.add(task)
+}
+
+// Runs every area's start task once; a task that throws stops no other.
+export function runStartTasks() {
+  const tasks = [...startTasks]
+  startTasks.clear()
+  for (const task of tasks) {
+    try {
+      task()
+    } catch {
+      // The area's own problem; the app goes on.
+    }
+  }
+}

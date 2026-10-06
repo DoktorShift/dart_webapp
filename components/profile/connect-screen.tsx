@@ -32,7 +32,7 @@ import { SITE } from "@/lib/site"
 // which games on this device are theirs. The existing profile is only read, never overwritten.
 
 // What a signer app is asked to allow right away, so it doesn't ask for each of these.
-const PERMISSIONS = ["sign_event:0", "sign_event:10002", "sign_event:30000", "sign_event:31180", "nip44_encrypt", "nip44_decrypt"]
+const PERMISSIONS = ["sign_event:0", "sign_event:10002", "sign_event:30000", "sign_event:30078", "sign_event:31180", "nip44_encrypt", "nip44_decrypt"]
 
 type Method = "extension" | "signer-app" | "android"
 

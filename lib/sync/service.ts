@@ -1,16 +1,16 @@
 import { addDiagnostics, type DiagnosticsSection } from "../profile/diagnostics.ts"
 import { getSession, loadSession, onSessionEnd, subscribeSession } from "../profile/session.ts"
 import { onStorageChange } from "../storage/db.ts"
-import { flushDue, outboxStatus, resumeOutbox } from "./outbox.ts"
+import { flushDue, outboxCounts, outboxStatus, resumeOutbox } from "./outbox.ts"
 import { getSyncStatus, setSyncStatus, type SyncStatus } from "./status.ts"
 
 // The sync in the background (started by components/sync/register.ts once the app is idle):
 //
 // - The outbox sends for everyone, guests' live games included (./outbox.ts).
-// - With a profile, its private history follows (./engine.ts, loaded only then): on start and
-//   when the app is shown again (a full sync with read-back and healing at most once a day,
-//   otherwise what changed since), a little after games or players changed here or in another
-//   tab, and on request ("Jetzt abgleichen", "Erneut versuchen").
+// - With a profile, its private history follows (./engine.ts, loaded only then): on start, when
+//   the app is shown again and when the device is back online (a full sync with read-back and
+//   healing at most once a day, otherwise what changed since), a little after games or players
+//   changed here or in another tab, and on request ("Jetzt abgleichen", "Erneut versuchen").
 // - One sync at a time per browser (Web Locks); a tab that finds another one syncing leaves it.
 // - No notices in normal screens (decision 0002 §1): the state is in ./status.ts for the screens
 //   that ask (Profil, Spiele, Erweitert) and in "Diagnose kopieren".
@@ -78,8 +78,9 @@ function follow() {
   if (next === pubkey) return
   pubkey = next
   clearTimeout(changeTimer)
-  setSyncStatus(next ? { pubkey: next } : null)
+  setSyncStatus(null)
   if (!next) return
+  setSyncStatus({ pubkey: next })
   void refresh(next).then((meta) => {
     if (pubkey === next) void run(meta.lastCheck === null || Date.now() - meta.lastCheck > FULL_EVERY_MS)
   })
@@ -110,6 +111,7 @@ export function startSyncService() {
       else soon()
     } else if (message.stores.includes("kv") && !getSyncStatus().running) void refresh(pubkey)
   })
+  if (typeof window !== "undefined") window.addEventListener("online", () => void run(false))
   if (typeof document !== "undefined")
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible" && pubkey && Date.now() - lastRun > SHOWN_AGAIN_MS) void run(false)
@@ -121,13 +123,13 @@ const when = (ms: number | null) => (ms === null ? "never" : new Date(ms).toISOS
 // The sync's part of "Diagnose kopieren" (lib/profile/diagnostics.ts): no secrets, no game data.
 async function diagnostics(): Promise<DiagnosticsSection> {
   const status: SyncStatus = getSyncStatus()
-  const entries = await outboxStatus()
+  const [counts, entries] = await Promise.all([outboxCounts(), outboxStatus()])
   const problems = [...new Set(entries.flatMap((e) => e.results.filter((r) => !r.ok).map((r) => `${r.url} ${r.code || "no reason"}`)))]
   return {
     title: "Sync",
     lines: [
-      `outbox: ${entries.filter((e) => e.state === "waiting").length} waiting, ${entries.length} kept`,
-      `fewer than 2 confirmed copies: ${entries.filter((e) => e.rule === "published" && e.operators < 2).length}`,
+      `outbox: ${counts.waiting} waiting, ${counts.kept} kept`,
+      `fewer than 2 confirmed copies: ${counts.fewCopies}`,
       `last sync: ${when(status.lastSync)} (${status.state ?? "none yet"}${status.problem ? `, ${status.problem}` : ""}${status.running ? ", running" : ""})`,
       `last check of copies: ${when(status.lastCheck)}`,
       ...problems.slice(0, 10).map((p) => `relay problem: ${p}`),
