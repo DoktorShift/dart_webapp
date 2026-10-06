@@ -11,6 +11,7 @@
 //
 // Only the relays named in the connection are used. The connection text holds the wallet's
 // secret: it never appears in an error message, a log or anything returned from here.
+import { hexToBytes } from "@noble/hashes/utils.js"
 import { loadCore } from "./core.ts"
 import { normalizeRelayUrl } from "./relays.ts"
 
@@ -60,10 +61,12 @@ export interface WalletUri {
 const SCHEMES = ["nostr+walletconnect:", "nostrwalletconnect:"]
 const HEX_KEY = /^[0-9a-f]{64}$/
 
-// Reads a wallet connection (nostr+walletconnect://…) the way nostr-core does, and checks what
-// nostr-core doesn't: a wallet key, a secret, and at least one relay this app can reach (wss, or
-// ws on this device). Null for anything else, an invoice or a link included.
-export function parseWalletUri(text: string): WalletUri | null {
+// A connection text read, with the secret this app signs with.
+interface ReadUri extends WalletUri {
+  secret: string
+}
+
+function readWalletUri(text: string): ReadUri | null {
   const trimmed = text.trim()
   const scheme = SCHEMES.find((prefix) => trimmed.toLowerCase().startsWith(prefix))
   if (!scheme) return null
@@ -78,7 +81,15 @@ export function parseWalletUri(text: string): WalletUri | null {
   const relays = [...new Set(url.searchParams.getAll("relay").map(normalizeRelayUrl))].filter((relay): relay is string => relay !== null)
   if (!HEX_KEY.test(walletPubkey) || relays.length === 0) return null
   if (!/^[0-9a-f]{64}$/i.test(secret) && !secret.startsWith("nsec1")) return null
-  return { walletPubkey, relays, lightningAddress: url.searchParams.get("lud16")?.trim() || null }
+  return { walletPubkey, relays, lightningAddress: url.searchParams.get("lud16")?.trim() || null, secret }
+}
+
+// Reads a wallet connection (nostr+walletconnect://…) the way nostr-core does, and checks what
+// nostr-core doesn't: a wallet key, a secret, and at least one relay this app can reach (wss, or
+// ws on this device). Null for anything else, an invoice or a link included.
+export function parseWalletUri(text: string): WalletUri | null {
+  const read = readWalletUri(text)
+  return read && { walletPubkey: read.walletPubkey, relays: read.relays, lightningAddress: read.lightningAddress }
 }
 
 export interface WalletDetails {
@@ -106,6 +117,10 @@ export interface Budget {
 
 export interface WalletClient {
   details: WalletDetails
+  // Which connection this is: the wallet's key and the key this app holds in it, never the
+  // secret. A wallet answers lookups only about what went through the same connection (NWC-09),
+  // so a payment's outcome can only be ruled out by the connection that sent it.
+  connection: string
   payInvoice(invoice: string): Promise<{ feesMsat: number | null }>
   makeInvoice(request: { amountMsat: number; description: string; expirySeconds: number }): Promise<{ invoice: string; paymentHash: string }>
   // An invoice by its payment hash, paid by this wallet or to it.
@@ -143,10 +158,25 @@ function toWalletError(core: Core, error: unknown): WalletError {
 const strings = (value: unknown) => (Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [])
 const msat = (value: unknown) => (typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null)
 
+// The key this app holds in a connection, from its secret (hex, or nsec as some wallets write it).
+function appKeyOf(core: Core, secret: string): string {
+  if (!secret.startsWith("nsec1")) return core.getPublicKey(hexToBytes(secret))
+  const decoded = core.nip19.decode(secret)
+  if (decoded.type !== "nsec") throw new WalletError("invalid", "not a wallet connection")
+  return core.getPublicKey(decoded.data)
+}
+
 // Connects to the wallet and asks for its details (get_info). Throws WalletError.
 export async function connectWallet(uri: string, options: WalletOptions = {}): Promise<WalletClient> {
-  if (!parseWalletUri(uri)) throw new WalletError("invalid", "not a wallet connection")
+  const read = readWalletUri(uri)
+  if (!read) throw new WalletError("invalid", "not a wallet connection")
   const core = await loadCore()
+  let connection: string
+  try {
+    connection = `${read.walletPubkey}:${appKeyOf(core, read.secret)}`
+  } catch {
+    throw new WalletError("invalid", "not a wallet connection")
+  }
   const call = async <T>(request: () => Promise<T>): Promise<T> => {
     try {
       return await request()
@@ -179,6 +209,7 @@ export async function connectWallet(uri: string, options: WalletOptions = {}): P
 
   return {
     details,
+    connection,
     async payInvoice(invoice) {
       const result = await call(() => nwc.payInvoice(invoice))
       return { feesMsat: msat(result.fees_paid) }

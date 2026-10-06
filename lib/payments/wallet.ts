@@ -10,11 +10,10 @@
 // Every task opens its own connection and closes it after (decision 0002 §8: a fresh connection
 // with its get_info round trip before each payment).
 import { connectWallet, parseWalletUri, WalletError, type WalletClient, type WalletOptions } from "../nostr/wallet.ts"
-import { onSessionEnd, PROFILE_KV_PREFIX } from "../profile/session.ts"
+import { onSessionEnd } from "../profile/session.ts"
 import { openSecret, sealSecret, type SealedSecret } from "../profile/vault.ts"
 import { dbGet, dbWrite, type Keyed } from "../storage/db.ts"
-
-export const WALLET_KEY = `${PROFILE_KV_PREFIX}wallet`
+import { WALLET_KEY } from "./in-use.ts"
 
 export interface WalletInfo {
   // The name the wallet gives itself, if any.
@@ -26,6 +25,8 @@ export interface WalletInfo {
   // For "Erweitert": where the wallet listens and how the connection is encrypted.
   relays: string[]
   encryption: "nip44" | "nip04"
+  // Which connection it is (WalletClient.connection), to tell its payments from another one's.
+  connection: string
   // When it was connected (ms).
   connectedAt: number
 }
@@ -89,29 +90,44 @@ function closeAll() {
 
 onSessionEnd(closeAll)
 
-// Connects a wallet from its connection text and keeps it for this device, in place of any
-// earlier one. Throws WalletError ("invalid", "unreachable", "no-answer", …).
-export async function connectNewWallet(uri: string): Promise<WalletInfo> {
+// A wallet that answered and what it allows, not kept yet: the person sees it before it is kept
+// when the connection came from somewhere else (a wallet app's answer).
+export interface CheckedWallet {
+  uri: string
+  info: WalletInfo
+}
+
+// Connects to a wallet from its connection text and reads what it allows, keeping nothing.
+// Throws WalletError ("invalid", "unreachable", "no-answer", …).
+export async function checkWallet(uri: string): Promise<CheckedWallet> {
   const parsed = parseWalletUri(uri)
   if (!parsed) throw new WalletError("invalid", "not a wallet connection")
   const client = await connectWallet(uri)
-  try {
-    const info: WalletInfo = {
+  client.close()
+  return {
+    uri: uri.trim(),
+    info: {
       alias: client.details.alias,
       methods: client.details.methods,
       notifications: client.details.notifications,
       lightningAddress: parsed.lightningAddress,
       relays: parsed.relays,
       encryption: client.details.encryption,
+      connection: client.connection,
       connectedAt: Date.now(),
-    }
-    const stored: StoredWallet = { info, secret: await sealSecret(encode(uri.trim()), "wallet-connection") }
-    await dbWrite([{ store: "kv", put: { id: WALLET_KEY, value: stored } as Keyed }])
-    return info
-  } finally {
-    client.close()
+    },
   }
 }
+
+// Keeps a checked wallet for this device, in place of any earlier one.
+export async function keepWallet({ uri, info }: CheckedWallet): Promise<WalletInfo> {
+  const stored: StoredWallet = { info, secret: await sealSecret(encode(uri), "wallet-connection") }
+  await dbWrite([{ store: "kv", put: { id: WALLET_KEY, value: stored } as Keyed }])
+  return info
+}
+
+// Connects a wallet the person scanned or pasted, and keeps it. Throws WalletError.
+export const connectNewWallet = async (uri: string) => keepWallet(await checkWallet(uri))
 
 // Opens the stored wallet for one task; the caller closes it. Throws when none is stored or it
 // can't be opened (the vault key went with a sign-out).

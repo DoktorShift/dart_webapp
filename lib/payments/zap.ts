@@ -29,24 +29,23 @@ export async function zapInvoice(zap: { recipient: string; address: string; endp
   }
 }
 
-const firstTag = (event: NostrEvent, name: string) => event.tags.find((tag) => tag[0] === name)?.[1]
-
-// Whether `receipt` confirms this journal entry's zap.
+// Whether `receipt` confirms this journal entry's zap: the full check, for exactly the invoice
+// that was paid (the entry's id is its payment hash).
 export async function isReceiptFor(entry: PaymentEntry, receipt: NostrEvent): Promise<boolean> {
-  if (!entry.zap || !entry.invoice) return false
-  if (firstTag(receipt, "bolt11")?.toLowerCase() !== entry.invoice) return false
+  if (!entry.zap) return false
   const check = await validateZapReceipt(receipt, {
     nostrPubkey: entry.zap.zapPubkey,
     request: entry.zap.request,
     recipient: entry.counterpart.pubkey,
     amountMsat: entry.amountMsat,
+    paymentHash: entry.id,
   })
   return check.ok
 }
 
 // Listens for the receipt of a paid or unknown zap at its relays and records the first one that
-// fits. `onConfirmed` gets the updated entry. Returns what stops listening.
-export function watchReceipt(entry: PaymentEntry, onConfirmed: (entry: PaymentEntry) => void): Closer {
+// fits; `onConfirmed`, if given, gets the updated entry. Returns what stops listening.
+export function watchReceipt(entry: PaymentEntry, onConfirmed?: (entry: PaymentEntry) => void): Closer {
   const zap = entry.zap
   const recipient = entry.counterpart.pubkey
   if (!zap || zap.receipt || !recipient) return { close: () => {} }
@@ -60,7 +59,7 @@ export function watchReceipt(entry: PaymentEntry, onConfirmed: (entry: PaymentEn
       if (!saved?.zap?.receipt || done) return
       done = true
       subscription.close()
-      onConfirmed(saved)
+      onConfirmed?.(saved)
     },
   })
   return {

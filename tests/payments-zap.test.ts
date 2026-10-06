@@ -34,7 +34,8 @@ after(() => {
   delete process.env.NEXT_PUBLIC_BLUELINE_RELAYS
 })
 
-const fees = { payInvoice: async () => ({ feesMsat: 1000 }) }
+const CONNECTION = "wallet-a:app-1"
+const fees = { connection: CONNECTION, payInvoice: async () => ({ feesMsat: 1000 }) }
 
 async function zapped(amountMsat = 21_000): Promise<PaymentEntry> {
   const endpoint = await fetchPayEndpoint(service.address)
@@ -65,7 +66,7 @@ test("a zap request names the recipient, amount, receipt relays and service, sig
 
 test("an invoice for another amount or for something else is refused, and nothing is paid", async () => {
   const paid: string[] = []
-  const payer = { payInvoice: async (invoice: string) => (paid.push(invoice), { feesMsat: 0 }) }
+  const payer = { connection: CONNECTION, payInvoice: async (invoice: string) => (paid.push(invoice), { feesMsat: 0 }) }
   for (const misbehaving of [{ amountOffsetMsat: 1000 }, { wrongDescription: true }]) {
     service.uninstall()
     service = installFakeLnurl(misbehaving)
@@ -110,7 +111,7 @@ test("zap receipts: only the service's receipt for exactly the paid invoice conf
 
 test("a checked receipt confirms an unknown zap as paid, once", async () => {
   const endpoint = await fetchPayEndpoint(service.address)
-  const silent = { payInvoice: async () => Promise.reject(new Error("no answer")) }
+  const silent = { connection: CONNECTION, payInvoice: async () => Promise.reject(new Error("no answer")) }
   const unknown = await pay({ action: "zap:mia", once: false, counterpart: { name: "Mia", pubkey: mia }, invoice: () => zapInvoice({ recipient: mia, address: service.address, endpoint, amountMsat: 21_000, signer }) }, silent)
   service.uninstall()
   assert.ok(unknown !== "busy")
@@ -120,4 +121,32 @@ test("a checked receipt confirms an unknown zap as paid, once", async () => {
   assert.deepEqual([confirmed?.state, confirmed?.zap?.receipt], ["paid", receipt.id])
   // A second delivery of a receipt changes nothing.
   assert.deepEqual(await recordReceipt(unknown.id, "another"), confirmed)
+})
+
+test("a service that sends its invoice in capitals: checked, paid once, and its receipt confirms the zap", async () => {
+  service.uninstall()
+  service = installFakeLnurl({ upperCase: true })
+  const entry = await zapped()
+  service.uninstall()
+  assert.equal(entry.invoice, service.issued[0].invoice.toLowerCase())
+  const receipt = service.receipt(entry.invoice!)
+  assert.equal(tag(receipt, "bolt11")?.[1], service.issued[0].invoice, "the receipt names the invoice in capitals")
+  assert.equal(await isReceiptFor(entry, receipt), true)
+})
+
+test("a Lightning address service that doesn't answer is given up after ten seconds", async (t) => {
+  service.uninstall()
+  service = installFakeLnurl({ hang: true })
+  t.mock.timers.enable({ apis: ["setTimeout"] })
+  const asking = fetchPayEndpoint(service.address)
+  let settled = false
+  asking.catch(() => {}).finally(() => (settled = true))
+  const turn = () => new Promise((resolve) => setImmediate(resolve))
+  while (service.requests.length === 0) await turn()
+  t.mock.timers.tick(9_999)
+  await turn()
+  assert.equal(settled, false, "still waiting before ten seconds")
+  t.mock.timers.tick(1)
+  await assert.rejects(asking, (error) => error instanceof LnurlError && error.code === "unreachable")
+  service.uninstall()
 })

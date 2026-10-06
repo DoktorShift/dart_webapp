@@ -1,6 +1,7 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { MESSAGES } from "../lib/i18n/index.ts"
+import { PAYMENTS_TEXTS } from "../lib/i18n/features/payments.screens.ts"
 
 // Payments speak plainly (PLAN.md table "Im normalen Produkt": Wallet verbinden, Bezahlen /
 // Empfangen; _coordination/NOSTR-DESIGN-RULES.md): no protocol or bitcoin jargon outside the
@@ -16,15 +17,15 @@ function texts(value: unknown, path: string, out: [string, string][]) {
 }
 
 test("payment texts use no protocol words outside Erweitert", () => {
-  for (const [locale, t] of Object.entries(MESSAGES)) {
-    const { advanced, ...plain } = t.payments
+  for (const locale of ["de", "en"] as const) {
+    const { advanced, ...plain } = PAYMENTS_TEXTS[locale]
     assert.ok(advanced.protocolValue.length > 0)
-    for (const [path, text] of texts(plain, `${locale}.payments`, [])) assert.doesNotMatch(text, PROTOCOL, `${path}: ${text}`)
+    for (const [path, text] of texts({ start: MESSAGES[locale].payments, screens: plain }, `${locale}.payments`, [])) assert.doesNotMatch(text, PROTOCOL, `${path}: ${text}`)
   }
 })
 
 test("one sat, many sats", () => {
-  assert.equal(MESSAGES.de.payments.sats("1"), "1 sat")
-  assert.equal(MESSAGES.de.payments.sats("1.000"), "1.000 sats")
-  assert.equal(MESSAGES.en.payments.sats("21"), "21 sats")
+  assert.equal(PAYMENTS_TEXTS.de.sats("1"), "1 sat")
+  assert.equal(PAYMENTS_TEXTS.de.sats("1.000"), "1.000 sats")
+  assert.equal(PAYMENTS_TEXTS.en.sats("21"), "21 sats")
 })

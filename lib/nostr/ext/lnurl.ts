@@ -5,7 +5,8 @@
 // To be upstreamed to nostr-core.
 //
 // Endpoints are fetched straight from the browser. A service that sends no CORS headers can't be
-// reached from a web app at all (OP-22); that shows as "unreachable", like any network failure.
+// reached from a web app at all (OP-22); that shows as "unreachable", like any network failure,
+// and so does one that takes longer than SERVICE_TIMEOUT_MS to answer.
 import { sha256 } from "@noble/hashes/sha2.js"
 import { bytesToHex } from "@noble/hashes/utils.js"
 import { loadCore } from "../core.ts"
@@ -53,6 +54,25 @@ export interface CheckedInvoice {
 
 const isAmount = (value: unknown): value is number => typeof value === "number" && Number.isSafeInteger(value) && value > 0
 
+// nostr-core's LNURL requests have no timeout and take no AbortSignal: a service that hangs is
+// given up after this long (its late answer is ignored).
+const SERVICE_TIMEOUT_MS = 10_000
+
+// `request`, or LnurlError "unreachable" when it fails or takes too long.
+async function askService<T>(request: () => Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("the service took too long to answer")), SERVICE_TIMEOUT_MS)
+  })
+  try {
+    return await Promise.race([request(), timeout])
+  } catch (error) {
+    throw new LnurlError("unreachable", error instanceof Error ? error.message : String(error))
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 // The pay endpoint behind a Lightning address. Throws LnurlError.
 export async function fetchPayEndpoint(address: string): Promise<PayEndpoint> {
   const core = await loadCore()
@@ -63,12 +83,7 @@ export async function fetchPayEndpoint(address: string): Promise<PayEndpoint> {
     throw new LnurlError("address", "not a Lightning address")
   }
   const url = `https://${parts.domain.toLowerCase()}/.well-known/lnurlp/${encodeURIComponent(parts.name)}`
-  let response: Awaited<ReturnType<Core["fetchPayRequest"]>>
-  try {
-    response = await core.fetchPayRequest(url)
-  } catch (error) {
-    throw new LnurlError("unreachable", error instanceof Error ? error.message : String(error))
-  }
+  const response = await askService(() => core.fetchPayRequest(url))
   let callback: URL | null = null
   try {
     callback = new URL(response.callback)
@@ -82,23 +97,19 @@ export async function fetchPayEndpoint(address: string): Promise<PayEndpoint> {
   return { url, callback: callback.href, minMsat: response.minSendable, maxMsat: response.maxSendable, metadata: response.metadata, zapPubkey }
 }
 
-type Core = Awaited<ReturnType<typeof loadCore>>
-
 const hashOf = (text: string) => bytesToHex(sha256(new TextEncoder().encode(text)))
 
 // Asks the endpoint for an invoice of exactly `amountMsat`, for a zap when `zapRequest` is given
-// (signed kind 9734), and checks it before anyone pays it. Throws LnurlError.
+// (signed kind 9734), and checks it before anyone pays it. The invoice comes back in lower case,
+// as invoices are stored and compared everywhere in this app. Throws LnurlError.
 export async function requestInvoice(endpoint: PayEndpoint, amountMsat: number, zapRequest?: NostrEvent): Promise<CheckedInvoice> {
   if (amountMsat < endpoint.minMsat || amountMsat > endpoint.maxMsat) throw new LnurlError("amount", "the service doesn't take this amount")
   const core = await loadCore()
   const description = zapRequest ? JSON.stringify(zapRequest) : endpoint.metadata
-  let invoice: string
-  try {
-    const payRequest = { tag: "payRequest" as const, callback: endpoint.callback, minSendable: endpoint.minMsat, maxSendable: endpoint.maxMsat, metadata: endpoint.metadata }
-    invoice = (await core.requestLnurlInvoice(payRequest, amountMsat, zapRequest ? { nostr: description } : undefined)).pr
-  } catch (error) {
-    throw new LnurlError("unreachable", error instanceof Error ? error.message : String(error))
-  }
+  const payRequest = { tag: "payRequest" as const, callback: endpoint.callback, minSendable: endpoint.minMsat, maxSendable: endpoint.maxMsat, metadata: endpoint.metadata }
+  const { pr } = await askService(() => core.requestLnurlInvoice(payRequest, amountMsat, zapRequest ? { nostr: description } : undefined))
+  if (typeof pr !== "string") throw new LnurlError("unreachable", "the service sent no invoice")
+  const invoice = pr.toLowerCase()
   const checked = await checkInvoice(invoice, { amountMsat, descriptionHash: hashOf(description) })
   if (!checked.ok) throw new LnurlError("mismatch", checked.reason)
   return { invoice, paymentHash: checked.paymentHash, amountMsat, expiresAt: checked.expiresAt }

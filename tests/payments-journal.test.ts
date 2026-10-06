@@ -15,6 +15,8 @@ import {
   pay,
   recordIncoming,
   recoverInterrupted,
+  resolveByHand,
+  type Lookup,
   type PaymentEntry,
   type PaymentRequest,
 } from "../lib/payments/journal.ts"
@@ -30,6 +32,10 @@ const now = () => Math.floor(Date.now() / 1000)
 const newInvoice = (amountMsat = 500_000, expirySeconds = 600) => encodeInvoice({ amountMsat, timestamp: now(), expirySeconds, paymentHash: randomBytes(32), nodeKey })
 
 const MIA = { name: "Mia" }
+// The wallet connection that pays in these tests, and another one (another wallet, or the same
+// wallet connected anew).
+const CONNECTION = "wallet-a:app-1"
+const OTHER_CONNECTION = "wallet-b:app-2"
 
 // A request for one invoice, counting how often the invoice was asked for.
 function requestFor(invoice: string, action = "stake:m1", once = true) {
@@ -51,6 +57,7 @@ function wallet(fail?: WalletErrorCode) {
   const paid: string[] = []
   return {
     paid,
+    connection: CONNECTION,
     payInvoice: async (invoice: string) => {
       paid.push(invoice)
       if (fail) throw new WalletError(fail, fail)
@@ -70,6 +77,7 @@ test("the entry is written before the wallet is asked, then holds the wallet's a
   let seenWhilePaying: PaymentEntry | undefined
   const entry = entryOf(
     await pay(request, {
+      connection: CONNECTION,
       payInvoice: async () => {
         seenWhilePaying = (await loadJournal())[0]
         return { feesMsat: 2000 }
@@ -78,6 +86,7 @@ test("the entry is written before the wallet is asked, then holds the wallet's a
   )
   assert.equal(seenWhilePaying?.state, "sending")
   assert.equal(seenWhilePaying?.invoice, invoice)
+  assert.equal(seenWhilePaying?.connection, CONNECTION)
   assert.equal(entry.state, "paid")
   assert.equal(entry.feesMsat, 2000)
   assert.equal(entry.amountMsat, 500_000)
@@ -188,6 +197,7 @@ test("Status prüfen: the wallet's answer settles an unknown payment", async () 
   const lookups: string[] = []
   const checked = entryOf(
     await checkStatus(unknown.id, {
+      connection: CONNECTION,
       lookupInvoice: async (hash) => {
         lookups.push(hash)
         return { state: "settled", feesMsat: 1000 }
@@ -199,38 +209,151 @@ test("Status prüfen: the wallet's answer settles an unknown payment", async () 
   assert.equal(checked.feesMsat, 1000)
 })
 
+const unknownEntry: PaymentEntry = {
+  id: "h",
+  direction: "out",
+  action: "a",
+  once: true,
+  state: "unknown",
+  amountMsat: 1000,
+  counterpart: MIA,
+  via: "invoice",
+  invoice: "lnbc1",
+  expiresAt: 1000,
+  connection: CONNECTION,
+  createdAt: 0,
+  updatedAt: 0,
+}
+const beforeExpiry = 999_000
+const afterExpiry = 1_001_000
+
 test("after a lookup: settled is paid, unseen and expired is failed, anything else stays unknown", () => {
-  const base: PaymentEntry = {
-    id: "h",
-    direction: "out",
-    action: "a",
-    once: true,
-    state: "unknown",
-    amountMsat: 1000,
-    counterpart: MIA,
-    via: "invoice",
-    invoice: "lnbc1",
-    expiresAt: 1000,
-    createdAt: 0,
-    updatedAt: 0,
-  }
-  const before = 999_000
-  const after = 1_001_000
-  assert.equal(afterLookup(base, { state: "settled", feesMsat: 0 }, before).state, "paid")
-  assert.equal(afterLookup(base, { state: "failed", feesMsat: null }, before).state, "failed")
-  assert.equal(afterLookup(base, { state: "pending", feesMsat: null }, after).state, "unknown")
-  assert.equal(afterLookup(base, "not-found", before).state, "unknown")
-  const late = afterLookup(base, "not-found", after)
+  const base = unknownEntry
+  assert.equal(afterLookup(base, { state: "settled", feesMsat: 0 }, CONNECTION, beforeExpiry).state, "paid")
+  assert.equal(afterLookup(base, { state: "failed", feesMsat: null }, CONNECTION, beforeExpiry).state, "failed")
+  assert.equal(afterLookup(base, { state: "pending", feesMsat: null }, CONNECTION, afterExpiry).state, "unknown")
+  assert.equal(afterLookup(base, "not-found", CONNECTION, beforeExpiry).state, "unknown")
+  const late = afterLookup(base, "not-found", CONNECTION, afterExpiry)
   assert.deepEqual([late.state, late.problem], ["failed", "expired"])
 
   const incoming = { ...base, direction: "in" as const, state: "waiting" as const }
-  assert.equal(afterLookup(incoming, { state: "settled", feesMsat: 0 }, after).state, "received")
-  assert.equal(afterLookup(incoming, { state: "pending", feesMsat: null }, before).state, "waiting")
-  assert.equal(afterLookup(incoming, { state: "pending", feesMsat: null }, after).state, "expired")
+  assert.equal(afterLookup(incoming, { state: "settled", feesMsat: 0 }, CONNECTION, afterExpiry).state, "received")
+  assert.equal(afterLookup(incoming, { state: "pending", feesMsat: null }, CONNECTION, beforeExpiry).state, "waiting")
+  assert.equal(afterLookup(incoming, { state: "pending", feesMsat: null }, CONNECTION, afterExpiry).state, "expired")
+})
+
+test("another wallet connection can confirm a payment, never rule one out", () => {
+  // Only the connection that paid knows what it did (NIP-47 lookup_invoice): a new connection,
+  // after "Verbindung entfernen", doesn't know the old one's payments.
+  for (const status of ["not-found", { state: "failed", feesMsat: null }, { state: "pending", feesMsat: null }] as const) {
+    assert.deepEqual(afterLookup(unknownEntry, status, OTHER_CONNECTION, afterExpiry), unknownEntry)
+  }
+  assert.equal(afterLookup(unknownEntry, { state: "settled", feesMsat: 0 }, OTHER_CONNECTION, afterExpiry).state, "paid")
+  const incoming = { ...unknownEntry, direction: "in" as const, state: "waiting" as const }
+  assert.equal(afterLookup(incoming, "not-found", OTHER_CONNECTION, afterExpiry).state, "waiting")
+  assert.equal(afterLookup(incoming, { state: "settled", feesMsat: 0 }, OTHER_CONNECTION, afterExpiry).state, "received")
+})
+
+test("Status prüfen through another connection after the invoice expired: still unknown, and the stake stays blocked", async () => {
+  const unknown = entryOf(await pay(requestFor(newInvoice()).request, wallet("no-answer")))
+  assert.equal(unknown.connection, CONNECTION)
+  // The invoice runs out; then another wallet is connected and asked.
+  await dbPut("payments", { ...unknown, expiresAt: now() - 1 })
+  const other: Lookup = {
+    connection: OTHER_CONNECTION,
+    lookupInvoice: async () => {
+      throw new WalletError("not-found", "NOT_FOUND")
+    },
+  }
+  assert.equal(entryOf(await checkStatus(unknown.id, other)).state, "unknown")
+  const retry = requestFor(newInvoice())
+  assert.equal(entryOf(await pay(retry.request, wallet())).id, unknown.id)
+  assert.equal(retry.asked.count, 0, "no new invoice while the outcome is open")
+  // The connection that paid can say it never saw it.
+  const ruledOut = entryOf(await checkStatus(unknown.id, { ...other, connection: CONNECTION }))
+  assert.deepEqual([ruledOut.state, ruledOut.problem], ["failed", "expired"])
+})
+
+test("Status prüfen on a payment a closed page left sending: unknown, then the wallet's answer", async () => {
+  const left = await scannedInvoice(newInvoice(), 500_000)
+  await dbPut("payments", {
+    id: left.checked.paymentHash,
+    direction: "out",
+    action: "stake:m1",
+    once: true,
+    state: "sending",
+    amountMsat: 500_000,
+    counterpart: MIA,
+    via: "invoice",
+    invoice: left.checked.invoice,
+    expiresAt: left.checked.expiresAt,
+    connection: CONNECTION,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  } satisfies PaymentEntry)
+  const pending: Lookup = { connection: CONNECTION, lookupInvoice: async () => ({ state: "pending", feesMsat: null }) }
+  assert.equal(entryOf(await checkStatus(left.checked.paymentHash, pending)).state, "unknown")
+})
+
+test("the same invoice from two actions at once is paid once", async () => {
+  const invoice = newInvoice()
+  const w = wallet()
+  const results = await Promise.all([pay(requestFor(invoice, "single:a", false).request, w), pay(requestFor(invoice, "single:b", false).request, w)])
+  assert.deepEqual(w.paid, [invoice])
+  const [entry] = await loadJournal()
+  assert.equal(entry.state, "paid")
+  for (const result of results) assert.ok(result === "busy" || result.id === entry.id)
+})
+
+test("cancelled while the invoice was being fetched: nothing written, nothing paid", async () => {
+  const controller = new AbortController()
+  const w = wallet()
+  const request: PaymentRequest = {
+    action: "pay:m1:p2",
+    once: false,
+    counterpart: MIA,
+    signal: controller.signal,
+    invoice: async () => {
+      controller.abort()
+      return scannedInvoice(newInvoice(), 500_000)
+    },
+  }
+  await assert.rejects(pay(request, w), { name: "AbortError" })
+  assert.equal(w.paid.length, 0)
+  assert.deepEqual(await loadJournal(), [])
+})
+
+test("settled by hand: paid as the wallet shows it, kept apart from the wallet's answer", async () => {
+  const unknown = entryOf(await pay(requestFor(newInvoice()).request, wallet("no-answer")))
+  const paid = entryOf(await resolveByHand(unknown.id, "done"))
+  assert.deepEqual([paid.state, paid.resolvedByHand], ["paid", true])
+  // The stake is done.
+  const attempt = requestFor(newInvoice())
+  assert.equal(entryOf(await pay(attempt.request, wallet())).id, unknown.id)
+  assert.equal(attempt.asked.count, 0)
+})
+
+test("not paid by hand only once the invoice has expired; then it can be paid anew", async () => {
+  const unknown = entryOf(await pay(requestFor(newInvoice()).request, wallet("no-answer")))
+  await assert.rejects(resolveByHand(unknown.id, "not-done"))
+  assert.equal((await loadJournal())[0].state, "unknown")
+  const failed = entryOf(await resolveByHand(unknown.id, "not-done", (unknown.expiresAt! + 1) * 1000))
+  assert.deepEqual([failed.state, failed.problem, failed.resolvedByHand], ["failed", "expired", true])
+  const w = wallet()
+  assert.equal(entryOf(await pay(requestFor(newInvoice()).request, w)).state, "paid")
+  assert.equal(w.paid.length, 1)
+})
+
+test("an invoice shown to be paid can be settled by hand too: received, or after it expired not received", async () => {
+  const shown = await recordIncoming({ id: "cd".repeat(32), action: "receive:m1", once: true, amountMsat: 500_000, counterpart: { name: "Tom" }, via: "invoice", invoice: "lnbc1", expiresAt: now() + 600, connection: CONNECTION })
+  assert.equal(entryOf(await resolveByHand(shown.id, "done")).state, "received")
+  const other = await recordIncoming({ id: "ef".repeat(32), action: "receive:m2", once: true, amountMsat: 500_000, counterpart: { name: "Tom" }, via: "invoice", invoice: "lnbc1", expiresAt: now() - 1, connection: CONNECTION })
+  const expired = entryOf(await resolveByHand(other.id, "not-done"))
+  assert.deepEqual([expired.state, expired.problem], ["expired", undefined])
 })
 
 test("an invoice shown to be paid stops the same stake from being paid on this device", async () => {
-  await recordIncoming({ id: "ab".repeat(32), action: "stake:m1", once: true, amountMsat: 500_000, counterpart: { name: "Tom" }, via: "invoice", invoice: "lnbc1", expiresAt: now() + 600 })
+  await recordIncoming({ id: "ab".repeat(32), action: "stake:m1", once: true, amountMsat: 500_000, counterpart: { name: "Tom" }, via: "invoice", invoice: "lnbc1", expiresAt: now() + 600, connection: CONNECTION })
   const attempt = requestFor(newInvoice())
   assert.equal(entryOf(await pay(attempt.request, wallet())).state, "waiting")
   assert.equal(attempt.asked.count, 0)
@@ -248,17 +371,39 @@ test("vor Ort erledigt: noted apart from a paid stake, and it ends the stake", a
   assert.equal(await noteSettled({ action: "stake:m2", direction: "out", amountMsat: 500_000, counterpart: MIA }), false)
 })
 
-test("another tab paying the same action: this one doesn't ask its wallet", { skip: typeof navigator === "undefined" || !navigator.locks }, async () => {
-  // A second "tab": a worker thread with its own database, sharing this process's Web Locks.
-  const tab = new Worker(new URL("./support/payment-tab.ts", import.meta.url), { workerData: { action: "stake:m1" } })
+const webLocks = { skip: typeof navigator === "undefined" || !navigator.locks }
+
+// A second "tab": a worker thread with its own database, sharing this process's Web Locks. It pays
+// `invoice` for `action` and holds the wallet's answer until released; it must have paid then.
+async function payingTab(action: string, invoice: string) {
+  const tab = new Worker(new URL("./support/payment-tab.ts", import.meta.url), { workerData: { action, invoice } })
   const message = (type: string) => new Promise<unknown>((resolve) => tab.on("message", (m: { type: string; value?: unknown }) => m.type === type && resolve(m.value)))
-  const paying = message("paying")
   const finished = message("finished")
-  await paying
+  await message("paying")
+  return {
+    async release() {
+      tab.postMessage("release")
+      const result = await finished
+      await tab.terminate()
+      assert.equal(result, "paid")
+    },
+  }
+}
+
+test("another tab paying the same action: this one doesn't ask its wallet", webLocks, async () => {
+  const tab = await payingTab("stake:m1", newInvoice())
   const w = wallet()
-  assert.equal(await pay(requestFor(newInvoice()).request, w), "busy")
+  const result = await pay(requestFor(newInvoice()).request, w).finally(tab.release)
+  assert.equal(result, "busy")
   assert.equal(w.paid.length, 0)
-  tab.postMessage("release")
-  assert.equal(await finished, "paid")
-  await tab.terminate()
+})
+
+test("another tab paying the same invoice for another action: this one doesn't ask its wallet", webLocks, async () => {
+  const invoice = newInvoice()
+  const tab = await payingTab("single:a", invoice)
+  const w = wallet()
+  const result = await pay(requestFor(invoice, "single:b", false).request, w).finally(tab.release)
+  assert.equal(result, "busy")
+  assert.equal(w.paid.length, 0)
+  assert.equal((await loadJournal()).length, 0, "the other tab's entry is in its own database")
 })

@@ -2,7 +2,7 @@
 // tests: it answers the app's fetch() for https://<domain>/.well-known/lnurlp/<name> and its
 // callback, issues invoices signed with a throwaway node key, and signs zap receipts with its own
 // key. Nothing goes over the network. A test can make it misbehave: another amount, a description
-// hash for something else, no zaps.
+// hash for something else, no zaps, invoices in capitals, or no answer at all.
 import { randomBytes } from "node:crypto"
 import { sha256 } from "@noble/hashes/sha2.js"
 import { finalizeEvent, generateSecretKey, getPublicKey, type NostrEvent } from "nostr-core"
@@ -16,15 +16,21 @@ export interface FakeLnurlOptions {
   amountOffsetMsat?: number
   // Commit the invoice to something else than LUD-06 and NIP-57 ask for.
   wrongDescription?: boolean
+  // Send invoices in capitals (valid bech32), in its answers and its receipts.
+  upperCase?: boolean
+  // Never answer.
+  hang?: boolean
 }
 
 export interface FakeLnurl {
   address: string
   serviceKey: Uint8Array
   servicePubkey: string
-  // Every invoice issued, with the zap request it was for (if any).
+  // Every address the app asked.
+  requests: string[]
+  // Every invoice issued, as sent, with the zap request it was for (if any).
   issued: { invoice: string; zapRequest: NostrEvent | null }[]
-  // The receipt the service publishes once `invoice` was paid.
+  // The receipt the service publishes once `invoice` was paid, naming it as the service sent it.
   receipt(invoice: string, options?: { signer?: Uint8Array }): NostrEvent
   uninstall(): void
 }
@@ -36,6 +42,7 @@ export function installFakeLnurl(options: FakeLnurlOptions = {}): FakeLnurl {
   const nodeKey = randomBytes(32)
   const metadata = JSON.stringify([["text/plain", `Zahlung an ${name}`]])
   const issued: FakeLnurl["issued"] = []
+  const requests: string[] = []
   const realFetch = globalThis.fetch
 
   const respond = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } })
@@ -43,6 +50,8 @@ export function installFakeLnurl(options: FakeLnurlOptions = {}): FakeLnurl {
   globalThis.fetch = async (input: string | URL | Request, init?: RequestInit) => {
     const url = new URL(input instanceof Request ? input.url : String(input))
     if (url.host !== domain) return realFetch(input, init)
+    requests.push(url.href)
+    if (options.hang) return new Promise<Response>(() => {})
     if (url.pathname === `/.well-known/lnurlp/${name}`) {
       return respond({
         tag: "payRequest",
@@ -57,7 +66,7 @@ export function installFakeLnurl(options: FakeLnurlOptions = {}): FakeLnurl {
       const amountMsat = Number(url.searchParams.get("amount"))
       const nostr = url.searchParams.get("nostr")
       const description = options.wrongDescription ? "something else" : (nostr ?? metadata)
-      const invoice = encodeInvoice({
+      const encoded = encodeInvoice({
         amountMsat: amountMsat + (options.amountOffsetMsat ?? 0),
         timestamp: Math.floor(Date.now() / 1000),
         expirySeconds: 600,
@@ -65,6 +74,7 @@ export function installFakeLnurl(options: FakeLnurlOptions = {}): FakeLnurl {
         descriptionHash: sha256(new TextEncoder().encode(description)),
         nodeKey,
       })
+      const invoice = options.upperCase ? encoded.toUpperCase() : encoded
       issued.push({ invoice, zapRequest: nostr ? (JSON.parse(nostr) as NostrEvent) : null })
       return respond({ pr: invoice, routes: [] })
     }
@@ -75,10 +85,11 @@ export function installFakeLnurl(options: FakeLnurlOptions = {}): FakeLnurl {
     address: `${name}@${domain}`,
     serviceKey,
     servicePubkey: getPublicKey(serviceKey),
+    requests,
     issued,
-    receipt(invoice, receiptOptions = {}) {
-      const zapRequest = issued.find((entry) => entry.invoice === invoice)?.zapRequest
-      if (!zapRequest) throw new Error("no zap for this invoice")
+    receipt(paid, receiptOptions = {}) {
+      const { invoice, zapRequest } = issued.find((entry) => entry.invoice.toLowerCase() === paid.toLowerCase()) ?? {}
+      if (!invoice || !zapRequest) throw new Error("no zap for this invoice")
       const recipient = zapRequest.tags.find((tag) => tag[0] === "p")![1]
       return finalizeEvent(
         {

@@ -6,15 +6,18 @@
 // - Every entry belongs to an action, what the person did: the stake of one game, a
 //   congratulation, one scanned invoice. While a payment for an action is open, no new invoice
 //   is fetched or paid for it, and a one-off action (a stake) stays done once it is paid.
-// - Paying holds a lock named after the action (Web Locks, so across tabs) until the wallet has
-//   answered. An entry still "sending" whose lock is free was left by a page that closed: its
-//   outcome is unknown.
+// - Paying holds a lock named after the action, and one named after the invoice (Web Locks, so
+//   across tabs), until the wallet has answered. An entry still "sending" whose lock is free was
+//   left by a page that closed: its outcome is unknown.
 // - An unknown outcome is cleared up only by asking the wallet (lookup by payment hash), never by
-//   paying again. An expired invoice that the wallet never saw can no longer be paid: failed.
+//   paying again. An expired invoice that the wallet never saw can no longer be paid: failed. Only
+//   the connection that sent a payment can say it never saw it; any other can only confirm it.
+// - Where the wallet can't be asked, the person settles it from what their wallet shows
+//   (resolveByHand), kept apart from the wallet's own answer.
 //
 // The journal is this device's record, like its games: it isn't part of the profile, a backup or
 // an export, and only "Alle Daten löschen" removes it.
-import { WalletError, type InvoiceStatus, type WalletErrorCode } from "../nostr/wallet.ts"
+import { WalletError, type InvoiceStatus, type WalletClient, type WalletErrorCode } from "../nostr/wallet.ts"
 import type { CheckedInvoice } from "../nostr/ext/lnurl.ts"
 import type { NostrEvent } from "../nostr/types.ts"
 import { dbGet, dbGetAll, dbWrite, type Keyed } from "../storage/db.ts"
@@ -70,9 +73,14 @@ export interface PaymentEntry extends Keyed {
   expiresAt: number | null
   // The Lightning address it was paid to.
   address?: string
+  // The wallet connection that sent it or made its invoice (WalletClient.connection); none for
+  // "vor Ort erledigt".
+  connection?: string
   // Unknown until the wallet says; null when it didn't.
   feesMsat?: number | null
   problem?: PaymentProblem
+  // Settled by the person from what their wallet shows, not by the wallet's answer.
+  resolvedByHand?: true
   zap?: ZapRecord
   createdAt: number
   updatedAt: number
@@ -97,6 +105,8 @@ export const actions = {
 
 export const isOpen = (entry: PaymentEntry) => OPEN.has(entry.state)
 export const isDone = (entry: PaymentEntry) => DONE.has(entry.state)
+// Whether the entry's invoice has run out: it can't be paid any more.
+export const hasExpired = (entry: PaymentEntry, nowMs = Date.now()) => entry.expiresAt !== null && nowMs / 1000 >= entry.expiresAt
 
 // The entry that stops a new payment for this action: one still open, or a one-off already done.
 export function blockingEntry(entries: readonly PaymentEntry[], action: string): PaymentEntry | null {
@@ -120,26 +130,25 @@ async function save(entry: PaymentEntry, now = Date.now()): Promise<PaymentEntry
 const LOCK_PREFIX = "blueline.payment:"
 const heldHere = new Set<string>()
 
-// Runs `task` holding the lock of `action` in every tab of this app; null right away when it is
-// held already, here or elsewhere. Without Web Locks (Safari before 15.4) only this page is
-// covered; the entry written before paying still stops any later attempt in another tab.
-async function exclusive<T>(action: string, task: () => Promise<T>): Promise<T | null> {
-  if (heldHere.has(action)) return null
-  heldHere.add(action)
+// Runs `task` holding the lock `name` (an action, or an invoice) in every tab of this app; null
+// right away when it is held already, here or elsewhere. Without Web Locks (Safari before 15.4)
+// only this page is covered; the entry written before paying still stops any later attempt in
+// another tab.
+async function exclusive<T>(name: string, task: () => Promise<T>): Promise<T | null> {
+  if (heldHere.has(name)) return null
+  heldHere.add(name)
   try {
     const locks = typeof navigator === "undefined" ? undefined : navigator.locks
     if (!locks) return await task()
-    return await locks.request(LOCK_PREFIX + action, { ifAvailable: true }, (lock) => (lock ? task() : null))
+    return await locks.request(LOCK_PREFIX + name, { ifAvailable: true }, (lock) => (lock ? task() : null))
   } finally {
-    heldHere.delete(action)
+    heldHere.delete(name)
   }
 }
 
 // ---- Paying -------------------------------------------------------------------------------------
 
-export interface Payer {
-  payInvoice(invoice: string): Promise<{ feesMsat: number | null }>
-}
+export type Payer = Pick<WalletClient, "payInvoice" | "connection">
 
 export interface InvoiceSource {
   checked: CheckedInvoice
@@ -155,72 +164,88 @@ export interface PaymentRequest {
   // The checked invoice to pay. Called only when nothing for this action is open, so no new
   // invoice is ever fetched while an earlier payment's outcome is unknown. May throw.
   invoice: () => Promise<InvoiceSource>
+  // Cancelled while the invoice was being fetched: nothing is written and nothing paid (pay()
+  // throws the signal's reason). Once the payment is handed to the wallet it can't be cancelled.
+  signal?: AbortSignal
 }
 
+// One lock per invoice besides the one per action: two actions (two tabs that scanned the same
+// code) never pay the same invoice at the same time.
+const invoiceLock = (paymentHash: string) => `invoice:${paymentHash}`
+
 // Pays once for an action and returns the journal entry: the new payment's, or the earlier one
-// that stops it ("Zahlung läuft", paid, unknown). "busy": this action is being paid in another
-// tab right now.
+// that stops it ("Zahlung läuft", paid, unknown). "busy": this action or this invoice is being
+// paid in another tab right now.
 export async function pay(request: PaymentRequest, payer: Payer): Promise<PaymentEntry | "busy"> {
   const result = await exclusive(request.action, async () => {
-    const entries = await loadJournal()
-    const earlier = blockingEntry(entries, request.action)
+    const earlier = blockingEntry(await loadJournal(), request.action)
     // Holding the lock, an entry still "sending" can only be from a page that closed meanwhile.
     if (earlier) return earlier.state === "sending" ? save({ ...earlier, state: "unknown" }) : earlier
-    const { checked, via, address, zap } = await request.invoice()
-    const known = entries.find((entry) => entry.id === checked.paymentHash)
-    if (known && known.state !== "failed") return known
-    const now = Date.now()
-    const entry = await save(
-      {
-        id: checked.paymentHash,
-        direction: "out",
-        action: request.action,
-        once: request.once,
-        state: "sending",
-        amountMsat: checked.amountMsat,
-        counterpart: request.counterpart,
-        via,
-        invoice: checked.invoice,
-        expiresAt: checked.expiresAt,
-        ...(address ? { address } : {}),
-        ...(zap ? { zap } : {}),
-        createdAt: known?.createdAt ?? now,
-        updatedAt: now,
-      },
-      now,
-    )
-    try {
-      const { feesMsat } = await payer.payInvoice(checked.invoice)
-      return save({ ...entry, state: "paid", feesMsat, problem: undefined })
-    } catch (error) {
-      // Anything but a definite answer from the wallet may have paid.
-      const problem: WalletErrorCode = error instanceof WalletError ? error.code : "no-answer"
-      return save({ ...entry, state: problem === "no-answer" ? "unknown" : "failed", problem })
-    }
+    const source = await request.invoice()
+    request.signal?.throwIfAborted()
+    return exclusive(invoiceLock(source.checked.paymentHash), () => send(request, source, payer))
   })
   return result ?? "busy"
 }
 
+// Writes the entry, then hands the invoice to the wallet. An invoice already paid, or with an
+// outcome still open, is never handed over again; one the wallet refused may be tried again.
+async function send(request: PaymentRequest, { checked, via, address, zap }: InvoiceSource, payer: Payer): Promise<PaymentEntry> {
+  const known = await dbGet<PaymentEntry>("payments", checked.paymentHash)
+  if (known && known.state !== "failed") return known
+  const now = Date.now()
+  const entry = await save(
+    {
+      id: checked.paymentHash,
+      direction: "out",
+      action: request.action,
+      once: request.once,
+      state: "sending",
+      amountMsat: checked.amountMsat,
+      counterpart: request.counterpart,
+      via,
+      invoice: checked.invoice,
+      expiresAt: checked.expiresAt,
+      connection: payer.connection,
+      ...(address ? { address } : {}),
+      ...(zap ? { zap } : {}),
+      createdAt: known?.createdAt ?? now,
+      updatedAt: now,
+    },
+    now,
+  )
+  try {
+    const { feesMsat } = await payer.payInvoice(checked.invoice)
+    return save({ ...entry, state: "paid", feesMsat, problem: undefined })
+  } catch (error) {
+    // Anything but a definite answer from the wallet may have paid.
+    const problem: WalletErrorCode = error instanceof WalletError ? error.code : "no-answer"
+    return save({ ...entry, state: problem === "no-answer" ? "unknown" : "failed", problem })
+  }
+}
+
 // ---- Clearing up ---------------------------------------------------------------------------------
 
-// The entry after the wallet's answer to a lookup ("not-found": it doesn't know the invoice).
-export function afterLookup(entry: PaymentEntry, status: InvoiceStatus | "not-found", nowMs = Date.now()): PaymentEntry {
-  const expired = entry.expiresAt !== null && nowMs / 1000 >= entry.expiresAt
+// The entry after the wallet's answer to a lookup through `connection` ("not-found": it doesn't
+// know the invoice). A wallet only knows what went through the same connection (NWC-09): asked
+// through another one, "settled" still counts, anything else leaves the entry as it is.
+export function afterLookup(entry: PaymentEntry, status: InvoiceStatus | "not-found", connection: string, nowMs = Date.now()): PaymentEntry {
   const state = status === "not-found" ? null : status.state
+  if (state === "settled") {
+    return entry.direction === "out" ? { ...entry, state: "paid", feesMsat: status === "not-found" ? null : status.feesMsat, problem: undefined } : { ...entry, state: "received" }
+  }
+  if (connection !== entry.connection) return entry
+  const expired = hasExpired(entry, nowMs)
   if (entry.direction === "out") {
-    if (state === "settled") return { ...entry, state: "paid", feesMsat: status === "not-found" ? null : status.feesMsat, problem: undefined }
     if (state === "failed") return { ...entry, state: "failed", problem: "failed" }
     // Never seen by the wallet and too late to be paid now.
     if (status === "not-found" && expired) return { ...entry, state: "failed", problem: "expired" }
     return { ...entry, state: "unknown" }
   }
-  if (state === "settled") return { ...entry, state: "received" }
   return { ...entry, state: expired ? "expired" : "waiting" }
 }
 
-export interface Lookup {
-  lookupInvoice(paymentHash: string): Promise<InvoiceStatus>
-}
+export type Lookup = Pick<WalletClient, "lookupInvoice" | "connection">
 
 // "Status prüfen": asks the wallet about an open entry and records the answer. "busy": the
 // payment is still being sent in another tab. Throws WalletError when the wallet can't be asked.
@@ -228,8 +253,10 @@ export async function checkStatus(id: string, wallet: Lookup): Promise<PaymentEn
   const current = await dbGet<PaymentEntry>("payments", id)
   if (!current?.invoice || !isOpen(current)) return current ?? null
   const result = await exclusive(current.action, async () => {
-    const entry = await dbGet<PaymentEntry>("payments", id)
-    if (!entry?.invoice || !isOpen(entry)) return entry ?? null
+    const stored = await dbGet<PaymentEntry>("payments", id)
+    if (!stored?.invoice || !isOpen(stored)) return stored ?? null
+    // Holding the lock, a payment still "sending" was left by a page that closed.
+    const entry = stored.state === "sending" ? await save({ ...stored, state: "unknown" }) : stored
     let status: InvoiceStatus | "not-found"
     try {
       status = await wallet.lookupInvoice(entry.id)
@@ -237,7 +264,7 @@ export async function checkStatus(id: string, wallet: Lookup): Promise<PaymentEn
       if (!(error instanceof WalletError && error.code === "not-found")) throw error
       status = "not-found"
     }
-    const next = afterLookup(entry, status)
+    const next = afterLookup(entry, status, wallet.connection)
     return next.state === entry.state ? entry : save(next)
   })
   return result ?? "busy"
@@ -257,11 +284,30 @@ export async function recoverInterrupted(): Promise<void> {
   )
 }
 
+// "In meiner Wallet nachgesehen": the person settles an open entry from what their wallet shows,
+// where the wallet can't be asked (another connection, no permission to look up) or doesn't
+// say. "done": paid or received. "not-done" only once the invoice has expired, so it can't be paid
+// any more: failed or expired. "busy" while it is being sent in another tab.
+export async function resolveByHand(id: string, outcome: "done" | "not-done", nowMs = Date.now()): Promise<PaymentEntry | "busy" | null> {
+  const current = await dbGet<PaymentEntry>("payments", id)
+  if (!current || !isOpen(current)) return current ?? null
+  const result = await exclusive(current.action, async () => {
+    const entry = await dbGet<PaymentEntry>("payments", id)
+    if (!entry || !isOpen(entry)) return entry ?? null
+    if (outcome === "not-done" && !hasExpired(entry, nowMs)) throw new Error("an invoice that can still be paid may yet be paid")
+    const out = entry.direction === "out"
+    const next: PaymentEntry =
+      outcome === "done" ? { ...entry, state: out ? "paid" : "received", problem: undefined } : { ...entry, state: out ? "failed" : "expired", problem: out ? "expired" : undefined }
+    return save({ ...next, resolvedByHand: true }, nowMs)
+  })
+  return result ?? "busy"
+}
+
 // ---- Receiving and notes ---------------------------------------------------------------------------
 
-// An invoice this device shows to be paid ("Empfangen"). Kept while it can be paid, so it is
-// shown again instead of being replaced.
-export async function recordIncoming(entry: Omit<PaymentEntry, "direction" | "state" | "createdAt" | "updatedAt">): Promise<PaymentEntry> {
+// An invoice this device shows to be paid ("Empfangen"), made by the wallet connection named in
+// it. Kept while it can be paid, so it is shown again instead of being replaced.
+export async function recordIncoming(entry: Omit<PaymentEntry, "direction" | "state" | "createdAt" | "updatedAt"> & { connection: string }): Promise<PaymentEntry> {
   const now = Date.now()
   return save({ ...entry, direction: "in", state: "waiting", createdAt: now, updatedAt: now }, now)
 }

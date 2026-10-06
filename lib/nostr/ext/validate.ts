@@ -83,6 +83,8 @@ export interface ZapExpectation {
   request?: NostrEvent
   recipient?: string
   amountMsat?: number
+  // The payment hash of the invoice that was paid: the receipt must be for exactly that invoice.
+  paymentHash?: string
   // The recipient's LNURL (bech32 lnurl1...); a request naming another one is refused.
   lnurl?: string
 }
@@ -117,6 +119,7 @@ export async function validateZapReceipt(receipt: NostrEvent, expected: ZapExpec
   const requested = firstTag(request, "amount")
   if (requested !== undefined && String(invoice.amountMsat ?? "") !== requested) return fail("the invoice amount differs from the zap request")
   if (expected.amountMsat !== undefined && invoice.amountMsat !== expected.amountMsat) return fail("the amount differs from the expected amount")
+  if (expected.paymentHash !== undefined && invoice.paymentHash !== expected.paymentHash) return fail("the receipt is for another invoice")
   const requestRecipients = tagValues(request, "p")
   if (requestRecipients.length !== 1) return fail("the zap request must name one recipient")
   if (firstTag(receipt, "p") !== requestRecipients[0]) return fail("the receipt names another recipient than the request")

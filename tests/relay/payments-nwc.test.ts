@@ -14,7 +14,7 @@ import { publish, relayClient } from "../../lib/nostr/client.ts"
 import { fetchPayEndpoint } from "../../lib/nostr/ext/lnurl.ts"
 import { createLocalSigner } from "../../lib/nostr/signers.ts"
 import { connectWallet, WalletError } from "../../lib/nostr/wallet.ts"
-import { dbGetAll } from "../../lib/storage/db.ts"
+import { dbGetAll, dbPut } from "../../lib/storage/db.ts"
 import { makeIncoming, scannedInvoice } from "../../lib/payments/invoices.ts"
 import { checkStatus, markReceived, pay, type PaymentEntry } from "../../lib/payments/journal.ts"
 import { capabilities, connectNewWallet, loadWallet, removeWallet, withWallet } from "../../lib/payments/wallet.ts"
@@ -59,6 +59,8 @@ test("connecting keeps what the wallet allows, and its secret only sealed", asyn
   assert.equal(info.encryption, "nip44")
   assert.equal(info.lightningAddress, "mia@wallet.test")
   assert.deepEqual(info.relays, [relay.url])
+  // The connection is named by the wallet's key and the app's key in it, never by its secret.
+  assert.match(info.connection, new RegExp(`^${wallet.walletPubkey}:[0-9a-f]{64}$`))
   assert.deepEqual(capabilities(info), { pay: true, receive: true, lookup: true, balance: true, budget: true, notifies: false })
   assert.deepEqual(await loadWallet(), info)
   const secret = new URL(wallet.uri.replace("nostr+walletconnect://", "http://")).searchParams.get("secret")!
@@ -92,6 +94,24 @@ test("timeout after success: unknown, never paid again, cleared up by Status prÃ
   const checked = entryOf(await withWallet((w) => checkStatus(unknown.id, w)))
   assert.equal(checked.state, "paid")
   assert.equal(wallet.paid.get(unknown.id), 1)
+})
+
+test("after switching wallets, Status prÃ¼fen never calls a payment of the old one unpaid", async () => {
+  const first = await fakeWallet()
+  await connectNewWallet(first.uri)
+  first.payBehaviour = "silent"
+  const unknown = entryOf(await withWallet((w) => pay(stake(invoice()), w), { replyTimeoutMs: 1500 }))
+  assert.equal(first.paid.get(unknown.id), 1, "the first wallet paid, its answer was lost")
+  // The invoice runs out; "Verbindung entfernen", then another wallet is connected.
+  await dbPut("payments", { ...unknown, expiresAt: Math.floor(Date.now() / 1000) - 1 })
+  await removeWallet()
+  const second = await fakeWallet()
+  const info = await connectNewWallet(second.uri)
+  assert.notEqual(info.connection, unknown.connection)
+  // The second wallet doesn't know the payment (NOT_FOUND): that proves nothing.
+  assert.equal(entryOf(await withWallet((w) => checkStatus(unknown.id, w))).state, "unknown")
+  assert.equal(entryOf(await withWallet((w) => pay(stake(invoice()), w))).id, unknown.id)
+  assert.equal(pays(second), 0, "the stake is not paid a second time")
 })
 
 test("wallet errors are failures, each with its reason, and nothing left the wallet", async () => {

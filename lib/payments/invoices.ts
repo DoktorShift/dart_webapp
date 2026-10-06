@@ -71,9 +71,9 @@ const INCOMING_EXPIRY_SECONDS = 3600
 
 // "Geld empfangen": a new invoice from this device's wallet, checked like any other (the wallet's
 // answer is untrusted too) and recorded as waiting. Throws WalletError or InvoiceError.
-export async function makeIncoming(wallet: Pick<WalletClient, "makeInvoice">, request: { action: string; once: boolean; counterpart: Counterpart; amountMsat: number }): Promise<PaymentEntry> {
+export async function makeIncoming(wallet: Pick<WalletClient, "makeInvoice" | "connection">, request: { action: string; once: boolean; counterpart: Counterpart; amountMsat: number }): Promise<PaymentEntry> {
   const made = await wallet.makeInvoice({ amountMsat: request.amountMsat, description: DESCRIPTION, expirySeconds: INCOMING_EXPIRY_SECONDS })
   const { checked } = await scannedInvoice(made.invoice, request.amountMsat)
   if (checked.paymentHash !== made.paymentHash) throw new InvoiceError("invalid")
-  return recordIncoming({ ...request, id: checked.paymentHash, via: "invoice", invoice: checked.invoice, expiresAt: checked.expiresAt })
+  return recordIncoming({ ...request, id: checked.paymentHash, via: "invoice", invoice: checked.invoice, expiresAt: checked.expiresAt, connection: wallet.connection })
 }
