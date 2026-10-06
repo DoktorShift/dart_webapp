@@ -1688,7 +1688,7 @@ test("load: 128 participants and 16 boards — draw, calls to boards and results
 // --- Names ----------------------------------------------------------------------------------
 
 test("round names: knockout rounds from the end, by bracket size", async () => {
-  const { tournamentsDe } = await import("../lib/i18n/features/tournaments.de.ts")
+  const { tournamentsScreensDe: tournamentsDe } = await import("../lib/i18n/features/tournaments.screens.de.ts")
   const { roundLabel } = await import("../lib/tournaments/labels.ts")
   const name = (t: Tournament, id: string) => roundLabel(tournamentsDe, match(t, id))
   const five = make("single", 5)
