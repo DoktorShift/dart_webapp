@@ -5,12 +5,15 @@ import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } f
 import { cn } from "@/lib/utils"
 
 // A bottom sheet for a focused task that can be dismissed (HIG: sheets). Used during a game
-// and for the install guide. Content that can be long brings its own scroll area.
+// and for the install guide. Content that can be long brings its own scroll area. While a task
+// must not be left half-way (a game moving to another device), `dismissible` false keeps the
+// sheet until its own buttons close it.
 export function Sheet({
   open,
   onOpenChange,
   title,
   description,
+  dismissible = true,
   className,
   children,
 }: {
@@ -18,11 +21,12 @@ export function Sheet({
   onOpenChange: (open: boolean) => void
   title: string
   description?: ReactNode
+  dismissible?: boolean
   className?: string
   children: ReactNode
 }) {
   return (
-    <Drawer open={open} onOpenChange={onOpenChange} shouldScaleBackground={false}>
+    <Drawer open={open} onOpenChange={onOpenChange} dismissible={dismissible} shouldScaleBackground={false}>
       <DrawerContent className={cn("mx-auto max-h-[92dvh] max-w-lg border-border", className)}>
         <div className="flex min-h-0 flex-col px-4 pb-[max(env(safe-area-inset-bottom),1rem)]">
           <DrawerHeader className="px-0 text-left">

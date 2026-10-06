@@ -303,3 +303,42 @@ test("the writer hands the match to another device only after confirming; the ol
   assert.equal(after.live?.sv, 2)
 
 })
+
+test("an offer closed right after 'Übergeben' is called off: the match stays here, the other device hears so", async () => {
+  const local = "handoff-called-off"
+  const game = newGame(local, fullGame.slice(0, 5))
+  const view = await live.goLive(game)
+  opened.push(() => live.stopHere(local))
+  const link = links.decodeLinkPayload("watch", view.watch)
+  const spectator = watcher({ match: link.match, key: link.key ?? null, relays: link.relays })
+  const first = await until("the board's snapshot", () => spectator.get()?.state?.live)
+
+  const device = new Worker(new URL("./live-device.ts", import.meta.url), { workerData: { relay: relay.url } })
+  opened.push(() => device.terminate())
+  const messages: { type: string; step?: string }[] = []
+  device.on("message", (m) => messages.push(m))
+  await until("the other device", () => messages.some((m) => m.type === "ready"))
+
+  let offer: import("../../lib/live/handoff.ts").HandoffOffer | null = null
+  const control = await handoff.offerHandoff(local, (next) => (offer = next))
+  const waiting = await until("the handoff code", () => offer?.step === "waiting" && offer)
+  device.postMessage({ type: "take", code: waiting.code })
+  await until("the request", () => offer?.step === "asked")
+
+  // Confirmed, then closed at once (the sheet went away): the package never leaves.
+  control.give()
+  control.close()
+  await until("the other device told", () => messages.some((m) => m.step === "declined"))
+  await new Promise((resolve) => setTimeout(resolve, 2000))
+  assert.ok(!messages.some((m) => m.type === "taken"))
+  assert.ok(live.boardView(local), "the match is still live here")
+  assert.ok(await store.loadBoard(local), "the board's keys are kept")
+
+  // And this device goes on writing under its own session.
+  live.updateBoard({ ...game, throws: fullGame.slice(0, 8) })
+  const next = await until("a newer snapshot from here", () => {
+    const now = spectator.get()?.state?.live
+    return now && now.n > first.n && now
+  })
+  assert.equal(next.sv, 1)
+})

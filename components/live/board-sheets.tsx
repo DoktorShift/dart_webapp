@@ -286,7 +286,9 @@ export function HandoffSheet({ open, onClose, match, start, closeGame }: SheetPr
   }, [open, ready, round, match.id])
 
   const done = offer?.step === "done"
-  const dismiss = done ? closeGame : onClose
+  // From "Übergeben" on, the other device may have the game at any moment: the sheet stays until
+  // it says so (then only "Spiel hier schließen" leads on) or the wait for it runs out.
+  const locked = offer?.step === "sending" || done
   const title = offer?.step === "asked" ? s.askedTitle : done ? s.doneTitle : s.title
   const description = offer?.step === "waiting" ? s.description : offer?.step === "asked" ? s.asked : undefined
 
@@ -334,9 +336,9 @@ export function HandoffSheet({ open, onClose, match, start, closeGame }: SheetPr
     )
 
   return (
-    <Sheet open={open} onOpenChange={(next) => !next && dismiss()} title={title} description={description}>
+    <Sheet open={open} dismissible={!locked} onOpenChange={(next) => !next && onClose()} title={title} description={description}>
       <div className="min-h-0 overflow-y-auto overscroll-contain">{body}</div>
-      {!done && offer?.step !== "asked" && <Done onClose={onClose} />}
+      {!locked && offer?.step !== "asked" && <Done onClose={onClose} />}
     </Sheet>
   )
 }
@@ -359,7 +361,7 @@ export function MovedSheet({ match, view, closeGame }: { match: SavedMatch; view
   const s = tx.movedSheet
   const moved = view?.moved ?? null
   return (
-    <Sheet open={moved !== null} onOpenChange={() => {}} title={s.title} description={moved ? s.description(moved.here, moved.there) : undefined}>
+    <Sheet open={moved !== null} dismissible={false} onOpenChange={() => {}} title={s.title} description={moved ? s.description(moved.here, moved.there) : undefined}>
       <div className="grid gap-2 pb-1">
         <Button onClick={closeGame} className={primary}>
           {s.close}

@@ -13,7 +13,9 @@ import { newKey, toHex } from "./keys.ts"
 // "Schreiberwechsel"): the writing device shows a handoff code, the other device asks to take
 // over, both show the same check code, and only the person at the writing device sends the match
 // on its way. It stops writing once the other device confirmed it has the match; without that
-// confirmation the game simply stays here.
+// confirmation the game simply stays here. An offer can be called off (close) until the package
+// is made; from then on the other device may have the match at any moment, so the screen keeps
+// the offer open until "done" or the wait for it runs out.
 
 const HANDOFF_FLOW: ChannelFlow<HandoffMessage> = { plaintext: handoffPlaintext, template: handoffTemplate, parse: parseHandoffEvent }
 
@@ -71,6 +73,8 @@ export async function offerHandoff(local: string, onChange: (offer: HandoffOffer
       set({ step: "waiting", code, expires })
     }
   })
+  // Tells the asking device that the match stays here.
+  const abort = (to: string) => channel.send(to, { t: "abort", sid, reason: "declined" }).catch(() => {})
   set({ step: "waiting", code, expires })
 
   return {
@@ -78,27 +82,37 @@ export async function offerHandoff(local: string, onChange: (offer: HandoffOffer
       const to = taker
       if (!to || sent) return
       set({ step: "sending" })
-      void packBoard(local).then((data) => {
-        if (utf8Length(JSON.stringify(data)) > MAX_HANDOFF_PACKAGE_BYTES) return set({ step: "failed", reason: "too-long" })
-        sent = packageHash(data)
-        stopSending = repeat(() => channel.send(to, { t: "game", sid, data }))
-        // No confirmation: the other device may not have it, so the game goes on here.
-        waiting = setTimeout(() => {
-          stop()
-          sent = null
-          set({ step: "failed", reason: "silent" })
-        }, DELIVERY_WAIT_MS)
-      })
+      void packBoard(local).then(
+        (data) => {
+          // Called off while the package was being made: nothing has left this device.
+          if (closed) return
+          if (utf8Length(JSON.stringify(data)) > MAX_HANDOFF_PACKAGE_BYTES) return set({ step: "failed", reason: "too-long" })
+          sent = packageHash(data)
+          stopSending = repeat(() => channel.send(to, { t: "game", sid, data }))
+          // No confirmation: the other device may not have it, so the game goes on here.
+          waiting = setTimeout(() => {
+            stop()
+            sent = null
+            set({ step: "failed", reason: "silent" })
+          }, DELIVERY_WAIT_MS)
+        },
+        // The match stopped being live here meanwhile (another device took it): nothing to send.
+        () => set({ step: "failed", reason: "silent" }),
+      )
     },
     decline() {
       const to = taker
       if (!to || sent) return
       taker = null
-      void channel.send(to, { t: "abort", sid, reason: "declined" }).catch(() => {})
+      void abort(to)
       set({ step: "waiting", code, expires })
     },
     close() {
       closed = true
+      // A device still asking hears that the match stays here. Once the package is on its way,
+      // the other device may already have it: that is for the match itself to show (lib/live/
+      // board.ts noticeTakeover), not for this offer.
+      if (taker && !sent) void abort(taker)
       stop()
       clearTimeout(expiry)
       channel.close()
