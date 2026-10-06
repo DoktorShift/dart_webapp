@@ -72,7 +72,6 @@ export const badgesScreensEn: Widen<typeof badgesScreensDe> = {
   detail: {
     self: "Self-earned",
     onDevice: "Reached on this device",
-    from: (issuer: string) => `From ${issuer}`,
     meaning: "Meaning",
     condition: "Condition",
     earnedAt: "Reached on",
@@ -82,7 +81,6 @@ export const badgesScreensEn: Widen<typeof badgesScreensDe> = {
     issuerUnknown: "No name",
     result: "Result",
     resultElsewhere: "Game on another device",
-    note: "Reason",
     visibility: "Visibility",
     inProfile: "In your profile",
     onlyHere: "Only on this device",

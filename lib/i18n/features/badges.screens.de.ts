@@ -78,7 +78,6 @@ export const badgesScreensDe = {
   detail: {
     self: "Selbst erreicht",
     onDevice: "Auf diesem Gerät erreicht",
-    from: (issuer: string) => `Von ${issuer}`,
     meaning: "Bedeutung",
     condition: "Bedingung",
     earnedAt: "Erreicht am",
@@ -88,7 +87,6 @@ export const badgesScreensDe = {
     issuerUnknown: "Ohne Namen",
     result: "Ergebnis",
     resultElsewhere: "Spiel auf einem anderen Gerät",
-    note: "Begründung",
     visibility: "Sichtbarkeit",
     inProfile: "Im Profil",
     onlyHere: "Nur auf diesem Gerät",
