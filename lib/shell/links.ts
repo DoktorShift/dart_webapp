@@ -16,6 +16,10 @@ export const LINK_KINDS: readonly LinkKind[] = ["p", "watch", "club", "tournamen
 //   wallet-return  a wallet app that created a connection (NWC deep link), callback "#wallet-return"
 const ANSWERS: readonly LinkKind[] = ["signer-return", "wallet-return"]
 
+// An answer goes back to where the request was made; it opens no screen of its own, so setup or
+// a game that is open stay as they are.
+export const isAnswerLink = (kind: LinkKind): boolean => ANSWERS.includes(kind)
+
 export interface AppLink {
   kind: LinkKind
   // Exactly as it appeared after "<kind>=" (still percent-encoded where the sender encoded it).

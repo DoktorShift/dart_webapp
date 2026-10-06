@@ -1,13 +1,14 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useSyncExternalStore } from "react"
 import { exchangeRate } from "@/lib/nostr/wallet"
 import { loadJournal, recoverInterrupted, type PaymentEntry } from "@/lib/payments/journal"
 import { loadWallet, type WalletInfo } from "@/lib/payments/wallet"
+import { returnedConnection, subscribeReturned, type ReturnedConnection } from "@/lib/payments/wallet-return"
 import { useStored } from "@/lib/storage/hooks"
 
-// React access to the wallet connection and the payment journal. Each hook reads once, then
-// follows changes from this tab and from other tabs.
+// React access to the wallet connection, the payment journal and a wallet app's answer. The
+// stored ones read once, then follow changes from this tab and from other tabs.
 
 const readWallet = () => loadWallet().catch(() => null)
 
@@ -24,6 +25,11 @@ const readJournal = async () => {
 
 // Every payment on this device, newest first; undefined until read.
 export const useJournal = (): PaymentEntry[] | undefined => useStored("payments", readJournal)[0]
+
+const noReturn = () => null
+
+// The connection a wallet app sent back ("Wallet-App öffnen"), until it is confirmed or dismissed.
+export const useReturnedConnection = (): ReturnedConnection | null => useSyncExternalStore(subscribeReturned, returnedConnection, noReturn)
 
 // The euro price of a bitcoin and when it was fetched, for "≈ 0,32 €" next to an amount. Null
 // while unknown and when it can't be had: the approximation is then just left out (decision 0001

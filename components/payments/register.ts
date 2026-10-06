@@ -4,7 +4,7 @@ import { lazy } from "react"
 import { lazyScreen } from "@/components/nav/lazy-screen"
 import { whenInUse } from "@/components/payments/gate"
 import { PAYMENT_SCREENS } from "@/components/payments/screens"
-import { acceptWalletReturn } from "@/lib/payments/wallet-return"
+import { acceptWalletReturn, returnedConnection, returnsWatched } from "@/lib/payments/wallet-return"
 import { resultOffer, STAKE_EXTRA } from "@/lib/payments/stake"
 import { registerLinkHandler, registerScreen, registerSlotItem } from "@/lib/shell/registry"
 
@@ -37,10 +37,13 @@ registerSlotItem("profile.actions", "payments.congratulate", lazy(() => import("
 
 // A wallet app came back with a new connection ("Wallet-App öffnen"). It counts only as the
 // answer to this device's own request (lib/payments/wallet-return.ts), and is kept only after the
-// person confirmed it on the connect screen. The connection leaves the address at once, also when
-// the wallet put it into the query.
+// person confirmed it. The connection leaves the address at once, also when the wallet put it
+// into the query. A requested connection is shown where it was asked for: by the connect panel on
+// screen, or by the payment sheet of the game it was asked from, which that game's result opens
+// again. Only otherwise is the connect screen opened for it.
 registerLinkHandler("wallet-return", (link, nav) => {
   const answer = acceptWalletReturn(link.payload, window.location.search)
   if (/[?&]value=/.test(window.location.search)) window.history.replaceState(window.history.state, "", window.location.pathname)
-  if (answer) nav.push(PAYMENT_SCREENS.connect, { returned: answer }, { tab: "profile" })
+  if (answer === "unrequested") nav.push(PAYMENT_SCREENS.connect, { returned: "unrequested" }, { tab: "profile" })
+  else if (answer === "connection" && !returnedConnection()?.from && !returnsWatched()) nav.push(PAYMENT_SCREENS.connect, {}, { tab: "profile" })
 })

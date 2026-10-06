@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { ChevronRight } from "lucide-react"
 import {
   AlertDialog,
@@ -19,6 +19,7 @@ import { FitText } from "@/components/fit-text"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { AmountPicker } from "@/components/payments/amount-picker"
 import { CongratulateFlow } from "@/components/payments/congratulate"
+import { RequestOriginContext } from "@/components/payments/connect"
 import { StatusIcon, TONE_COLORS, entryStatus, type Tone } from "@/components/payments/entry-status"
 import { useFormat, type Format } from "@/components/payments/format"
 import { PayFlow } from "@/components/payments/pay-flow"
@@ -28,9 +29,10 @@ import { PaymentSignet } from "@/components/payments/signet"
 import type { MatchPlayer } from "@/lib/game/types"
 import { PAYMENTS_TEXTS, type PaymentTexts } from "@/lib/i18n/features/payments.screens"
 import { useSession } from "@/lib/profile/session"
-import { useJournal, useWallet } from "@/lib/payments/hooks"
+import { useJournal, useReturnedConnection, useWallet } from "@/lib/payments/hooks"
 import { actions, isDone, isOpen, noteSettled, type PaymentEntry } from "@/lib/payments/journal"
 import { deviceSide, AMOUNT_PRESETS, resultOffer, type StakeParties } from "@/lib/payments/stake"
+import type { RequestOrigin } from "@/lib/payments/wallet-return"
 import type { FinishedMatch } from "@/lib/shell/registry"
 import { usePlayers } from "@/lib/storage/hooks"
 import { cn } from "@/lib/utils"
@@ -112,8 +114,18 @@ function StakeAction({ match, parties, entry }: { match: FinishedMatch; parties:
     setMode(null)
   }
 
+  // "Wallet-App öffnen" in this sheet names it as the place of the request; the wallet app's
+  // answer opens the sheet again on that side, also after a fresh page load.
+  const origin = useMemo<RequestOrigin>(() => (shown ? { match: match.id, side: shown } : { match: match.id }), [match.id, shown])
+  const returned = useReturnedConnection()
+  useEffect(() => {
+    if (returned?.from?.match !== match.id) return
+    setMode(returned.from.side ?? null)
+    setOpen(true)
+  }, [returned, match.id])
+
   return (
-    <>
+    <RequestOriginContext.Provider value={origin}>
       <PaymentRow label={stakeLabel(tx, format, parties, side, settled, landscape)} tone={settled && entryStatus(tx, settled).tone} onClick={() => setOpen(true)} />
       <Sheet open={open} onOpenChange={(next) => (next ? setOpen(true) : close())} title={t.payments.stake.title} description={landscape ? undefined : s.agreed(parties.payer.name, amount, parties.payee.name)}>
         <SheetBody>
@@ -159,7 +171,7 @@ function StakeAction({ match, parties, entry }: { match: FinishedMatch; parties:
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </RequestOriginContext.Provider>
   )
 }
 
@@ -187,8 +199,15 @@ function FreeAction({ match }: { match: FinishedMatch }) {
     setConfirmed(false)
   }
 
+  // A wallet app's answer to a request from this sheet opens it again (see StakeAction).
+  const origin = useMemo<RequestOrigin>(() => ({ match: match.id }), [match.id])
+  const returned = useReturnedConnection()
+  useEffect(() => {
+    if (returned?.from?.match === match.id) setOpen(true)
+  }, [returned, match.id])
+
   return (
-    <>
+    <RequestOriginContext.Provider value={origin}>
       <PaymentRow label={landscape ? f.briefButton : f.button} onClick={() => setOpen(true)} />
       <Sheet open={open} onOpenChange={(next) => (next ? setOpen(true) : close())} title={choice?.kind === "congratulate" ? tx.congratulate.title(choice.player.name) : f.title}>
         <SheetBody>
@@ -221,7 +240,7 @@ function FreeAction({ match }: { match: FinishedMatch }) {
           </Button>
         )}
       </Sheet>
-    </>
+    </RequestOriginContext.Provider>
   )
 }
 

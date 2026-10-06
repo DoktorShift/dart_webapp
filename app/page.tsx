@@ -40,7 +40,7 @@ import {
   type AppSettings,
 } from "@/lib/game/storage"
 import type { GameType, MatchConfig, SavedMatch } from "@/lib/game/types"
-import { parseHash, type AppLink } from "@/lib/shell/links"
+import { isAnswerLink, parseHash, type AppLink } from "@/lib/shell/links"
 import { TABS, depthOf, initialNavState, makeEntry, navReducer, type TabId } from "@/lib/shell/nav"
 import { canOpenLink, dispatchLink, getScreen, hasScreen, type ShellNavigator } from "@/lib/shell/registry"
 
@@ -173,12 +173,16 @@ export default function DartScorer() {
   )
 
   // An app link (/#club=…) opens its screen in its tab. Setup is left; a running game is kept
-  // as "paused", exactly as "save and leave" does, and waits on the Play tab.
+  // as "paused", exactly as "save and leave" does, and waits on the Play tab. Another app's answer
+  // (a signer, a wallet app) goes back to where it was asked for: its handler decides, and setup
+  // or the game stay open.
   const openLink = useCallback(
     (link: AppLink) => {
       if (!canOpenLink(link)) return
-      if (screenRef.current === "game") setMatch((m) => (m && m.status === "playing" ? { ...m, status: "paused" } : m))
-      if (screenRef.current !== "tabs") go("tabs")
+      if (!isAnswerLink(link.kind)) {
+        if (screenRef.current === "game") setMatch((m) => (m && m.status === "playing" ? { ...m, status: "paused" } : m))
+        if (screenRef.current !== "tabs") go("tabs")
+      }
       dispatchLink(link, navigator, "address")
     },
     [go, navigator],
@@ -216,7 +220,8 @@ export default function DartScorer() {
 
   // Restore settings and any game in progress. A game that was open when the page
   // reloaded (or the phone dropped the tab) goes straight back to the board, unless the app was
-  // opened with a link: then the game waits on the Play tab and the link opens.
+  // opened with a link that opens a screen: then the game waits on the Play tab and the link
+  // opens. Another app's answer opens no screen, so the game comes back as usual.
   useEffect(() => {
     if (typeof CSS === "undefined" || !CSS.supports("container-type: size")) {
       setUnsupported(true)
@@ -226,7 +231,7 @@ export default function DartScorer() {
     setSettings(loadSettings())
     setLastGame(loadLastGame())
     const link = parseHash(window.location.hash)
-    const linkOpens = link !== null && canOpenLink(link)
+    const linkOpens = link !== null && canOpenLink(link) && !isAnswerLink(link.kind)
     if (saved) {
       if (saved.status === "playing" && !linkOpens) {
         setMatch(saved)

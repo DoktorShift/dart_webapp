@@ -1,6 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { MAX_PAYLOAD_LENGTH, buildLink, parseAppLink, parseHash } from "../lib/shell/links.ts"
+import { MAX_PAYLOAD_LENGTH, buildLink, isAnswerLink, parseAppLink, parseHash } from "../lib/shell/links.ts"
 
 // Expected values follow the link format in docs/decisions/0002 §9 and the task card P0.02:
 // "#<kind>=<payload>", payload opaque, only on the app's own start page.
@@ -44,6 +44,12 @@ test("a wallet app's answer arrives the same way", () => {
   assert.deepEqual(parseHash("#wallet-return"), { kind: "wallet-return", payload: "" })
   assert.deepEqual(parseHash("#wallet-return?value=nostr%2Bwalletconnect"), { kind: "wallet-return", payload: "?value=nostr%2Bwalletconnect" })
   assert.equal(parseHash("#wallet-returned"), null)
+})
+
+test("answers of other apps open no screen of their own; every other link does", () => {
+  assert.equal(isAnswerLink("signer-return"), true)
+  assert.equal(isAnswerLink("wallet-return"), true)
+  for (const kind of ["p", "watch", "club", "tournament", "pair", "board"] as const) assert.equal(isAnswerLink(kind), false, kind)
 })
 
 test("scanned or pasted links count only for this app's start page", () => {

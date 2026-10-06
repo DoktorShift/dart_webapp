@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react"
 import { Smartphone } from "lucide-react"
 import { InlineStatus } from "@/components/common/inline-status"
 import { QRScanner, type ScanVerdict } from "@/components/common/qr-scanner"
@@ -12,10 +12,10 @@ import { problemText } from "@/components/payments/problem"
 import { PaymentSignet } from "@/components/payments/signet"
 import { capabilityText, WalletCard, WalletRights } from "@/components/payments/wallet-details"
 import { PAYMENTS_TEXTS } from "@/lib/i18n/features/payments.screens"
-import { useWallet } from "@/lib/payments/hooks"
+import { useReturnedConnection, useWallet } from "@/lib/payments/hooks"
 import { scanKind } from "@/lib/payments/invoices"
 import { checkWallet, connectNewWallet, keepWallet, type CheckedWallet, type WalletInfo } from "@/lib/payments/wallet"
-import { forgetReturnedConnection, returnedConnection, walletAppLink } from "@/lib/payments/wallet-return"
+import { forgetReturnedConnection, walletAppLink, watchReturns, type RequestOrigin } from "@/lib/payments/wallet-return"
 import type { ScreenProps } from "@/lib/shell/registry"
 
 // "Wallet verbinden" (PLAN.md: "Wallet verbinden" → QR scannen oder Verbindung einfügen →
@@ -24,10 +24,18 @@ import type { ScreenProps } from "@/lib/shell/registry"
 // back (lib/payments/wallet-return.ts); what it sends is shown for the person to confirm before
 // anything is kept. Used as a screen in Zahlungen and inside the payment sheets (there `titled`,
 // under the sheet's own title), so a payment that needed a wallet carries on right after.
+
+// Where a panel's "Wallet-App öffnen" request is made: a result's payment sheet names its game
+// and side, so the wallet app's answer opens that sheet again, also after a fresh page load.
+// Without it the connect screen shows the answer (./register.ts).
+export const RequestOriginContext = createContext<RequestOrigin | null>(null)
+
 export function ConnectPanel({ onConnected, onCancel, titled = false }: { onConnected: (info: WalletInfo) => void; onCancel?: () => void; titled?: boolean }) {
   const t = useT()
   const tx = useAreaT(PAYMENTS_TEXTS)
   const c = tx.connect
+  const origin = useContext(RequestOriginContext)
+  const returned = useReturnedConnection()
   const [connecting, setConnecting] = useState(false)
   const [withApps, setWithApps] = useState(false)
   const onConnectedRef = useRef(onConnected)
@@ -35,9 +43,18 @@ export function ConnectPanel({ onConnected, onCancel, titled = false }: { onConn
     onConnectedRef.current = onConnected
   })
 
+  // While on screen, the panel shows a wallet app's answer by itself.
+  useEffect(() => watchReturns(), [])
+
   // Only phones and tablets have wallet apps to open; known only in the browser.
   useEffect(() => {
     setWithApps(window.matchMedia("(pointer: coarse)").matches)
+  }, [])
+
+  // The wallet is kept: the panel stays busy until whatever showed it goes on.
+  const finish = useCallback((info: WalletInfo) => {
+    setConnecting(true)
+    onConnectedRef.current(info)
   }, [])
 
   // A message when it didn't work, nothing when connected.
@@ -45,14 +62,13 @@ export function ConnectPanel({ onConnected, onCancel, titled = false }: { onConn
     async (uri: string): Promise<string | undefined> => {
       setConnecting(true)
       try {
-        onConnectedRef.current(await connectNewWallet(uri))
+        finish(await connectNewWallet(uri))
       } catch (error) {
-        return problemText(tx, error)
-      } finally {
         setConnecting(false)
+        return problemText(tx, error)
       }
     },
-    [tx],
+    [finish, tx],
   )
 
   const onResult = (text: string): ScanVerdict | Promise<ScanVerdict> => {
@@ -61,6 +77,8 @@ export function ConnectPanel({ onConnected, onCancel, titled = false }: { onConn
     if (kind !== "wallet") return c.notWallet
     return connect(text)
   }
+
+  if (returned) return <ConfirmReturned uri={returned.uri} onConnected={finish} onDismiss={forgetReturnedConnection} />
 
   return (
     <div className="flex flex-col">
@@ -78,7 +96,7 @@ export function ConnectPanel({ onConnected, onCancel, titled = false }: { onConn
           {/* A new request each time: only its answer is taken (lib/payments/wallet-return.ts). */}
           <Button
             variant="secondary"
-            onClick={() => window.location.assign(walletAppLink(window.location.origin))}
+            onClick={() => window.location.assign(walletAppLink(window.location.origin, origin))}
             className="h-12 w-full gap-2 whitespace-normal rounded-xl text-[1.0625rem] font-semibold text-primary"
           >
             <Smartphone className="h-5 w-5 shrink-0" aria-hidden="true" />
@@ -111,7 +129,7 @@ export function ConnectedView({ info }: { info: WalletInfo }) {
 
 // "Diese Wallet verbinden?": the connection a wallet app sent back, checked with the wallet and
 // shown with its name and rights, kept only when the person confirms. Says when it would replace
-// the wallet connected now.
+// the wallet connected now. The answer is let go once it is kept or dismissed.
 function ConfirmReturned({ uri, onConnected, onDismiss }: { uri: string; onConnected: (info: WalletInfo) => void; onDismiss: () => void }) {
   const t = useT()
   const tx = useAreaT(PAYMENTS_TEXTS)
@@ -136,6 +154,7 @@ function ConfirmReturned({ uri, onConnected, onDismiss }: { uri: string; onConne
     setKeeping(true)
     try {
       onConnected(await keepWallet(wallet))
+      onDismiss()
     } catch (error) {
       setProblem(problemText(tx, error))
       setKeeping(false)
@@ -178,33 +197,31 @@ function ConfirmReturned({ uri, onConnected, onDismiss }: { uri: string; onConne
   )
 }
 
-// Zahlungen › Wallet verbinden. Opened by a wallet app's answer too (params.returned): one to this
-// device's request is shown for confirmation, any other is refused and said so (and with a wallet
-// connected, nothing else is offered).
+// Zahlungen › Wallet verbinden. A wallet app's answer shows up in the panel by itself; one nobody
+// asked for here is refused and said so (params.returned, and with a wallet connected nothing
+// else is offered). Once a wallet is connected, here or in another tab, it shows "Verbunden".
 export default function ConnectScreen({ params }: ScreenProps) {
   const t = useT()
   const tx = useAreaT(PAYMENTS_TEXTS)
   const nav = useNav()
   const wallet = useWallet()
-  const [returned] = useState(() => (params.returned === "connection" ? returnedConnection() : null))
+  const returned = useReturnedConnection()
   const [connected, setConnected] = useState<WalletInfo | null>(null)
-  const refused = params.returned === "unrequested"
+  const refused = params.returned === "unrequested" && !connected
+  if (wallet === undefined) return null
 
-  // The connection lives on in this screen only.
-  useEffect(() => forgetReturnedConnection(), [])
-
-  if (connected) {
+  // Not while an answer still waits to be confirmed: it may replace the wallet connected now.
+  const shown = connected ?? (returned ? null : wallet)
+  if (shown && !refused) {
     return (
       <>
-        <ConnectedView info={connected} />
+        <ConnectedView info={shown} />
         <Button onClick={() => nav.pop()} className="mt-8 h-12 w-full rounded-xl text-[1.0625rem] font-semibold">
           {t.common.done}
         </Button>
       </>
     )
   }
-  if (returned) return <ConfirmReturned uri={returned} onConnected={setConnected} onDismiss={() => nav.pop()} />
-  if (wallet === undefined) return null
   return (
     <>
       <PaymentSignet size="large" className="mx-auto mb-5 mt-2 flex w-fit" />
