@@ -114,7 +114,8 @@ export const liveScreensDe = {
     refused: "Die Anfrage wurde nicht bestätigt. Wähle deinen Platz noch einmal.",
     seated: (name: string) => `Du spielst als ${name}`,
     leave: "Anderen Platz wählen",
-    freed: "Das Board hat dich von diesem Platz getrennt.",
+    leaveRefused: "Die Anfrage wurde nicht bestätigt. Du bleibst auf deinem Platz.",
+    freed: "Das Board hat dich von deinem Platz getrennt.",
     otherProfile: "Du bist jetzt mit einem anderen Profil angemeldet als beim Verbinden. Bestätigen kann nur das Profil, mit dem du verbunden bist.",
   },
 

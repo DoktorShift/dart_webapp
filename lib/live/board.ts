@@ -129,6 +129,7 @@ async function foundBoard(match: SavedMatch): Promise<Board> {
     n: 0,
     snapshotAt: 0,
     seats: match.config.players.map(() => null),
+    seatAt: 0,
     result: null,
     outbox: [founding],
   }
@@ -435,9 +436,10 @@ export function seatPlayer(local: string, seat: number, holder: SeatHolder | nul
   const board = boards.get(local)
   if (!board || board.ended) return Promise.reject(new Error("the match is not live here"))
   return step(board, async () => {
-    const event = await sign(board, board.keys.authority, "match.seat", { seat, player: holder }, createdAt(), {})
+    const at = createdAt(board.record.seatAt)
+    const event = await sign(board, board.keys.authority, "match.seat", { seat, player: holder }, at, {})
     const seats = board.record.seats.map((h, i) => (i === seat ? holder : h))
-    await persist(board, { seats, outbox: [...board.record.outbox, event] })
+    await persist(board, { seats, seatAt: at, outbox: [...board.record.outbox, event] })
     refreshView(board)
     void flush(board)
   })
@@ -515,6 +517,7 @@ export type HandoffPackage = {
   n: number
   snapshotAt: number
   seats: (SeatHolder | null)[]
+  seatAt: number
   outbox: SignedEvent[]
   game: { id: string; config: SavedMatch["config"]; throws: string; startedAt: string; acknowledgedLegs: number }
 }
@@ -535,6 +538,7 @@ export async function packBoard(local: string): Promise<HandoffPackage> {
     n: record.n,
     snapshotAt: record.snapshotAt,
     seats: record.seats,
+    seatAt: record.seatAt,
     outbox: record.outbox,
     game: { id: game.id, config: game.config, throws: encodeThrows(game.throws), startedAt: game.startedAt, acknowledgedLegs: game.acknowledgedLegs },
   }
@@ -580,6 +584,7 @@ export async function adoptBoard(data: unknown): Promise<SavedMatch | null> {
     n: pkg.n,
     snapshotAt: pkg.snapshotAt,
     seats: pkg.seats,
+    seatAt: pkg.seatAt,
     result: null,
     outbox: pkg.outbox,
   }
@@ -610,6 +615,7 @@ function readPackage(data: unknown): HandoffPackage | null {
     Number.isInteger(p.n) &&
     Number.isInteger(p.snapshotAt) &&
     Array.isArray(p.seats) &&
+    Number.isInteger(p.seatAt) &&
     events(p.outbox) &&
     typeof p.game?.throws === "string"
   return ok ? (p as HandoffPackage) : null

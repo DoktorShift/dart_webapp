@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Clock, Smartphone, WifiOff } from "lucide-react"
 import { InlineStatus } from "@/components/common/inline-status"
 import { readPayload } from "@/components/live/link-payload"
@@ -23,9 +23,10 @@ import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
 import { rulesSummary } from "@/lib/game/words"
 import { offeredGame } from "@/lib/live/content"
-import { giveVerdict, keepConfirmed, seatKey, visitBoard, type BoardSeats, type BoardVisit, type BoardVisitControl, type JoinedMatch } from "@/lib/live/join"
+import { giveVerdict, holdsSeat, keepConfirmed, seatKey, visitBoard, type BoardSeats, type BoardVisit, type BoardVisitControl, type JoinedMatch } from "@/lib/live/join"
 import { toHex } from "@/lib/live/keys"
 import type { Followed } from "@/lib/live/follow"
+import type { Signer } from "@/lib/nostr/types"
 import { getSigner, useSession } from "@/lib/profile/session"
 import type { ScreenProps } from "@/lib/shell/registry"
 
@@ -49,6 +50,8 @@ export default function BoardScreen({ params }: ScreenProps) {
       control.current = null
     }
   }, [link, attempt])
+  const leave = useCallback((profile: Signer | null) => control.current?.leave(profile) ?? Promise.resolve(), [])
+  const lost = useCallback(() => void control.current?.forget(), [])
 
   if (!link) return <EmptyState icon={Smartphone} title={b.invalid} />
   switch (visit.step) {
@@ -63,7 +66,7 @@ export default function BoardScreen({ params }: ScreenProps) {
     case "expired":
       return <EmptyState icon={Clock} title={b.expired} description={b.expiredText} />
     case "seated":
-      return <Seated joined={visit.joined} onLeave={() => void control.current?.leave()} />
+      return <Seated joined={visit.joined} restored={visit.restored} onLeave={leave} onLost={lost} />
     default:
       return <SeatPicker visit={visit} control={control} />
   }
@@ -92,6 +95,7 @@ function SeatPicker({ visit, control }: { visit: Extract<BoardVisit, { step: "ta
     <>
       <p className="mt-2 text-[1.0625rem] leading-snug text-muted-foreground">{rulesSummary(t, config)}</p>
       {visit.step === "table" && visit.declined && <InlineStatus tone="error" className="mt-4">{b.declined[visit.declined]}</InlineStatus>}
+      {visit.step === "table" && visit.freed && <InlineStatus className="mt-4">{b.freed}</InlineStatus>}
       {refused && <InlineStatus tone="error" className="mt-4">{b.refused}</InlineStatus>}
       <Group title={b.choose} footer={session ? b.asProfile : b.asGuest}>
         {table.seats.map((seat, i) => (
@@ -111,10 +115,23 @@ function SeatPicker({ visit, control }: { visit: Extract<BoardVisit, { step: "ta
   )
 }
 
-function Seated({ joined: initial, onLeave }: { joined: JoinedMatch; onLeave: () => void }) {
+// The seat with the game at the board. `restored`: the seat comes from this phone's memory.
+// Without `onLeave` (opened from the Play tab, no board code at hand) the seat can't be changed.
+function Seated({
+  joined: initial,
+  restored,
+  onLeave,
+  onLost,
+}: {
+  joined: JoinedMatch
+  restored: boolean
+  onLeave?: (profile: Signer | null) => Promise<void>
+  onLost: () => void
+}) {
   const tx = useAreaT(LIVE_TEXTS)
   const b = tx.board
   const [joined, setJoined] = useState(initial)
+  const [refused, setRefused] = useState(false)
   const followed = useFollowed({ match: joined.match, key: joined.key ? toHex(joined.key.secret) : null, relays: joined.relays })
   const state = followed.state
 
@@ -123,20 +140,39 @@ function Seated({ joined: initial, onLeave }: { joined: JoinedMatch; onLeave: ()
     if (state) void keepConfirmed(joined, state).then(setJoined, () => {})
   }, [state, joined])
 
-  const alias = state?.agreement.seats[joined.seat]?.alias ?? `${joined.seat + 1}`
-  // The board's record of the seat may reach this phone a moment after the board's answer: the
-  // seat counts as freed only once it was seen held and then isn't any more.
-  const holds = state?.seats[joined.seat]?.pubkey === seatKey(joined)
-  const [held, setHeld] = useState(false)
+  // The board's answer is proof enough for a seat given just now; the match shows it a moment
+  // later. A seat restored from memory counts only once the match shows this phone's key on it:
+  // the board's "taken" says nothing about whose it is. Either way, the seat is lost once the
+  // relays have told everything and the key on it is not this phone's.
+  const holds = state !== null && holdsSeat(joined, state)
+  const [held, setHeld] = useState(restored)
   if (holds && !held) setHeld(true)
-  const freed = held && !holds
+  const lost = followed.settled && held && state !== null && !holds
+  useEffect(() => {
+    if (lost) onLost()
+  }, [lost, onLost])
+
+  const leave = async () => {
+    if (!onLeave) return
+    setRefused(false)
+    try {
+      await onLeave(joined.profile ? await getSigner() : null)
+    } catch {
+      setRefused(true)
+    }
+  }
+
+  const alias = state?.agreement.seats[joined.seat]?.alias ?? `${joined.seat + 1}`
   return (
     <>
       <p className="mt-2 text-[1.0625rem] font-semibold leading-snug [overflow-wrap:anywhere]">{b.seated(alias)}</p>
-      <MatchView followed={followed} compact={state?.result != null} actions={freed ? <InlineStatus className="mt-4">{b.freed}</InlineStatus> : <Verdict joined={joined} followed={followed} />} />
-      <Button variant="ghost" onClick={onLeave} className="mt-4 h-11 w-full rounded-xl text-[1.0625rem] text-primary hover:bg-primary/10 hover:text-primary">
-        {b.leave}
-      </Button>
+      <MatchView followed={followed} compact={state?.result != null} actions={<Verdict joined={joined} followed={followed} />} />
+      {refused && <InlineStatus tone="error" className="mt-4">{b.leaveRefused}</InlineStatus>}
+      {onLeave && (
+        <Button variant="ghost" onClick={() => void leave()} className="mt-4 h-11 w-full rounded-xl text-[1.0625rem] text-primary hover:bg-primary/10 hover:text-primary">
+          {b.leave}
+        </Button>
+      )}
     </>
   )
 }
@@ -157,7 +193,9 @@ function Verdict({ joined, followed }: { joined: JoinedMatch; followed: Followed
   if (!result) return last?.status === "void" ? <InlineStatus className="mt-4">{r.withdrawn}</InlineStatus> : null
   if (joined.profile && session !== undefined && session?.pubkey !== joined.profile) return <InlineStatus className="mt-4">{tx.board.otherProfile}</InlineStatus>
 
-  const mine = state.confirmations[joined.seat]
+  // The seat's verdict counts as this phone's only from its own key (an earlier holder's doesn't).
+  const given = state.confirmations[joined.seat]
+  const mine = given?.pubkey === seatKey(joined) ? given : undefined
   const corrected = !mine && state.stale.some((v) => v.seat === joined.seat)
   const send = async (verdict: "confirm" | "dispute") => {
     setSending(true)

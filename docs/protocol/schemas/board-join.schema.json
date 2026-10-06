@@ -279,6 +279,60 @@
           "maxLength": 32,
           "pattern": "^[0-9a-f]{32}$",
           "description": "Session id of the board QR"
+        },
+        "profile": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 64,
+              "maxLength": 64,
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "pubkey": {
+              "type": "string",
+              "minLength": 64,
+              "maxLength": 64,
+              "pattern": "^[0-9a-f]{64}$",
+              "description": "Pubkey, lowercase hex"
+            },
+            "created_at": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            "kind": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "maxLength": 1024
+                },
+                "minItems": 1,
+                "maxItems": 16
+              },
+              "maxItems": 32
+            },
+            "content": {
+              "type": "string",
+              "maxLength": 8192
+            },
+            "sig": {
+              "type": "string",
+              "minLength": 128,
+              "maxLength": 128,
+              "pattern": "^[0-9a-f]{128}$",
+              "description": "Schnorr signature"
+            }
+          },
+          "required": ["id", "pubkey", "created_at", "kind", "tags", "content", "sig"],
+          "additionalProperties": true
         }
       },
       "required": ["t", "sid"],

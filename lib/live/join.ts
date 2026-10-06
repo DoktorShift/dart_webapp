@@ -10,7 +10,7 @@ import { buildRecord } from "../protocol/records.ts"
 import { createdAtAfter, type SignedEvent } from "../protocol/tags.ts"
 import { archiveFinished, unarchive } from "../storage/archive.ts"
 import { listPlayers } from "../storage/players.ts"
-import { openChannel, repeat, REPEAT_MS, type Channel } from "./channel.ts"
+import { openChannel, repeat, type Channel } from "./channel.ts"
 import { resultGame } from "./content.ts"
 import { fromHex, keyOf, newKey, sealToMatch, toHex, type MatchKey } from "./keys.ts"
 import { BOARD_FLOW } from "./seating.ts"
@@ -20,15 +20,21 @@ import { dropJoined, loadJoined, openKeys, saveJoined, sealKeys, type JoinedReco
 // board's match and seats, take a seat as a guest or with the profile, and later give the seat's
 // verdict on the result. The phone talks to the board through a one-time key; the profile only
 // signs (a claim on that key, later a verdict). A guest's seat belongs to a key this phone made
-// for the match and keeps, so the guest can come back to the same seat and confirm too.
+// for the match and keeps, so the guest can come back to the same seat and confirm too. Whether
+// a remembered seat is still this phone's only the match says (holdsSeat): the board's `taken`
+// tells that someone holds it, not who.
 
 export type BoardSeats = Extract<BoardMessage, { t: "table" }>
 
 export type BoardVisit =
   | { step: "looking" }
-  | { step: "table"; table: BoardSeats; declined?: "full" | "taken" | "expired" | "declined" }
+  // `declined`: why the last join didn't work. `freed`: the remembered seat is no longer this
+  // phone's, so it is up for choosing again.
+  | { step: "table"; table: BoardSeats; declined?: "full" | "taken" | "expired" | "declined"; freed?: true }
   | { step: "joining"; table: BoardSeats; seat: number }
-  | { step: "seated"; joined: JoinedMatch }
+  // `restored`: the seat comes from this phone's memory, not from an answer of the board just
+  // now; whether it still holds, the match has to show.
+  | { step: "seated"; joined: JoinedMatch; restored: boolean }
   // The board didn't answer (switched off, another network, the code ran out meanwhile).
   | { step: "silent" }
   | { step: "expired" }
@@ -52,8 +58,12 @@ const ANSWER_WAIT_MS = 20_000
 export interface BoardVisitControl {
   // `profile`: the signed-in profile's signer; null joins as a guest.
   join: (seat: number, profile: Signer | null) => Promise<void>
-  // Gives the seat back (a wrong seat chosen) and looks at the seats again.
-  leave: () => Promise<void>
+  // Gives the seat back (a wrong seat chosen) and looks at the seats again. A profile signs a
+  // claim for it, as it did to join; a guest's own key for the match sends it.
+  leave: (profile: Signer | null) => Promise<void>
+  // The seat is no longer this phone's (the board freed it, someone else has it): forgets it
+  // and looks at the seats again.
+  forget: () => Promise<void>
   close: () => void
 }
 
@@ -64,7 +74,10 @@ export function visitBoard(link: BoardLink, onChange: (visit: BoardVisit) => voi
   let table: BoardSeats | null = null
   let pending: { seat: number; profile: string | null } | null = null
   let seated: JoinedMatch | null = null
+  // A seat just given back: not taken up again from memory; forgotten once the board shows it free.
+  let left: JoinedMatch | null = null
   let declined: Extract<BoardMessage, { t: "decline" }>["reason"] | undefined
+  let freed = false
   let closed = false
 
   const set = (visit: BoardVisit) => {
@@ -76,16 +89,17 @@ export function visitBoard(link: BoardLink, onChange: (visit: BoardVisit) => voi
     clearTimeout(waiting)
   }
   // Sends until the board answers, or says it stayed silent.
-  const ask = (message: BoardMessage) => {
+  const ask = (send: (to: Channel<BoardMessage>) => Promise<void>) => {
     stop()
     const current = channel
     if (!current) return
-    stopSending = repeat(() => current.send(link.pubkey, message))
+    stopSending = repeat(() => send(current))
     waiting = setTimeout(() => {
       stop()
       set({ step: "silent" })
     }, ANSWER_WAIT_MS)
   }
+  const look = (to: Channel<BoardMessage>) => to.send(link.pubkey, { t: "look", sid: link.sid })
 
   function talkWith(key: MatchKey) {
     if (channel?.key.pubkey === key.pubkey) return
@@ -93,32 +107,43 @@ export function visitBoard(link: BoardLink, onChange: (visit: BoardVisit) => voi
     channel = openChannel(BOARD_FLOW, key, link.relays, (message) => void answer(message))
   }
 
+  // The profile's claim on the phone's current key, for a join or a leave.
+  const claimWith = (profile: Signer, to: Channel<BoardMessage>) =>
+    profile.signEvent(claimTemplate({ board: link.pubkey, sid: link.sid, key: to.key.pubkey, created_at: nowSeconds() }))
+
   async function answer(message: BoardMessage) {
     if (message.sid !== link.sid || closed) return
     if (message.t === "table" && !pending && !seated) {
       stop()
       table = message
-      // This phone sat here before (a fresh code, a reload): back to its seat while the board
-      // still has it taken.
-      const known = await joinedMatch(message.match)
+      // This phone sat here before (a fresh code, a reload) and someone still holds the seat:
+      // back to it for now; the match shows whether it is really this phone's.
+      const known = left ? null : await loadSeat(message.match)
       if (known && message.seats[known.seat]?.taken) {
         seated = known
-        return set({ step: "seated", joined: known })
+        return set({ step: "seated", joined: known, restored: true })
       }
       if (known) await dropJoined(known.match).catch(() => {})
-      set({ step: "table", table, ...(declined ? { declined } : {}) })
+      if (left) {
+        // The leave reached the board: the key that held the seat is no longer needed.
+        if (!message.seats[left.seat]?.taken) await dropJoined(left.match).catch(() => {})
+        left = null
+      }
+      set({ step: "table", table, ...(declined ? { declined } : {}), ...(freed ? { freed } : {}) })
     } else if (message.t === "seat" && pending && table) {
       stop()
       const key = message.key ? await keyOf(fromHex(message.key)) : null
       const guest = pending.profile ? null : (channel?.key ?? null)
       seated = await rememberJoined({ match: table.match, relays: link.relays, seat: message.seat, profile: pending.profile, key, guest, archived: null })
       pending = null
-      set({ step: "seated", joined: seated })
+      left = null
+      freed = false
+      set({ step: "seated", joined: seated, restored: false })
     } else if (message.t === "decline" && pending) {
       // The seats changed meanwhile: look again, and say why this one didn't work.
       pending = null
       declined = message.reason
-      ask({ t: "look", sid: link.sid })
+      ask(look)
     }
   }
 
@@ -129,7 +154,7 @@ export function visitBoard(link: BoardLink, onChange: (visit: BoardVisit) => voi
     void newKey().then((key) => {
       talkWith(key)
       set({ step: "looking" })
-      ask({ t: "look", sid: link.sid })
+      ask(look)
     })
 
   return {
@@ -141,10 +166,11 @@ export function visitBoard(link: BoardLink, onChange: (visit: BoardVisit) => voi
       const known = profile ? null : await loadJoined(shown.match).catch(() => null)
       const guestKey = known && !known.profile ? (await openKeys<JoinedSecrets>(known.keys))?.guest : undefined
       if (guestKey) talkWith(await keyOf(fromHex(guestKey)))
-      if (!channel) return
+      const current = channel
+      if (!current) return
       let claim: SignedEvent | undefined
       try {
-        claim = profile ? await profile.signEvent(claimTemplate({ board: link.pubkey, sid: link.sid, key: channel.key.pubkey, created_at: nowSeconds() })) : undefined
+        claim = profile ? await claimWith(profile, current) : undefined
       } catch (error) {
         // Refused or not reached in the signer: the seats stay as they were.
         set({ step: "table", table: shown })
@@ -152,18 +178,32 @@ export function visitBoard(link: BoardLink, onChange: (visit: BoardVisit) => voi
       }
       pending = { seat, profile: claim?.pubkey ?? null }
       declined = undefined
-      ask({ t: "join", sid: link.sid, seat, confirm: true, ...(claim ? { profile: claim } : {}) })
+      const message: BoardMessage = { t: "join", sid: link.sid, seat, confirm: true, ...(claim ? { profile: claim } : {}) }
+      ask((to) => to.send(link.pubkey, message))
     },
-    async leave() {
+    async leave(profile) {
+      const seat = seated
+      if (!seat) return
+      // The seat goes back from the key that holds it. No answer comes to a leave: the look
+      // right after it shows whether it arrived, and both go again until the board answers.
+      if (seat.guest) talkWith(seat.guest)
       const current = channel
-      if (!seated || !current) return
-      // No answer comes to a leave; a second copy covers one lost on the way.
-      await current.send(link.pubkey, { t: "leave", sid: link.sid }).catch(() => {})
-      setTimeout(() => void current.send(link.pubkey, { t: "leave", sid: link.sid }).catch(() => {}), REPEAT_MS)
-      await dropJoined(seated.match).catch(() => {})
+      if (!current) return
+      const claim = seat.profile && profile ? await claimWith(profile, current) : undefined
+      const message: BoardMessage = { t: "leave", sid: link.sid, ...(claim ? { profile: claim } : {}) }
+      left = seat
       seated = null
       set({ step: "looking" })
-      ask({ t: "look", sid: link.sid })
+      ask((to) => to.send(link.pubkey, message).then(() => look(to)))
+    },
+    async forget() {
+      const seat = seated
+      if (!seat) return
+      await dropJoined(seat.match).catch(() => {})
+      seated = null
+      freed = true
+      set({ step: "looking" })
+      ask(look)
     },
     close() {
       closed = true
@@ -183,7 +223,7 @@ async function rememberJoined(joined: JoinedMatch): Promise<JoinedMatch> {
 }
 
 // A seat this phone joined before, with its keys, or null.
-async function joinedMatch(match: string): Promise<JoinedMatch | null> {
+export async function loadSeat(match: string): Promise<JoinedMatch | null> {
   const record = await loadJoined(match).catch(() => null)
   if (!record) return null
   const secrets = await openKeys<JoinedSecrets>(record.keys)
@@ -198,6 +238,12 @@ async function joinedMatch(match: string): Promise<JoinedMatch | null> {
     archived: record.archived,
   }
 }
+
+// The key the seat belongs to on this phone: the profile's, or the guest key's.
+export const seatKey = (joined: JoinedMatch) => joined.profile ?? joined.guest?.pubkey ?? null
+
+// Whether the match, as replayed, has this phone's key on the seat.
+export const holdsSeat = (joined: JoinedMatch, state: MatchStateP) => state.seats[joined.seat]?.pubkey === seatKey(joined)
 
 // ---- The verdict ---------------------------------------------------------------------------
 
@@ -219,7 +265,7 @@ export async function giveVerdict(joined: JoinedMatch, state: MatchStateP, verdi
 // when that result is corrected or withdrawn, until they confirm the new one.
 export async function keepConfirmed(joined: JoinedMatch, state: MatchStateP): Promise<JoinedMatch> {
   const result = state.result
-  const mine = result && state.confirmations[joined.seat]?.verdict === "confirm" && state.seats[joined.seat]?.pubkey === seatKey(joined)
+  const mine = result && state.confirmations[joined.seat]?.verdict === "confirm" && holdsSeat(joined, state)
   const wanted = mine && result ? result.event : null
   if (wanted === joined.archived) return joined
   if (joined.archived) await unarchive(joined.match)
@@ -232,8 +278,6 @@ export async function keepConfirmed(joined: JoinedMatch, state: MatchStateP): Pr
   if (record) await saveJoined({ ...record, archived: wanted } satisfies Omit<JoinedRecord, "id">).catch(() => {})
   return next
 }
-
-export const seatKey = (joined: JoinedMatch) => joined.profile ?? joined.guest?.pubkey ?? null
 
 // The result's throws, from the result itself or its pieces; null while pieces are missing.
 function resultThrows(state: MatchStateP, result: MatchResultEntry): string | null {

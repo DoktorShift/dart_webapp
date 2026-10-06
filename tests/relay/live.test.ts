@@ -239,6 +239,93 @@ test("players join from their phones without any key leaving them; their verdict
 
 })
 
+test("a seat given back after a reload is freed on the board; a seat someone else holds is not taken up again", async () => {
+  const local = "leave-game"
+  const game = newGame(local, fullGame.slice(0, 3))
+  await live.goLive(game)
+  opened.push(() => live.stopHere(local))
+  const seats = keep(await seating.openSeating(local))
+  const board = links.decodeLinkPayload("board", seats.code)
+  const profile = await signers.createLocalSigner(crypto.getRandomValues(new Uint8Array(32)))
+  const profilePubkey = await profile.getPublicKey()
+
+  type Visit = import("../../lib/live/join.ts").BoardVisit
+  const visit = () => {
+    let current: Visit = { step: "looking" }
+    const control = keep(join.visitBoard(board, (next) => (current = next)))
+    return { control, get: () => current }
+  }
+  const seatedAs = (v: Visit) => (v.step === "seated" ? v : null)
+  const tableOf = (v: Visit) => (v.step === "table" ? v : null)
+  const holders = () => live.boardView(local)?.seats.map((s) => s.holder?.pubkey ?? null)
+
+  // A guest takes Mia's seat, then comes back with a fresh visit (a reload): the seat is restored
+  // from memory, and "Anderen Platz wählen" gives it back from the guest's own key.
+  const first = visit()
+  await until("the seats", () => tableOf(first.get()))
+  await first.control.join(0, null)
+  const fresh = await until("the seat", () => seatedAs(first.get()))
+  assert.equal(fresh.restored, false)
+  const guestKey = fresh.joined.guest!.pubkey
+  await until("the guest on the board", () => holders()?.[0] === guestKey)
+  first.control.close()
+
+  const again = visit()
+  const back = await until("the seat from memory", () => seatedAs(again.get()))
+  assert.equal(back.restored, true)
+  assert.equal(back.joined.guest!.pubkey, guestKey)
+  await again.control.leave(null)
+  await until("the seat freed on the board", () => holders()?.[0] === null)
+  const chooser = await until("the seats again", () => tableOf(again.get()))
+  assert.equal(chooser.table.seats[0].taken, false)
+  assert.equal(await store.loadJoined(back.joined.match), null, "the guest key is forgotten with the seat")
+
+  // A profile takes Jonas's seat and gives it back after a reload with a fresh claim.
+  await again.control.join(1, profile)
+  const asProfile = await until("the profile's seat", () => seatedAs(again.get()))
+  assert.equal(asProfile.joined.profile, profilePubkey)
+  await until("the profile on the board", () => holders()?.[1] === profilePubkey)
+  again.control.close()
+  const third = visit()
+  await until("the profile's seat from memory", () => seatedAs(third.get()))
+  await third.control.leave(profile)
+  await until("the profile's seat freed on the board", () => holders()?.[1] === null)
+  await until("the seats once more", () => tableOf(third.get()))
+  assert.equal(await store.loadJoined(asProfile.joined.match), null)
+
+  // The guest takes Mia's seat again; the board frees it and another phone takes it. Back from
+  // memory, the match shows another key on the seat: the phone forgets it and chooses anew.
+  await third.control.join(0, null)
+  const mine = await until("the guest's seat again", () => seatedAs(third.get()))
+  await until("the guest on the board again", () => holders()?.[0] !== null)
+  third.control.close()
+  await live.seatPlayer(local, 0, null)
+  const other = visit()
+  await until("the seats for the other phone", () => tableOf(other.get()))
+  await other.control.join(0, null)
+  const othersSeat = await until("the other phone's seat", () => seatedAs(other.get()))
+  const otherKey = othersSeat.joined.guest!.pubkey
+  assert.notEqual(otherKey, mine.joined.guest!.pubkey)
+  await until("the other phone on the board", () => holders()?.[0] === otherKey)
+  // The first phone's memory, as its own database would keep it (one database here stands for
+  // both phones, so the other phone's record has to give way).
+  await store.saveJoined({ match: mine.joined.match, relays: mine.joined.relays, seat: 0, profile: null, keys: await store.sealKeys({ match: bytesToHex(mine.joined.key!.secret), guest: bytesToHex(mine.joined.guest!.secret) }), archived: null })
+  const fourth = visit()
+  const restored = await until("the seat restored for the first phone", () => seatedAs(fourth.get()))
+  assert.equal(restored.restored, true)
+  const match = watcher({ match: restored.joined.match, key: bytesToHex(restored.joined.key!.secret), relays: restored.joined.relays })
+  const settled = await until("the match as the relays have it", () => {
+    const f = match.get()
+    return f?.settled && f.state ? f : null
+  })
+  assert.equal(join.holdsSeat(restored.joined, settled.state!), false)
+  await fourth.control.forget()
+  const chosen = await until("the seats with the hint", () => tableOf(fourth.get()))
+  assert.equal(chosen.freed, true)
+  assert.equal(chosen.table.seats[0].taken, true)
+  assert.equal(await store.loadJoined(restored.joined.match), null)
+})
+
 test("the writer hands the match to another device only after confirming; the old session counts no more", async () => {
   const local = "handoff-game"
   const game = newGame(local, fullGame.slice(0, 5))

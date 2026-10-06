@@ -1,6 +1,6 @@
 # Familie: Am Board mitspielen
 
-Stand: P4.01 (5. Oktober 2026; P0.05 um Ansehen, Anspruch des Profils und Spielschlüssel ergänzt). Code: [`board.ts`](../../../lib/protocol/board.ts), [`handshake.ts`](../../../lib/protocol/handshake.ts), [`links.ts`](../../../lib/protocol/links.ts). Schema: [`schemas/board-join.schema.json`](../schemas/board-join.schema.json). Vektoren: [`vectors/board-join.json`](../vectors/board-join.json).
+Stand: P4.01 (5. Oktober 2026; P0.05 um Ansehen, Anspruch des Profils und Spielschlüssel ergänzt; 6. Oktober 2026 nach Review P4 Runde 1: `leave` vom Inhaber des Platzes, mit Anspruch des Profils). Code: [`board.ts`](../../../lib/protocol/board.ts), [`handshake.ts`](../../../lib/protocol/handshake.ts), [`links.ts`](../../../lib/protocol/links.ts). Schema: [`schemas/board-join.schema.json`](../schemas/board-join.schema.json). Vektoren: [`vectors/board-join.json`](../vectors/board-join.json).
 
 ## Zweck
 
@@ -13,6 +13,7 @@ Ein Spieler verbindet sich vom eigenen Handy mit dem Spiel an einem gemeinsamen 
 3. Das Handy erzeugt einen Einmalschlüssel und spricht mit dem Board nur über ihn: NIP-44 zwischen den beiden Einmalschlüsseln, in beide Richtungen. Es fragt mit `look` nach dem Spiel; das Board antwortet mit `table` (Match-ID, Regeln, Plätze mit Namen und ob dort schon ein Handy verbunden ist).
 4. Der Spieler wählt seinen Platz; das Handy sendet `join`. **Mit Profil** trägt `join` unter `profile` den Anspruch des Profils: ein vom Profil signiertes, nie veröffentlichtes Event (Kind 21180, Label `board`, ohne `p`-Tag), Inhalt `{"t":"claim","sid","board","key"}` mit dem Einmalschlüssel des Boards und dem des Handys. So signiert das Profil nur, verschlüsselt nie; das genügt auch einem Android-Signer ohne NIP-44 (NIP-55). **Als Gast** fehlt `profile`; dann steht der Einmalschlüssel des Handys für den Platz.
 5. Das Board prüft die Signatur des Anspruchs (lib/nostr) und mit `checkClaim` Art, Board-Code und Handy-Schlüssel, dann mit `checkJoin` Sitzung, Ablauf und freien Platz, und antwortet mit `seat` (oder `decline`). Derselbe Spieler (dasselbe Profil, derselbe Gast-Schlüssel) bekommt bei Wiederholung denselben Platz. Das Board hält den Platz mit `match.seat` im Match fest ([match-result.md](match-result.md)); damit gibt der Spieler das Urteil seines Platzes zum Ergebnis ab. `seat` nennt die Match-ID und bei einem privaten Spiel den Spielschlüssel, mit dem das Handy dem Spiel folgt und seine Bestätigung verschlüsselt.
+6. Einen Platz gibt der Spieler mit `leave` zurück, auch nach einem Neustart oder mit einem neuen Code: ein Gast sendet es mit dem Schlüssel, der den Platz hält, ein Profil mit einem frischen Anspruch unter `profile`. Das Board gibt den Platz frei, dessen Inhaber die Nachricht spricht; ein `leave` von einem anderen Schlüssel ändert nichts. Eine Antwort gibt es nicht: der nächste `look` zeigt, ob der Platz frei ist. Ob ein gemerkter Platz noch der eigene ist, sagt dem Handy nur das Match selbst (`match.seat`), nicht das `taken` der Tafel.
 
 ## Nachrichten (Kind 21180, Label `board`)
 
@@ -25,7 +26,7 @@ Flüchtig, NIP-44, Empfänger im `p`-Tag, strikt (unbekannte Felder werden abgel
 | `join` | Spieler → Board | `sid`, `seat` (gewünschter Platz oder `null` = beliebig), `alias?`, `confirm` (will das Ergebnis vom Handy bestätigen), `profile?` (Anspruch des Profils, oben) |
 | `seat` | Board → Spieler | `sid`, `seat`, `match?` (Match-ID, sobald es läuft), `key?` (Spielschlüssel eines privaten Spiels) |
 | `decline` | Board → Spieler | `sid`, `reason` (`full` / `taken` / `expired` / `declined`) |
-| `leave` | Spieler → Board | `sid` |
+| `leave` | Spieler → Board | `sid`, `profile?` (Anspruch des Profils, wie bei `join`; ein Gast sendet mit dem Schlüssel, der den Platz hält) |
 
 Kopplungs- und Übergabenachrichten (`announce`, `hello`, `accept`, `package`, `ack`, `abort`, `take`, `game`, `done`) sind im Board-Weg `wrong_flow`; ein Board nimmt nie ein Paket an.
 
@@ -37,4 +38,4 @@ Der Spielschlüssel in `seat` ist derselbe Lesezugang wie der Zuschauerlink: Wer
 
 ## Vektoren
 
-`look`, `table`, `join` als Gast, `join` mit Anspruch des Profils, Anspruch für ein anderes Handy, `seat` mit Spielschlüssel, besetzter Platz, eingeschmuggeltes Feld, Kopplungspaket an ein Board, Übergabepaket an ein Board.
+`look`, `table`, `join` als Gast, `join` mit Anspruch des Profils, Anspruch für ein anderes Handy, `seat` mit Spielschlüssel, besetzter Platz, eingeschmuggeltes Feld, Kopplungspaket an ein Board, Übergabepaket an ein Board, `leave` mit Anspruch des Profils.

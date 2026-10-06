@@ -16,9 +16,10 @@ import { readLabels } from "./tags.ts"
 // its seats, and asks for one. The phone talks to the board with a one-time key of its own,
 // NIP-44 both ways; a player with a profile adds the profile's signed claim on that key, so the
 // profile only ever signs, never encrypts (an Android signer can't). The board answers with the
-// seat and, for a private match, the match key to follow and confirm it. Nothing in this flow
-// can carry a profile key: the messages are strict, and pairing messages are refused as
-// "wrong_flow". The player's profile key and wallet stay on the phone.
+// seat and, for a private match, the match key to follow and confirm it. A seat is given back
+// with `leave` by whoever holds it: a guest from the key that holds it, a profile with a fresh
+// claim. Nothing in this flow can carry a profile key: the messages are strict, and pairing
+// messages are refused as "wrong_flow". The player's profile key and wallet stay on the phone.
 
 export type BoardLink = Extract<LinkPayload, { type: "board" }>
 
@@ -62,7 +63,8 @@ export const BOARD_MESSAGES = {
     { strict: true },
   ),
   decline: obj({ t: oneOf(["decline"]), sid: sid(), reason: oneOf(["full", "taken", "expired", "declined"]) }, { strict: true }),
-  leave: obj({ t: oneOf(["leave"]), sid: sid() }, { strict: true }),
+  // Sent by the key that holds the seat (a guest's), or with the profile's fresh claim.
+  leave: obj({ t: oneOf(["leave"]), sid: sid(), profile: opt(embeddedEvent) }, { strict: true }),
 }
 
 export type BoardMessage = { [K in keyof typeof BOARD_MESSAGES]: Infer<(typeof BOARD_MESSAGES)[K]> }[keyof typeof BOARD_MESSAGES]

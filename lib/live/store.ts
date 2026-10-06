@@ -25,8 +25,10 @@ export interface BoardRecord extends Keyed {
   // Counter and date of the last snapshot signed.
   n: number
   snapshotAt: number
-  // Phones connected to the seats (match.seat).
+  // Phones connected to the seats (match.seat), and the date of the last match.seat signed: the
+  // next one is dated after it, so readers never see an older holder win a same-second tie.
   seats: (SeatHolder | null)[]
+  seatAt: number
   // The newest result this session published: its event and what it states (content.ts
   // resultKey; "void" for a withdrawn one).
   result: { event: string; key: string } | null

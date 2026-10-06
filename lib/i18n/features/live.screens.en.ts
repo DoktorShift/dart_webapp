@@ -115,7 +115,8 @@ export const liveScreensEn: Widen<typeof liveScreensDe> = {
     refused: "The request wasn't approved. Pick your seat again.",
     seated: (name) => `You're playing as ${name}`,
     leave: "Pick another seat",
-    freed: "The board disconnected you from this seat.",
+    leaveRefused: "The request wasn't approved. You keep your seat.",
+    freed: "The board disconnected you from your seat.",
     otherProfile: "You're now signed in with a different profile than when you connected. Only the profile you connected with can confirm.",
   },
 

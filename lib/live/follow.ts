@@ -21,8 +21,11 @@ export interface Followed {
   // Why there is no state although relays answered: "missing" (no such match there) and the like.
   problem: FoundingProblem | null
   connection: Connection
-  // When a relay last answered (ms), for "Stand von 20:14".
+  // When a relay last answered (ms), for "zuletzt aktualisiert 20:14".
   heardAt: number | null
+  // The relays that answer have sent what they had (their first EOSE): a seat or a result that
+  // is not in `state` now is not merely on its way.
+  settled: boolean
 }
 
 export interface MatchSource {
@@ -44,10 +47,12 @@ export function followMatch(source: MatchSource, onChange: (followed: Followed) 
   const key = source.key ? keyOf(fromHex(source.key)) : null
   const events = new Map<string, SignedEvent>()
   const opened = new Map<string, string | null>()
-  let current: Followed = { state: null, problem: null, connection: "connecting", heardAt: null }
-  let answeredOnce = false
+  let current: Followed = { state: null, problem: null, connection: "connecting", heardAt: null, settled: false }
   let closed = false
   let scheduled = false
+  // Events are taken in one line, decryption included, so an EOSE counts only once everything
+  // that came before it is in.
+  let taking: Promise<void> = Promise.resolve()
 
   const emit = (next: Partial<Followed>) => {
     current = { ...current, ...next }
@@ -61,11 +66,13 @@ export function followMatch(source: MatchSource, onChange: (followed: Followed) 
     queueMicrotask(() => {
       scheduled = false
       const result = reduceMatch([...events.values()], source.match, { open: (event) => opened.get(event.id) ?? null })
-      emit(result.state ? { state: result.state, problem: null } : { state: null, problem: answeredOnce ? result.problem : null })
+      emit(result.state ? { state: result.state, problem: null } : { state: null, problem: current.settled ? result.problem : null })
     })
   }
 
-  async function add(event: SignedEvent) {
+  const add = (event: SignedEvent) => (taking = taking.then(() => take(event)).catch(() => {}))
+
+  async function take(event: SignedEvent) {
     if (events.has(event.id)) return
     if (key && event.tags.some((t) => t[0] === "enc")) opened.set(event.id, await openFromMatch(event, await key))
     events.set(event.id, event)
@@ -74,17 +81,21 @@ export function followMatch(source: MatchSource, onChange: (followed: Followed) 
   }
 
   const heard = () => emit({ connection: "live", heardAt: Date.now() })
+  // The relays have sent what they had: from now on, what is missing is missing there.
+  const settle = () =>
+    void taking.then(() => {
+      emit({ connection: "live", heardAt: Date.now(), settled: true })
+      replay()
+    })
 
   const sub = subscribe(matchFilters(source.match), source.relays, {
     onevent: (event) => {
-      void add(event as SignedEvent)
+      add(event as SignedEvent)
       heard()
     },
     oneose: ({ answered }) => {
       if (answered.length === 0) return emit({ connection: "interrupted" })
-      answeredOnce = true
-      heard()
-      replay()
+      settle()
     },
   })
 
@@ -98,10 +109,8 @@ export function followMatch(source: MatchSource, onChange: (followed: Followed) 
     const result = await query(matchFilters(source.match), source.relays).catch(() => null)
     if (closed) return
     if (!result || result.answered.length === 0) return emit({ connection: "interrupted" })
-    answeredOnce = true
-    await Promise.all(result.events.map((event) => add(event as SignedEvent)))
-    heard()
-    replay()
+    for (const event of result.events) add(event as SignedEvent)
+    settle()
   }
 
   const timer = setInterval(() => void check(), CHECK_MS)

@@ -24,7 +24,7 @@ import { cn } from "@/lib/utils"
 // clear "Verbindung unterbrochen" when the relays stop answering. Read-only throughout.
 
 export function useFollowed(source: MatchSource | null): Followed {
-  const [followed, setFollowed] = useState<Followed>({ state: null, problem: null, connection: "connecting", heardAt: null })
+  const [followed, setFollowed] = useState<Followed>({ state: null, problem: null, connection: "connecting", heardAt: null, settled: false })
   const match = source?.match
   useEffect(() => {
     if (!source) return

@@ -2041,6 +2041,7 @@ function boardVectors() {
       claimForOtherPhone: join("phone3", { t: "join", sid, seat: 1, confirm: true, profile: claim }, 596),
       seatWithKey: reply("phone2", { t: "seat", sid, seat: 1, match: hex32("board-match"), key: sec("matchkey") }, 597),
       handoffGameToBoard: join("board2", { t: "game", sid, data: game }, 598),
+      leaveWithClaim: join("phone2", { t: "leave", sid, profile: claim }, 599),
     },
     handoff: {
       sid: handoffSid,
