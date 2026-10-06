@@ -1,7 +1,7 @@
 import { addDiagnostics, type DiagnosticsSection } from "../profile/diagnostics.ts"
 import { getSession, loadSession, onSessionEnd, subscribeSession } from "../profile/session.ts"
 import { onStorageChange } from "../storage/db.ts"
-import { flushDue, outboxCounts, outboxStatus, resumeOutbox } from "./outbox.ts"
+import { outboxCounts, outboxStatus, resumeOutbox, sendWaitingNow } from "./outbox.ts"
 import { getSyncStatus, setSyncStatus, type SyncStatus } from "./status.ts"
 
 // The sync in the background (started by components/sync/register.ts once the app is idle):
@@ -86,10 +86,11 @@ function follow() {
   })
 }
 
-// "Jetzt abgleichen": a full sync, then everything waiting in the outbox.
+// "Jetzt abgleichen", "Erneut versuchen": a full sync, then everything waiting in the outbox,
+// whatever its backoff says.
 export async function syncNow() {
   await run(true)
-  await flushDue()
+  await sendWaitingNow()
 }
 
 export function startSyncService() {

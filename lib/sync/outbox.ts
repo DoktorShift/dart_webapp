@@ -10,6 +10,7 @@ import { dbGetAll, dbWrite, onStorageChange, type Keyed, type WriteOp } from "..
 //   await enqueue([{ event, relays }], { rule: "published", coalesce: true })
 //   const [status] = await deliverNow([event.id])   // one attempt right away, if the caller waits for it
 //   await deliveryStatus(event.id)                   // later: waiting, delivered or refused; null once gone
+//   await sendWaitingNow()                           // on request: everything waiting, backoff or not
 //
 // - Rules: "published" (the default) is met once relays of two operators confirmed the event (OK
 //   true); "any" once one relay did (a live score, where the next one follows soon). Retrying also
@@ -246,7 +247,7 @@ export async function flushDue(now: Clock = Date.now): Promise<void> {
   schedule(busy ? BUSY_RETRY_MS : 0)
 }
 
-// Makes entries due now: every waiting one (back online), or also the delivered ones still
+// Makes entries due now and sends them: every waiting one, or also the delivered ones still
 // missing copies (a start of the app). Missing copies older than a week are given up instead.
 async function dueNow(withMissingCopies: boolean, now: Clock) {
   await withLock(true, async () => {
@@ -260,6 +261,10 @@ async function dueNow(withMissingCopies: boolean, now: Clock) {
   })
   await flushDue(now)
 }
+
+// Sends everything waiting right away, whatever its backoff says: the device is back online, or
+// the person asked for it ("Jetzt abgleichen", "Erneut versuchen").
+export const sendWaitingNow = (now: Clock = Date.now) => dueNow(false, now)
 
 // ---- Reading ----------------------------------------------------------------------------------
 
@@ -318,7 +323,7 @@ function schedule(atLeastMs = 0) {
 export async function resumeOutbox(): Promise<void> {
   if (resumed) return
   resumed = true
-  if (typeof window !== "undefined") window.addEventListener("online", () => void dueNow(false, Date.now))
+  if (typeof window !== "undefined") window.addEventListener("online", () => void sendWaitingNow())
   if (typeof document !== "undefined") document.addEventListener("visibilitychange", () => document.visibilityState === "visible" && void flushDue())
   // Another tab queued or sent something.
   onStorageChange((message) => {
