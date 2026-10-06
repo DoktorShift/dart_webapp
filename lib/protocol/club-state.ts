@@ -71,6 +71,8 @@ export interface ClubSeason {
   starts: number
   ends?: number
   ended: boolean
+  // When it was ended (club.season.end): games after that are no longer part of it.
+  endedAt?: number
   versions: { version: number; rules: SeasonRules; event: string; at: number; reason?: string }[]
 }
 
@@ -511,6 +513,7 @@ function apply(s: ClubState, r: AnyRecord, ctx: Context): Problem {
       if (!season) return ["season_unknown", "no such season"]
       if (season.ended) return ["season_ended", "the season has ended"]
       season.ended = true
+      season.endedAt = r.created_at
       return null
     }
 
