@@ -164,10 +164,16 @@ export interface PaymentRequest {
   // The checked invoice to pay. Called only when nothing for this action is open, so no new
   // invoice is ever fetched while an earlier payment's outcome is unknown. May throw.
   invoice: () => Promise<InvoiceSource>
-  // Cancelled while the invoice was being fetched: nothing is written and nothing paid, pay()
-  // throws the signal's reason at once and frees the action (the fetch's late result is ignored).
-  // Once the payment is handed to the wallet it can't be cancelled.
+  // Cancelled before the payment is handed to the wallet (while the wallet opens, the invoice is
+  // fetched or its lock taken): nothing is written and nothing paid, pay() throws the signal's
+  // reason at once and frees the action (the fetch's late result is ignored). Once the payment
+  // is handed to the wallet it can't be cancelled.
   signal?: AbortSignal
+}
+
+// Throws the signal's reason once it has aborted.
+function checkAborted(signal: AbortSignal | undefined) {
+  if (signal?.aborted) throw signal.reason
 }
 
 // `promise`, unless `signal` aborts first.
@@ -193,6 +199,8 @@ export async function pay(request: PaymentRequest, payer: Payer): Promise<Paymen
     const earlier = blockingEntry(await loadJournal(), request.action)
     // Holding the lock, an entry still "sending" can only be from a page that closed meanwhile.
     if (earlier) return earlier.state === "sending" ? save({ ...earlier, state: "unknown" }) : earlier
+    // Cancelled while the wallet was still opening: the invoice isn't even asked for.
+    checkAborted(request.signal)
     const source = await untilAborted(request.invoice(), request.signal)
     return exclusive(invoiceLock(source.checked.paymentHash), () => send(request, source, payer))
   })
@@ -202,6 +210,8 @@ export async function pay(request: PaymentRequest, payer: Payer): Promise<Paymen
 // Writes the entry, then hands the invoice to the wallet. An invoice already paid, or with an
 // outcome still open, is never handed over again; one the wallet refused may be tried again.
 async function send(request: PaymentRequest, { checked, via, address, zap }: InvoiceSource, payer: Payer): Promise<PaymentEntry> {
+  // The last moment to cancel: nothing is written yet.
+  checkAborted(request.signal)
   const known = await dbGet<PaymentEntry>("payments", checked.paymentHash)
   if (known && known.state !== "failed") return known
   const now = Date.now()

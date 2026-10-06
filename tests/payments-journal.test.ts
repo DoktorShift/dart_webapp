@@ -328,6 +328,33 @@ test("cancelled while the invoice was being fetched: nothing written, nothing pa
   assert.equal(entryOf(await pay(requestFor(newInvoice(), "pay:m1:p2", false).request, w)).state, "paid")
 })
 
+test("cancelled before paying: while the wallet opened, or right after the invoice arrived, nothing is written or paid", async () => {
+  const w = wallet()
+  // Cancelled while the wallet was still being opened: the address is never asked.
+  const early = new AbortController()
+  early.abort()
+  const notAsked = requestFor(newInvoice(), "pay:m1:p2", false)
+  await assert.rejects(pay({ ...notAsked.request, signal: early.signal }, w), { name: "AbortError" })
+  assert.equal(notAsked.asked.count, 0)
+  // Cancelled in the moment the invoice arrived, before the wallet has it.
+  const late = new AbortController()
+  const request: PaymentRequest = {
+    action: "pay:m1:p2",
+    once: false,
+    counterpart: MIA,
+    signal: late.signal,
+    invoice: async () => {
+      const source = await scannedInvoice(newInvoice(), 500_000)
+      late.abort()
+      return source
+    },
+  }
+  await assert.rejects(pay(request, w), { name: "AbortError" })
+  assert.equal(w.paid.length, 0)
+  assert.deepEqual(await loadJournal(), [])
+  assert.equal(entryOf(await pay(requestFor(newInvoice(), "pay:m1:p2", false).request, w)).state, "paid")
+})
+
 test("settled by hand: paid as the wallet shows it, kept apart from the wallet's answer", async () => {
   const unknown = entryOf(await pay(requestFor(newInvoice()).request, wallet("no-answer")))
   const paid = entryOf(await resolveByHand(unknown.id, "done"))
