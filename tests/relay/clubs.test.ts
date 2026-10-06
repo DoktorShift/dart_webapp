@@ -28,7 +28,8 @@ const SITE = "https://blueline21.netlify.app"
 
 before(async () => {
   core = await loadCore()
-  ;[a, b] = await Promise.all([startRelay(), startRelay()])
+  // The nak ports assigned to this track (20000-20009).
+  ;[a, b] = await Promise.all([startRelay({ port: 20000 }), startRelay({ port: 20001 })])
   process.env.NEXT_PUBLIC_BLUELINE_RELAYS = `${a.url},${b.url}`
 })
 

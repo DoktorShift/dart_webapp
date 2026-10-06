@@ -1,11 +1,13 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { MESSAGES } from "../lib/i18n/index.ts"
+import { CLUBS_TEXTS } from "../lib/i18n/features/clubs.screens.ts"
 import { PROFILE_TEXTS } from "../lib/i18n/features/profile.screens.ts"
 
 // Normal views never use protocol words (decision 0002 §1 and §9, PLAN.md "Einfach sprechen");
 // technical details belong behind an explicit "Erweitert" / "Advanced" screen only. This checks
-// the shell's and the profile's texts in every language; profile.advanced is that screen.
+// the shell's, the profile's and the clubs' texts in every language; profile.advanced is that
+// screen (the clubs have none: everything they say is plain).
 
 const PROTOCOL = /nostr|\bnip[- ]?\d*\b|relay|npub|nsec|pubkey|\bkeys?\b|schlüssel|bunker|nwc|lnurl|event/i
 
@@ -20,7 +22,14 @@ test("shell and profile texts use no protocol words, except under Erweitert", ()
   for (const [locale, t] of Object.entries(MESSAGES)) {
     const { advanced, ...screens } = PROFILE_TEXTS[locale as keyof typeof PROFILE_TEXTS]
     assert.ok(advanced, "the technical texts are kept apart")
-    for (const [path, text] of [...texts(t.shell, `${locale}.shell`, []), ...texts(t.profile, `${locale}.profile`, []), ...texts(screens, `${locale}.profile.screens`, [])]) {
+    const clubs = CLUBS_TEXTS[locale as keyof typeof CLUBS_TEXTS]
+    for (const [path, text] of [
+      ...texts(t.shell, `${locale}.shell`, []),
+      ...texts(t.profile, `${locale}.profile`, []),
+      ...texts(screens, `${locale}.profile.screens`, []),
+      ...texts(t.clubs, `${locale}.clubs`, []),
+      ...texts(clubs, `${locale}.clubs.screens`, []),
+    ]) {
       assert.doesNotMatch(text, PROTOCOL, `${path}: ${text}`)
     }
   }

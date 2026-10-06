@@ -2,7 +2,7 @@ import { latestEvents, query } from "../nostr/client.ts"
 import { generalRelays, mergeRelays, profileRelays } from "../nostr/relays.ts"
 import type { NostrEvent } from "../nostr/types.ts"
 import { STATS_CARD_D } from "../protocol/profile.ts"
-import { dbGet, dbWrite, type Keyed } from "../storage/db.ts"
+import { dbGet, dbWrite, type Keyed, type WriteOp } from "../storage/db.ts"
 import { MAX_OWN_RELAYS, RELAY_LIST_KIND, relaySettings } from "./relay-list.ts"
 
 // Someone's public profile as other people see it: metadata (kind 0), relay list (10002) and
@@ -54,4 +54,23 @@ export async function loadPublicProfile(pubkey: string, hints: readonly string[]
   profile = { ...profile, loadedAt: Date.now() }
   await dbWrite([{ store: "objects", put: { id: cacheId(pubkey), ...profile } as Keyed }]).catch(() => {})
   return { profile, status: failed > 0 ? "partial" : "complete" }
+}
+
+// The names and pictures of several people at once (a club's members): one question to the
+// profile and general relays for their metadata, kept per person as loadPublicProfile keeps it.
+// Without an answer from any relay, what this device had is returned unchanged.
+export async function loadProfiles(pubkeys: readonly string[]): Promise<Map<string, PublicProfile>> {
+  const found = new Map<string, PublicProfile>()
+  for (const pubkey of pubkeys) found.set(pubkey, (await cachedProfile(pubkey).catch(() => null)) ?? { pubkey, metadata: null, relayList: null, card: null, loadedAt: null })
+  if (found.size === 0) return found
+  const result = await query([{ authors: [...found.keys()], kinds: [0] }], mergeRelays(profileRelays(), generalRelays()))
+  if (result.answered.length === 0) return found
+  const ops: WriteOp[] = []
+  for (const [pubkey, profile] of found) {
+    const next = { ...merge(profile, result.events), loadedAt: Date.now() }
+    found.set(pubkey, next)
+    ops.push({ store: "objects", put: { id: cacheId(pubkey), ...next } as Keyed })
+  }
+  await dbWrite(ops).catch(() => {})
+  return found
 }

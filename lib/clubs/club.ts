@@ -56,6 +56,8 @@ export interface ClubView {
   games: ClubGame[]
   invite?: OpenedInvite
   tokens: Record<string, string>
+  // Relays an invite link named, asked along with the usual ones.
+  relays: string[]
   // Own events no relay has confirmed yet.
   unsent: NostrEvent[]
   loadedAt: number | null
@@ -107,6 +109,7 @@ export async function readClub(
       games,
       ...(stored.invite ? { invite: stored.invite } : {}),
       tokens: stored.tokens,
+      relays: stored.relays,
       unsent: stored.events.filter((e) => stored.unsent.includes(e.id)),
       loadedAt: stored.loadedAt,
     },
