@@ -77,7 +77,7 @@ export const paymentsScreensEn: Widen<typeof paymentsScreensDe> = {
     limitLeft: "Left of limit",
     limitOf: (left: string, total: string) => `${left} of ${total}`,
     limitFooter: "Your wallet enforces this limit for BlueLine.",
-    noLimitFooter: "You set a spending limit for BlueLine in your wallet.",
+    noLimitFooter: "You can set a spending limit for BlueLine in your wallet.",
     cantPay: "To let BlueLine pay, allow it in your wallet and connect it again.",
     cantReceive: "To receive money, allow it for BlueLine in your wallet and connect it again.",
     receiveMoney: "Receive Money",
@@ -182,6 +182,7 @@ export const paymentsScreensEn: Widen<typeof paymentsScreensDe> = {
     stillUnknown: "No confirmation yet. Check again later or look in your wallet.",
     noLookup: "Your wallet can't report the status. Look in your wallet to see whether the payment went through.",
     otherWallet: "This payment went through another wallet connection. The wallet it was paid from shows whether it went through.",
+    noWallet: "No wallet connected. Connect the wallet it was paid from to check the status, or note what it shows.",
     failedTitle: "Payment failed",
     nothingPaid: "Nothing was paid.",
     retry: "Try Again",
@@ -230,6 +231,7 @@ export const paymentsScreensEn: Widen<typeof paymentsScreensDe> = {
     offline: "Your wallet can't be reached right now. Open it and try again; it has to be online for a new payment code.",
     noStatus: "Your wallet doesn't tell BlueLine about incoming payments. Look in your wallet to see whether it arrived.",
     otherWallet: "Another wallet connection created this code. The wallet that created it shows whether the payment arrived.",
+    noWallet: "No wallet connected. The wallet that created this code shows whether the payment arrived.",
   },
 
   stake: {
@@ -282,7 +284,7 @@ export const paymentsScreensEn: Widen<typeof paymentsScreensDe> = {
 
   advanced: {
     protocol: "Protocol",
-    protocolValue: "Nostr Wallet Connect (NIP-47)",
+    protocolValue: "Nostr Wallet Connect (NIP‑47)",
     encryption: "Encryption",
     relays: "Wallet relays",
     methods: "Allowed commands",

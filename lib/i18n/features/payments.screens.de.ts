@@ -196,6 +196,7 @@ export const paymentsScreensDe = {
     stillUnknown: "Noch keine Bestätigung. Prüfe es später noch einmal oder sieh in deiner Wallet nach.",
     noLookup: "Deine Wallet kann den Status nicht melden. Sieh in deiner Wallet nach, ob die Zahlung durchging.",
     otherWallet: "Diese Zahlung lief über eine andere Wallet-Verbindung. Ob sie durchging, zeigt die Wallet, mit der bezahlt wurde.",
+    noWallet: "Keine Wallet verbunden. Verbinde die Wallet, mit der bezahlt wurde, um den Status zu prüfen, oder vermerke, was sie zeigt.",
     failedTitle: "Zahlung fehlgeschlagen",
     nothingPaid: "Es wurde nichts bezahlt.",
     retry: "Erneut versuchen",
@@ -246,6 +247,7 @@ export const paymentsScreensDe = {
     offline: "Deine Wallet ist gerade nicht erreichbar. Öffne sie und versuche es erneut; für einen neuen Zahlungscode muss sie online sein.",
     noStatus: "Deine Wallet meldet Zahlungseingänge nicht an BlueLine. Sieh in deiner Wallet nach, ob die Zahlung da ist.",
     otherWallet: "Diesen Code hat eine andere Wallet-Verbindung erstellt. Ob die Zahlung ankam, zeigt die Wallet, die ihn erstellt hat.",
+    noWallet: "Keine Wallet verbunden. Ob die Zahlung ankam, zeigt die Wallet, die diesen Code erstellt hat.",
   },
 
   // The stake: setting it in setup (the row's own texts are in payments.de.ts), and after the game.
@@ -304,7 +306,8 @@ export const paymentsScreensDe = {
   // "Erweitert": the technical details, for those who want them.
   advanced: {
     protocol: "Verfahren",
-    protocolValue: "Nostr Wallet Connect (NIP-47)",
+    // A non-breaking hyphen: the value stays on one line on narrow screens.
+    protocolValue: "Nostr Wallet Connect (NIP‑47)",
     encryption: "Verschlüsselung",
     relays: "Relays der Wallet",
     methods: "Erlaubte Befehle",

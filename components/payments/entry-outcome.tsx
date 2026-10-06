@@ -42,6 +42,8 @@ export function EntryOutcome({
   const wallet = useWallet()
   const [checking, setChecking] = useState(false)
   const [note, setNote] = useState<{ text: string; tone: "info" | "error" } | null>(null)
+  // A check that didn't settle it: the person may look in their wallet instead.
+  const [unsettled, setUnsettled] = useState(false)
   const listening = entry.direction === "out" && !!entry.zap && !entry.zap.receipt && (entry.state === "paid" || entry.state === "unknown")
 
   useEffect(() => {
@@ -53,27 +55,35 @@ export function EntryOutcome({
   }, [entry.id, listening])
 
   if (wallet === undefined) return null
-  if (entry.direction === "in") return <InvoiceView entry={entry} info={wallet} />
+  if (entry.direction === "in") return <InvoiceView entry={entry} info={wallet} onDone={onDone} />
 
   const amount = format.msat(entry.amountMsat)
   const name = entry.counterpart.name
-  // Another connection can confirm a payment, never rule it out (lib/payments/journal.ts).
+  // Only the connection that paid can say what became of it; another one could at best confirm
+  // it (lib/payments/journal.ts), so it isn't asked.
   const otherWallet = wallet !== null && wallet.connection !== entry.connection
-  const canLookup = wallet !== null && capabilities(wallet).lookup
+  const canAsk = wallet !== null && !otherWallet && capabilities(wallet).lookup
   // A payment still "sending" is being sent in another window, or was left by one that closed:
   // checking tells which, also without a wallet that can look it up.
-  const canCheck = entry.state === "sending" || (entry.state === "unknown" && canLookup)
-  const hint = entry.state !== "unknown" ? null : otherWallet ? p.otherWallet : canLookup ? null : p.noLookup
+  const canCheck = entry.state === "sending" || (entry.state === "unknown" && canAsk)
+  // Why BlueLine can't ask, where it can't.
+  const hint = entry.state !== "unknown" || canAsk ? null : wallet === null ? p.noWallet : otherWallet ? p.otherWallet : p.noLookup
+  // "In deiner Wallet nachgesehen?" is the way out where the wallet can't tell, or didn't.
+  const byHand = entry.state === "unknown" && (hint !== null || unsettled)
 
   const check = async () => {
     setChecking(true)
     setNote(null)
     try {
-      const result = canLookup ? await withWallet((w) => checkStatus(entry.id, w)) : await checkStatus(entry.id, null)
+      const result = canAsk ? await withWallet((w) => checkStatus(entry.id, w)) : await checkStatus(entry.id, null)
       if (result === "busy") setNote({ text: p.busy, tone: "info" })
-      else if (result?.state === "unknown" && !hint) setNote({ text: p.stillUnknown, tone: "info" })
+      else if (result?.state === "unknown") {
+        setNote({ text: p.stillUnknown, tone: "info" })
+        setUnsettled(true)
+      }
     } catch (error) {
       setNote({ text: problemText(tx, error), tone: "error" })
+      setUnsettled(true)
     } finally {
       setChecking(false)
     }
@@ -101,14 +111,8 @@ export function EntryOutcome({
       {header}
       {entry.state === "paid" && typeof entry.feesMsat === "number" && <p className="mt-2 text-center text-[0.9375rem] text-muted-foreground">{p.feesPaid(format.msat(entry.feesMsat))}</p>}
       {reason && <InlineStatus className="mt-4">{reason}</InlineStatus>}
-      {hint && <InlineStatus className="mt-4">{hint}</InlineStatus>}
-      {note && (
-        <InlineStatus tone={note.tone} className="mt-4">
-          {note.text}
-        </InlineStatus>
-      )}
-      {entry.state === "unknown" && <ResolveByHand entry={entry} />}
-      <SheetActions>
+      {byHand && <ResolveByHand entry={entry} hint={hint ?? undefined} />}
+      <SheetActions note={note && <InlineStatus tone={note.tone}>{note.text}</InlineStatus>}>
         {canCheck && (
           <Button onClick={check} disabled={checking} className="h-12 w-full rounded-xl text-[1.0625rem] font-semibold">
             {checking ? p.checking : p.check}

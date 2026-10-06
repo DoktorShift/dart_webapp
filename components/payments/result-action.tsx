@@ -130,24 +130,25 @@ function StakeAction({ match, parties, entry }: { match: FinishedMatch; parties:
       <Sheet open={open} onOpenChange={(next) => (next ? setOpen(true) : close())} title={t.payments.stake.title} description={landscape ? undefined : s.agreed(parties.payer.name, amount, parties.payee.name)}>
         <SheetBody>
           {open && shown === "pay" && <PayFlow action={action} once counterpart={payee} amountSats={parties.sats} onDone={close} />}
-          {open && shown === "receive" && <ReceiveFlow action={action} once counterpart={payer} amountSats={parties.sats} />}
+          {open && shown === "receive" && <ReceiveFlow action={action} once counterpart={payer} amountSats={parties.sats} onDone={close} />}
           {open && shown === null && (
-            <div className="flex flex-col gap-2">
+            // Which side this device is on; the two sides share a row on a phone in landscape.
+            <div className="grid gap-2 xshort:grid-cols-2">
               <Button onClick={() => setMode("pay")} className="h-auto min-h-12 w-full whitespace-normal rounded-xl py-2 text-[1.0625rem] font-semibold">
                 {s.payTo(amount, parties.payee.name)}
               </Button>
               <Button variant="secondary" onClick={() => setMode("receive")} className="h-auto min-h-12 w-full whitespace-normal rounded-xl py-2 text-[1.0625rem] font-semibold text-primary">
                 {s.receiveHere(parties.payee.name)}
               </Button>
-              <Button variant="ghost" onClick={() => setConfirmSettled(true)} className="h-12 w-full rounded-xl text-[1.0625rem] text-primary hover:bg-primary/10 hover:text-primary">
+              <Button variant="ghost" onClick={() => setConfirmSettled(true)} className="h-12 w-full rounded-xl text-[1.0625rem] text-primary hover:bg-primary/10 hover:text-primary xshort:col-span-2">
                 {s.settledHere}
               </Button>
             </div>
           )}
         </SheetBody>
-        {shown !== "pay" && (
+        {shown === null && (
           <Button variant="ghost" onClick={close} className="mt-2 h-12 w-full shrink-0 rounded-2xl text-[1.0625rem]">
-            {shown === "receive" ? t.common.done : t.common.cancel}
+            {t.common.cancel}
           </Button>
         )}
       </Sheet>
@@ -221,7 +222,7 @@ function FreeAction({ match }: { match: FinishedMatch }) {
             </div>
           )}
           {open && choice?.kind === "congratulate" && <CongratulateFlow pubkey={choice.pubkey} name={choice.player.name} action={actions.congratulate(choice.pubkey, match.id)} onDone={close} />}
-          {open && choice?.kind === "receive" && <ReceiveFlow action={actions.receiveAfter(match.id)} once={false} counterpart={{ name: "" }} amountSats={null} />}
+          {open && choice?.kind === "receive" && <ReceiveFlow action={actions.receiveAfter(match.id)} once={false} counterpart={{ name: "" }} amountSats={null} onDone={close} />}
           {open && choice?.kind === "pay" && !confirmed && (
             <>
               <AmountPicker label={tx.receive.amount} presets={AMOUNT_PRESETS} value={amount} onChange={setAmount} />
@@ -234,9 +235,9 @@ function FreeAction({ match }: { match: FinishedMatch }) {
             <PayFlow action={actions.payPlayer(match.id, choice.player.id)} once={false} counterpart={{ name: choice.player.name, pubkey: linked(choice.player.id) }} amountSats={amount} onDone={close} />
           )}
         </SheetBody>
-        {(!choice || choice.kind === "receive" || (choice.kind === "pay" && !confirmed)) && (
+        {(!choice || (choice.kind === "pay" && !confirmed)) && (
           <Button variant="ghost" onClick={close} className="mt-2 h-12 w-full shrink-0 rounded-2xl text-[1.0625rem]">
-            {choice?.kind === "receive" ? t.common.done : t.common.cancel}
+            {t.common.cancel}
           </Button>
         )}
       </Sheet>

@@ -18,7 +18,7 @@ import { Sheet, SheetBody } from "@/components/ui/sheet"
 import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { EntryOutcome } from "@/components/payments/entry-outcome"
-import { EntryRow } from "@/components/payments/entry-status"
+import { EntryRow, entryTitle } from "@/components/payments/entry-status"
 import { PayFlow } from "@/components/payments/pay-flow"
 import { ReceiveFlow } from "@/components/payments/receive-flow"
 import { PAYMENT_SCREENS } from "@/components/payments/screens"
@@ -55,7 +55,7 @@ export default function PaymentsScreen() {
   const can = wallet ? capabilities(wallet) : null
   const close = () => setOpen(null)
   const entry = open?.kind === "entry" ? journal.find((e) => e.id === open.id) : undefined
-  const sheetTitle = open?.kind === "receive" ? p.receive.title : open?.kind === "pay" ? w.payInvoice : t.payments.title
+  const sheetTitle = open?.kind === "receive" ? p.receive.title : open?.kind === "pay" ? w.payInvoice : entry ? entryTitle(p, entry) : t.payments.title
 
   return (
     <>
@@ -112,15 +112,10 @@ export default function PaymentsScreen() {
 
       <Sheet open={open !== null} onOpenChange={(next) => !next && close()} title={sheetTitle}>
         <SheetBody>
-          {open?.kind === "receive" && <ReceiveFlow action={open.action} once={false} counterpart={{ name: "" }} amountSats={null} />}
+          {open?.kind === "receive" && <ReceiveFlow action={open.action} once={false} counterpart={{ name: "" }} amountSats={null} onDone={close} />}
           {open?.kind === "pay" && <PayFlow action={open.action} once counterpart={{ name: "" }} amountSats={null} route={{ kind: "scan" }} onDone={close} />}
           {entry && <EntryOutcome entry={entry} onDone={close} />}
         </SheetBody>
-        {(open?.kind === "receive" || entry?.direction === "in") && (
-          <Button variant="ghost" onClick={close} className="mt-2 h-12 w-full shrink-0 rounded-2xl text-[1.0625rem]">
-            {t.common.done}
-          </Button>
-        )}
       </Sheet>
 
       <Sheet open={helpOpen} onOpenChange={setHelpOpen} title={p.help.title} description={p.help.text}>

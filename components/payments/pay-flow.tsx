@@ -249,16 +249,23 @@ export function PayFlow({
       const zap = active?.kind === "zap"
       return (
         <>
-          <div ref={reviewTop} className="flex flex-col items-center text-center">
-            <Avatar seed={counterpart.pubkey ?? counterpart.name} name={counterpart.name} size={56} />
-            <p className="mt-2 text-[1.0625rem] font-semibold leading-snug [overflow-wrap:anywhere]">{counterpart.name}</p>
-            {active && active.kind !== "scan" && !step.scanned && <p className="text-[0.8125rem] text-muted-foreground [overflow-wrap:anywhere]">{p.toAddress(active.address)}</p>}
-            <p className="mt-3 font-display text-4xl font-semibold tabular-nums tracking-tight">{amount}</p>
-            {euro && <p className="mt-1 text-[0.8125rem] text-muted-foreground">{tx.euro(format.euros(step.amountMsat / 1000, euro.rate), format.time(euro.at))}</p>}
-          </div>
-          <div className="mt-4 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
-            <ListRow title={p.fromWallet} value={wallet.alias ?? tx.yourWallet} />
-            <ListRow title={p.fees} value={p.feesUnknown} />
+          {/* Who (when known) and how much; on a phone in landscape next to the wallet and fees. */}
+          <div ref={reviewTop} className="xshort:grid xshort:grid-cols-2 xshort:items-center xshort:gap-3">
+            <div className="flex flex-col items-center text-center">
+              {counterpart.name && (
+                <>
+                  <Avatar seed={counterpart.pubkey ?? counterpart.name} name={counterpart.name} size={56} className="xshort:hidden" />
+                  <p className="mt-2 text-[1.0625rem] font-semibold leading-snug [overflow-wrap:anywhere] xshort:mt-0">{counterpart.name}</p>
+                </>
+              )}
+              {active && active.kind !== "scan" && !step.scanned && <p className="text-[0.8125rem] text-muted-foreground [overflow-wrap:anywhere]">{p.toAddress(active.address)}</p>}
+              <p className="mt-3 font-display text-4xl font-semibold tabular-nums tracking-tight xshort:mt-1">{amount}</p>
+              {euro && <p className="mt-1 text-[0.8125rem] text-muted-foreground">{tx.euro(format.euros(step.amountMsat / 1000, euro.rate), format.time(euro.at))}</p>}
+            </div>
+            <div className="mt-4 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card xshort:mt-0">
+              <ListRow title={p.fromWallet} value={wallet.alias ?? tx.yourWallet} />
+              <ListRow title={p.fees} value={p.feesUnknown} />
+            </div>
           </div>
           {zap ? (
             <InlineStatus className="mt-3">{tx.congratulate.publicHint(counterpart.name)}</InlineStatus>
@@ -268,12 +275,7 @@ export function PayFlow({
           <div className="mt-3">
             <LearnMore inline />
           </div>
-          {step.problem && (
-            <InlineStatus tone="error" className="mt-3">
-              {step.problem}
-            </InlineStatus>
-          )}
-          <SheetActions>
+          <SheetActions note={step.problem && <InlineStatus tone="error">{step.problem}</InlineStatus>}>
             <Button onClick={() => void confirm(step)} className="h-auto min-h-12 w-full whitespace-normal rounded-xl py-2 text-[1.0625rem] font-semibold">
               {zap ? tx.congratulate.send(amount, counterpart.name) : p.confirm(amount, counterpart.name)}
             </Button>

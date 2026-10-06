@@ -24,7 +24,8 @@ import { cn } from "@/lib/utils"
 // went through another connection, the wallet may not look payments up, or it has no answer) is
 // settled from what the person's wallet shows (lib/payments/journal.ts resolveByHand). "Not paid"
 // is offered only once the code has expired and can't be paid any more. Each choice is confirmed
-// first, and the payment stays marked as noted by hand.
+// first, and the payment stays marked as noted by hand. `hint` says why it is up to the person,
+// as the group's footnote.
 
 const DAY_MS = 86_400_000
 
@@ -41,7 +42,7 @@ export function useHasExpired(entry: PaymentEntry) {
   return expired
 }
 
-export function ResolveByHand({ entry }: { entry: PaymentEntry }) {
+export function ResolveByHand({ entry, hint }: { entry: PaymentEntry; hint?: string }) {
   const t = useT()
   const tx = useAreaT(PAYMENTS_TEXTS)
   const format = useFormat()
@@ -52,6 +53,7 @@ export function ResolveByHand({ entry }: { entry: PaymentEntry }) {
   const [busy, setBusy] = useState(false)
   const texts = entry.direction === "out" ? tx.byHand.outgoing : tx.byHand.incoming
   const amount = format.msat(entry.amountMsat)
+  const footer = [hint, !expired && entry.expiresAt !== null ? texts.notYet(format.time(entry.expiresAt * 1000)) : null].filter(Boolean).join(" ")
 
   const ask = (outcome: "done" | "not-done") => {
     setChoice(outcome)
@@ -61,7 +63,7 @@ export function ResolveByHand({ entry }: { entry: PaymentEntry }) {
 
   return (
     <>
-      <Group title={tx.byHand.title} footer={!expired && entry.expiresAt !== null ? texts.notYet(format.time(entry.expiresAt * 1000)) : undefined}>
+      <Group title={tx.byHand.title} footer={footer || undefined}>
         <ListRow title={texts.done} chevron={false} onClick={() => ask("done")} className="text-primary" />
         {expired && <ListRow title={texts.notDone} chevron={false} onClick={() => ask("not-done")} className="text-primary" />}
       </Group>

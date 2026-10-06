@@ -93,8 +93,9 @@ export function OutcomeHeader({ tone, title, text, working = false }: { tone: To
   )
 }
 
-// Who a payment went to or came from; an invoice from Zahlungen names nobody.
-function counterpartTitle(tx: PaymentTexts, { direction, counterpart }: PaymentEntry) {
+// What a payment is called in a list and as a sheet's title: who it went to or came from; an
+// invoice from Zahlungen names nobody.
+export function entryTitle(tx: PaymentTexts, { direction, counterpart }: PaymentEntry) {
   if (direction === "out") return counterpart.name ? tx.to(counterpart.name) : tx.pay.invoice
   return counterpart.name ? tx.from(counterpart.name) : tx.receive.title
 }
@@ -104,5 +105,5 @@ export function EntryRow({ entry, onClick }: { entry: PaymentEntry; onClick: () 
   const tx = useAreaT(PAYMENTS_TEXTS)
   const format = useFormat()
   const { label, tone } = entryStatus(tx, entry)
-  return <ListRow title={counterpartTitle(tx, entry)} subtitle={<StatusLabel tone={tone}>{label}</StatusLabel>} value={format.msat(entry.amountMsat)} onClick={onClick} />
+  return <ListRow title={entryTitle(tx, entry)} subtitle={<StatusLabel tone={tone}>{label}</StatusLabel>} value={format.msat(entry.amountMsat)} onClick={onClick} />
 }
