@@ -1,0 +1,212 @@
+"use client"
+
+import { useEffect, useState, type ReactNode } from "react"
+import { CircleDot, Maximize2, Pause, Trophy, WifiOff, X } from "lucide-react"
+import { ClockScoreboard, CricketScoreboard, X01Scoreboard } from "@/components/game/scoreboards"
+import { slotLabel } from "@/components/game/visit-panel"
+import { useT } from "@/components/i18n-provider"
+import { Group } from "@/components/ui/group"
+import { ListRow } from "@/components/ui/list-row"
+import { EmptyState } from "@/components/ui/empty-state"
+import type { MatchState } from "@/lib/game/engine"
+import type { MatchConfig } from "@/lib/game/types"
+import { gameSubtitle, rulesSummary } from "@/lib/game/words"
+import { watchedGame } from "@/lib/live/content"
+import { agreementToConfig } from "@/lib/protocol/match"
+import { followMatch, type Followed, type MatchSource } from "@/lib/live/follow"
+import type { Messages } from "@/lib/i18n"
+import type { LiveSnapshot } from "@/lib/protocol/live"
+import { cn } from "@/lib/utils"
+
+// A live match as spectators and seated players see it: the board's own scoreboard, replayed
+// by the engine from the latest snapshot, with its status, the time of that snapshot, and a
+// clear "Verbindung unterbrochen" when the relays stop answering. Read-only throughout.
+
+export function useFollowed(source: MatchSource | null): Followed {
+  const [followed, setFollowed] = useState<Followed>({ state: null, problem: null, connection: "connecting", heardAt: null })
+  const match = source?.match
+  useEffect(() => {
+    if (!source) return
+    const follow = followMatch(source, setFollowed)
+    return follow.close
+    // The source is fixed per match; a new object for the same match changes nothing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [match])
+  return followed
+}
+
+const clock = (t: Messages, ms: number) => new Date(ms).toLocaleTimeString(t.intl, { hour: "2-digit", minute: "2-digit" })
+
+// Loading, missing and unreadable matches, or null once there is something to show.
+export function MatchProblem({ followed }: { followed: Followed }) {
+  const t = useT()
+  const w = t.live.watch
+  if (followed.state) return null
+  if (followed.problem === "missing") return <EmptyState icon={CircleDot} title={w.notFound} description={w.notFoundText} />
+  if (followed.problem) return <EmptyState icon={CircleDot} title={w.unreadable} description={w.unreadableText} />
+  if (followed.connection === "interrupted") return <EmptyState icon={WifiOff} title={w.offline} description={w.offlineText} />
+  return (
+    <p role="status" className="py-12 text-center text-[0.9375rem] text-muted-foreground">
+      {w.connecting}
+    </p>
+  )
+}
+
+export function MatchView({ followed, actions }: { followed: Followed; actions?: ReactNode }) {
+  const t = useT()
+  const [fullScreen, setFullScreen] = useState(false)
+  const state = followed.state
+  if (!state) return <MatchProblem followed={followed} />
+  const live = state.live
+  const config = agreementToConfig(state.agreement)
+  const game = live ? watchedGame(state.agreement, live.content) : null
+  const status = live?.content.status ?? null
+
+  return (
+    <div className="mt-2">
+      <header className="flex items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <h2 className="text-xl font-semibold leading-tight [overflow-wrap:anywhere]">{rulesSummary(t, config)}</h2>
+          <Freshness followed={followed} status={status} />
+        </div>
+        {game?.state && (
+          <button
+            type="button"
+            onClick={() => setFullScreen(true)}
+            aria-label={t.live.watch.fullScreen}
+            className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-primary active:bg-secondary/70"
+          >
+            <Maximize2 className="h-5 w-5" aria-hidden="true" />
+          </button>
+        )}
+      </header>
+
+      {!live ? (
+        <p className="mt-6 text-[0.9375rem] text-muted-foreground">{t.live.watch.waiting}</p>
+      ) : game?.state ? (
+        !fullScreen && <Board state={game.state} className="mt-4 h-[clamp(13rem,52dvh,30rem)]" />
+      ) : (
+        <Standing config={config} snapshot={live.content} />
+      )}
+
+      {actions}
+
+      {fullScreen && game?.state && (
+        <FullScreen onClose={() => setFullScreen(false)}>
+          <div className="min-w-0 px-1">
+            <p className="text-2xl font-semibold leading-tight tablet:text-4xl [overflow-wrap:anywhere]">{rulesSummary(t, config)}</p>
+            <Freshness followed={followed} status={status} large />
+          </div>
+          <Board state={game.state} className="min-h-0 flex-1" large />
+        </FullScreen>
+      )}
+    </div>
+  )
+}
+
+// Status in words with a symbol, and how current the score is: when the connection broke, the
+// time of the last score; otherwise the time it was signed on the board.
+function Freshness({ followed, status, large }: { followed: Followed; status: LiveSnapshot["status"] | null; large?: boolean }) {
+  const t = useT()
+  const w = t.live.watch
+  const interrupted = followed.connection === "interrupted"
+  const at = followed.state?.live ? followed.state.live.at * 1000 : followed.heardAt
+  const Icon = interrupted ? WifiOff : status === "finished" ? Trophy : status === "playing" ? CircleDot : Pause
+  return (
+    <p className={cn("mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.9375rem] text-muted-foreground", large && "tablet:text-xl")}>
+      <span className={cn("inline-flex items-center gap-1.5 font-medium", interrupted ? "text-warning" : status === "playing" ? "text-danger" : "text-foreground")}>
+        <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+        {interrupted ? w.interrupted : status ? w.status[status] : w.connecting}
+      </span>
+      {at !== null && <span>{w.updatedAt(clock(t, at))}</span>}
+    </p>
+  )
+}
+
+// The board's scoreboard, the current visit under it, and who won once someone has.
+function Board({ state, className, large }: { state: MatchState; className?: string; large?: boolean }) {
+  const t = useT()
+  const players = state.config.players
+  const winner = state.winner !== null ? players[state.winner].name : null
+  return (
+    <section aria-label={gameSubtitle(t, state)} className={cn("flex flex-col gap-2", className)}>
+      <div className="relative min-h-0 flex-1 [container-type:size]">
+        {state.config.type === "x01" && <X01Scoreboard state={state} />}
+        {state.config.type === "cricket" && <CricketScoreboard state={state} />}
+        {state.config.type === "clock" && <ClockScoreboard state={state} />}
+      </div>
+      <p aria-live="polite" className={cn("rounded-2xl border border-border bg-card px-4 py-3 text-[1.0625rem]", large && "tablet:py-5 tablet:text-3xl")}>
+        {winner ? (
+          <span className="flex items-center gap-2 font-semibold">
+            <Trophy className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+            {t.live.watch.wins(winner)}
+          </span>
+        ) : (
+          <CurrentVisit state={state} />
+        )}
+      </p>
+    </section>
+  )
+}
+
+function CurrentVisit({ state }: { state: MatchState }) {
+  const t = useT()
+  const name = state.config.players[state.current].name
+  const darts = state.visitDarts.map((d) => slotLabel(state, d, t))
+  const points = state.config.type === "x01" ? state.visitStartScore - state.scores[state.current] : null
+  return (
+    <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+      <span className="font-semibold [overflow-wrap:anywhere]">{t.live.watch.throwing(name)}</span>
+      <span className="text-muted-foreground">{t.live.watch.current}</span>
+      <span className="font-display font-semibold tabular-nums">{darts.length > 0 ? darts.join("  ") : "–"}</span>
+      {points !== null && darts.length > 0 && <span className="ml-auto font-display font-semibold tabular-nums">{points}</span>}
+    </span>
+  )
+}
+
+// A very long game's snapshot carries only the end of its log: the score stands, the board can't
+// be redrawn from it.
+function Standing({ config, snapshot }: { config: MatchConfig; snapshot: LiveSnapshot }) {
+  const t = useT()
+  const s = snapshot.standing
+  return (
+    <Group footer={t.live.watch.standingOnly}>
+      {config.players.map((p, i) => (
+        <ListRow
+          key={p.id}
+          title={p.name}
+          subtitle={[s.sets ? t.live.watch.sets(`${s.sets[i]}`) : null, t.live.watch.legs(`${s.legs[i]}`), s.current === i && s.winner === null ? t.live.watch.throwing(p.name) : null].filter(Boolean).join(" · ")}
+          value={<span className="font-display text-2xl font-semibold text-foreground">{s.scores[i]}</span>}
+        />
+      ))}
+    </Group>
+  )
+}
+
+// The TV view: the whole screen for the scoreboard, in large type; Escape or the button closes it.
+function FullScreen({ onClose, children }: { onClose: () => void; children: ReactNode }) {
+  const t = useT()
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => event.key === "Escape" && onClose()
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [onClose])
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={t.live.watch.title}
+      className="fixed inset-0 z-50 flex flex-col gap-3 bg-background px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] pl-[max(env(safe-area-inset-left),0.75rem)] pr-[max(env(safe-area-inset-right),0.75rem)] pt-[max(env(safe-area-inset-top),0.5rem)] tablet:gap-5 tablet:px-6"
+    >
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label={t.live.watch.closeFullScreen}
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground active:bg-secondary/70"
+      >
+        <X className="h-6 w-6" aria-hidden="true" />
+      </button>
+      {children}
+    </div>
+  )
+}

@@ -1,0 +1,288 @@
+// Live games end to end over a real relay (nak serve on 127.0.0.1): the board founds a private
+// match and sends snapshots, a spectator replays them, players join from their phones and give
+// their verdicts, a correction voids them, and the board hands the match to another device.
+// Run: npm run test:relay
+import { after, before, test } from "node:test"
+import assert from "node:assert/strict"
+import { Worker } from "node:worker_threads"
+import { bytesToHex } from "@noble/hashes/utils"
+import "../storage-helpers.ts"
+import { startRelay, type NakRelay } from "../support/nak.ts"
+import { config, dart } from "../helpers.ts"
+import { applyThrow, correctDart, newMatchState, replay, tagThrow, visitBySeq, type MatchState } from "../../lib/game/engine.ts"
+import type { SavedMatch, Throw } from "../../lib/game/types.ts"
+
+let relay: NakRelay
+let live: typeof import("../../lib/live/board.ts")
+let seating: typeof import("../../lib/live/seating.ts")
+let join: typeof import("../../lib/live/join.ts")
+let handoff: typeof import("../../lib/live/handoff.ts")
+let follow: typeof import("../../lib/live/follow.ts")
+let content: typeof import("../../lib/live/content.ts")
+let store: typeof import("../../lib/live/store.ts")
+let nostr: typeof import("../../lib/nostr/client.ts")
+let signers: typeof import("../../lib/nostr/signers.ts")
+let links: typeof import("../../lib/protocol/links.ts")
+
+before(async () => {
+  relay = await startRelay()
+  // Read whenever the live code picks its relays: never a public relay in these tests.
+  process.env.NEXT_PUBLIC_BLUELINE_RELAYS = relay.url
+  ;[live, seating, join, handoff, follow, content, store, nostr, signers, links] = await Promise.all([
+    import("../../lib/live/board.ts"),
+    import("../../lib/live/seating.ts"),
+    import("../../lib/live/join.ts"),
+    import("../../lib/live/handoff.ts"),
+    import("../../lib/live/follow.ts"),
+    import("../../lib/live/content.ts"),
+    import("../../lib/live/store.ts"),
+    import("../../lib/nostr/client.ts"),
+    import("../../lib/nostr/signers.ts"),
+    import("../../lib/protocol/links.ts"),
+  ])
+})
+
+after(async () => {
+  nostr.relayClient().close()
+  await relay?.stop()
+})
+
+// Waits until `check` returns something, polling; fails with `what` after `ms`.
+async function until<T>(what: string, check: () => T | null | undefined | false, ms = 15_000): Promise<T> {
+  const deadline = Date.now() + ms
+  for (;;) {
+    const value = check()
+    if (value) return value
+    if (Date.now() > deadline) throw new Error(`timed out waiting for ${what}`)
+    await new Promise((resolve) => setTimeout(resolve, 100))
+  }
+}
+
+// Mia scores 180, 180 and checks out 141; Jonas misses. Tagged the way the app enters throws.
+function playOut(c: SavedMatch["config"], next: (s: MatchState) => Throw): Throw[] {
+  const s = newMatchState(c)
+  const throws: Throw[] = []
+  while (s.winner === null) {
+    const tagged = tagThrow(s, next(s))
+    applyThrow(s, tagged)
+    throws.push(tagged)
+  }
+  return throws
+}
+const miaWins = (s: MatchState): Throw =>
+  s.current === 1 ? { kind: "noScore" } : s.scores[0] > 141 ? dart(20, 3) : [dart(20, 3), dart(19, 3), dart(12, 2)][s.visitDarts.length]
+
+const players = [
+  { id: "a", name: "Mia" },
+  { id: "b", name: "Jonas" },
+]
+const newGame = (id: string, throws: Throw[]): SavedMatch => ({ id, config: config({ players }), throws, startedAt: new Date().toISOString(), acknowledgedLegs: 0, status: "playing" })
+const fullGame = playOut(config({ players }), miaWins)
+
+// What spectators see of the game.
+const shown = (s: MatchState) => ({ scores: s.scores, current: s.current, visitDarts: s.visitDarts, winner: s.winner, legs: s.legsWon })
+
+function watcher(source: { match: string; key: string | null; relays: string[] }) {
+  let latest: import("../../lib/live/follow.ts").Followed | null = null
+  const handle = follow.followMatch(source, (f) => (latest = f))
+  return { get: () => latest, close: handle.close }
+}
+
+test("a spectator replays the board's newest snapshot; without the match key nothing is readable", async () => {
+  const game = newGame("watch-game", fullGame.slice(0, 4))
+  const view = await live.goLive(game)
+  const link = links.decodeLinkPayload("watch", view.watch)
+  assert.deepEqual(link.relays, [relay.url])
+  assert.ok(link.key)
+
+  const spectator = watcher({ match: link.match, key: link.key ?? null, relays: link.relays })
+  const sameAs = (g: SavedMatch) => () => {
+    const live = spectator.get()?.state?.live
+    if (!live) return null
+    const watched = content.watchedGame(spectator.get()!.state!.agreement, live.content).state
+    return watched && JSON.stringify(shown(watched)) === JSON.stringify(shown(replay(g.config, g.throws))) && live
+  }
+  const first = await until("the first snapshot", sameAs(game))
+  assert.equal(spectator.get()?.connection, "live")
+
+  // Every change goes out (at most one snapshot a second); the newest wins.
+  const later = { ...game, throws: fullGame.slice(0, 9) }
+  live.updateBoard({ ...game, throws: fullGame.slice(0, 6) })
+  live.updateBoard(later)
+  const second = await until("the newer snapshot", sameAs(later))
+  assert.ok(second.n > first.n)
+
+  // The founding and every snapshot are encrypted: names and throws are not on the relay in the clear.
+  const stored = await nostr.query(follow.matchFilters(link.match), [relay.url])
+  assert.ok(stored.events.length >= 2)
+  assert.ok(!JSON.stringify(stored.events).includes("Mia"))
+  const blind = watcher({ match: link.match, key: null, relays: link.relays })
+  await until("the founding as sealed", () => blind.get()?.problem === "sealed")
+  spectator.close()
+  blind.close()
+  await live.stopHere(game.id)
+})
+
+test("players join from their phones without any key leaving them; their verdicts count until a correction", async () => {
+  const local = "join-game"
+  const game = newGame(local, fullGame.slice(0, 3))
+  await live.goLive(game)
+  const seats = await seating.openSeating(local)
+  const board = links.decodeLinkPayload("board", seats.code)
+
+  // Everything the handshake sends, as anyone on the relay sees it.
+  const seen: unknown[] = []
+  const spy = nostr.subscribe([{ kinds: [21180] }], [relay.url], { onevent: (event) => seen.push(event) })
+
+  const profileSecret = crypto.getRandomValues(new Uint8Array(32))
+  const profile = await signers.createLocalSigner(profileSecret)
+  const profilePubkey = await profile.getPublicKey()
+
+  const sit = async (seat: number, signer: typeof profile | null) => {
+    let visit: import("../../lib/live/join.ts").BoardVisit = { step: "looking" }
+    const control = join.visitBoard(board, (next) => (visit = next))
+    const table = await until("the seats", () => visit.step === "table" && visit.table)
+    assert.deepEqual(table.seats.map((s) => s.alias), ["Mia", "Jonas"])
+    await control.join(seat, signer)
+    const seated = await until("the seat", () => visit.step === "seated" && visit.joined)
+    return { seated, control }
+  }
+  const mia = await sit(0, null)
+  const jonas = await sit(1, profile)
+  assert.equal(jonas.seated.profile, profilePubkey)
+  assert.equal(jonas.seated.guest, null)
+  assert.ok(mia.seated.guest)
+  assert.ok(mia.seated.key, "the phone got the match key")
+
+  // The board knows each seat's key: the guest's own one, the profile's public key.
+  const holders = await until("both seats on the board", () => {
+    const seats = live.boardView(local)?.seats
+    return seats?.every((s) => s.holder) && seats
+  })
+  assert.deepEqual(holders[1].holder, { pubkey: profilePubkey, profile: true })
+  assert.deepEqual(holders[0].holder, { pubkey: mia.seated.guest!.pubkey, profile: false })
+
+  // No secret travelled, and none sits in the clear on either side's storage.
+  spy.close()
+  const db = await import("../../lib/storage/db.ts")
+  const everything = JSON.stringify([seen, await db.dbGetAll("pending")], (_k, v) => (v instanceof Uint8Array ? bytesToHex(v) : v))
+  assert.ok(seen.length >= 4)
+  for (const secret of [bytesToHex(profileSecret), bytesToHex(mia.seated.guest!.secret)]) assert.ok(!everything.includes(secret))
+
+  // The game ends; the result is published once it stays won.
+  const finished = { ...game, throws: fullGame }
+  live.updateBoard(finished)
+  const phone = watcher({ match: jonas.seated.match, key: bytesToHex(jonas.seated.key!.secret), relays: jonas.seated.relays })
+  const result = await until("the result", () => phone.get()?.state?.result)
+  assert.equal(result.winner, 0)
+  assert.deepEqual(result.legs, [1, 0])
+
+  assert.ok(await join.giveVerdict(jonas.seated, phone.get()!.state!, "confirm", profile))
+  assert.ok(await join.giveVerdict(mia.seated, phone.get()!.state!, "dispute", null))
+  await until("both verdicts on the board", () => {
+    const seats = live.boardView(local)?.seats
+    return seats?.[0].verdict === "dispute" && seats[1].verdict === "confirm"
+  })
+
+  // The confirmed result is now among the player's own games.
+  const archive = await import("../../lib/storage/archive.ts")
+  let joined = await join.keepConfirmed(jonas.seated, phone.get()!.state!)
+  assert.equal(joined.archived, result.event)
+  assert.ok((await archive.loadArchive()).some((m) => m.id === jonas.seated.match))
+
+  // A correction after publication: a new result names the old one, and the verdicts lapse.
+  const plan = correctDart(finished.config, finished.throws, visitBySeq(replay(finished.config, finished.throws), 0)!, 0, { segment: 19, multiplier: 3 })
+  const corrected = plan.keepResult ? plan.keepResult.throws : plan.rescored
+  assert.notEqual(replay(finished.config, corrected).winner, null)
+  live.updateBoard({ ...finished, throws: corrected })
+  const second = await until("the corrected result", () => {
+    const r = phone.get()?.state?.result
+    return r && r.event !== result.event && r
+  })
+  assert.equal(second.replaces, result.event)
+  assert.deepEqual(phone.get()!.state!.confirmations, {})
+  await until("the lapsed verdicts on the board", () => live.boardView(local)?.seats.every((s) => s.verdict === null))
+  joined = await join.keepConfirmed(joined, phone.get()!.state!)
+  assert.equal(joined.archived, null)
+  assert.ok(!(await archive.loadArchive()).some((m) => m.id === jonas.seated.match))
+
+  // Confirmed again: the corrected game is the one kept.
+  assert.ok(await join.giveVerdict(joined, phone.get()!.state!, "confirm", profile))
+  const state = await until("the renewed verdict", () => phone.get()?.state?.confirmations[1]?.verdict === "confirm" && phone.get()!.state)
+  joined = await join.keepConfirmed(joined, state)
+  const kept = (await archive.loadArchive()).find((m) => m.id === jonas.seated.match)
+  assert.deepEqual(kept?.throws, JSON.parse(JSON.stringify(corrected)))
+  assert.equal(kept?.players[1].name, "Jonas")
+
+  mia.control.close()
+  jonas.control.close()
+  phone.close()
+  seats.close()
+  await live.stopHere(local)
+})
+
+test("the writer hands the match to another device only after confirming; the old session counts no more", async () => {
+  const local = "handoff-game"
+  const game = newGame(local, fullGame.slice(0, 5))
+  const view = await live.goLive(game)
+  const link = links.decodeLinkPayload("watch", view.watch)
+  const spectator = watcher({ match: link.match, key: link.key ?? null, relays: link.relays })
+  await until("the board's snapshot", () => spectator.get()?.state?.live)
+  // The old session's key, as an old device that kept writing would still have it.
+  const sealed = await store.loadBoard(local)
+  const oldKeys = await store.openKeys<import("../../lib/live/store.ts").BoardSecrets>(sealed!.keys)
+
+  const device = new Worker(new URL("./live-device.ts", import.meta.url), { workerData: { relay: relay.url } })
+  const messages: { type: string; step?: string; checkCode?: string; game?: SavedMatch; live?: boolean }[] = []
+  device.on("message", (m) => messages.push(m))
+  await until("the other device", () => messages.some((m) => m.type === "ready"))
+
+  let offer: import("../../lib/live/handoff.ts").HandoffOffer | null = null
+  const control = await handoff.offerHandoff(local, (next) => (offer = next))
+  const waiting = await until("the handoff code", () => offer?.step === "waiting" && offer)
+  device.postMessage({ type: "take", code: waiting.code })
+
+  // Both show the same check code; nothing moves before the person here confirms.
+  const asked = await until("the request", () => offer?.step === "asked" && offer)
+  const shownThere = await until("the check code over there", () => messages.find((m) => m.step === "asking"))
+  assert.equal(asked.checkCode, shownThere.checkCode)
+  await new Promise((resolve) => setTimeout(resolve, 1500))
+  assert.ok(!messages.some((m) => m.type === "taken"))
+  assert.ok(live.boardView(local))
+
+  control.give()
+  const taken = await until("the game over there", () => messages.find((m) => m.type === "taken"))
+  assert.equal(taken.live, true)
+  assert.deepEqual(JSON.parse(JSON.stringify(taken.game!.throws)), JSON.parse(JSON.stringify(game.throws)))
+  await until("the handover done here", () => offer?.step === "done")
+  assert.equal(live.boardView(local), null)
+  assert.equal(await store.loadBoard(local), null)
+
+  // The new device writes under session 2; spectators follow it.
+  device.postMessage({ type: "throw", throws: fullGame.slice(0, 8) })
+  const moved = await until("the new device's snapshot", () => {
+    const state = spectator.get()?.state
+    return state && state.current.sv === 2 && state.live?.sv === 2 && state.live.content.standing && state
+  })
+  assert.notEqual(moved.current.session, (await signers.createLocalSigner(Buffer.from(oldKeys!.session, "hex"))).getPublicKey())
+
+  // A snapshot the old session signs afterwards is refused, however new it claims to be.
+  const oldSession = await signers.createLocalSigner(Buffer.from(oldKeys!.session, "hex"))
+  const matchKey = await signers.createLocalSigner(Buffer.from(oldKeys!.match, "hex"))
+  const records = await import("../../lib/protocol/records.ts")
+  const late = content.snapshotFor(newGame(local, fullGame.slice(0, 12)), replay(game.config, fullGame.slice(0, 12)), { sv: 1, n: 999, auth: sealed!.founding })
+  const template = records.buildRecord("match.live", late, { created_at: Math.floor(Date.now() / 1000), root: link.match, d: link.match })
+  const sealedLate = records.encryptForLinkKey(template, await matchKey.getPublicKey(), await matchKey.nip44!.encrypt(await oldSession.getPublicKey(), template.content))
+  const lateEvent = await oldSession.signEvent(sealedLate)
+  await nostr.publish(lateEvent, [relay.url])
+  const after = await until("the late snapshot refused", () => {
+    const state = spectator.get()?.state
+    return state?.log.rejected.find((r) => r.id === lateEvent.id) && state
+  })
+  assert.equal(after.log.rejected.find((r) => r.id === lateEvent.id)?.reason, "session_superseded")
+  assert.equal(after.live?.sv, 2)
+
+  control.close()
+  spectator.close()
+  await device.terminate()
+})

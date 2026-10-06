@@ -12,3 +12,4 @@
 // play) never carries an area's code, and nostr-core only ever arrives on demand.
 
 import "@/components/shell/builtin-screens"
+import "@/components/live/register"
