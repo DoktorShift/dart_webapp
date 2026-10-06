@@ -96,6 +96,21 @@ export function EditSheet({ own, open, onOpenChange }: { own: OwnProfile; open: 
       <Sheet open={open} onOpenChange={onOpenChange} title={e.title}>
         <form onSubmit={submit} className="flex min-h-0 flex-col overscroll-contain xshort:overflow-y-auto">
           <div className="min-h-0 overflow-y-auto overscroll-contain pb-4 xshort:shrink-0 xshort:overflow-visible">
+            {/* What is known of the public profile comes first: it decides what saving does. */}
+            {publicState === "loading" && (
+              <p role="status" className="mt-2 px-4 text-[0.9375rem] text-muted-foreground">
+                {e.loading}
+              </p>
+            )}
+            {publicState === "none" && <InlineStatus className="mt-2">{e.notFound}</InlineStatus>}
+            {publicState === "failed" && (
+              <div className="mt-2">
+                <InlineStatus tone="error">{e.notLoaded}</InlineStatus>
+                <Button variant="secondary" onClick={() => void lookupOwnEvents(pubkey, { again: true })} className="mt-2 h-11 rounded-xl px-5 text-[1.0625rem]">
+                  {tx.public.retry}
+                </Button>
+              </div>
+            )}
             <TextField
               label={e.boardName}
               value={boardName}
@@ -108,20 +123,6 @@ export function EditSheet({ own, open, onOpenChange }: { own: OwnProfile; open: 
               hint={e.boardHint(MAX_SEAT_NAME)}
             />
             <ProfileFields seed={pubkey} name={publicName} nameHint={e.publicHint} onName={setPublicName} picture={picture} onPicture={setPicture} />
-            {publicState === "loading" && (
-              <p role="status" className="mt-4 px-4 text-[0.9375rem] text-muted-foreground">
-                {e.loading}
-              </p>
-            )}
-            {publicState === "none" && <InlineStatus className="mt-4">{e.notFound}</InlineStatus>}
-            {publicState === "failed" && (
-              <div className="mt-4">
-                <InlineStatus tone="error">{e.notLoaded}</InlineStatus>
-                <Button variant="secondary" onClick={() => void lookupOwnEvents(pubkey, { again: true })} className="mt-2 h-11 rounded-xl px-5 text-[1.0625rem]">
-                  {tx.public.retry}
-                </Button>
-              </div>
-            )}
             <SignerConfirmation />
             {problem && (
               <InlineStatus tone="error" className="mt-4">
