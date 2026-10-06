@@ -140,6 +140,7 @@ export const profileScreensDe = {
     toggleHint: "Deine Gesamtzahlen, ohne einzelne Spiele",
     update: "Statistik aktualisieren",
     outdated: "Deine Zahlen haben sich seitdem geändert.",
+    noFigures: "Noch keine Spiele. Sobald du spielst, stehen deine Zahlen im Profil.",
   },
 
   // A public profile.

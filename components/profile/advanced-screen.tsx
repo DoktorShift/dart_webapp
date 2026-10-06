@@ -19,7 +19,7 @@ import { changeBase, lookupOwnEvents, OWN } from "@/lib/profile/own-events"
 import { addRelay, editableRelays, relayListTemplate, removeRelay } from "@/lib/profile/relay-list"
 import { probeRelays, relayHost, type RelayStatus } from "@/lib/profile/relay-status"
 import { copyText } from "@/lib/shell/share"
-import { publishOwn } from "@/lib/sync/publish"
+import { submitOwn } from "@/lib/sync/publish"
 import { cn } from "@/lib/utils"
 import { version } from "@/package.json"
 
@@ -205,7 +205,7 @@ function RelayList({ pubkey, entries, state, status }: { pubkey: string; entries
     setBusy(true)
     setProblem(null)
     try {
-      await publishOwn([relayListTemplate(next, await changeBase(pubkey, OWN.relayList))])
+      await submitOwn([relayListTemplate(next, await changeBase(pubkey, OWN.relayList))])
       return true
     } catch (error) {
       setProblem(signerProblem(tx, error))

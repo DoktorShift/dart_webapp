@@ -25,7 +25,7 @@ import { metadataTemplate, type MetadataChange } from "@/lib/profile/metadata"
 import { changeBase, lookupOwnEvents, OWN } from "@/lib/profile/own-events"
 import { safeImageUrl } from "@/lib/shell/avatar"
 import { MAX_SEAT_NAME, renamePlayer, seatName } from "@/lib/storage/players"
-import { publishOwn } from "@/lib/sync/publish"
+import { submitOwn } from "@/lib/sync/publish"
 
 // "Bearbeiten": the name at the board, which is the profile's player here, and the public
 // profile (name and picture, which other apps show too). The two are kept apart on purpose: a
@@ -72,7 +72,7 @@ export function EditSheet({ own, open, onOpenChange }: { own: OwnProfile; open: 
       }
       const name = publicChanged ? publicName.trim() : publicFollows ? seatName(boardName) : undefined
       const change: MetadataChange = { ...(name !== undefined ? { name } : {}), ...(pictureChanged ? { picture: safeImageUrl(picture) } : {}) }
-      if (Object.keys(change).length > 0) await publishOwn([metadataTemplate(change, await changeBase(pubkey, OWN.metadata))])
+      if (Object.keys(change).length > 0) await submitOwn([metadataTemplate(change, await changeBase(pubkey, OWN.metadata))])
       onOpenChange(false)
     } catch (error) {
       setProblem(signerProblem(tx, error))

@@ -14,7 +14,8 @@ import { ownRelaySettings } from "@/lib/profile/own-events"
 
 // "So sehen andere dein Profil": what relays have published, read from them like anyone else
 // would (PLAN.md: a real preview of published data, not of what this device has), and the one
-// choice about it: "Statistik im Profil zeigen", off until switched on.
+// choice about it: "Statistik im Profil zeigen", off until switched on; on before the first
+// game, the figures follow as soon as there are some.
 export default function PreviewScreen() {
   const own = useOwnProfile()
   if (!own) return null
@@ -45,8 +46,8 @@ function Preview({ own }: { own: OwnProfile }) {
   return (
     <>
       <p className="mt-2 text-[1.0625rem] leading-snug text-muted-foreground">{p.intro}</p>
-      <Group footer={card.outdated ? p.outdated : undefined}>
-        <SwitchRow title={p.toggle} hint={p.toggleHint} checked={card.enabled} onCheckedChange={(on) => !busy && void run(() => card.setEnabled(on))} />
+      <Group footer={card.enabled && !card.hasFigures ? p.noFigures : card.outdated ? p.outdated : undefined}>
+        <SwitchRow title={p.toggle} hint={p.toggleHint} checked={card.enabled} onCheckedChange={(on) => !busy && card.loaded && void run(() => card.setEnabled(on))} />
       </Group>
       {card.outdated && own.session.kind !== "local" && (
         <Button variant="secondary" disabled={busy} onClick={() => void run(card.refresh)} className="mt-3 h-11 w-full rounded-xl text-[1.0625rem] text-primary">

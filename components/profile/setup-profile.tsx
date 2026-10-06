@@ -29,7 +29,7 @@ import { getSigner, type Session } from "@/lib/profile/session"
 import type { SetupPlayersProps, SetupSeat } from "@/lib/shell/registry"
 import { usePlayers } from "@/lib/storage/hooks"
 import { findByName, isUnnamed, seatName } from "@/lib/storage/players"
-import { publishOwn } from "@/lib/sync/publish"
+import { submitOwn } from "@/lib/sync/publish"
 
 // The signed-in profile's quick picks in game setup: "Du" (its own seat, linked by the profile
 // rather than by a name anyone could type), its saved rounds, and "Runde speichern" for the
@@ -135,7 +135,7 @@ function SaveRound({ session, players, rounds, onSaved }: { session: Session; pl
   const save = (event: FormEvent) => {
     event.preventDefault()
     if (seats.length === 0 || busy) return
-    void run(async () => publishOwn([await roundTemplate({ id: newRoundId(), title, players: seats }, null, await getSigner())]))
+    void run(async () => submitOwn([await roundTemplate({ id: newRoundId(), title, players: seats }, null, await getSigner())]))
   }
 
   return (
@@ -182,7 +182,7 @@ function SaveRound({ session, players, rounds, onSaved }: { session: Session; pl
               className="h-11 bg-danger text-white hover:bg-danger/90"
               onClick={() => {
                 const round = deleting
-                if (round) void run(async () => publishOwn([await deletedRoundTemplate(round.event, await getSigner())]))
+                if (round) void run(async () => submitOwn([await deletedRoundTemplate(round.event, await getSigner())]))
               }}
             >
               {s.deleteConfirm}

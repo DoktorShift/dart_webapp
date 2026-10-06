@@ -8,7 +8,7 @@ import { relayClient } from "../lib/nostr/client.ts"
 import { loadCore } from "../lib/nostr/core.ts"
 import type { NostrEvent } from "../lib/nostr/types.ts"
 import { metadataTemplate } from "../lib/profile/metadata.ts"
-import { rememberOwn } from "../lib/profile/own-events.ts"
+import { ownEvents, rememberOwn } from "../lib/profile/own-events.ts"
 import { getSession, getSigner, signOut, startLocalProfile } from "../lib/profile/session.ts"
 import { archiveFinished, type ArchivedMatch } from "../lib/storage/archive.ts"
 import { dbGetAll } from "../lib/storage/db.ts"
@@ -60,8 +60,11 @@ test("a profile publishes only its own events", async () => {
 
 test("creating a profile from a game: name, picture and relays go out; the games stay, and only this seat's become the profile's", async () => {
   await twoGames()
-  await createProfile({ name: "Anna Schmidt", picture: "https://img.example/anna.jpg", claim: { matchId: "match-a", seat: 0 } })
+  const { published } = await createProfile({ name: "Anna Schmidt", picture: "https://img.example/anna.jpg", claim: { matchId: "match-a", seat: 0 } })
   const pubkey = getSession()!.pubkey
+  // The profile is complete here before any relay answered; the events are the profile's own.
+  assert.equal((await ownEvents(pubkey)).size, 2)
+  await published
 
   // Every relay has the two events, signed by the new profile, and nothing else.
   for (const relay of relays) assert.deepEqual(relay.events.map((e) => e.kind).sort((a, b) => a - b), [0, 10002], relay.url)
@@ -70,8 +73,9 @@ test("creating a profile from a game: name, picture and relays go out; the games
   assert.deepEqual(JSON.parse(metadata.content), { name: "Anna Schmidt", display_name: "Anna Schmidt", picture: "https://img.example/anna.jpg" })
   assert.deepEqual(metadata.tags, [])
   assert.deepEqual(relayList.tags, URLS.map((url) => ["r", url]))
-  // No opponent, no game, no score in anything published.
-  const everything = JSON.stringify(received())
+  // No opponent, no game, no score in anything published (ids and signatures are random hex,
+  // so only what the events say is looked at).
+  const everything = JSON.stringify(received().map((e) => [e.kind, e.tags, e.content]))
   for (const secret of ["Ben", "match-a", "match-b", "301"]) assert.ok(!everything.includes(secret), secret)
 
   // Anna (seat 0) is the profile's player, still named as she plays; Ben is nobody's.
@@ -101,7 +105,7 @@ test("creating a profile from a game: name, picture and relays go out; the games
 
 test("a profile from nobody's games starts with a player of its own, named as a seat holds it", async () => {
   await twoGames()
-  await createProfile({ name: "Carla Konstantinopoulou", picture: "", claim: null })
+  await (await createProfile({ name: "Carla Konstantinopoulou", picture: "", claim: null })).published
   const pubkey = getSession()!.pubkey
   const players = await listPlayers()
   assert.deepEqual(players.filter((p) => p.pubkey === pubkey).map((p) => p.name), ["Carla Konstantin"])

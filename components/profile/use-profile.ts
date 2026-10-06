@@ -15,17 +15,19 @@ import type { PlayerRecord } from "@/lib/storage/players"
 
 // The data the profile screens show, from this device first and relays second.
 
-// The profile's own events, kept current with this tab's and other tabs' writes. null while read.
+// The profile's own events, kept current with this tab's and other tabs' writes. null while
+// read, and for a profile other than the one they were read for: another profile signing in
+// never sees the previous one's name for a moment.
 export function useOwnEvents(pubkey: string | null) {
-  const [events, setEvents] = useState<Map<string, NostrEvent> | null>(null)
+  const [read, setRead] = useState<{ pubkey: string; events: Map<string, NostrEvent> } | null>(null)
   useEffect(() => {
     if (!pubkey) return
     let latest = 0
     const load = () => {
       const run = ++latest
       void ownEvents(pubkey).then(
-        (found) => run === latest && setEvents(found),
-        () => run === latest && setEvents(new Map()),
+        (events) => run === latest && setRead({ pubkey, events }),
+        () => run === latest && setRead({ pubkey, events: new Map() }),
       )
     }
     load()
@@ -37,7 +39,7 @@ export function useOwnEvents(pubkey: string | null) {
       stop()
     }
   }, [pubkey])
-  return events
+  return read && read.pubkey === pubkey ? read.events : null
 }
 
 // Looked for on relays once per profile and page load: on a new device the profile's name,

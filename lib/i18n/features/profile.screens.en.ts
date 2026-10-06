@@ -130,6 +130,7 @@ export const profileScreensEn: Widen<typeof profileScreensDe> = {
     toggleHint: "Your totals, no single games",
     update: "Update statistics",
     outdated: "Your numbers have changed since.",
+    noFigures: "No games yet. As soon as you play, your numbers appear in your profile.",
   },
 
   public: {

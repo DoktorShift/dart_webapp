@@ -52,7 +52,9 @@ export default function KeepResults({ match }: { match: FinishedMatch }) {
   }, [match.id])
 
   if (created) return <InlineStatus tone="success">{k.done}</InlineStatus>
-  if (session !== null || dismissed !== false || seats.length === 0) return null
+  // The sheet stays while it is open: the session appears the moment the profile starts, before
+  // the games are taken over, and the row turns into the done line only after that.
+  if (!open && (session !== null || dismissed !== false || seats.length === 0)) return null
 
   const later = async () => {
     setDismissed(true)
