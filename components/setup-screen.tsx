@@ -13,7 +13,7 @@ import { loadLastPlayers, loadRules } from "@/lib/game/storage"
 import { assignPlayers, listPlayers, savePlayers, type PlayerRecord } from "@/lib/storage/players"
 import { LEG_OPTIONS, SET_OPTIONS, START_SCORES, configFor, modeIdFor, type GameRules } from "@/lib/game/rules"
 import type { GameType, MatchConfig, MatchPlayer } from "@/lib/game/types"
-import type { SetupSeat } from "@/lib/shell/registry"
+import type { SetupPreset, SetupSeat } from "@/lib/shell/registry"
 import { cn } from "@/lib/utils"
 
 const MAX_PLAYERS = 6
@@ -29,6 +29,8 @@ interface SetupPlayer {
 
 interface SetupScreenProps {
   type: GameType
+  // Players and extras the area that opened setup brought (a club game); else the last players.
+  preset?: SetupPreset
   // The title of the screen setup was opened from; "Play" when left out.
   backLabel?: string
   onBack: () => void
@@ -38,7 +40,8 @@ interface SetupScreenProps {
 let keySeed = 0
 const newKey = () => `p${Date.now().toString(36)}${keySeed++}`
 
-function initialPlayers(): SetupPlayer[] {
+function initialPlayers(preset?: SetupPreset): SetupPlayer[] {
+  if (preset?.players?.length) return preset.players.slice(0, MAX_PLAYERS).map(({ name, pubkey }) => ({ key: newKey(), name, ...(pubkey ? { pubkey } : {}) }))
   const last = loadLastPlayers().slice(0, MAX_PLAYERS)
   const names = last.length > 0 ? last : ["", ""]
   return names.map((name) => ({ key: newKey(), name }))
@@ -128,9 +131,9 @@ function PlayerRow({
   )
 }
 
-export function SetupScreen({ type, backLabel, onBack, onStart }: SetupScreenProps) {
+export function SetupScreen({ type, preset, backLabel, onBack, onStart }: SetupScreenProps) {
   const t = useT()
-  const [players, setPlayers] = useState<SetupPlayer[]>(initialPlayers)
+  const [players, setPlayers] = useState<SetupPlayer[]>(() => initialPlayers(preset))
   // The rules this group played last time, for this kind of game.
   const [rules, setRules] = useState<GameRules>(() => loadRules(type))
   const change = (patch: Partial<GameRules>) => setRules((current) => ({ ...current, ...patch }))
@@ -139,7 +142,7 @@ export function SetupScreen({ type, backLabel, onBack, onStart }: SetupScreenPro
   const { all: matches, players: directory } = useMatchHistory()
   const starting = useRef(false)
   // Values areas add below the rules ("setup.extras" in lib/shell/registry.ts), by area id.
-  const [extras, setExtras] = useState<Record<string, unknown>>({})
+  const [extras, setExtras] = useState<Record<string, unknown>>(() => ({ ...preset?.extras }))
 
   const nameKeys = players.map((p) => p.name.trim().toLowerCase())
   const duplicates = new Set(nameKeys.filter((k, i) => k && nameKeys.indexOf(k) !== i))

@@ -36,6 +36,11 @@
 //                       "Gratulieren". Gets { pubkey, name } (the name as that profile shows it).
 //     "profile.advanced" In Profil › Erweitert, below the technical identity: diagnostics.
 //                        Gets { pubkey }.
+//     "club.tournaments" A club's tournaments (the tournaments area): in the club's overview
+//                        (compact: a running or next tournament, one row at most) and in
+//                        "Termine & Turniere" (the list, and for leaders a way to create one).
+//                        Gets { club (its id), name, leader, compact }. Renders nothing when the
+//                        club has none and the person can't create one.
 // - Game menu items: entries at the end of the running game's options menu (the "…" button), each
 //   { id, label, icon?, onSelect }. onSelect gets the running game; the menu closes first.
 //   Nothing else on the game screen can be changed from outside.
@@ -74,8 +79,16 @@ export interface ShellNavigator {
   pop(): void
   popToRoot(tab?: TabId): void
   // Opens game setup for X01, Cricket or Around the Clock on top of everything. Back in setup,
-  // and leaving or finishing the game, return to the screen it was opened from.
-  openSetup(type: "x01" | "cricket" | "clock"): void
+  // and leaving or finishing the game, return to the screen it was opened from. An area may hand
+  // over the players and its extras (a club game: the chosen members and the club).
+  openSetup(type: "x01" | "cricket" | "clock", preset?: SetupPreset): void
+}
+
+// Game setup as an area opens it: these seats instead of the last game's players, and initial
+// values of config.extras by area id ("setup.extras" below). Players can change both in setup.
+export interface SetupPreset {
+  players?: readonly SetupSeat[]
+  extras?: Readonly<Record<string, unknown>>
 }
 
 export interface ScreenProps {
@@ -272,6 +285,7 @@ export interface SlotListProps {
   "profile.card": { pubkey: string; own: boolean }
   "profile.actions": { pubkey: string; name: string }
   "profile.advanced": { pubkey: string }
+  "club.tournaments": { club: string; name: string; leader: boolean; compact: boolean }
 }
 export type SlotListId = keyof SlotListProps
 export interface SlotItem<K extends SlotListId> {
@@ -287,6 +301,7 @@ const slotLists: { [K in SlotListId]: Map<string, ComponentType<SlotListProps[K]
   "profile.card": new Map(),
   "profile.actions": new Map(),
   "profile.advanced": new Map(),
+  "club.tournaments": new Map(),
 }
 
 // Adds a piece to a slot list. The same id again replaces the piece in its place.
