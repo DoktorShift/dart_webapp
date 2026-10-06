@@ -1,7 +1,9 @@
 import { useEffect, useSyncExternalStore } from "react"
+import { bytesToHex, hexToBytes } from "@noble/hashes/utils.js"
 import type { Nip46Connection } from "../nostr/signers.ts"
 import type { Signer } from "../nostr/types.ts"
 import { dbGet, dbKeys, dbWrite, onStorageChange, type Keyed, type WriteOp } from "../storage/db.ts"
+import { isPubkey } from "../storage/players.ts"
 import { forgetVaultKey, openSecret, sealSecret, type SealedSecret } from "./vault.ts"
 
 // The one current session of this device (docs/decisions/0002 §4): a guest (no session), a key
@@ -18,6 +20,10 @@ import { forgetVaultKey, openSecret, sealSecret, type SealedSecret } from "./vau
 // "club:*" (the clubs as this profile reads them, lib/clubs/store.ts) and pending requests named
 // "signer:*" are deleted when the profile signs out or another one signs in on this device.
 // Other areas clean up theirs in onSessionEnd.
+//
+// Another profile signs in only with `replace`: otherwise the start is refused with SessionError
+// "occupied", so the UI can say who is being signed out (and that a key kept only here is lost)
+// before anything happens.
 
 export type SessionKind = "local" | "nip07" | "nip46" | "nip55"
 
@@ -33,6 +39,26 @@ interface StoredSession extends Session {
   secret?: SealedSecret
   // "nip46": the signer app and where it listens.
   remote?: { signerPubkey: string; relays: string[] }
+}
+
+export type SessionErrorCode = "occupied"
+
+export class SessionError extends Error {
+  code: SessionErrorCode
+  // The profile signed in on this device.
+  session: Session
+  constructor(code: SessionErrorCode, session: Session, message: string) {
+    super(message)
+    this.name = "SessionError"
+    this.code = code
+    this.session = session
+  }
+}
+
+export interface SessionOptions {
+  // Sign the profile on this device out first, if it is another one. Without it, a start while
+  // another profile is signed in is refused with SessionError "occupied".
+  replace?: boolean
 }
 
 export const SESSION_KEY = "profile.session"
@@ -169,9 +195,6 @@ export function useSignerConfirmation(): string | null {
   )
 }
 
-const toHex = (bytes: Uint8Array) => Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")
-const fromHex = (hex: string) => Uint8Array.from(hex.match(/../g) ?? [], (h) => parseInt(h, 16))
-
 async function openStoredSigner(stored: StoredSession): Promise<OpenSigner> {
   const signers = await import("../nostr/signers.ts")
   switch (stored.kind) {
@@ -188,7 +211,7 @@ async function openStoredSigner(stored: StoredSession): Promise<OpenSigner> {
     case "nip46": {
       if (!stored.secret || !stored.remote) throw new signers.SignerError("unavailable", "the signer app connection is missing")
       const session = {
-        clientSecretKey: toHex(await openSecret(stored.secret, "connection-key")),
+        clientSecretKey: bytesToHex(await openSecret(stored.secret, "connection-key")),
         remoteSignerPubkey: stored.remote.signerPubkey,
         userPubkey: stored.pubkey,
         relays: stored.remote.relays,
@@ -244,23 +267,35 @@ async function endSession() {
   await Promise.allSettled([...sessionEndHooks].map(async (hook) => hook()))
 }
 
+// Deletes the signer requests still waiting for an answer: they belong to the sign-in or the
+// session that is over now.
+async function pendingSignerOps(): Promise<WriteOp[]> {
+  const pending = await dbKeys("pending")
+  return pending.filter((id) => id.startsWith(SIGNER_PENDING_PREFIX)).map((id): WriteOp => ({ store: "pending", delete: id }))
+}
+
 // Deletes what belongs to the signed-in profile; `all` also the session and the vault key.
 async function profileDataOps(all: boolean): Promise<WriteOp[]> {
-  const [kv, objects, pending] = await Promise.all([dbKeys("kv"), dbKeys("objects"), dbKeys("pending")])
+  const [kv, objects] = await Promise.all([dbKeys("kv"), dbKeys("objects")])
   return [
     ...kv.filter((id) => id.startsWith(PROFILE_KV_PREFIX) && (all || !KEPT_ON_SWITCH.has(id))).map((id): WriteOp => ({ store: "kv", delete: id })),
     ...objects.filter((id) => PROFILE_OBJECT_PREFIXES.some((prefix) => id.startsWith(prefix))).map((id): WriteOp => ({ store: "objects", delete: id })),
-    ...pending.filter((id) => id.startsWith(SIGNER_PENDING_PREFIX)).map((id): WriteOp => ({ store: "pending", delete: id })),
+    ...(await pendingSignerOps()),
   ]
 }
 
-async function begin(stored: StoredSession, signer?: OpenSigner): Promise<Session> {
+async function begin(stored: StoredSession, options: SessionOptions, signer?: OpenSigner): Promise<Session> {
   const previous = await readStored()
   const ops: WriteOp[] = []
-  // Another profile on this device: nothing of the previous one stays.
   if (previous && previous.pubkey !== stored.pubkey) {
+    if (!options.replace) throw new SessionError("occupied", publicPart(previous), "another profile is signed in on this device")
+    // Another profile on this device: nothing of the previous one stays.
     await endSession()
     ops.push(...(await profileDataOps(false)))
+  } else {
+    // A sign-in started earlier (an Android signer asked for the key) must not answer into
+    // this session later.
+    ops.push(...(await pendingSignerOps()))
   }
   ops.push({ store: "kv", put: { id: SESSION_KEY, value: stored } as Keyed })
   await dbWrite(ops)
@@ -273,17 +308,17 @@ async function begin(stored: StoredSession, signer?: OpenSigner): Promise<Sessio
 }
 
 // A new profile with a key the app keeps (encrypted, see ./vault.ts).
-export async function startLocalProfile(): Promise<Session> {
+export async function startLocalProfile(options: SessionOptions = {}): Promise<Session> {
   const { createLocalKey } = await import("../nostr/signers.ts")
   const { secretKey, pubkey } = await createLocalKey()
-  return begin({ pubkey, kind: "local", createdAt: Date.now(), secret: await sealSecret(secretKey, "local-key") })
+  return begin({ pubkey, kind: "local", createdAt: Date.now(), secret: await sealSecret(secretKey, "local-key") }, options)
 }
 
 // A key brought from elsewhere: another device of the same person, or a backup.
-export async function importLocalKey(secretKey: Uint8Array): Promise<Session> {
+export async function importLocalKey(secretKey: Uint8Array, options: SessionOptions = {}): Promise<Session> {
   const { createLocalSigner } = await import("../nostr/signers.ts")
   const pubkey = await (await createLocalSigner(secretKey)).getPublicKey()
-  return begin({ pubkey, kind: "local", createdAt: Date.now(), secret: await sealSecret(secretKey, "local-key") })
+  return begin({ pubkey, kind: "local", createdAt: Date.now(), secret: await sealSecret(secretKey, "local-key") }, options)
 }
 
 export interface ExternalParams {
@@ -296,7 +331,7 @@ export interface ExternalParams {
 }
 
 // Signs in with a signer outside the app, once the person confirmed the account it named.
-export async function connectExternal<K extends keyof ExternalParams>(kind: K, params: ExternalParams[K]): Promise<Session> {
+export async function connectExternal<K extends keyof ExternalParams>(kind: K, params: ExternalParams[K], options: SessionOptions = {}): Promise<Session> {
   if (kind === "nip46") {
     const { connection } = params as ExternalParams["nip46"]
     const { session } = connection
@@ -305,15 +340,16 @@ export async function connectExternal<K extends keyof ExternalParams>(kind: K, p
         pubkey: session.userPubkey,
         kind,
         createdAt: Date.now(),
-        secret: await sealSecret(fromHex(session.clientSecretKey), "connection-key"),
+        secret: await sealSecret(hexToBytes(session.clientSecretKey), "connection-key"),
         remote: { signerPubkey: session.remoteSignerPubkey, relays: session.relays },
       },
+      options,
       { signer: connection.signer, close: () => connection.remote.close(), logout: () => connection.remote.logout(3000) },
     )
   }
   const { pubkey } = params as ExternalParams["nip07"]
-  if (!/^[0-9a-f]{64}$/.test(pubkey)) throw new Error("not a public key")
-  return begin({ pubkey, kind, createdAt: Date.now() })
+  if (!isPubkey(pubkey)) throw new Error("not a public key")
+  return begin({ pubkey, kind, createdAt: Date.now() }, options)
 }
 
 // Ends the session on this device: the signer app hears that the connection ends, every key and

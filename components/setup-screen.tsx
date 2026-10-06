@@ -10,7 +10,7 @@ import { SlotItems } from "@/components/shell/slot-items"
 import { useT } from "@/components/i18n-provider"
 import { recentPlayerNames, useMatchHistory } from "@/lib/leaderboard"
 import { loadLastPlayers, loadRules } from "@/lib/game/storage"
-import { assignPlayers, listPlayers, savePlayers, type PlayerRecord } from "@/lib/storage/players"
+import { assignPlayers, listPlayers, MAX_SEAT_NAME, savePlayers, seatName, type PlayerRecord } from "@/lib/storage/players"
 import { LEG_OPTIONS, SET_OPTIONS, START_SCORES, configFor, modeIdFor, type GameRules } from "@/lib/game/rules"
 import type { GameType, MatchConfig, MatchPlayer } from "@/lib/game/types"
 import type { SetupPreset, SetupSeat } from "@/lib/shell/registry"
@@ -41,7 +41,7 @@ let keySeed = 0
 const newKey = () => `p${Date.now().toString(36)}${keySeed++}`
 
 function initialPlayers(preset?: SetupPreset): SetupPlayer[] {
-  if (preset?.players?.length) return preset.players.slice(0, MAX_PLAYERS).map(({ name, pubkey }) => ({ key: newKey(), name, ...(pubkey ? { pubkey } : {}) }))
+  if (preset?.players?.length) return preset.players.slice(0, MAX_PLAYERS).map(({ name, pubkey }) => ({ key: newKey(), name: seatName(name), ...(pubkey ? { pubkey } : {}) }))
   const last = loadLastPlayers().slice(0, MAX_PLAYERS)
   const names = last.length > 0 ? last : ["", ""]
   return names.map((name) => ({ key: newKey(), name }))
@@ -93,7 +93,7 @@ function PlayerRow({
         value={player.name}
         onChange={(e) => onChange(e.target.value)}
         placeholder={t.setup.placeholder(index + 1)}
-        maxLength={16}
+        maxLength={MAX_SEAT_NAME}
         autoComplete="off"
         autoCapitalize="words"
         // Return moves on to the next name; on the last one it closes the keyboard.

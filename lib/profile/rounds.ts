@@ -2,6 +2,7 @@ import { buildListTemplate, parseListSafe, type PrivateStatus, type SafeList } f
 import type { EventTemplate, NostrEvent, Signer } from "../nostr/types.ts"
 import { kvGet, kvSet } from "../storage/db.ts"
 import { randomHex } from "../storage/ids.ts"
+import { isPubkey } from "../storage/players.ts"
 
 // "Meine Spielerrunden": the groups someone plays with, saved to pick in setup with one tap.
 // Stored as NIP-51 follow sets (kind 30000), so they travel with the profile
@@ -16,7 +17,6 @@ import { randomHex } from "../storage/ids.ts"
 export const ROUNDS_KIND = 30000
 export const ROUND_D_PREFIX = "blueline-round-"
 const PLAYER_TAG = "player"
-const HEX_KEY = /^[0-9a-f]{64}$/
 
 export interface RoundPlayer {
   // Empty when only the public part could be read: the player is known by their profile.
@@ -44,10 +44,10 @@ const roundId = (event: NostrEvent) => {
 const playerOf = (tag: string[]): RoundPlayer | null => {
   const name = tag[1]?.trim() ?? ""
   if (tag[0] !== PLAYER_TAG || !name) return null
-  return HEX_KEY.test(tag[2] ?? "") ? { name, pubkey: tag[2] } : { name }
+  return isPubkey(tag[2]) ? { name, pubkey: tag[2] } : { name }
 }
 
-const profileKeys = (tags: string[][]) => tags.filter((tag) => tag[0] === "p" && HEX_KEY.test(tag[1] ?? "")).map((tag) => tag[1])
+const profileKeys = (tags: string[][]) => tags.filter((tag) => tag[0] === "p" && isPubkey(tag[1])).map((tag) => tag[1])
 
 // The round in a list event, or null when it isn't one of ours or was deleted.
 export async function readRound(event: NostrEvent, signer?: Signer | null): Promise<Round | null> {
@@ -105,15 +105,23 @@ const READ_ROUNDS = "profile.rounds"
 type ReadRounds = Record<string, Omit<Round, "event">>
 
 // The profile's rounds, newest first, from its events (lib/profile/own-events.ts). Seats known
-// only by their profile get the name this device knows them by.
-export async function savedRounds(events: Iterable<NostrEvent>, signer: Signer | null, directory: readonly { pubkey?: string; name: string }[]): Promise<Round[]> {
+// only by their profile get the name this device knows them by. The signer is asked for (once)
+// only when a round has to be read for the first time: opening setup doesn't wake a signer app
+// or an extension for rounds read before.
+export async function savedRounds(
+  events: Iterable<NostrEvent>,
+  signer: Signer | null | (() => Promise<Signer | null>),
+  directory: readonly { pubkey?: string; name: string }[],
+): Promise<Round[]> {
   const read = (await kvGet<ReadRounds>(READ_ROUNDS).catch(() => undefined)) ?? {}
   const kept: ReadRounds = {}
   const rounds: Round[] = []
+  let opened: Promise<Signer | null> | null = null
+  const signerFor = () => (opened ??= typeof signer === "function" ? signer() : Promise.resolve(signer))
   for (const event of events) {
     if (!roundId(event)) continue
     const known = read[event.id]
-    const round = known ? { ...known, event } : await readRound(event, signer)
+    const round = known ? { ...known, event } : await readRound(event, await signerFor())
     if (!round) continue
     if (round.privateStatus === "decrypted" || round.privateStatus === "none") kept[event.id] = { id: round.id, title: round.title, players: round.players, privateStatus: round.privateStatus }
     rounds.push({ ...round, players: round.players.map((p) => (p.name || !p.pubkey ? p : { ...p, name: directory.find((d) => d.pubkey === p.pubkey)?.name ?? "" })) })

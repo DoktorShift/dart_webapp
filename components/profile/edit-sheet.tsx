@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, type FormEvent } from "react"
+import { useEffect, useState, type FormEvent } from "react"
 import { Button } from "@/components/ui/button"
 import { Sheet } from "@/components/ui/sheet"
+import { TextField } from "@/components/ui/text-field"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,43 +22,57 @@ import { signerProblem, SignerConfirmation } from "@/components/profile/signer-s
 import type { OwnProfile } from "@/components/profile/use-profile"
 import { addProfilePlayer } from "@/lib/profile/claim"
 import { metadataTemplate, type MetadataChange } from "@/lib/profile/metadata"
-import { OWN } from "@/lib/profile/own-events"
+import { changeBase, lookupOwnEvents, OWN } from "@/lib/profile/own-events"
 import { safeImageUrl } from "@/lib/shell/avatar"
-import { renamePlayer } from "@/lib/storage/players"
-import { publishOwn } from "@/lib/sync/publish"
+import { MAX_SEAT_NAME, renamePlayer, seatName } from "@/lib/storage/players"
+import { submitOwn } from "@/lib/sync/publish"
 
-// "Bearbeiten": the name at the board and the public picture. The name in BlueLine is the
-// profile's player here; whether the public profile (which other apps show too) changes with it
-// is asked, never done on the side (PLAN.md "Identitäten und Signer"). The picture exists only
-// publicly, so changing it publishes it, as the form says.
+// "Bearbeiten": the name at the board, which is the profile's player here, and the public
+// profile (name and picture, which other apps show too). The two are kept apart on purpose: a
+// new board name never changes the public profile on the side; where both were the same, it is
+// asked (PLAN.md "Identitäten und Signer"). The public profile is looked up again when the sheet
+// opens: a change builds on the newest version, and until a version is known (or a relay has
+// said there is none) nothing public is saved (lib/profile/own-events.ts).
 export function EditSheet({ own, open, onOpenChange }: { own: OwnProfile; open: boolean; onOpenChange: (open: boolean) => void }) {
   const t = useT()
   const tx = useAreaT(PROFILE_TEXTS)
   const e = tx.edit
-  const [name, setName] = useState(own.name ?? "")
+  const { pubkey } = own.session
+  const [boardName, setBoardName] = useState(own.player?.name ?? "")
+  const [publicName, setPublicName] = useState(own.metadata.name ?? "")
   const [picture, setPicture] = useState(own.metadata.picture ?? "")
   const [asking, setAsking] = useState(false)
   const [busy, setBusy] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)
 
-  const nameChanged = name.trim() !== (own.name ?? "")
-  const pictureChanged = (safeImageUrl(picture) ?? "") !== (own.metadata.picture ?? "")
-  const ready = name.trim() !== "" && !pictureProblem(picture) && (nameChanged || pictureChanged)
+  useEffect(() => {
+    void lookupOwnEvents(pubkey, { again: true })
+  }, [pubkey])
 
-  const save = async (publicName: boolean) => {
+  const base = own.events?.get(OWN.metadata) ?? null
+  // Without a version here, the public profile can be changed only once a relay has answered.
+  const answered = own.lookup?.answered ?? null
+  const publicState = base ? "known" : answered === null ? "loading" : answered ? "none" : "failed"
+  const publicKnown = publicState === "known" || publicState === "none"
+
+  const boardChanged = seatName(boardName) !== "" && seatName(boardName) !== (own.player?.name ?? "")
+  const publicChanged = publicName.trim() !== (own.metadata.name ?? "")
+  const pictureChanged = (safeImageUrl(picture) ?? "") !== (own.metadata.picture ?? "")
+  const publicChange = publicChanged || pictureChanged
+  const ready = !pictureProblem(picture) && (boardChanged || publicChange) && (!publicChange || publicKnown) && (!publicChanged || publicName.trim() !== "")
+
+  const save = async (publicFollows: boolean) => {
     setAsking(false)
     setBusy(true)
     setProblem(null)
     try {
-      if (nameChanged) {
-        if (own.player) await renamePlayer(own.player.id, name)
-        else await addProfilePlayer(own.session.pubkey, name)
+      if (boardChanged) {
+        if (own.player) await renamePlayer(own.player.id, seatName(boardName))
+        else await addProfilePlayer(pubkey, boardName)
       }
-      const change: MetadataChange = {
-        ...(publicName && name.trim() !== own.metadata.name ? { name: name.trim() } : {}),
-        ...(pictureChanged ? { picture: safeImageUrl(picture) } : {}),
-      }
-      if (Object.keys(change).length > 0) await publishOwn([metadataTemplate(change, own.events?.get(OWN.metadata))])
+      const name = publicChanged ? publicName.trim() : publicFollows ? seatName(boardName) : undefined
+      const change: MetadataChange = { ...(name !== undefined ? { name } : {}), ...(pictureChanged ? { picture: safeImageUrl(picture) } : {}) }
+      if (Object.keys(change).length > 0) await submitOwn([metadataTemplate(change, await changeBase(pubkey, OWN.metadata))])
       onOpenChange(false)
     } catch (error) {
       setProblem(signerProblem(tx, error))
@@ -69,8 +84,10 @@ export function EditSheet({ own, open, onOpenChange }: { own: OwnProfile; open: 
   const submit = (event: FormEvent) => {
     event.preventDefault()
     if (!ready || busy) return
-    // A new name the public profile doesn't have yet: ask. Otherwise nothing to decide.
-    if (nameChanged && name.trim() !== own.metadata.name) setAsking(true)
+    // A new board name while the public name is still the old board name: ask whether the public
+    // profile follows. Otherwise there is nothing to decide.
+    const sameSoFar = (own.metadata.name ?? "") === (own.player?.name ?? "")
+    if (boardChanged && !publicChanged && publicKnown && sameSoFar) setAsking(true)
     else void save(false)
   }
 
@@ -79,7 +96,33 @@ export function EditSheet({ own, open, onOpenChange }: { own: OwnProfile; open: 
       <Sheet open={open} onOpenChange={onOpenChange} title={e.title}>
         <form onSubmit={submit} className="flex min-h-0 flex-col overscroll-contain xshort:overflow-y-auto">
           <div className="min-h-0 overflow-y-auto overscroll-contain pb-4 xshort:shrink-0 xshort:overflow-visible">
-            <ProfileFields seed={own.session.pubkey} name={name} onName={setName} picture={picture} onPicture={setPicture} />
+            {/* What is known of the public profile comes first: it decides what saving does. */}
+            {publicState === "loading" && (
+              <p role="status" className="mt-2 px-4 text-[0.9375rem] text-muted-foreground">
+                {e.loading}
+              </p>
+            )}
+            {publicState === "none" && <InlineStatus className="mt-2">{e.notFound}</InlineStatus>}
+            {publicState === "failed" && (
+              <div className="mt-2">
+                <InlineStatus tone="error">{e.notLoaded}</InlineStatus>
+                <Button variant="secondary" onClick={() => void lookupOwnEvents(pubkey, { again: true })} className="mt-2 h-11 rounded-xl px-5 text-[1.0625rem]">
+                  {tx.public.retry}
+                </Button>
+              </div>
+            )}
+            <TextField
+              label={e.boardName}
+              value={boardName}
+              onChange={(event) => setBoardName(event.target.value)}
+              placeholder={own.player?.name ?? seatName(publicName)}
+              maxLength={MAX_SEAT_NAME}
+              autoComplete="off"
+              autoCapitalize="words"
+              enterKeyHint="next"
+              hint={e.boardHint(MAX_SEAT_NAME)}
+            />
+            <ProfileFields seed={pubkey} name={publicName} nameHint={e.publicHint} onName={setPublicName} picture={picture} onPicture={setPicture} />
             <SignerConfirmation />
             {problem && (
               <InlineStatus tone="error" className="mt-4">
@@ -99,7 +142,7 @@ export function EditSheet({ own, open, onOpenChange }: { own: OwnProfile; open: 
         <AlertDialogContent className="max-w-[calc(100vw-2rem)] rounded-2xl sm:max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle>{e.publicTitle}</AlertDialogTitle>
-            <AlertDialogDescription>{e.publicDescription(name.trim())}</AlertDialogDescription>
+            <AlertDialogDescription>{e.publicDescription(seatName(boardName))}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2">
             <AlertDialogCancel className="h-11" onClick={() => void save(false)}>

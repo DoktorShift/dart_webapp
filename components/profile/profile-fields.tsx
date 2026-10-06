@@ -9,19 +9,22 @@ import { safeImageUrl } from "@/lib/shell/avatar"
 
 // Name and picture of a profile, with a preview of exactly what others will see and the promise
 // that games stay private (PLAN.md: confirm name and picture before anything is published).
-// The name may be longer than a seat's 16 characters; game tiles fit it without cutting it off.
+// The name may be longer than a seat's: the board keeps the seat's name (lib/profile/claim.ts).
 
 export const pictureProblem = (picture: string) => picture.trim() !== "" && !safeImageUrl(picture)
 
 export function ProfileFields({
   seed,
   name,
+  nameHint,
   onName,
   picture,
   onPicture,
 }: {
   seed: string
   name: string
+  // E.g. that the name at the board stays as it is.
+  nameHint?: string
   onName: (name: string) => void
   picture: string
   onPicture: (picture: string) => void
@@ -40,6 +43,7 @@ export function ProfileFields({
         autoComplete="nickname"
         autoCapitalize="words"
         enterKeyHint="next"
+        hint={nameHint}
       />
       <TextField
         label={f.picture}

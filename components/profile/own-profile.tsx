@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { ChartColumn, Eye, History, Info, Settings, Share, Wrench } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Group } from "@/components/ui/group"
@@ -17,7 +17,6 @@ import { ShareSheet } from "@/components/profile/share-sheet"
 import { SignOutDialog } from "@/components/profile/sign-out-dialog"
 import { useStatsCardFollowsGames } from "@/components/profile/use-stats-card"
 import { useProfileGames, type OwnProfile } from "@/components/profile/use-profile"
-import { addProfilePlayer } from "@/lib/profile/claim"
 import { ownRelaySettings } from "@/lib/profile/own-events"
 import { SCREENS } from "@/lib/shell/registry"
 import { summarizePlayer } from "@/lib/storage/stats"
@@ -32,7 +31,7 @@ export function OwnProfileView({ own }: { own: OwnProfile }) {
   const tx = useAreaT(PROFILE_TEXTS)
   const h = tx.home
   const nav = useNav()
-  const { session, metadata, name, history, key, sameAs } = own
+  const { session, metadata, name, player, lookup, history, key, sameAs } = own
   const games = useProfileGames(own)
   const summary = useMemo(() => (key ? summarizePlayer(history.all, key, { type: "x01", aliases: history.aliases, sameAs }) : null), [key, history.all, history.aliases, sameAs])
   const [shareOpen, setShareOpen] = useState(false)
@@ -40,15 +39,16 @@ export function OwnProfileView({ own }: { own: OwnProfile }) {
   const [edit, setEdit] = useState({ open: false, round: 0 })
   const [signingOut, setSigningOut] = useState(false)
   useStatsCardFollowsGames(own)
-  useProfilePlayer(own)
 
   return (
     <>
       <ProfileCard
         seed={session.pubkey}
         name={name}
+        // No name here yet: say whether it is still being looked up, not "no name".
+        placeholder={lookup?.answered ? undefined : lookup?.answered === false ? h.nameNotLoaded : h.nameLoading}
         picture={metadata.picture}
-        subtitle={metadata.name && name && metadata.name !== name ? h.publicName(metadata.name) : undefined}
+        subtitle={player && metadata.name && player.name !== metadata.name ? h.boardName(player.name) : undefined}
         slot={{ pubkey: session.pubkey, own: true }}
       >
         {summary?.x01 ? (
@@ -104,11 +104,3 @@ export function OwnProfileView({ own }: { own: OwnProfile }) {
   )
 }
 
-// A profile signed in without taking over games gets a player of its own here under its public
-// name, once that is known: setup then finds it by name, and its games count from the first one.
-function useProfilePlayer({ session, player, metadata }: OwnProfile) {
-  const missing = !player && metadata.name ? metadata.name : null
-  useEffect(() => {
-    if (missing) void addProfilePlayer(session.pubkey, missing).catch(() => {})
-  }, [missing, session.pubkey])
-}

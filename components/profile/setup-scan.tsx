@@ -13,7 +13,7 @@ import { readMetadata } from "@/lib/profile/metadata"
 import { readProfileCode, type ProfileAddress } from "@/lib/profile/profile-link"
 import type { SetupSeat } from "@/lib/shell/registry"
 import { SITE } from "@/lib/site"
-import { isUnnamed, nameKey } from "@/lib/storage/players"
+import { isUnnamed, MAX_SEAT_NAME, nameKey, seatName } from "@/lib/storage/players"
 
 // "Spieler per QR hinzufügen": scan (or paste) a player's profile code, see whose it is, add
 // them to a seat with their name and profile. Loaded when the sheet first opens.
@@ -36,7 +36,7 @@ export default function ScanSheetContent({ players, onAdd }: { players: readonly
 }
 
 // The scanned player: picture and name from their public profile, the name editable for the
-// board (it may be shown shorter there, the profile stays the same). Someone else in the game
+// board (a seat holds 16 characters; the profile keeps its full name). Someone else in the game
 // with the same name: the start of this profile's fingerprint tells them apart (design rules,
 // impostor prevention); names alone never decide who is who.
 function FoundPlayer({ address, players, onAdd }: { address: ProfileAddress; players: readonly SetupSeat[]; onAdd: (seat: SetupSeat) => void }) {
@@ -45,7 +45,8 @@ function FoundPlayer({ address, players, onAdd }: { address: ProfileAddress; pla
   const { profile, status } = usePublicProfile(address.pubkey, address.relays)
   const metadata = readMetadata(profile?.metadata)
   const [typed, setTyped] = useState<string | null>(null)
-  const name = typed ?? metadata.name ?? ""
+  const name = typed ?? seatName(metadata.name ?? "")
+  const shortened = !!metadata.name && seatName(metadata.name) !== metadata.name.trim()
   const alreadyIn = players.some((p) => p.pubkey === address.pubkey)
   const sameName = !alreadyIn && players.some((p) => !isUnnamed(p.name) && nameKey(p.name) === nameKey(name))
 
@@ -69,10 +70,11 @@ function FoundPlayer({ address, players, onAdd }: { address: ProfileAddress; pla
         label={s.nameLabel}
         value={name}
         onChange={(e) => setTyped(e.target.value)}
+        maxLength={MAX_SEAT_NAME}
         autoCapitalize="words"
         autoComplete="off"
         enterKeyHint="done"
-        hint={status !== null && !metadata.name ? s.nameUnknown : undefined}
+        hint={status !== null && !metadata.name ? s.nameUnknown : shortened ? s.nameShortened(MAX_SEAT_NAME) : undefined}
       />
       <Button type="submit" disabled={isUnnamed(name) || alreadyIn} className="mt-6 h-12 w-full rounded-xl text-[1.0625rem] font-semibold">
         {s.add}
