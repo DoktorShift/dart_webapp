@@ -1,10 +1,10 @@
 PASS a game that was never live opens no connection (0 sockets)
 PASS the options menu lists the three live entries
-PASS the watch link carries the match in the fragment (http://localhost:3315/#watch=W1.EGoIac38)
+PASS the watch link carries the match in the fragment (http://localhost:3315/#watch=W1.e_9HEZGA)
 PASS going live connects to the local relay only (ws://127.0.0.1:47315/)
 PASS the spectator sees the board's names and score
 PASS the spectator page has no horizontal scrolling
-PASS a visit reaches the spectator (lab: 816 ms from tap to the spectator's screen)
+PASS a visit reaches the spectator (lab: 837 ms from tap to the spectator's screen)
 PASS a lost connection says so, with the time of the last score
 PASS the board code is a board link
 PASS a taken seat shows as taken
@@ -14,7 +14,7 @@ PASS a confirmed result lands in the player's own games
 PASS the result shows who confirmed and who disputes
 PASS a withdrawn result leaves the player's own games
 PASS the board's verdict count starts again with the corrected result
-PASS both devices show the same check code (7429 0188 / 7429 0188)
+PASS both devices show the same check code (7649 4049 / 7649 4049)
 PASS nothing moves before the writing device confirms
 PASS the game goes on on the other device with its throws
 PASS the first device leaves the game
