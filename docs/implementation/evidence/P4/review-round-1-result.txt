@@ -1,0 +1,30 @@
+PASS a sheet closed while asked tells the other device the game stays here
+PASS after Übergeben the sheet cannot be dismissed and shows no Fertig
+PASS the game goes on on the other device
+PASS after done the old device no longer keeps the game for resuming
+PASS a reload after the handover offers no game to continue
+PASS no page errors in the handoff devices
+PASS with one relay down the spectator gets the score (lab: 915 ms after opening the link)
+PASS with one relay down a visit still reaches the spectator
+PASS no page errors with one relay down (apart from the browser's own notes on the stopped relay)
+PASS back with the code while another phone holds the seat: the seats with the reason, one seat taken, not 'Du spielst als Mia'
+PASS a seat the board frees sends the phone back to the seats, with the reason
+PASS a seat given back after a reload is freed on the board
+PASS the phone can take another seat afterwards: its old one is free, not 'Taken'
+PASS the phone sits down again on another seat
+PASS no page errors in the seat devices
+PASS a guest's Play tab opens no connection (0 sockets)
+PASS after a reload the Play tab shows the seat at the board
+PASS the row opens the seat without the board's code, without 'Anderen Platz wählen'
+PASS the row shows the confirmed result
+PASS no page errors on the way back
+PASS at 548x320 the result's actions and the confirmations stay in view
+PASS no page errors at 548x320
+PASS at 568x320 the result's actions and the confirmations stay in view
+PASS no page errors at 568x320
+PASS Zuschauen lassen: the share button is in view on an iPhone SE
+PASS Spieler verbinden: the share button is in view on an iPhone SE
+PASS Auf anderem Gerät fortsetzen: the share button is in view on an iPhone SE
+PASS Let others watch: the share button is in view on an iPhone SE (English, dark)
+PASS no page errors in the sheets
+29/29 checks passed
