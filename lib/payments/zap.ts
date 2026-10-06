@@ -11,7 +11,7 @@ import { generalRelays } from "../nostr/relays.ts"
 import type { NostrEvent, Signer } from "../nostr/types.ts"
 import { recordReceipt, type InvoiceSource, type PaymentEntry } from "./journal.ts"
 
-export const ZAP_RECEIPT_KIND = 9735
+const ZAP_RECEIPT_KIND = 9735
 
 // The signed zap request and its checked invoice. The endpoint must take zaps (zapPubkey).
 // Throws LnurlError, or the signer's error.

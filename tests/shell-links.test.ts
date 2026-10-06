@@ -40,6 +40,12 @@ test("a signer answer may be empty and is passed on without the '='", () => {
   assert.equal(parseHash("#signer-returned=1"), null)
 })
 
+test("a wallet app's answer arrives the same way", () => {
+  assert.deepEqual(parseHash("#wallet-return"), { kind: "wallet-return", payload: "" })
+  assert.deepEqual(parseHash("#wallet-return?value=nostr%2Bwalletconnect"), { kind: "wallet-return", payload: "?value=nostr%2Bwalletconnect" })
+  assert.equal(parseHash("#wallet-returned"), null)
+})
+
 test("scanned or pasted links count only for this app's start page", () => {
   const origins = [SITE]
   assert.deepEqual(parseAppLink(`${SITE}/#club=c1`, origins), { kind: "club", payload: "c1" })

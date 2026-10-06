@@ -9,7 +9,7 @@
 //
 // Every task opens its own connection and closes it after (decision 0002 §8: a fresh connection
 // with its get_info round trip before each payment).
-import { connectWallet, parseWalletUri, type WalletClient, type WalletOptions } from "../nostr/wallet.ts"
+import { connectWallet, parseWalletUri, WalletError, type WalletClient, type WalletOptions } from "../nostr/wallet.ts"
 import { onSessionEnd, PROFILE_KV_PREFIX } from "../profile/session.ts"
 import { openSecret, sealSecret, type SealedSecret } from "../profile/vault.ts"
 import { dbGet, dbWrite, type Keyed } from "../storage/db.ts"
@@ -93,14 +93,15 @@ onSessionEnd(closeAll)
 // earlier one. Throws WalletError ("invalid", "unreachable", "no-answer", …).
 export async function connectNewWallet(uri: string): Promise<WalletInfo> {
   const parsed = parseWalletUri(uri)
+  if (!parsed) throw new WalletError("invalid", "not a wallet connection")
   const client = await connectWallet(uri)
   try {
     const info: WalletInfo = {
       alias: client.details.alias,
       methods: client.details.methods,
       notifications: client.details.notifications,
-      lightningAddress: parsed?.lightningAddress ?? null,
-      relays: parsed?.relays ?? [],
+      lightningAddress: parsed.lightningAddress,
+      relays: parsed.relays,
       encryption: client.details.encryption,
       connectedAt: Date.now(),
     }

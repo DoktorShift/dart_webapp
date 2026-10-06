@@ -1,0 +1,517 @@
+[
+  {
+    "shot": "de-light-iphone-01-stake-sheet.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-light-iphone-02-setup-stake-row.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": [
+      "button:Tom verschieben 36×44",
+      "button:Mia verschieben 36×44"
+    ]
+  },
+  {
+    "shot": "de-light-iphone-03-result-row.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-light-iphone-04-stake-choice.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-light-iphone-05-connect-in-sheet.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-light-iphone-06-scan-invoice.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-light-iphone-07-wrong-amount.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-light-iphone-08-review.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-light-iphone-09-paid.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-light-iphone-10-result-paid.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-light-iphone-11-free-choices.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-light-iphone-12-congratulate.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-light-iphone-13-congratulate-review.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-light-iphone-14-congratulate-paid.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-light-iphone-15-profile-row.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-light-iphone-16-payments.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-light-iphone-17-receive-waiting.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-light-iphone-18-received.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-light-iphone-19-unknown.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-light-iphone-20-checked-paid.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-light-iphone-21-payments-history.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-light-iphone-22-advanced.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-light-iphone-23-remove-confirm.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-light-iphone-24-payments-not-connected.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-light-iphone-25-connect-screen.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "run": "de-light-iphone",
+    "pays": 3,
+    "foreign": [],
+    "errors": []
+  },
+  {
+    "shot": "de-dark-se-01-stake-sheet.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-dark-se-02-setup-stake-row.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-dark-se-03-result-row.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-dark-se-04-stake-choice.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-dark-se-05-connect-in-sheet.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-dark-se-06-scan-invoice.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-dark-se-07-wrong-amount.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-dark-se-08-review.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-dark-se-09-paid.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-dark-se-10-result-paid.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-dark-se-11-free-choices.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-dark-se-12-congratulate.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-dark-se-13-congratulate-review.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-dark-se-14-congratulate-paid.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-dark-se-15-profile-row.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-dark-se-16-payments.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-dark-se-17-receive-waiting.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-dark-se-18-received.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-dark-se-19-unknown.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-dark-se-20-checked-paid.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-dark-se-21-payments-history.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-dark-se-22-advanced.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-dark-se-23-remove-confirm.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-dark-se-24-payments-not-connected.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-dark-se-25-connect-screen.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "run": "de-dark-se",
+    "pays": 3,
+    "foreign": [],
+    "errors": []
+  },
+  {
+    "shot": "de-light-desktop-02-setup-stake-row.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": [
+      "button:Tom verschieben 36×44",
+      "button:Mia verschieben 36×44"
+    ]
+  },
+  {
+    "shot": "de-light-desktop-03-result-row.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-light-desktop-04-stake-choice.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-light-desktop-08-review.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-light-desktop-09-paid.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-light-desktop-10-result-paid.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "run": "de-light-desktop",
+    "pays": 1,
+    "foreign": [],
+    "errors": []
+  },
+  {
+    "shot": "de-dark-phone-landscape-02-setup-stake-row.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-dark-phone-landscape-03-result-row.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-dark-phone-landscape-04-stake-choice.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-dark-phone-landscape-08-review.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-dark-phone-landscape-09-paid.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "de-dark-phone-landscape-10-result-paid.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "run": "de-dark-phone-landscape",
+    "pays": 1,
+    "foreign": [],
+    "errors": []
+  },
+  {
+    "shot": "en-dark-iphone-02-setup-stake-row.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": [
+      "button:Move Tom 36×44",
+      "button:Move Mia 36×44"
+    ]
+  },
+  {
+    "shot": "en-dark-iphone-03-result-row.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "en-dark-iphone-04-stake-choice.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "en-dark-iphone-08-review.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "en-dark-iphone-09-paid.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "shot": "en-dark-iphone-10-result-paid.jpg",
+    "pageScroll": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "small": []
+  },
+  {
+    "run": "en-dark-iphone",
+    "pays": 1,
+    "foreign": [],
+    "errors": []
+  }
+]

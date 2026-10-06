@@ -15,8 +15,8 @@ import { fetchPayEndpoint } from "../../lib/nostr/ext/lnurl.ts"
 import { createLocalSigner } from "../../lib/nostr/signers.ts"
 import { connectWallet, WalletError } from "../../lib/nostr/wallet.ts"
 import { dbGetAll } from "../../lib/storage/db.ts"
-import { scannedInvoice } from "../../lib/payments/invoices.ts"
-import { checkStatus, markReceived, pay, recordIncoming, type PaymentEntry } from "../../lib/payments/journal.ts"
+import { makeIncoming, scannedInvoice } from "../../lib/payments/invoices.ts"
+import { checkStatus, markReceived, pay, type PaymentEntry } from "../../lib/payments/journal.ts"
 import { capabilities, connectNewWallet, loadWallet, removeWallet, withWallet } from "../../lib/payments/wallet.ts"
 import { watchReceipt, zapInvoice } from "../../lib/payments/zap.ts"
 
@@ -131,16 +131,15 @@ test("receiving: make an invoice, see it paid by notification and by lookup", as
   const info = await connectNewWallet(wallet.uri)
   assert.equal(capabilities(info).notifies, true)
   await withWallet(async (w) => {
-    const made = await w.makeInvoice({ amountMsat: 500_000, description: "BlueLine Darts", expirySeconds: 600 })
-    const checked = await scannedInvoice(made.invoice, 500_000)
-    assert.equal(checked.checked.paymentHash, made.paymentHash)
-    const entry = await recordIncoming({ id: made.paymentHash, action: "receive:1", once: true, amountMsat: 500_000, counterpart: { name: "Tom" }, via: "invoice", invoice: made.invoice, expiresAt: checked.checked.expiresAt })
-    assert.equal(entry.state, "waiting")
+    const entry = await makeIncoming(w, { action: "receive:1", once: true, counterpart: { name: "Tom" }, amountMsat: 500_000 })
+    assert.deepEqual([entry.state, entry.direction, entry.amountMsat], ["waiting", "in", 500_000])
     assert.equal(entryOf(await checkStatus(entry.id, w)).state, "waiting")
     const heard = new Promise<string>((resolve) => w.onPaymentReceived(resolve))
-    await wallet.settle(made.paymentHash)
-    assert.equal(await heard, made.paymentHash)
-    await markReceived(made.paymentHash)
+    // The listener's subscription reaches the relay a moment later; until then a notification is
+    // dropped, which is why the app also asks the wallet while a code is shown.
+    for (let tries = 0; !(await wallet.settle(entry.id)) && tries < 50; tries++) await new Promise((resolve) => setTimeout(resolve, 100))
+    assert.equal(await heard, entry.id)
+    await markReceived(entry.id)
     assert.equal(entryOf(await checkStatus(entry.id, w)).state, "received")
   })
 })

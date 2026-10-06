@@ -5,20 +5,20 @@
 import type { MatchPlayer } from "../game/types.ts"
 
 export const STAKE_EXTRA = "payments.stake"
-export const MAX_STAKE_SATS = 1_000_000
-// Offered in setup; any other whole amount up to the maximum can be typed.
-export const STAKE_PRESETS = [100, 500, 1000, 5000] as const
+// Every amount this app pays, asks for or notes is whole sats up to this.
+export const MAX_SATS = 1_000_000
+const isSatsAmount = (sats: number) => Number.isSafeInteger(sats) && sats >= 1 && sats <= MAX_SATS
+// Offered wherever an amount is chosen (stake, receiving, paying); any other can be typed.
+export const AMOUNT_PRESETS = [100, 500, 1000, 5000] as const
 
 export interface Stake {
   sats: number
 }
 
-export const isStakeAmount = (sats: number) => Number.isSafeInteger(sats) && sats >= 1 && sats <= MAX_STAKE_SATS
-
 // The stake as setup stores it, or null (none, or a value this version can't read).
 export function readStake(value: unknown): Stake | null {
   const sats = (value as Partial<Stake> | null)?.sats
-  return typeof sats === "number" && isStakeAmount(sats) ? { sats } : null
+  return typeof sats === "number" && isSatsAmount(sats) ? { sats } : null
 }
 
 export interface StakeParties {
@@ -35,9 +35,6 @@ export function stakeParties(match: { players: readonly MatchPlayer[]; winner: n
   const payer = match.players[1 - match.winner]
   return payee && payer ? { payer, payee, sats: stake.sats } : null
 }
-
-// The journal action of a game's stake: paid, received or settled once, on this device.
-export const stakeAction = (matchId: string) => `stake:${matchId}`
 
 // Which side of the stake this device is on, when a player is linked to the signed-in profile
 // (`linked` gives a player's profile key). Null when it can't tell: then both sides are offered.

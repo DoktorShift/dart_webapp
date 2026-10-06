@@ -46,8 +46,9 @@ export interface FakeWallet {
   requests: string[]
   payBehaviour: PayBehaviour
   balanceMsat: number
-  // Marks an invoice this wallet made as paid by someone, with a notification if enabled.
-  settle(paymentHash: string): Promise<void>
+  // Marks an invoice this wallet made as paid by someone, with a notification if enabled. False
+  // when the notification reached no one: it is ephemeral, and the relay drops it ("mute").
+  settle(paymentHash: string): Promise<boolean>
   // Stops answering and disconnects: the wallet went offline (the relay stays up).
   stop(): void
 }
@@ -107,10 +108,13 @@ export async function startFakeWallet(options: FakeWalletOptions): Promise<FakeW
       const entry = incoming.get(paymentHash)
       if (!entry) throw new Error("no such invoice")
       entry.settled = true
-      if (!options.notifications) return
+      if (!options.notifications) return false
       const body = JSON.stringify({ notification_type: "payment_received", notification: transaction(paymentHash, entry) })
       const scheme = nip44Capable ? "nip44" : "nip04"
-      await relay.publish(sign(scheme === "nip44" ? NOTIFICATION_NIP44 : NOTIFICATION_NIP04, seal(scheme, body), [["p", clientPubkey]]))
+      return relay.publish(sign(scheme === "nip44" ? NOTIFICATION_NIP44 : NOTIFICATION_NIP04, seal(scheme, body), [["p", clientPubkey]])).then(
+        () => true,
+        () => false,
+      )
     },
     stop: () => {
       subscription.close()

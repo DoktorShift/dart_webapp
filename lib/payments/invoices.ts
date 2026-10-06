@@ -1,11 +1,11 @@
-// Where the invoice for a payment comes from, each one checked before anything is paid
-// (PLAN.md "Bezahlen und Empfangen im Spiel"): one the other player's device shows ("Empfangen")
-// and this one scans, or one fetched from the other player's Lightning address. A zap's invoice
-// comes from ./zap.ts.
+// Invoices, each one checked before anything is paid (PLAN.md "Bezahlen und Empfangen im
+// Spiel"): one the other player's device shows ("Geld empfangen") and this one scans, one fetched
+// from the other player's Lightning address, and the one this device's wallet makes to be paid.
+// A zap's invoice comes from ./zap.ts.
 import { requestInvoice, type PayEndpoint } from "../nostr/ext/lnurl.ts"
 import { checkInvoice, type InvoiceProblem } from "../nostr/ext/validate.ts"
-import { parseWalletUri } from "../nostr/wallet.ts"
-import type { InvoiceSource } from "./journal.ts"
+import { parseWalletUri, type WalletClient } from "../nostr/wallet.ts"
+import { recordIncoming, type Counterpart, type InvoiceSource, type PaymentEntry } from "./journal.ts"
 
 // What a scanned or pasted text is. Each scanner takes only its own kind and names the others,
 // so a wallet connection is never taken for something to pay (PLAN.md: verschiedene Prüfregeln).
@@ -61,4 +61,19 @@ export async function scannedInvoice(text: string, amountMsat?: number): Promise
 // Throws LnurlError.
 export async function addressInvoice(address: string, endpoint: PayEndpoint, amountMsat: number): Promise<InvoiceSource> {
   return { checked: await requestInvoice(endpoint, amountMsat), via: "address", address }
+}
+
+// What an invoice of this app says about itself: nothing about the game or the players, which
+// the payer's wallet and its operator would see (PLAN.md: private games stay private).
+const DESCRIPTION = "BlueLine Darts"
+// How long an invoice shown at the table can be paid.
+const INCOMING_EXPIRY_SECONDS = 3600
+
+// "Geld empfangen": a new invoice from this device's wallet, checked like any other (the wallet's
+// answer is untrusted too) and recorded as waiting. Throws WalletError or InvoiceError.
+export async function makeIncoming(wallet: Pick<WalletClient, "makeInvoice">, request: { action: string; once: boolean; counterpart: Counterpart; amountMsat: number }): Promise<PaymentEntry> {
+  const made = await wallet.makeInvoice({ amountMsat: request.amountMsat, description: DESCRIPTION, expirySeconds: INCOMING_EXPIRY_SECONDS })
+  const { checked } = await scannedInvoice(made.invoice, request.amountMsat)
+  if (checked.paymentHash !== made.paymentHash) throw new InvoiceError("invalid")
+  return recordIncoming({ ...request, id: checked.paymentHash, via: "invoice", invoice: checked.invoice, expiresAt: checked.expiresAt })
 }

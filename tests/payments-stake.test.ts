@@ -3,7 +3,7 @@ import assert from "node:assert/strict"
 import { randomBytes } from "@noble/hashes/utils.js"
 import { encodeInvoice } from "./support/bolt11.ts"
 import { invoiceIn, scanKind, scannedInvoice } from "../lib/payments/invoices.ts"
-import { deviceSide, MAX_STAKE_SATS, readStake, STAKE_EXTRA, stakeParties } from "../lib/payments/stake.ts"
+import { deviceSide, MAX_SATS, readStake, STAKE_EXTRA, stakeParties } from "../lib/payments/stake.ts"
 
 // The stake noted in setup ("Verlierer zahlt"), who pays whom after the game, and what the
 // payment scanners take: an invoice only, never a wallet connection.
@@ -14,8 +14,8 @@ const withStake = (sats: unknown, winner = 1, players = [TOM, MIA]) => ({ player
 
 test("a stake is a whole number of sats up to the maximum; anything else is no stake", () => {
   assert.deepEqual(readStake({ sats: 500 }), { sats: 500 })
-  assert.deepEqual(readStake({ sats: MAX_STAKE_SATS }), { sats: MAX_STAKE_SATS })
-  for (const value of [undefined, null, {}, { sats: 0 }, { sats: -5 }, { sats: 1.5 }, { sats: "500" }, { sats: MAX_STAKE_SATS + 1 }]) assert.equal(readStake(value), null)
+  assert.deepEqual(readStake({ sats: MAX_SATS }), { sats: MAX_SATS })
+  for (const value of [undefined, null, {}, { sats: 0 }, { sats: -5 }, { sats: 1.5 }, { sats: "500" }, { sats: MAX_SATS + 1 }]) assert.equal(readStake(value), null)
 })
 
 test("the loser pays the winner, only between two players", () => {

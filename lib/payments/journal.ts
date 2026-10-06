@@ -14,11 +14,11 @@
 //
 // The journal is this device's record, like its games: it isn't part of the profile, a backup or
 // an export, and only "Alle Daten löschen" removes it.
-import type { InvoiceStatus } from "../nostr/wallet.ts"
-import { WalletError, type WalletErrorCode } from "../nostr/wallet.ts"
+import { WalletError, type InvoiceStatus, type WalletErrorCode } from "../nostr/wallet.ts"
 import type { CheckedInvoice } from "../nostr/ext/lnurl.ts"
 import type { NostrEvent } from "../nostr/types.ts"
 import { dbGet, dbGetAll, dbWrite, type Keyed } from "../storage/db.ts"
+import { newObjectId } from "../storage/ids.ts"
 
 export type PaymentState =
   // Outgoing. "sending": handed to the wallet, no answer yet ("Zahlung läuft").
@@ -81,6 +81,20 @@ export interface PaymentEntry extends Keyed {
 const OPEN: ReadonlySet<PaymentState> = new Set(["sending", "unknown", "waiting"])
 const DONE: ReadonlySet<PaymentState> = new Set(["paid", "received"])
 
+// The actions payments belong to, one key each.
+export const actions = {
+  // A game's stake: paid, received or settled once on this device.
+  stake: (matchId: string) => `stake:${matchId}`,
+  // Paying one player of a game without a stake.
+  payPlayer: (matchId: string, playerId: string) => `pay:${matchId}:${playerId}`,
+  // Receiving after a game without a stake.
+  receiveAfter: (matchId: string) => `receive:${matchId}`,
+  // Congratulating a player, after a game or from their profile.
+  congratulate: (pubkey: string, matchId?: string) => (matchId ? `congratulate:${matchId}:${pubkey}` : `congratulate:${pubkey}`),
+  // One scanned invoice, or one amount asked for, from Zahlungen.
+  single: () => `single:${newObjectId()}`,
+}
+
 export const isOpen = (entry: PaymentEntry) => OPEN.has(entry.state)
 export const isDone = (entry: PaymentEntry) => DONE.has(entry.state)
 
@@ -108,7 +122,7 @@ const heldHere = new Set<string>()
 
 // Runs `task` holding the lock of `action` in every tab of this app; null right away when it is
 // held already, here or elsewhere. Without Web Locks (Safari before 15.4) only this page is
-// covered; the journal entry written before paying still stops the other tabs.
+// covered; the entry written before paying still stops any later attempt in another tab.
 async function exclusive<T>(action: string, task: () => Promise<T>): Promise<T | null> {
   if (heldHere.has(action)) return null
   heldHere.add(action)
