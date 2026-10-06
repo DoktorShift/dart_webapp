@@ -42,6 +42,9 @@ export const profileScreensDe = {
   // The signed-in Profile tab.
   home: {
     publicName: (name: string) => `Öffentlich: ${name}`,
+    // In place of the name while it isn't known yet, or couldn't be loaded.
+    nameLoading: "Wird geladen",
+    nameNotLoaded: "Nicht geladen",
     share: "Profil teilen",
     edit: "Bearbeiten",
     recent: "Letzte Spiele",
@@ -115,6 +118,9 @@ export const profileScreensDe = {
   edit: {
     title: "Profil bearbeiten",
     save: "Sichern",
+    loading: "Dein öffentliches Profil wird geladen.",
+    notFound: "Zu deinem Profil wurde nichts gefunden. Speichern legt es neu an.",
+    notLoaded: "Dein Profil konnte nicht geladen werden.",
     publicTitle: "Auch im öffentlichen Profil ändern?",
     publicDescription: (name: string) => `Dann heißt du überall „${name}“, auch in anderen Apps. Sonst nur hier in BlueLine.`,
     publicYes: "Auch öffentlich ändern",
@@ -217,6 +223,7 @@ export const profileScreensDe = {
     mismatch: "Die Antwort passt nicht zu deinem Profil. Es wurde nichts geändert.",
     unavailable: "Die App, die für dich unterschreibt, ist gerade nicht erreichbar.",
     unsupported: "Deine Signer-App kann das nicht.",
+    unreachable: "Dein Profil konnte nicht geladen werden. Versuch es noch einmal.",
     failed: "Das hat nicht geklappt. Versuch es noch einmal.",
   },
 
@@ -245,6 +252,8 @@ export const profileScreensDe = {
     relays: "Relays (NIP-65)",
     relaysFooter: "Hier veröffentlicht dein Profil, und hier finden andere es.",
     defaultRelays: "Noch keine eigene Liste: das sind die Relays der App. Eine Änderung legt deine Liste an.",
+    listLoading: "Deine Liste wird geladen",
+    listNotLoaded: "Deine Liste konnte nicht geladen werden.",
     lastRelay: "Ein Relay muss mindestens bleiben.",
     read: "Lesen",
     write: "Schreiben",

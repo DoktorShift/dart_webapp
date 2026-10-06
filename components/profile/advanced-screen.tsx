@@ -13,10 +13,9 @@ import { PROFILE_TEXTS, type ProfileTexts } from "@/lib/i18n/features/profile.sc
 import { signerProblem, SignerConfirmation } from "@/components/profile/signer-status"
 import { useOwnProfile, type OwnProfile } from "@/components/profile/use-profile"
 import type { RelayEntry } from "@/lib/nostr/ext/lists"
-import type { NostrEvent } from "@/lib/nostr/types"
 import { generalRelays } from "@/lib/nostr/relays"
 import { diagnosticsReport } from "@/lib/profile/diagnostics"
-import { OWN } from "@/lib/profile/own-events"
+import { changeBase, lookupOwnEvents, OWN } from "@/lib/profile/own-events"
 import { addRelay, editableRelays, relayListTemplate, removeRelay } from "@/lib/profile/relay-list"
 import { probeRelays, relayHost, type RelayStatus } from "@/lib/profile/relay-status"
 import { copyText } from "@/lib/shell/share"
@@ -69,7 +68,10 @@ function Advanced({ own }: { own: OwnProfile }) {
   const [keyCopied, copyKey] = useCopied()
   const [reportCopied, copyReport] = useCopied()
   const relayList = events?.get(OWN.relayList) ?? null
-  const entries = editableRelays(relayList)
+  // Without a list here, the app's relays stand in only once a relay has said there is none.
+  const answered = own.lookup?.answered ?? null
+  const listState: ListState = relayList ? "known" : answered === null ? "loading" : answered ? "none" : "failed"
+  const entries = listState === "loading" || listState === "failed" ? [] : editableRelays(relayList)
   const status = useRelayStatus(
     entries.map((e) => e.url),
     session.pubkey,
@@ -78,6 +80,8 @@ function Advanced({ own }: { own: OwnProfile }) {
   useEffect(() => {
     let alive = true
     void import("@/lib/nostr/pointers").then(({ npubOf }) => npubOf(session.pubkey)).then((value) => alive && setNpub(value), () => {})
+    // Changing the list starts from the newest version: looked up again on opening.
+    void lookupOwnEvents(session.pubkey, { again: true })
     return () => {
       alive = false
     }
@@ -96,7 +100,7 @@ function Advanced({ own }: { own: OwnProfile }) {
       },
       {
         title: "Profile",
-        lines: [`access: ${session.kind}`, `npub: ${npub ?? "?"}`, `metadata: ${at(OWN.metadata)}`, `relay list: ${relayList ? at(OWN.relayList) : "none (app relays)"}`, `stats card: ${at(OWN.statsCard)}`],
+        lines: [`access: ${session.kind}`, `npub: ${npub ?? "?"}`, `metadata: ${at(OWN.metadata)}`, `relay list: ${relayList ? at(OWN.relayList) : listState === "none" ? "none (app relays)" : "not loaded"}`, `stats card: ${at(OWN.statsCard)}`],
       },
       {
         title: "Relays",
@@ -129,7 +133,7 @@ function Advanced({ own }: { own: OwnProfile }) {
         </div>
       </Group>
 
-      <RelayList entries={entries} base={relayList} status={status} />
+      <RelayList pubkey={session.pubkey} entries={entries} state={listState} status={status} />
 
       <SlotItems list="profile.advanced" props={() => ({ pubkey: session.pubkey })} />
 
@@ -148,6 +152,10 @@ function Advanced({ own }: { own: OwnProfile }) {
     </>
   )
 }
+
+// "known": the profile's own list. "none": it has none, the app's relays show. "loading" and
+// "failed": not looked up yet, or no relay answered; nothing to edit.
+type ListState = "known" | "none" | "loading" | "failed"
 
 const usage = (tx: ProfileTexts, entry: RelayEntry) => (entry.read && entry.write ? tx.advanced.readWrite : entry.read ? tx.advanced.read : tx.advanced.write)
 
@@ -179,23 +187,25 @@ function RelayState({ status }: { status: RelayStatus | undefined }) {
 }
 
 // The profile's relay list as hosts, with their state. Adding and removing publish a new list at
-// once; whatever another app wrote into it stays (lib/profile/relay-list.ts). The app's relays
-// not on the list are offered with one tap.
-function RelayList({ entries, base, status }: { entries: RelayEntry[]; base: NostrEvent | null; status: Map<string, RelayStatus> | null }) {
+// once, on top of the newest version known (lib/profile/own-events.ts); whatever another app
+// wrote into it stays (lib/profile/relay-list.ts). The app's relays not on the list are offered
+// with one tap.
+function RelayList({ pubkey, entries, state, status }: { pubkey: string; entries: RelayEntry[]; state: ListState; status: Map<string, RelayStatus> | null }) {
   const tx = useAreaT(PROFILE_TEXTS)
   const a = tx.advanced
   const [typed, setTyped] = useState("")
   const [invalid, setInvalid] = useState(false)
   const [busy, setBusy] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)
-  const recommended = generalRelays().filter((url) => !entries.some((e) => e.url === url))
+  const editable = state === "known" || state === "none"
+  const recommended = editable ? generalRelays().filter((url) => !entries.some((e) => e.url === url)) : []
 
   const save = async (next: RelayEntry[] | null) => {
     if (!next) return false
     setBusy(true)
     setProblem(null)
     try {
-      await publishOwn([relayListTemplate(next, base)])
+      await publishOwn([relayListTemplate(next, await changeBase(pubkey, OWN.relayList))])
       return true
     } catch (error) {
       setProblem(signerProblem(tx, error))
@@ -214,7 +224,21 @@ function RelayList({ entries, base, status }: { entries: RelayEntry[]; base: Nos
 
   return (
     <>
-      <Group title={a.relays} footer={entries.length === 1 ? a.lastRelay : base ? a.relaysFooter : a.defaultRelays}>
+      <Group title={a.relays} footer={!editable ? undefined : entries.length === 1 ? a.lastRelay : state === "known" ? a.relaysFooter : a.defaultRelays}>
+        {state === "loading" && (
+          <p role="status" className="flex min-h-12 items-center gap-2 px-4 text-[1.0625rem] text-muted-foreground">
+            <LoaderCircle className="h-4 w-4 shrink-0 motion-safe:animate-spin" aria-hidden="true" />
+            {a.listLoading}
+          </p>
+        )}
+        {state === "failed" && (
+          <div className="px-4 py-3">
+            <InlineStatus tone="error">{a.listNotLoaded}</InlineStatus>
+            <Button variant="secondary" onClick={() => void lookupOwnEvents(pubkey, { again: true })} className="mt-2 h-11 rounded-xl px-5 text-[1.0625rem]">
+              {tx.public.retry}
+            </Button>
+          </div>
+        )}
         {entries.map((entry) => (
           <div key={entry.url} className="flex min-h-12 items-center gap-2 py-1.5 pl-4 pr-1">
             <div className="min-w-0 flex-1">
@@ -259,28 +283,30 @@ function RelayList({ entries, base, status }: { entries: RelayEntry[]; base: Nos
           </div>
         </div>
       )}
-      <form onSubmit={add}>
-        <TextField
-          label={a.add}
-          value={typed}
-          onChange={(e) => {
-            setTyped(e.target.value)
-            setInvalid(false)
-          }}
-          placeholder={a.addPlaceholder}
-          inputMode="url"
-          autoCapitalize="none"
-          autoCorrect="off"
-          spellCheck={false}
-          enterKeyHint="done"
-          error={invalid ? a.invalid : undefined}
-          trailing={
-            <Button type="submit" variant="secondary" disabled={busy || !typed.trim()} className="h-11 shrink-0 rounded-xl px-4 text-[1.0625rem] font-semibold text-primary">
-              {a.addButton}
-            </Button>
-          }
-        />
-      </form>
+      {editable && (
+        <form onSubmit={add}>
+          <TextField
+            label={a.add}
+            value={typed}
+            onChange={(e) => {
+              setTyped(e.target.value)
+              setInvalid(false)
+            }}
+            placeholder={a.addPlaceholder}
+            inputMode="url"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            enterKeyHint="done"
+            error={invalid ? a.invalid : undefined}
+            trailing={
+              <Button type="submit" variant="secondary" disabled={busy || !typed.trim()} className="h-11 shrink-0 rounded-xl px-4 text-[1.0625rem] font-semibold text-primary">
+                {a.addButton}
+              </Button>
+            }
+          />
+        </form>
+      )}
       <SignerConfirmation />
       {problem && (
         <InlineStatus tone="error" className="mt-4">

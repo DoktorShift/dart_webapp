@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils"
 export function ProfileCard({
   seed,
   name,
+  placeholder,
   picture,
   subtitle,
   slot,
@@ -23,6 +24,8 @@ export function ProfileCard({
   // What the drawn picture is made from: the pubkey, or the local player's key.
   seed: string
   name: string | null
+  // In place of a missing name: by default "Ohne Namen", or why it is missing (still loading).
+  placeholder?: string
   picture?: string | null
   subtitle?: ReactNode
   // Public profiles get the areas' line below the figures ("profile.card": badges, club).
@@ -37,7 +40,7 @@ export function ProfileCard({
         <Avatar seed={seed} name={name ?? undefined} src={picture} size={64} />
         <div className="min-w-0">
           <h2 id={id} className="text-xl font-semibold leading-tight [overflow-wrap:anywhere]">
-            {name ?? tx.unnamed}
+            {name ?? placeholder ?? tx.unnamed}
           </h2>
           {subtitle && <p className="mt-0.5 text-[0.9375rem] leading-snug text-muted-foreground [overflow-wrap:anywhere]">{subtitle}</p>}
         </div>

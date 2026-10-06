@@ -1,12 +1,12 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react"
 import { useMatchHistory } from "@/lib/leaderboard"
 import type { NostrEvent } from "@/lib/nostr/types"
 import { profilePlayers } from "@/lib/profile/claim"
 import { gamesOf, type PlayedGame } from "@/lib/profile/history"
 import { readMetadata } from "@/lib/profile/metadata"
-import { fetchOwnEvents, OWN, ownEvents } from "@/lib/profile/own-events"
+import { lookupOwnEvents, OWN, ownEvents, ownLookup, subscribeOwnLookups, type OwnLookup } from "@/lib/profile/own-events"
 import { cachedProfile, loadPublicProfile, type LoadStatus, type PublicProfile } from "@/lib/profile/public-profile"
 import { useSession, type Session } from "@/lib/profile/session"
 import { onStorageChange } from "@/lib/storage/db"
@@ -41,19 +41,24 @@ export function useOwnEvents(pubkey: string | null) {
 }
 
 // Looked for on relays once per profile and page load: on a new device the profile's name,
-// picture, relays and rounds arrive this way; on a known one, changes made elsewhere.
-const fetched = new Set<string>()
-function useOwnEventsFromRelays(pubkey: string | null) {
+// picture, relays and rounds arrive this way; on a known one, changes made elsewhere. The
+// lookup's state says whether what this device shows was ever confirmed by a relay.
+export function useOwnLookup(pubkey: string | null): OwnLookup | null {
   useEffect(() => {
-    if (!pubkey || fetched.has(pubkey)) return
-    fetched.add(pubkey)
-    void fetchOwnEvents(pubkey).catch(() => fetched.delete(pubkey))
+    if (pubkey) void lookupOwnEvents(pubkey)
   }, [pubkey])
+  return useSyncExternalStore(
+    subscribeOwnLookups,
+    () => (pubkey ? ownLookup(pubkey) : null),
+    () => null,
+  )
 }
 
 export interface OwnProfile {
   session: Session
   events: Map<string, NostrEvent> | null
+  // Whether relays were asked for the events, and answered (lib/profile/own-events.ts).
+  lookup: OwnLookup | null
   metadata: ReturnType<typeof readMetadata>
   // The profile's player on this device (the one it plays as in setup), if it has one.
   player: PlayerRecord | null
@@ -74,13 +79,13 @@ export function useOwnProfile(): OwnProfile | null | undefined {
   const session = useSession()
   const pubkey = session?.pubkey ?? null
   const events = useOwnEvents(pubkey)
-  useOwnEventsFromRelays(pubkey)
+  const lookup = useOwnLookup(pubkey)
   const history = useMatchHistory()
   const me = useMemo(() => (pubkey && history.players ? profilePlayers(pubkey, history.players, history.all) : null), [pubkey, history.players, history.all])
   const metadata = useMemo(() => readMetadata(events?.get(OWN.metadata)), [events])
   if (session === undefined) return undefined
   if (session === null) return null
-  return { session, events, metadata, player: me?.player ?? null, name: me?.player?.name ?? metadata.name, history, key: me?.key ?? null, sameAs: me?.sameAs ?? NOBODY }
+  return { session, events, lookup, metadata, player: me?.player ?? null, name: me?.player?.name ?? metadata.name, history, key: me?.key ?? null, sameAs: me?.sameAs ?? NOBODY }
 }
 
 // The profile's games on this device, newest first.

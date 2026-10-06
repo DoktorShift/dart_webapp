@@ -4,7 +4,7 @@ import { dbGetAll, dbWrite, type Keyed } from "../storage/db.ts"
 import { STATS_CARD_D } from "../protocol/profile.ts"
 import { ROUND_D_PREFIX } from "./rounds.ts"
 import { BLOCKED_RELAYS_KIND, ownReadRelays, RELAY_LIST_KIND, relaySettings, type RelaySettings } from "./relay-list.ts"
-import { OWN_OBJECT_PREFIX } from "./session.ts"
+import { onSessionEnd, OWN_OBJECT_PREFIX } from "./session.ts"
 
 // The signed-in profile's own replaceable events, as last seen: its metadata (0), relay list
 // (10002), blocked relays (10006), stats card (31180 "stats") and player rounds (30000). Kept in
@@ -87,4 +87,83 @@ export async function fetchOwnEvents(pubkey: string): Promise<FetchResult> {
     )
   }
   return { answered, failed }
+}
+
+// ---- Looking the profile up ------------------------------------------------------------------
+
+// Whether relays were asked for the profile's events in this page load, and whether any
+// answered. A change of the profile builds on what that found (PLAN.md "Profilbearbeitung": the
+// current version is loaded before a change), so an edit never writes a profile made elsewhere
+// out of existence just because this device hasn't seen it yet.
+export interface OwnLookup {
+  // null while relays are being asked.
+  answered: boolean | null
+}
+
+interface Lookup {
+  running: Promise<FetchResult> | null
+  // The last finished lookup.
+  result: FetchResult | null
+}
+
+const lookups = new Map<string, Lookup>()
+const lookupListeners = new Set<() => void>()
+
+// The lookup's state; null before the first one.
+export function ownLookup(pubkey: string): OwnLookup | null {
+  const lookup = lookups.get(pubkey)
+  if (!lookup) return null
+  return { answered: lookup.running ? null : (lookup.result?.answered.length ?? 0) > 0 }
+}
+
+export function subscribeOwnLookups(listener: () => void) {
+  lookupListeners.add(listener)
+  return () => {
+    lookupListeners.delete(listener)
+  }
+}
+
+function setLookup(pubkey: string, lookup: Lookup) {
+  lookups.set(pubkey, lookup)
+  for (const listener of lookupListeners) listener()
+}
+
+// A profile that signs out may sign in again on this page: its lookup starts over.
+onSessionEnd(() => lookups.clear())
+
+// Asks relays for the profile's events once per page load, and again when nothing answered the
+// last time; `again` asks once more even after an answer (before a change). A lookup already
+// running is shared. A lookup that fails on this device counts as nothing answered.
+export function lookupOwnEvents(pubkey: string, { again = false } = {}): Promise<FetchResult> {
+  const current = lookups.get(pubkey)
+  if (current?.running) return current.running
+  if (current?.result && current.result.answered.length > 0 && !again) return Promise.resolve(current.result)
+  const running = fetchOwnEvents(pubkey)
+    .catch((): FetchResult => ({ answered: [], failed: [] }))
+    .then((result) => {
+      setLookup(pubkey, { running: null, result })
+      return result
+    })
+  setLookup(pubkey, { running, result: null })
+  return running
+}
+
+export class OwnEventsError extends Error {
+  code: "unreachable"
+  constructor(message: string) {
+    super(message)
+    this.name = "OwnEventsError"
+    this.code = "unreachable"
+  }
+}
+
+// The version a change of one of the profile's events (OWN.*) builds on: the newest known once
+// relays were asked. Null when relays answered and have none. Throws "unreachable" when nothing
+// is known here and no relay answered: then there is nothing to build on, and a profile that may
+// well exist elsewhere is not written over.
+export async function changeBase(pubkey: string, key: string): Promise<NostrEvent | null> {
+  const { answered } = await lookupOwnEvents(pubkey)
+  const base = (await ownEvents(pubkey)).get(key) ?? null
+  if (!base && answered.length === 0) throw new OwnEventsError("the profile could not be loaded from any relay")
+  return base
 }

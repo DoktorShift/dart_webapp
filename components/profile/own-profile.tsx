@@ -32,7 +32,7 @@ export function OwnProfileView({ own }: { own: OwnProfile }) {
   const tx = useAreaT(PROFILE_TEXTS)
   const h = tx.home
   const nav = useNav()
-  const { session, metadata, name, history, key, sameAs } = own
+  const { session, metadata, name, lookup, history, key, sameAs } = own
   const games = useProfileGames(own)
   const summary = useMemo(() => (key ? summarizePlayer(history.all, key, { type: "x01", aliases: history.aliases, sameAs }) : null), [key, history.all, history.aliases, sameAs])
   const [shareOpen, setShareOpen] = useState(false)
@@ -47,6 +47,8 @@ export function OwnProfileView({ own }: { own: OwnProfile }) {
       <ProfileCard
         seed={session.pubkey}
         name={name}
+        // No name here yet: say whether it is still being looked up, not "no name".
+        placeholder={lookup?.answered ? undefined : lookup?.answered === false ? h.nameNotLoaded : h.nameLoading}
         picture={metadata.picture}
         subtitle={metadata.name && name && metadata.name !== name ? h.publicName(metadata.name) : undefined}
         slot={{ pubkey: session.pubkey, own: true }}

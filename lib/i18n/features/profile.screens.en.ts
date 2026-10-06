@@ -38,6 +38,8 @@ export const profileScreensEn: Widen<typeof profileScreensDe> = {
 
   home: {
     publicName: (name) => `Public: ${name}`,
+    nameLoading: "Loading",
+    nameNotLoaded: "Not loaded",
     share: "Share profile",
     edit: "Edit",
     recent: "Recent games",
@@ -107,6 +109,9 @@ export const profileScreensEn: Widen<typeof profileScreensDe> = {
   edit: {
     title: "Edit profile",
     save: "Save",
+    loading: "Loading your public profile.",
+    notFound: "Nothing was found for your profile. Saving creates it anew.",
+    notLoaded: "Your profile couldn't be loaded.",
     publicTitle: "Change your public profile too?",
     publicDescription: (name) => `Then you're "${name}" everywhere, in other apps too. Otherwise only here in BlueLine.`,
     publicYes: "Change it publicly too",
@@ -204,6 +209,7 @@ export const profileScreensEn: Widen<typeof profileScreensDe> = {
     mismatch: "The answer doesn't match your profile. Nothing was changed.",
     unavailable: "The app that signs for you can't be reached right now.",
     unsupported: "Your signer app can't do this.",
+    unreachable: "Your profile couldn't be loaded. Please try again.",
     failed: "That didn't work. Please try again.",
   },
 
@@ -231,6 +237,8 @@ export const profileScreensEn: Widen<typeof profileScreensDe> = {
     relays: "Relays (NIP-65)",
     relaysFooter: "Your profile publishes here, and this is where others find it.",
     defaultRelays: "No list of your own yet: these are the app's relays. A change creates your list.",
+    listLoading: "Loading your list",
+    listNotLoaded: "Your list couldn't be loaded.",
     lastRelay: "At least one relay has to stay.",
     read: "Read",
     write: "Write",
