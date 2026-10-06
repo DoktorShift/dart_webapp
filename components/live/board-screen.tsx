@@ -24,8 +24,7 @@ import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
 import { rulesSummary } from "@/lib/game/words"
 import { offeredGame } from "@/lib/live/content"
-import { giveVerdict, loadSeat, seatKey, visitBoard, type BoardSeats, type BoardVisit, type BoardVisitControl, type JoinedMatch } from "@/lib/live/join"
-import { dropJoined } from "@/lib/live/store"
+import { forgetSeat, giveVerdict, loadSeat, seatKey, visitBoard, type BoardSeats, type BoardVisit, type BoardVisitControl, type JoinedMatch } from "@/lib/live/join"
 import type { Followed } from "@/lib/live/follow"
 import type { Signer } from "@/lib/nostr/types"
 import { getSigner, useSession } from "@/lib/profile/session"
@@ -97,7 +96,7 @@ function StoredSeatScreen({ match }: { match: string }) {
     }
   }, [match])
   const lost = useCallback(() => {
-    void dropJoined(match).catch(() => {})
+    void forgetSeat(match)
     setJoined(null)
   }, [match])
 

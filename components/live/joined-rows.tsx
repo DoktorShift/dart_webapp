@@ -10,8 +10,8 @@ import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
 import { rulesSummary } from "@/lib/game/words"
 import { offeredGame } from "@/lib/live/content"
-import { loadSeat, seatKey, type JoinedMatch } from "@/lib/live/join"
-import { dropJoined, type JoinedRecord } from "@/lib/live/store"
+import { forgetSeat, loadSeat, seatKey, type JoinedMatch } from "@/lib/live/join"
+import type { JoinedRecord } from "@/lib/live/store"
 import { SCREENS } from "@/lib/shell/registry"
 
 // "play.rows": this phone's seats at boards, one row each. The way back to a game without the
@@ -46,7 +46,7 @@ function SeatRow({ record, joined: initial }: { record: JoinedRecord; joined: Jo
   const nav = useNav()
   const { joined, followed, lost } = useSeat(initial, true)
   useEffect(() => {
-    if (lost) void dropJoined(record.match).catch(() => {})
+    if (lost) void forgetSeat(record.match)
   }, [lost, record.match])
 
   const state = followed.state

@@ -61,10 +61,19 @@ export interface BoardVisitControl {
   // Gives the seat back (a wrong seat chosen) and looks at the seats again. A profile signs a
   // claim for it, as it did to join; a guest's own key for the match sends it.
   leave: (profile: Signer | null) => Promise<void>
-  // The seat is no longer this phone's (the board freed it, someone else has it): forgets it
-  // and looks at the seats again.
+  // The seat is no longer this phone's (forgetSeat), and the seats are looked at again.
   forget: () => Promise<void>
   close: () => void
+}
+
+// Seats lost while the app runs (the board freed them, someone else took them), by match: the
+// seats say so once, when the board's code is opened next.
+const lostSeats = new Set<string>()
+
+// The seat is no longer this phone's: forgets it, and keeps the reason for the next visit.
+export async function forgetSeat(match: string) {
+  lostSeats.add(match)
+  await dropJoined(match).catch(() => {})
 }
 
 export function visitBoard(link: BoardLink, onChange: (visit: BoardVisit) => void): BoardVisitControl {
@@ -77,7 +86,6 @@ export function visitBoard(link: BoardLink, onChange: (visit: BoardVisit) => voi
   // A seat just given back: not taken up again from memory; forgotten once the board shows it free.
   let left: JoinedMatch | null = null
   let declined: Extract<BoardMessage, { t: "decline" }>["reason"] | undefined
-  let freed = false
   let closed = false
 
   const set = (visit: BoardVisit) => {
@@ -129,6 +137,7 @@ export function visitBoard(link: BoardLink, onChange: (visit: BoardVisit) => voi
         if (!message.seats[left.seat]?.taken) await dropJoined(left.match).catch(() => {})
         left = null
       }
+      const freed = lostSeats.delete(message.match)
       set({ step: "table", table, ...(declined ? { declined } : {}), ...(freed ? { freed } : {}) })
     } else if (message.t === "seat" && pending && table) {
       stop()
@@ -137,7 +146,6 @@ export function visitBoard(link: BoardLink, onChange: (visit: BoardVisit) => voi
       seated = await rememberJoined({ match: table.match, relays: link.relays, seat: message.seat, profile: pending.profile, key, guest, archived: null }, table)
       pending = null
       left = null
-      freed = false
       set({ step: "seated", joined: seated, restored: false })
     } else if (message.t === "decline" && pending) {
       // The seats changed meanwhile: look again, and say why this one didn't work.
@@ -199,9 +207,8 @@ export function visitBoard(link: BoardLink, onChange: (visit: BoardVisit) => voi
     async forget() {
       const seat = seated
       if (!seat) return
-      await dropJoined(seat.match).catch(() => {})
+      await forgetSeat(seat.match)
       seated = null
-      freed = true
       set({ step: "looking" })
       ask(look)
     },

@@ -36,8 +36,9 @@ import { cn } from "@/lib/utils"
 
 const primary = "h-14 w-full rounded-2xl text-[1.0625rem] font-semibold"
 const secondary = "h-12 w-full rounded-2xl text-[1.0625rem]"
-// A code in a sheet leaves room for the share buttons below it, even on an iPhone SE (548 pt).
-const QR_IN_SHEET = "36dvh"
+// A code in a sheet leaves room for the share buttons below it (and a caption), even on an
+// iPhone SE (548 pt).
+const QR_IN_SHEET = "32dvh"
 
 export interface SheetProps {
   open: boolean

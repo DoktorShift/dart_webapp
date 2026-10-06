@@ -1,4 +1,4 @@
-import { MAX_SESSION_SECONDS, type Agreement } from "../protocol/match.ts"
+import type { Agreement } from "../protocol/match.ts"
 import type { SeatHolder } from "../protocol/match-state.ts"
 import type { SignedEvent } from "../protocol/tags.ts"
 import { openSecret, sealSecret, type SealedSecret } from "../profile/vault.ts"
@@ -70,8 +70,10 @@ const boardId = (local: string) => `live:board:${local}`
 const joinedId = (match: string) => `live:joined:${match}`
 const BOARD_PREFIX = "live:board:"
 const JOINED_PREFIX = "live:joined:"
-// A seat is remembered as long as a match's session can last; afterwards the game is long over.
-const JOINED_KEEP_MS = MAX_SESSION_SECONDS * 1000
+// A seat is remembered as long as a match's session can last (lib/protocol/match.ts
+// MAX_SESSION_SECONDS, a day; a plain number here keeps the protocol code off the start page);
+// afterwards the game is long over.
+const JOINED_KEEP_MS = 24 * 60 * 60 * 1000
 
 export const sealKeys = async (secrets: BoardSecrets | JoinedSecrets) => sealSecret(new TextEncoder().encode(JSON.stringify(secrets)), "match-keys")
 
