@@ -1,8 +1,8 @@
 import { after, before, beforeEach, test } from "node:test"
 import assert from "node:assert/strict"
-import { IDBFactory } from "fake-indexeddb"
-import { ANNA, BEN, MemoryStorage, at, resetStorage, saved } from "./storage-helpers.ts"
+import { ANNA, BEN, at, resetStorage, saved } from "./storage-helpers.ts"
 import { config, dart, play } from "./helpers.ts"
+import { newDevice, switchTo, type Device } from "./support/devices.ts"
 import { FakeNetwork, type FakeRelay } from "./support/fake-relay.ts"
 import { relayClient } from "../lib/nostr/client.ts"
 import { loadCore, type Core } from "../lib/nostr/core.ts"
@@ -53,18 +53,9 @@ after(async () => {
   relayClient().close()
 })
 
-interface Device {
-  idb: IDBFactory
-  local: MemoryStorage
-}
-
-const newDevice = (): Device => ({ idb: new IDBFactory(), local: new MemoryStorage() })
-
 // Makes `device` the one the app runs on, signed in with the test's profile.
 async function on(device: Device) {
-  await closeDatabase()
-  Object.assign(globalThis, { indexedDB: device.idb })
-  ;(globalThis as unknown as { window: { localStorage: MemoryStorage } }).window.localStorage = device.local
+  await switchTo(device)
   await importLocalKey(secret)
 }
 
