@@ -6,9 +6,9 @@
 // The payload is an opaque string here; each area defines and checks its own format. No React
 // and no browser APIs, so the rules run in the Node unit tests.
 
-export type LinkKind = "p" | "watch" | "club" | "tournament" | "pair" | "board" | "signer-return"
+export type LinkKind = "p" | "watch" | "club" | "tournament" | "pair" | "board" | "handoff" | "signer-return"
 
-export const LINK_KINDS: readonly LinkKind[] = ["p", "watch", "club", "tournament", "pair", "board", "signer-return"]
+export const LINK_KINDS: readonly LinkKind[] = ["p", "watch", "club", "tournament", "pair", "board", "handoff", "signer-return"]
 
 export interface AppLink {
   kind: LinkKind

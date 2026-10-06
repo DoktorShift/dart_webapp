@@ -29,6 +29,7 @@ function recorder(tab: TabId = "play") {
     pop: () => calls.push("pop"),
     popToRoot: () => calls.push("popToRoot"),
     openSetup: (type) => calls.push(`setup ${type}`),
+    resumeMatch: (match) => calls.push(`resume ${match.id}`),
   }
   return { nav, calls }
 }

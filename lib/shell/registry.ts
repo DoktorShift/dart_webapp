@@ -33,6 +33,11 @@
 //                       "Gratulieren". Gets { pubkey, name } (the name as that profile shows it).
 //     "profile.advanced" In Profil › Erweitert, below the technical identity: diagnostics.
 //                        Gets { pubkey }.
+//     "game.attachments" With the running game, from its first dart to its result: pieces that add
+//                       nothing to the screen itself, only sheets and dialogs they open (from
+//                       their game menu item, say) and effects that follow the game (sending it
+//                       to spectators). Gets { match, close }: the game as saved, and a way to
+//                       leave it for good without keeping it here (it went on on another device).
 // - Game menu items: entries at the end of the running game's options menu (the "…" button), each
 //   { id, label, icon?, onSelect }. onSelect gets the running game; the menu closes first.
 //   Nothing else on the game screen can be changed from outside.
@@ -73,6 +78,9 @@ export interface ShellNavigator {
   // Opens game setup for X01, Cricket or Around the Clock on top of everything. Back in setup,
   // and leaving or finishing the game, return to the screen it was opened from.
   openSetup(type: "x01" | "cricket" | "clock"): void
+  // Goes on with a game that arrived from another device, on the game screen. It replaces the
+  // game kept here (a paused one): ask first.
+  resumeMatch(match: SavedMatch): void
 }
 
 export interface ScreenProps {
@@ -106,6 +114,7 @@ export const SCREENS = {
   tournamentView: "tournament.view",
   liveWatch: "live.watch",
   liveBoard: "live.board",
+  liveHandoff: "live.handoff",
 } as const
 
 export type ShellAction =
@@ -139,6 +148,7 @@ export const LINK_ROUTES: Record<LinkKind, { tab: TabId; screen: string } | null
   tournament: { tab: "tournaments", screen: SCREENS.tournamentView },
   pair: { tab: "profile", screen: SCREENS.devicesPair },
   board: { tab: "play", screen: SCREENS.liveBoard },
+  handoff: { tab: "play", screen: SCREENS.liveHandoff },
   "signer-return": null,
 }
 
@@ -263,6 +273,7 @@ export interface SetupPlayersProps {
 
 export interface SlotListProps {
   "result.actions": { match: FinishedMatch }
+  "game.attachments": { match: SavedMatch; close: () => void }
   "setup.extras": SetupExtraProps
   "setup.players": SetupPlayersProps
   "profile.rows": Record<string, never>
@@ -278,6 +289,7 @@ export interface SlotItem<K extends SlotListId> {
 
 const slotLists: { [K in SlotListId]: Map<string, ComponentType<SlotListProps[K]>> } = {
   "result.actions": new Map(),
+  "game.attachments": new Map(),
   "setup.extras": new Map(),
   "setup.players": new Map(),
   "profile.rows": new Map(),
