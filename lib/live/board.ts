@@ -1,5 +1,5 @@
 import { replay } from "../game/engine.ts"
-import { loadMatch, parseSavedMatch } from "../game/storage.ts"
+import { loadMatch, parseSavedMatch, saveMatch } from "../game/storage.ts"
 import type { SavedMatch } from "../game/types.ts"
 import { publish, type PublishResult } from "../nostr/client.ts"
 import { isPublished, normalizeRelayUrl } from "../nostr/relays.ts"
@@ -544,7 +544,8 @@ export async function packBoard(local: string): Promise<HandoffPackage> {
   }
 }
 
-// The other device has the match: this one writes nothing more and forgets its keys.
+// The other device has the match: this one writes nothing more, forgets its keys, and no longer
+// keeps the game to go on with here (a reload must not offer it again).
 export async function handedOver(local: string) {
   const board = boards.get(local)
   if (!board) return
@@ -556,6 +557,7 @@ export async function handedOver(local: string) {
   board.follower = null
   boards.delete(local)
   changed()
+  if (loadMatch()?.id === local) saveMatch(null)
   await dropBoard(local).catch(() => {})
 }
 

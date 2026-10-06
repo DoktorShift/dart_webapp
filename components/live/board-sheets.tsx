@@ -36,6 +36,8 @@ import { cn } from "@/lib/utils"
 
 const primary = "h-14 w-full rounded-2xl text-[1.0625rem] font-semibold"
 const secondary = "h-12 w-full rounded-2xl text-[1.0625rem]"
+// A code in a sheet leaves room for the share buttons below it, even on an iPhone SE (548 pt).
+const QR_IN_SHEET = "36dvh"
 
 export interface SheetProps {
   open: boolean
@@ -108,6 +110,7 @@ export function WatchSheet({ open, onClose, match, view, start }: SheetProps) {
               value={linkFor("watch", view.watch)}
               label={tx.watchSheet.qrLabel}
               share={{ url: linkFor("watch", view.watch), title: tx.watchSheet.shareTitle, text: tx.watchSheet.shareText(game) }}
+              maxSize={QR_IN_SHEET}
             />
             <p className="mt-4 px-1 text-[0.8125rem] text-muted-foreground">{tx.watchSheet.footnote}</p>
           </>
@@ -170,7 +173,7 @@ export function PlayersSheet({ open, onClose, match, view, start }: SheetProps) 
         ) : failed ? (
           <Starting state="failed" retry={() => setRound((n) => n + 1)} />
         ) : boardLink && seating ? (
-          <QRCodeView value={boardLink} label={s.qrLabel} caption={s.codeValid(clock(t, seating.expires))} share={{ url: boardLink, title: s.title }} />
+          <QRCodeView value={boardLink} label={s.qrLabel} caption={s.codeValid(clock(t, seating.expires))} share={{ url: boardLink, title: s.title }} maxSize={QR_IN_SHEET} />
         ) : (
           <Starting state="starting" retry={started.retry} />
         )}
@@ -297,7 +300,7 @@ export function HandoffSheet({ open, onClose, match, start, closeGame }: SheetPr
   else if (offer.step === "waiting")
     body = (
       <>
-        <QRCodeView value={linkFor("handoff", offer.code)} label={s.qrLabel} share={{ url: linkFor("handoff", offer.code), title: s.title }} />
+        <QRCodeView value={linkFor("handoff", offer.code)} label={s.qrLabel} share={{ url: linkFor("handoff", offer.code), title: s.title }} maxSize={QR_IN_SHEET} />
         <p className="mt-4 px-1 text-[0.8125rem] text-muted-foreground">{s.footnote}</p>
       </>
     )

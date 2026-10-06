@@ -32,8 +32,6 @@ export const liveScreensDe = {
     disconnectTitle: (name: string) => `${name} trennen?`,
     disconnectText: "Das Handy ist danach nicht mehr mit diesem Platz verbunden und kann das Ergebnis nicht bestätigen.",
     codeValid: (time: string) => `Der Code gilt bis ${time} Uhr.`,
-    expired: "Dieser Code ist abgelaufen.",
-    newCode: "Neuen Code zeigen",
   },
 
   handoffSheet: {

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, type ReactNode } from "react"
-import { CircleDot, Maximize2, Pause, Trophy, WifiOff, X } from "lucide-react"
+import { CircleDot, Hourglass, Maximize2, Pause, Trophy, WifiOff, X } from "lucide-react"
 import { ClockScoreboard, CricketScoreboard, X01Scoreboard } from "@/components/game/scoreboards"
 import { slotLabel } from "@/components/game/visit-panel"
 import { useAreaT, useT } from "@/components/i18n-provider"
@@ -113,14 +113,16 @@ export function MatchView({ followed, actions, compact }: { followed: Followed; 
 
 // Status in words with a symbol, and how current the score is: the time the board signed it, or,
 // when the connection broke, since when nothing new came ("Verbindung unterbrochen · zuletzt
-// aktualisiert 21:14").
+// aktualisiert 21:14"). Before the first score there is no "Stand von": only a broken connection
+// names a time then, the last a relay answered.
 function Freshness({ followed, status, large }: { followed: Followed; status: LiveSnapshot["status"] | null; large?: boolean }) {
   const t = useT()
   const tx = useAreaT(LIVE_TEXTS)
   const w = tx.watch
   const interrupted = followed.connection === "interrupted"
-  const at = followed.state?.live ? followed.state.live.at * 1000 : followed.heardAt
-  const Icon = interrupted ? WifiOff : status === "finished" ? Trophy : status === "playing" ? CircleDot : Pause
+  const live = followed.state?.live ?? null
+  const at = live ? live.at * 1000 : interrupted ? followed.heardAt : null
+  const Icon = interrupted ? WifiOff : status === "finished" ? Trophy : status === "playing" ? CircleDot : status ? Pause : Hourglass
   return (
     <p className={cn("mt-1 text-[0.9375rem] leading-snug text-muted-foreground", large && "tablet:text-xl")}>
       <span className={cn("font-medium", interrupted ? "text-warning" : status === "playing" ? "text-danger" : "text-foreground")}>

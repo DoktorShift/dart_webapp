@@ -155,21 +155,25 @@ export function takeHandoff(link: HandoffLink, onChange: (take: HandoffTake) => 
     if (!adopted) set({ step: "failed", reason: "expired" })
   }, Math.max(0, link.expires - nowSeconds()) * 1000)
 
-  // The package may come again (the confirmation got lost): it is taken once, confirmed each time.
+  // The package may come again (the confirmation got lost, or it came while the first copy was
+  // still being taken): it is taken once, confirmed each time.
+  let adopting: Promise<void> | null = null
   async function receive(data: Record<string, unknown>) {
     stopAsking?.()
     const hash = packageHash(data)
-    if (!adopted) {
-      const game = await adoptBoard(data)
-      const current = await channel
-      if (!game) {
-        void current.send(link.pubkey, { t: "abort", sid: link.sid, reason: "error" }).catch(() => {})
-        return set({ step: "failed", reason: "invalid" })
-      }
-      adopted = { hash, game }
-      set({ step: "done", game })
+    adopting ??= adopt(data, hash)
+    await adopting
+    if (adopted?.hash === hash) await (await channel).send(link.pubkey, { t: "done", sid: link.sid, hash }).catch(() => {})
+  }
+  async function adopt(data: Record<string, unknown>, hash: string) {
+    const game = await adoptBoard(data)
+    const current = await channel
+    if (!game) {
+      void current.send(link.pubkey, { t: "abort", sid: link.sid, reason: "error" }).catch(() => {})
+      return set({ step: "failed", reason: "invalid" })
     }
-    if (adopted.hash === hash) await (await channel).send(link.pubkey, { t: "done", sid: link.sid, hash }).catch(() => {})
+    adopted = { hash, game }
+    set({ step: "done", game })
   }
 
   if (link.expires <= nowSeconds()) set({ step: "failed", reason: "expired" })

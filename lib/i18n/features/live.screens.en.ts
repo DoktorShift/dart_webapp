@@ -33,8 +33,6 @@ export const liveScreensEn: Widen<typeof liveScreensDe> = {
     disconnectTitle: (name) => `Disconnect ${name}?`,
     disconnectText: "That phone will no longer be connected to this seat and can't confirm the result.",
     codeValid: (time) => `The code is valid until ${time}.`,
-    expired: "This code has expired.",
-    newCode: "Show a new code",
   },
 
   handoffSheet: {

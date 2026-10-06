@@ -367,6 +367,9 @@ test("the writer hands the match to another device only after confirming; the ol
   assert.ok(!messages.some((m) => m.type === "taken"))
   assert.ok(live.boardView(local))
 
+  // The game kept on this device for going on with it goes along with the handover.
+  const gameStorage = await import("../../lib/game/storage.ts")
+  gameStorage.saveMatch(game)
   control.give()
   const taken = await until("the game over there", () => messages.find((m) => m.type === "taken"))
   assert.equal(taken.live, true)
@@ -374,6 +377,7 @@ test("the writer hands the match to another device only after confirming; the ol
   await until("the handover done here", () => offer?.step === "done")
   assert.equal(live.boardView(local), null)
   assert.equal(await store.loadBoard(local), null)
+  assert.equal(gameStorage.loadMatch(), null, "a reload would not offer the game here again")
 
   // The new device writes under session 2; spectators follow it.
   device.postMessage({ type: "throw", throws: fullGame.slice(0, 8) })
@@ -381,10 +385,10 @@ test("the writer hands the match to another device only after confirming; the ol
     const state = spectator.get()?.state
     return state && state.current.sv === 2 && state.live?.sv === 2 && state.live.content.standing && state
   })
-  assert.notEqual(moved.current.session, (await signers.createLocalSigner(Buffer.from(oldKeys!.session, "hex"))).getPublicKey())
+  const oldSession = await signers.createLocalSigner(Buffer.from(oldKeys!.session, "hex"))
+  assert.notEqual(moved.current.session, await oldSession.getPublicKey())
 
   // A snapshot the old session signs afterwards is refused, however new it claims to be.
-  const oldSession = await signers.createLocalSigner(Buffer.from(oldKeys!.session, "hex"))
   const matchKey = await signers.createLocalSigner(Buffer.from(oldKeys!.match, "hex"))
   const records = await import("../../lib/protocol/records.ts")
   const late = content.snapshotFor(newGame(local, fullGame.slice(0, 12)), replay(game.config, fullGame.slice(0, 12)), { sv: 1, n: 999, auth: sealed!.founding })
