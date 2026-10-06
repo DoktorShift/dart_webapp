@@ -9,7 +9,7 @@ import { en } from "./en.ts"
 
 // The German catalog's shape with every text widened to `string`, so other languages can say
 // anything as long as each entry exists and each function takes the same arguments.
-type Widen<T> = T extends string
+export type Widen<T> = T extends string
   ? string
   : T extends (...args: infer A) => infer R
     ? (...args: A) => Widen<R>
@@ -23,6 +23,19 @@ export type Messages = Widen<typeof de>
 export type Locale = "de" | "en"
 // The choice in Settings: a language, or "system" to follow the device (the default).
 export type LocalePreference = Locale | "system"
+
+// An area's own texts (profile, payments, clubs …), kept out of the catalog above so the start page
+// never carries them: an area's screens load on demand, and their texts come with them. The area's
+// file in features/ (e.g. payments.de.ts) holds only what is needed before its screens load
+// (screen titles, its row in Profile, menu entries); everything else goes into
+// features/<area>.screens.de.ts and .en.ts, made into one value with areaTexts() in
+// features/<area>.screens.ts and read with useAreaT() (components/i18n-provider.tsx).
+// The English texts must have the German shape, as in the main catalog.
+export interface AreaTexts<T> {
+  de: T
+  en: Widen<T>
+}
+export const areaTexts = <T>(texts: AreaTexts<T>) => texts
 
 export const DEFAULT_LOCALE: Locale = "de"
 export const MESSAGES: Record<Locale, Messages> = { de, en }

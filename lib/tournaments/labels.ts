@@ -1,10 +1,11 @@
-import type { Messages } from "../i18n/index.ts"
+import type { Widen } from "../i18n/index.ts"
+import type { tournamentsScreensDe } from "../i18n/features/tournaments.screens.de.ts"
 import type { MatchView } from "./types.ts"
 
 // The name of a match's round as players know it. Knockout rounds are named from the end
 // (final, semi-final, …) by the size of the bracket, so a first round with byes is still the
 // quarter-final of a bracket of eight.
-export function roundLabel(texts: Messages["tournaments"], m: Pick<MatchView, "bracket" | "group" | "round" | "rounds" | "reset">): string {
+export function roundLabel(texts: Widen<typeof tournamentsScreensDe>, m: Pick<MatchView, "bracket" | "group" | "round" | "rounds" | "reset">): string {
   const r = texts.round
   switch (m.bracket) {
     case "group":
