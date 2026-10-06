@@ -104,17 +104,15 @@ interface Lookup {
   running: Promise<FetchResult> | null
   // The last finished lookup.
   result: FetchResult | null
+  // What the UI sees; one object per state, so useSyncExternalStore sees no change without one.
+  state: OwnLookup
 }
 
 const lookups = new Map<string, Lookup>()
 const lookupListeners = new Set<() => void>()
 
 // The lookup's state; null before the first one.
-export function ownLookup(pubkey: string): OwnLookup | null {
-  const lookup = lookups.get(pubkey)
-  if (!lookup) return null
-  return { answered: lookup.running ? null : (lookup.result?.answered.length ?? 0) > 0 }
-}
+export const ownLookup = (pubkey: string): OwnLookup | null => lookups.get(pubkey)?.state ?? null
 
 export function subscribeOwnLookups(listener: () => void) {
   lookupListeners.add(listener)
@@ -123,8 +121,8 @@ export function subscribeOwnLookups(listener: () => void) {
   }
 }
 
-function setLookup(pubkey: string, lookup: Lookup) {
-  lookups.set(pubkey, lookup)
+function setLookup(pubkey: string, lookup: Omit<Lookup, "state">) {
+  lookups.set(pubkey, { ...lookup, state: { answered: lookup.running ? null : (lookup.result?.answered.length ?? 0) > 0 } })
   for (const listener of lookupListeners) listener()
 }
 
