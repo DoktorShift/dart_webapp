@@ -23,6 +23,7 @@ import { StatusIcon, TONE_COLORS, entryStatus, type Tone } from "@/components/pa
 import { useFormat, type Format } from "@/components/payments/format"
 import { PayFlow } from "@/components/payments/pay-flow"
 import { ReceiveFlow } from "@/components/payments/receive-flow"
+import { useLandscapePhone } from "@/components/payments/sheet-actions"
 import { PaymentSignet } from "@/components/payments/signet"
 import type { MatchPlayer } from "@/lib/game/types"
 import { PAYMENTS_TEXTS, type PaymentTexts } from "@/lib/i18n/features/payments.screens"
@@ -42,12 +43,14 @@ import { cn } from "@/lib/utils"
 
 // The row itself: the signet, how it stands (a symbol with words, never colour alone) and one
 // line of text, which shrinks a little to fit and wraps to a second line when it still doesn't.
+// min-w-0 keeps the row inside its grid column while the text is measured at full size;
+// otherwise the column would stretch to the text and the measurement would be wrong.
 function PaymentRow({ label, tone, onClick }: { label: string; tone?: Tone; onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex min-h-12 w-full items-center gap-3 rounded-2xl border border-border bg-card px-4 py-2 text-left text-[1.0625rem] transition-colors active:bg-secondary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring xshort:min-h-11"
+      className="flex min-h-12 w-full min-w-0 items-center gap-3 rounded-2xl border border-border bg-card px-4 py-2 text-left text-[1.0625rem] transition-colors active:bg-secondary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring short:min-h-11"
     >
       <PaymentSignet />
       <span className={cn("flex min-w-0 flex-1 items-center gap-1.5 leading-snug", tone && TONE_COLORS[tone])}>
@@ -70,9 +73,10 @@ function useLinked() {
   }, [players])
 }
 
-// What the stake's row says: how it stands, or what this device can do about it.
-function stakeLabel(tx: PaymentTexts, format: Format, parties: StakeParties, side: "payer" | "payee" | null, settled: PaymentEntry | undefined) {
-  const s = tx.stake
+// What the stake's row says: how it stands, or what this device can do about it. `brief` where
+// the row is narrow (a phone in landscape).
+function stakeLabel(tx: PaymentTexts, format: Format, parties: StakeParties, side: "payer" | "payee" | null, settled: PaymentEntry | undefined, brief: boolean) {
+  const s = brief ? tx.stake.brief : tx.stake
   const amount = format.sats(parties.sats)
   if (!settled) return side === "payee" ? s.receiveFrom(amount, parties.payer.name) : s.payTo(amount, parties.payee.name)
   if (settled.via === "manual") return s.settledRow
@@ -90,6 +94,7 @@ function StakeAction({ match, parties, entry }: { match: FinishedMatch; parties:
   const s = tx.stake
   const session = useSession()
   const linked = useLinked()
+  const landscape = useLandscapePhone()
   const [open, setOpen] = useState(false)
   const [mode, setMode] = useState<"pay" | "receive" | null>(null)
   const [confirmSettled, setConfirmSettled] = useState(false)
@@ -109,8 +114,8 @@ function StakeAction({ match, parties, entry }: { match: FinishedMatch; parties:
 
   return (
     <>
-      <PaymentRow label={stakeLabel(tx, format, parties, side, settled)} tone={settled && entryStatus(tx, settled).tone} onClick={() => setOpen(true)} />
-      <Sheet open={open} onOpenChange={(next) => (next ? setOpen(true) : close())} title={t.payments.stake.title} description={s.agreed(parties.payer.name, amount, parties.payee.name)}>
+      <PaymentRow label={stakeLabel(tx, format, parties, side, settled, landscape)} tone={settled && entryStatus(tx, settled).tone} onClick={() => setOpen(true)} />
+      <Sheet open={open} onOpenChange={(next) => (next ? setOpen(true) : close())} title={t.payments.stake.title} description={landscape ? undefined : s.agreed(parties.payer.name, amount, parties.payee.name)}>
         <SheetBody>
           {open && shown === "pay" && <PayFlow action={action} once counterpart={payee} amountSats={parties.sats} onDone={close} />}
           {open && shown === "receive" && <ReceiveFlow action={action} once counterpart={payer} amountSats={parties.sats} />}
@@ -137,7 +142,7 @@ function StakeAction({ match, parties, entry }: { match: FinishedMatch; parties:
       <AlertDialog open={confirmSettled} onOpenChange={setConfirmSettled}>
         <AlertDialogContent className="max-w-[calc(100vw-2rem)] rounded-2xl sm:max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>{s.settledHere}</AlertDialogTitle>
+            <AlertDialogTitle>{s.settledHereTitle}</AlertDialogTitle>
             <AlertDialogDescription>{s.settledHereHint}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2">
@@ -149,7 +154,7 @@ function StakeAction({ match, parties, entry }: { match: FinishedMatch; parties:
                 close()
               }}
             >
-              {s.settledHere}
+              {tx.byHand.confirm}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -166,6 +171,7 @@ function FreeAction({ match }: { match: FinishedMatch }) {
   const f = tx.free
   const session = useSession()
   const linked = useLinked()
+  const landscape = useLandscapePhone()
   const [open, setOpen] = useState(false)
   const [choice, setChoice] = useState<FreeChoice | null>(null)
   const [amount, setAmount] = useState<number | null>(null)
@@ -183,7 +189,7 @@ function FreeAction({ match }: { match: FinishedMatch }) {
 
   return (
     <>
-      <PaymentRow label={f.button} onClick={() => setOpen(true)} />
+      <PaymentRow label={landscape ? f.briefButton : f.button} onClick={() => setOpen(true)} />
       <Sheet open={open} onOpenChange={(next) => (next ? setOpen(true) : close())} title={choice?.kind === "congratulate" ? tx.congratulate.title(choice.player.name) : f.title}>
         <SheetBody>
           {open && !choice && (

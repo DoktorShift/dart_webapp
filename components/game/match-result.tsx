@@ -144,7 +144,7 @@ export function MatchResult({ state, match, onRematch, onNewGame, onHome, onLead
 
   const actions = (withPieces: boolean) => (
     <div>
-      {withPieces && <SlotItems list="result.actions" props={() => ({ match: finished })} className="mb-2 grid gap-2" />}
+      {withPieces && <SlotItems list="result.actions" props={() => ({ match: finished })} className="mb-2 grid gap-2 short:mb-1 short:gap-1" />}
       <Button onClick={onRematch} className="h-14 w-full gap-2 rounded-2xl text-[1.0625rem] font-semibold xshort:h-12">
         <RotateCcw className="h-5 w-5" aria-hidden="true" />
         {t.result.rematch}

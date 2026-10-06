@@ -258,17 +258,30 @@ export const paymentsScreensDe = {
     receiveFrom: (amount: string, name: string) => `${amount} von ${name} empfangen`,
     receiveHere: (name: string) => `Ich bin ${name}: hier empfangen`,
     settledHere: "Vor Ort erledigt",
+    settledHereTitle: "Einsatz als vor Ort erledigt vermerken?",
     settledHereHint: "Wenn ihr den Einsatz anders beglichen habt, zum Beispiel bar.",
     paidRow: (amount: string, name: string) => `${amount} an ${name} bezahlt`,
     receivedRow: (amount: string, name: string) => `${amount} von ${name} erhalten`,
     settledRow: "Einsatz vor Ort erledigt",
     unknownRow: "Einsatz: Zahlung noch nicht bestätigt",
     waitingRow: "Einsatz: Warte auf Zahlung",
+    // The same row on a phone in landscape, where it has room for a few words; its symbol says
+    // how the payment stands.
+    brief: {
+      payTo: (amount: string, name: string) => `${amount} an ${name}`,
+      receiveFrom: (amount: string, name: string) => `${amount} von ${name}`,
+      paidRow: (amount: string, name: string) => `${amount} an ${name}`,
+      receivedRow: (amount: string, name: string) => `${amount} von ${name}`,
+      settledRow: "Vor Ort erledigt",
+      unknownRow: "Nicht bestätigt",
+      waitingRow: "Warte auf Zahlung",
+    },
   },
 
   // Paying without a stake, from a result.
   free: {
     button: "Bezahlen oder empfangen",
+    briefButton: "Zahlung",
     title: "Zahlung",
     payTo: (name: string) => `An ${name} zahlen`,
   },
