@@ -6,7 +6,8 @@ import { InlineStatus } from "@/components/common/inline-status"
 import { CheckCode } from "@/components/live/board-sheets"
 import { readPayload } from "@/components/live/link-payload"
 import { useNav } from "@/components/nav/nav-context"
-import { useT } from "@/components/i18n-provider"
+import { useAreaT, useT } from "@/components/i18n-provider"
+import { LIVE_TEXTS } from "@/lib/i18n/features/live.screens"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,7 +29,8 @@ import type { ScreenProps } from "@/lib/shell/registry"
 // paused on this device would be replaced: that is asked first.
 export default function TakeoverScreen({ params }: ScreenProps) {
   const t = useT()
-  const s = t.live.takeover
+  const tx = useAreaT(LIVE_TEXTS)
+  const s = tx.takeover
   const nav = useNav()
   const link = useMemo(() => readPayload("handoff", params.payload), [params.payload])
   const [take, setTake] = useState<HandoffTake>({ step: "ready" })

@@ -5,7 +5,8 @@ import { Clock, Smartphone, WifiOff } from "lucide-react"
 import { InlineStatus } from "@/components/common/inline-status"
 import { readPayload } from "@/components/live/link-payload"
 import { MatchView, useFollowed } from "@/components/live/match-view"
-import { useT } from "@/components/i18n-provider"
+import { useAreaT, useT } from "@/components/i18n-provider"
+import { LIVE_TEXTS } from "@/lib/i18n/features/live.screens"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,8 +33,8 @@ import type { ScreenProps } from "@/lib/shell/registry"
 // the game there, and give the seat's verdict on the result. With a profile the profile only
 // signs (a claim, a verdict); its key and wallet never leave the phone.
 export default function BoardScreen({ params }: ScreenProps) {
-  const t = useT()
-  const b = t.live.board
+  const tx = useAreaT(LIVE_TEXTS)
+  const b = tx.board
   const link = useMemo(() => readPayload("board", params.payload), [params.payload])
   const [visit, setVisit] = useState<BoardVisit>({ step: "looking" })
   const [attempt, setAttempt] = useState(0)
@@ -58,7 +59,7 @@ export default function BoardScreen({ params }: ScreenProps) {
         </p>
       )
     case "silent":
-      return <EmptyState icon={WifiOff} title={b.silent} description={b.silentText} primary={{ label: t.live.retry, onClick: () => setAttempt((n) => n + 1) }} />
+      return <EmptyState icon={WifiOff} title={b.silent} description={b.silentText} primary={{ label: tx.retry, onClick: () => setAttempt((n) => n + 1) }} />
     case "expired":
       return <EmptyState icon={Clock} title={b.expired} description={b.expiredText} />
     case "seated":
@@ -70,7 +71,8 @@ export default function BoardScreen({ params }: ScreenProps) {
 
 function SeatPicker({ visit, control }: { visit: Extract<BoardVisit, { step: "table" | "joining" }>; control: { current: BoardVisitControl | null } }) {
   const t = useT()
-  const b = t.live.board
+  const tx = useAreaT(LIVE_TEXTS)
+  const b = tx.board
   const session = useSession()
   const [refused, setRefused] = useState(false)
   const table: BoardSeats = visit.table
@@ -110,8 +112,8 @@ function SeatPicker({ visit, control }: { visit: Extract<BoardVisit, { step: "ta
 }
 
 function Seated({ joined: initial, onLeave }: { joined: JoinedMatch; onLeave: () => void }) {
-  const t = useT()
-  const b = t.live.board
+  const tx = useAreaT(LIVE_TEXTS)
+  const b = tx.board
   const [joined, setJoined] = useState(initial)
   const followed = useFollowed({ match: joined.match, key: joined.key ? toHex(joined.key.secret) : null, relays: joined.relays })
   const state = followed.state
@@ -142,7 +144,8 @@ function Seated({ joined: initial, onLeave }: { joined: JoinedMatch; onLeave: ()
 // The seat's verdict on the result as it stands: confirm, or dispute after asking once more.
 function Verdict({ joined, followed }: { joined: JoinedMatch; followed: Followed }) {
   const t = useT()
-  const r = t.live.result
+  const tx = useAreaT(LIVE_TEXTS)
+  const r = tx.result
   const session = useSession()
   const [sending, setSending] = useState(false)
   const [failed, setFailed] = useState(false)
@@ -152,7 +155,7 @@ function Verdict({ joined, followed }: { joined: JoinedMatch; followed: Followed
   const result = state.result
   const last = state.results.at(-1)
   if (!result) return last?.status === "void" ? <InlineStatus className="mt-4">{r.withdrawn}</InlineStatus> : null
-  if (joined.profile && session !== undefined && session?.pubkey !== joined.profile) return <InlineStatus className="mt-4">{t.live.board.otherProfile}</InlineStatus>
+  if (joined.profile && session !== undefined && session?.pubkey !== joined.profile) return <InlineStatus className="mt-4">{tx.board.otherProfile}</InlineStatus>
 
   const mine = state.confirmations[joined.seat]
   const corrected = !mine && state.stale.some((v) => v.seat === joined.seat)

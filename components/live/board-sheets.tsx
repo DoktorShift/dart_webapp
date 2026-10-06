@@ -4,7 +4,8 @@ import { useEffect, useRef, useState, type ReactNode } from "react"
 import { QRCodeView } from "@/components/common/qr-code-view"
 import { InlineStatus } from "@/components/common/inline-status"
 import { sameNamed, shortKey, usePublicNames, type PublicName } from "@/components/live/use-public-names"
-import { useT } from "@/components/i18n-provider"
+import { useAreaT, useT } from "@/components/i18n-provider"
+import { LIVE_TEXTS } from "@/lib/i18n/features/live.screens"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -70,13 +71,13 @@ function useStarted(open: boolean, start: () => Promise<unknown>) {
 }
 
 function Starting({ state, retry }: { state: "starting" | "failed"; retry: () => void }) {
-  const t = useT()
-  if (state === "starting") return <p role="status" className="py-10 text-center text-[0.9375rem] text-muted-foreground">{t.live.preparing}</p>
+  const tx = useAreaT(LIVE_TEXTS)
+  if (state === "starting") return <p role="status" className="py-10 text-center text-[0.9375rem] text-muted-foreground">{tx.preparing}</p>
   return (
     <div className="grid gap-3 pb-2">
-      <InlineStatus tone="error">{t.live.startFailed}</InlineStatus>
+      <InlineStatus tone="error">{tx.startFailed}</InlineStatus>
       <Button onClick={retry} className={primary}>
-        {t.live.retry}
+        {tx.retry}
       </Button>
     </div>
   )
@@ -95,19 +96,20 @@ function Done({ onClose }: { onClose: () => void }) {
 
 export function WatchSheet({ open, onClose, match, view, start }: SheetProps) {
   const t = useT()
+  const tx = useAreaT(LIVE_TEXTS)
   const started = useStarted(open, start)
   const game = `${modeName(t, match.config.modeId, match.config.modeName)}, ${match.config.players.map((p) => p.name).join(" – ")}`
   return (
-    <Sheet open={open} onOpenChange={(next) => !next && onClose()} title={t.live.watchSheet.title} description={t.live.watchSheet.description}>
+    <Sheet open={open} onOpenChange={(next) => !next && onClose()} title={tx.watchSheet.title} description={tx.watchSheet.description}>
       <div className="min-h-0 overflow-y-auto overscroll-contain">
         {view && started.state === "ready" ? (
           <>
             <QRCodeView
               value={linkFor("watch", view.watch)}
-              label={t.live.watchSheet.qrLabel}
-              share={{ url: linkFor("watch", view.watch), title: t.live.watchSheet.shareTitle, text: t.live.watchSheet.shareText(game) }}
+              label={tx.watchSheet.qrLabel}
+              share={{ url: linkFor("watch", view.watch), title: tx.watchSheet.shareTitle, text: tx.watchSheet.shareText(game) }}
             />
-            <p className="mt-4 px-1 text-[0.8125rem] text-muted-foreground">{t.live.watchSheet.footnote}</p>
+            <p className="mt-4 px-1 text-[0.8125rem] text-muted-foreground">{tx.watchSheet.footnote}</p>
           </>
         ) : (
           <Starting state={started.state === "failed" ? "failed" : "starting"} retry={started.retry} />
@@ -122,7 +124,8 @@ export function WatchSheet({ open, onClose, match, view, start }: SheetProps) {
 
 export function PlayersSheet({ open, onClose, match, view, start }: SheetProps) {
   const t = useT()
-  const s = t.live.playersSheet
+  const tx = useAreaT(LIVE_TEXTS)
+  const s = tx.playersSheet
   const started = useStarted(open, start)
   const [seating, setSeating] = useState<Seating | null>(null)
   const [failed, setFailed] = useState(false)
@@ -225,8 +228,8 @@ function SeatRow({
   verdict: "confirm" | "dispute" | null
   onFree: () => void
 }) {
-  const t = useT()
-  const s = t.live.playersSheet
+  const tx = useAreaT(LIVE_TEXTS)
+  const s = tx.playersSheet
   const connection = !holder ? s.notConnected : holder.profile ? (profile?.name ? s.connectedAs(profile.name) : s.connectedProfile) : s.connectedGuest
   const subtitle: ReactNode = (
     <>
@@ -256,8 +259,8 @@ function SeatRow({
 // ---- Auf anderem Gerät fortsetzen ------------------------------------------------------------
 
 export function HandoffSheet({ open, onClose, match, start, closeGame }: SheetProps & { closeGame: () => void }) {
-  const t = useT()
-  const s = t.live.handoffSheet
+  const tx = useAreaT(LIVE_TEXTS)
+  const s = tx.handoffSheet
   const started = useStarted(open, start)
   const [offer, setOffer] = useState<HandoffOffer | null>(null)
   const [round, setRound] = useState(0)
@@ -340,10 +343,10 @@ export function HandoffSheet({ open, onClose, match, start, closeGame }: SheetPr
 
 // The check code both devices show: four digits, a space, four digits, large enough to compare.
 export function CheckCode({ code }: { code: string }) {
-  const t = useT()
+  const tx = useAreaT(LIVE_TEXTS)
   return (
     <p className="rounded-2xl border border-border bg-card px-4 py-5 text-center">
-      <span className="block text-[0.8125rem] text-muted-foreground">{t.live.takeover.checkCode}</span>
+      <span className="block text-[0.8125rem] text-muted-foreground">{tx.takeover.checkCode}</span>
       <span className="mt-1 block font-display text-4xl font-semibold tabular-nums tracking-wider">{code}</span>
     </p>
   )
@@ -352,8 +355,8 @@ export function CheckCode({ code }: { code: string }) {
 // ---- Another device took over ----------------------------------------------------------------
 
 export function MovedSheet({ match, view, closeGame }: { match: SavedMatch; view: BoardView | null; closeGame: () => void }) {
-  const t = useT()
-  const s = t.live.movedSheet
+  const tx = useAreaT(LIVE_TEXTS)
+  const s = tx.movedSheet
   const moved = view?.moved ?? null
   return (
     <Sheet open={moved !== null} onOpenChange={() => {}} title={s.title} description={moved ? s.description(moved.here, moved.there) : undefined}>

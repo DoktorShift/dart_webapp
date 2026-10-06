@@ -16,6 +16,6 @@ registerGameMenuItem({ id: "live.handoff", label: (t) => t.live.menu.handoff, ic
 registerSlotItem("game.attachments", "live", LiveGate)
 registerSlotItem("result.actions", "live", LiveResultGate)
 
-registerScreen(SCREENS.liveWatch, { title: (t) => t.live.watch.title, largeTitle: false, Component: lazyScreen(() => import("@/components/live/watch-screen")) })
-registerScreen(SCREENS.liveBoard, { title: (t) => t.live.board.title, Component: lazyScreen(() => import("@/components/live/board-screen")) })
-registerScreen(SCREENS.liveHandoff, { title: (t) => t.live.takeover.title, Component: lazyScreen(() => import("@/components/live/takeover-screen")) })
+registerScreen(SCREENS.liveWatch, { title: (t) => t.live.titles.watch, largeTitle: false, Component: lazyScreen(() => import("@/components/live/watch-screen")) })
+registerScreen(SCREENS.liveBoard, { title: (t) => t.live.titles.board, Component: lazyScreen(() => import("@/components/live/board-screen")) })
+registerScreen(SCREENS.liveHandoff, { title: (t) => t.live.titles.takeover, Component: lazyScreen(() => import("@/components/live/takeover-screen")) })

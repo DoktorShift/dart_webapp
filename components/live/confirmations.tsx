@@ -3,14 +3,15 @@
 import { useSyncExternalStore } from "react"
 import { ChevronRight, CircleAlert, CircleCheck } from "lucide-react"
 import { openLiveSheet } from "@/components/live/gate"
-import { useT } from "@/components/i18n-provider"
+import { useAreaT } from "@/components/i18n-provider"
+import { LIVE_TEXTS } from "@/lib/i18n/features/live.screens"
 import { boardView, subscribeBoards } from "@/lib/live/board"
 import type { FinishedMatch } from "@/lib/shell/registry"
 
 // On the result of a live game: how many of the connected players confirmed it, and who
 // disputes it, in one row. It opens "Spieler verbinden" with every seat's answer.
 export default function Confirmations({ match }: { match: FinishedMatch }) {
-  const t = useT()
+  const tx = useAreaT(LIVE_TEXTS)
   const view = useSyncExternalStore(
     subscribeBoards,
     () => boardView(match.id),
@@ -29,8 +30,8 @@ export default function Confirmations({ match }: { match: FinishedMatch }) {
     >
       <Icon className={disputes.length > 0 ? "h-5 w-5 shrink-0 text-danger" : "h-5 w-5 shrink-0 text-success"} aria-hidden="true" />
       <span className="min-w-0 flex-1 leading-snug [overflow-wrap:anywhere]">
-        {t.live.confirmations(confirmed, seats.length)}
-        {disputes.length > 0 && <span className="block text-danger">{t.live.disputedBy(disputes.join(", "))}</span>}
+        {tx.confirmations(confirmed, seats.length)}
+        {disputes.length > 0 && <span className="block text-danger">{tx.disputedBy(disputes.join(", "))}</span>}
       </span>
       <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/70" aria-hidden="true" />
     </button>
