@@ -1,7 +1,9 @@
 import { useEffect, useSyncExternalStore } from "react"
+import { bytesToHex, hexToBytes } from "@noble/hashes/utils.js"
 import type { Nip46Connection } from "../nostr/signers.ts"
 import type { Signer } from "../nostr/types.ts"
 import { dbGet, dbKeys, dbWrite, onStorageChange, type Keyed, type WriteOp } from "../storage/db.ts"
+import { isPubkey } from "../storage/players.ts"
 import { forgetVaultKey, openSecret, sealSecret, type SealedSecret } from "./vault.ts"
 
 // The one current session of this device (docs/decisions/0002 §4): a guest (no session), a key
@@ -190,9 +192,6 @@ export function useSignerConfirmation(): string | null {
   )
 }
 
-const toHex = (bytes: Uint8Array) => Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")
-const fromHex = (hex: string) => Uint8Array.from(hex.match(/../g) ?? [], (h) => parseInt(h, 16))
-
 async function openStoredSigner(stored: StoredSession): Promise<OpenSigner> {
   const signers = await import("../nostr/signers.ts")
   switch (stored.kind) {
@@ -209,7 +208,7 @@ async function openStoredSigner(stored: StoredSession): Promise<OpenSigner> {
     case "nip46": {
       if (!stored.secret || !stored.remote) throw new signers.SignerError("unavailable", "the signer app connection is missing")
       const session = {
-        clientSecretKey: toHex(await openSecret(stored.secret, "connection-key")),
+        clientSecretKey: bytesToHex(await openSecret(stored.secret, "connection-key")),
         remoteSignerPubkey: stored.remote.signerPubkey,
         userPubkey: stored.pubkey,
         relays: stored.remote.relays,
@@ -338,7 +337,7 @@ export async function connectExternal<K extends keyof ExternalParams>(kind: K, p
         pubkey: session.userPubkey,
         kind,
         createdAt: Date.now(),
-        secret: await sealSecret(fromHex(session.clientSecretKey), "connection-key"),
+        secret: await sealSecret(hexToBytes(session.clientSecretKey), "connection-key"),
         remote: { signerPubkey: session.remoteSignerPubkey, relays: session.relays },
       },
       options,
@@ -346,7 +345,7 @@ export async function connectExternal<K extends keyof ExternalParams>(kind: K, p
     )
   }
   const { pubkey } = params as ExternalParams["nip07"]
-  if (!/^[0-9a-f]{64}$/.test(pubkey)) throw new Error("not a public key")
+  if (!isPubkey(pubkey)) throw new Error("not a public key")
   return begin({ pubkey, kind, createdAt: Date.now() }, options)
 }
 

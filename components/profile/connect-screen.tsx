@@ -22,6 +22,7 @@ import { claimPlayer } from "@/lib/profile/claim"
 import { connectExternal, type ExternalParams, type SessionOptions } from "@/lib/profile/session"
 import type { ScreenProps } from "@/lib/shell/registry"
 import { SITE } from "@/lib/site"
+import { isPubkey } from "@/lib/storage/players"
 
 // "Mit einer anderen App": signing in with a profile someone already has elsewhere (P2.02). The
 // key stays in that app; BlueLine asks it when something needs a signature.
@@ -39,8 +40,6 @@ const PERMISSIONS = ["sign_event:0", "sign_event:10002", "sign_event:30000", "si
 
 type Method = "extension" | "signer-app" | "android"
 
-const isHexKey = (value: string | undefined): value is string => !!value && /^[0-9a-f]{64}$/.test(value)
-
 function platform() {
   const agent = navigator.userAgent
   const android = /Android/i.test(agent)
@@ -55,7 +54,7 @@ function platform() {
 export default function ConnectScreen({ params }: ScreenProps) {
   const tx = useAreaT(PROFILE_TEXTS)
   const c = tx.connect
-  const androidKey = isHexKey(params.androidKey) ? params.androidKey : null
+  const androidKey = isPubkey(params.androidKey) ? params.androidKey : null
   const [method, setMethod] = useState<Method | null>(androidKey ? "android" : null)
   const [connected, setConnected] = useState<string | null>(null)
   // Known only in the browser; the first render matches the server's.

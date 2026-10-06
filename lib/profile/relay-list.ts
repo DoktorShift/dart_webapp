@@ -8,10 +8,13 @@ import type { EventTemplate, NostrEvent } from "../nostr/types.ts"
 //   only, never claimed as a general relay (PLAN.md "Start Relays und NIP 65").
 // - Relays the person blocked (kind 10006, public "relay" tags) are never written to.
 // - Profile kinds (0, 10002, 10006, 10008) go to the five profile relays, everything else to the
-//   general ones; both plus the person's own write relays.
+//   general ones; both plus the person's own write relays, the first few of them: a long list
+//   (another app's) must not open a socket per entry.
 
 export const RELAY_LIST_KIND = 10002
 export const BLOCKED_RELAYS_KIND = 10006
+// How many of someone's own write relays are used beside the app's (NIP-65 asks for few).
+export const MAX_OWN_RELAYS = 4
 const PROFILE_KINDS = new Set([0, 3, RELAY_LIST_KIND, BLOCKED_RELAYS_KIND, 10008])
 
 export interface RelaySettings {
@@ -35,15 +38,16 @@ export function relaySettings(relayList?: NostrEvent | null, blockedList?: Nostr
 }
 
 const without = (urls: string[], blocked: readonly string[]) => urls.filter((url) => !blocked.includes(url))
+const ownWrite = (settings: RelaySettings) => settings.write.slice(0, MAX_OWN_RELAYS)
 
 // The relays an event of this kind is published to.
 export function publishTargets(kind: number, settings: RelaySettings): string[] {
-  return without(mergeRelays(defaultRelays(PROFILE_KINDS.has(kind) ? "profile" : "general"), settings.write), settings.blocked)
+  return without(mergeRelays(defaultRelays(PROFILE_KINDS.has(kind) ? "profile" : "general"), ownWrite(settings)), settings.blocked)
 }
 
 // Where the profile's own events are looked for: everywhere they may have gone.
 export function ownReadRelays(settings: RelaySettings): string[] {
-  return without(mergeRelays(profileRelays(), generalRelays(), settings.write), settings.blocked)
+  return without(mergeRelays(profileRelays(), generalRelays(), ownWrite(settings)), settings.blocked)
 }
 
 // The relay list of a new profile: the general relays, for reading and writing.
