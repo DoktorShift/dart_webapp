@@ -139,8 +139,15 @@ export const TOURNAMENT_TYPES = {
   ),
   "tournament.approve": rec(obj({ slot: slot(), submission: eventId("tournament.result event id"), prev: prev() }), "The organizer approves a submitted result"),
   "tournament.correct": rec(
-    obj({ slot: slot(), winner: nullable(participantId()), score: score(), reason: shortText(), prev: prev() }),
-    "The organizer corrects an approved result",
+    obj({
+      slot: slot(),
+      winner: nullable(participantId()),
+      score: score(),
+      walkover: opt(oneOf(["noShow", "retired"], "The new winner won without (finishing) the match")),
+      reason: shortText(),
+      prev: prev(),
+    }),
+    "The organizer corrects an approved result (winner null: the match is played again)",
   ),
   "tournament.handover.offer": rec(
     obj({
