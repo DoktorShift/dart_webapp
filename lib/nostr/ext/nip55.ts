@@ -6,7 +6,11 @@
 // request (createGetPublicKeyRequest / createSignEventRequest) before leaving the page, then on
 // return parse the URL (parseCallback), find the stored request (matchPending) and complete it.
 //
-// The callback URL must end in a fragment (#...), so results never reach a server or its logs.
+// The callback URL must end in a fragment name (#signer-return), so results never reach a server
+// or its logs. The request's id goes into the callback in front of the result, as
+// "#<name>=<id>." with the result right after the dot: Amber (IntentUtils.kt) URL-decodes the
+// callback once and splits it at "?" and "&", so neither may appear in it, and the dot survives
+// the signer's own URL-encoding of what it appends.
 // Decryption is deliberately not offered: plaintext would land in the browser history.
 import { bytesToHex, randomBytes } from "@noble/hashes/utils.js"
 import { loadCore } from "../core.ts"
@@ -65,9 +69,8 @@ export function createSignEventRequest(template: EventTemplate, pubkey: string, 
 // to app schemes without a user gesture).
 export function buildSignerUrl(request: Nip55Request, options: SignerUrlOptions): string {
   const hash = options.callbackUrl.indexOf("#")
-  if (hash < 0) throw new Nip55Error("malformed", "the callback URL must end in a fragment (#...)")
-  const fragment = options.callbackUrl.slice(hash + 1)
-  const callback = `${options.callbackUrl}${fragment ? "&" : ""}id=${request.id}&result=`
+  if (hash < 0 || hash === options.callbackUrl.length - 1) throw new Nip55Error("malformed", "the callback URL must end in a fragment name (#signer-return)")
+  const callback = `${options.callbackUrl}=${request.id}.`
   const params = new URLSearchParams()
   params.set("type", request.type)
   params.set("returnType", options.returnType ?? "signature")
@@ -91,14 +94,14 @@ export interface Nip55Callback {
   result: string
 }
 
-// Reads a signer's answer from the page URL, or null when the URL is not an answer. `marker` is
-// the fragment the callback URL started with.
+// Reads a signer's answer ("#<marker>=<id>.<result>") from the page URL, or null when the URL is
+// not an answer. `marker` is the fragment name the callback URL ended with.
 export function parseCallback(url: string, marker = "signer-return"): Nip55Callback | null {
   const hash = url.indexOf("#")
   if (hash < 0) return null
   const fragment = url.slice(hash + 1)
-  if (!fragment.startsWith(marker)) return null
-  const match = /(?:^|&)id=([0-9a-f]{32})&result=([\s\S]*)$/.exec(fragment.slice(marker.length))
+  if (!fragment.startsWith(`${marker}=`)) return null
+  const match = /^([0-9a-f]{32})\.([\s\S]*)$/.exec(fragment.slice(marker.length + 1))
   if (!match) return null
   // Signers append the result raw or URL-encoded; base64 "+" must survive either way.
   let result = match[2]

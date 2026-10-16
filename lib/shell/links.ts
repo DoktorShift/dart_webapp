@@ -12,7 +12,7 @@ export const LINK_KINDS: readonly LinkKind[] = ["p", "watch", "club", "tournamen
 
 // Answers of other apps to a request this app made: they append their answer to the callback
 // address they were given, so the payload may be empty or start with "?".
-//   signer-return  a signer app (NIP-55), callback "#signer-return="
+//   signer-return  a signer app (NIP-55), callback "#signer-return=<id>." (lib/nostr/ext/nip55.ts)
 //   wallet-return  a wallet app that created a connection (NWC deep link), callback "#wallet-return"
 const ANSWERS: readonly LinkKind[] = ["signer-return", "wallet-return"]
 
