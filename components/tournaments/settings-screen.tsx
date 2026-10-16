@@ -10,8 +10,9 @@ import { InlineStatus } from "@/components/common/inline-status"
 import { Waiting } from "@/components/common/waiting"
 import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
+import { formatDateTime } from "@/lib/i18n"
 import { TOURNAMENTS_TEXTS } from "@/lib/i18n/features/tournaments.screens"
-import { formatDateTime, SyncLine, useActions, useParticipantNames } from "@/components/tournaments/common"
+import { SyncLine, useActions, useParticipantNames } from "@/components/tournaments/common"
 import { DetailsSheet, HandoverSheet } from "@/components/tournaments/organize-sheets"
 import { useProfileNames } from "@/components/profile/use-profile-names"
 import { TOURNAMENT_SCREENS } from "@/components/tournaments/screens"
@@ -65,7 +66,7 @@ function Settings({ entry, onRefresh }: { entry: Entry; onRefresh: () => void })
         <ListRow icon={Printer} iconTone="gray" title={s.export} onClick={() => nav.push(TOURNAMENT_SCREENS.print, { tournament: read.id })} />
       </Group>
       {!over && (
-        <Group footer={state.offer ? s.offerOpen(offerTo.name ?? names.nameOf(state.offer.to), formatDateTime(state.offer.expires, t)) : s.handoverText}>
+        <Group footer={state.offer ? s.offerOpen(offerTo.name ?? names.nameOf(state.offer.to), formatDateTime(t, state.offer.expires * 1000)) : s.handoverText}>
           {state.offer ? (
             <ListRow title={s.cancelOffer} chevron={false} disabled={busy} onClick={() => void actions.run("cancelOffer", () => [cancelOfferTemplate(state, (state.offer as NonNullable<typeof state.offer>).event)])} />
           ) : (

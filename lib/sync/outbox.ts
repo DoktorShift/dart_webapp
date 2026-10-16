@@ -1,5 +1,5 @@
 import { coordinateOf, publish as send, supersedes, type PublishResult, type RelayCode } from "../nostr/client.ts"
-import { countOperators, isPublished, mergeRelays } from "../nostr/relays.ts"
+import { countOperators, isPublished, mergeRelays, PUBLISHED_MIN_OPERATORS } from "../nostr/relays.ts"
 import type { NostrEvent } from "../nostr/types.ts"
 import { dbGetAll, dbWrite, onStorageChange, type Keyed, type WriteOp } from "../storage/db.ts"
 
@@ -358,7 +358,7 @@ export async function outboxCounts(): Promise<OutboxCounts> {
   const entries = await outboxStatus()
   return {
     waiting: entries.filter((e) => e.state === "waiting").length,
-    fewCopies: entries.filter((e) => e.rule === "published" && e.operators < 2).length,
+    fewCopies: entries.filter((e) => e.rule === "published" && e.operators < PUBLISHED_MIN_OPERATORS).length,
     kept: entries.length,
   }
 }

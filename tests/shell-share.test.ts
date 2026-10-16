@@ -1,6 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { copyText, shareLink, type ShareData } from "../lib/shell/share.ts"
+import { copyText, shareFile, shareLink, type ShareData } from "../lib/shell/share.ts"
 
 const link: ShareData = { url: "https://blueline21.netlify.app/#club=c1", title: "Club" }
 
@@ -63,4 +63,17 @@ test("copying falls back to a hidden text field, and reports failure honestly", 
   assert.equal(await copyText("x", { navigator: {}, document: doc(false) }), false)
   assert.equal(appended, removed, "the text field is always removed again")
   assert.equal(await copyText("x", {}), false)
+})
+
+test("a file goes to the share sheet; the answer tells whether to save it instead", async () => {
+  const file = new File(["{}"], "blueline.json", { type: "application/json" })
+  const refused = (name: string) => async () => Promise.reject(Object.assign(new Error(name), { name }))
+  const shared: unknown[] = []
+  assert.equal(await shareFile(file, "Ergebnis", { navigator: { share: async (d) => void shared.push(d) } }), "shared")
+  assert.deepEqual(shared, [{ files: [file], text: "Ergebnis" }])
+  assert.equal(await shareFile(file, undefined, { navigator: { share: refused("AbortError") } }), "dismissed")
+  assert.equal(await shareFile(file, undefined, { navigator: { share: refused("NotAllowedError") } }), "blocked")
+  assert.equal(await shareFile(file, undefined, { navigator: { share: refused("DataError") } }), "failed")
+  assert.equal(await shareFile(file, undefined, { navigator: { share: async () => {}, canShare: () => false } }), "failed")
+  assert.equal(await shareFile(file, undefined, { navigator: {} }), "failed")
 })

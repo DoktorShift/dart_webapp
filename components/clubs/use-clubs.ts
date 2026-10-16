@@ -1,11 +1,11 @@
 "use client"
 
-import { useEffect, useState, useSyncExternalStore } from "react"
+import { useEffect, useState } from "react"
 import type { ClubView } from "@/lib/clubs/club"
 import type { Author } from "@/lib/clubs/send"
 import { storedClubs } from "@/lib/clubs/store"
 import { discoverClubs, refreshClub, viewClub, type Reader } from "@/lib/clubs/sync"
-import { followProfile } from "@/components/profile/follow-profile"
+import { profileStore } from "@/components/profile/follow-profile"
 import { getSigner, loadSession } from "@/lib/profile/session"
 import { onStorageChange } from "@/lib/storage/db"
 
@@ -26,16 +26,13 @@ export interface ClubsSnapshot {
 }
 
 const views = new Map<string, ClubView>()
-let snapshot: ClubsSnapshot = { views: [], loaded: false, refreshing: false, online: null }
-const listeners = new Set<() => void>()
 let watching = false
 let reading = 0
 
 const byName = (a: ClubView, b: ClubView) => (a.info?.name ?? "￿").localeCompare(b.info?.name ?? "￿")
 
 function emit(change: Partial<Omit<ClubsSnapshot, "views">> = {}) {
-  snapshot = { ...snapshot, ...change, views: [...views.values()].sort(byName) }
-  for (const listener of listeners) listener()
+  store.set({ ...store.get(), ...change, views: [...views.values()].sort(byName) })
 }
 
 // The signed-in profile (or the guest) as the clubs' reader. Only a key kept on this device
@@ -70,7 +67,7 @@ async function refreshOne(club: string, r: Reader): Promise<{ view: ClubView; re
 }
 
 async function refreshAll() {
-  if (snapshot.refreshing) return
+  if (store.get().refreshing) return
   emit({ refreshing: true })
   const r = await clubReader()
   let online = false
@@ -97,26 +94,17 @@ function watch() {
   })
 }
 
-const start = followProfile(async () => {
-  watch()
-  await readLocal()
-}, refreshAll)
-
-function subscribe(listener: () => void) {
-  listeners.add(listener)
-  return () => {
-    listeners.delete(listener)
-  }
-}
-
-const EMPTY: ClubsSnapshot = { views: [], loaded: false, refreshing: false, online: null }
+const store = profileStore<ClubsSnapshot>(
+  { views: [], loaded: false, refreshing: false, online: null },
+  async () => {
+    watch()
+    await readLocal()
+  },
+  refreshAll,
+)
 
 export function useClubs(): ClubsSnapshot & { refresh: () => Promise<void> } {
-  useEffect(() => {
-    void start()
-  }, [])
-  const current = useSyncExternalStore(subscribe, () => snapshot, () => EMPTY)
-  return { ...current, refresh: refreshAll }
+  return { ...store.useSnapshot(), refresh: refreshAll }
 }
 
 // One club, from the store; a club not kept here yet (opened from a link or the public list) is

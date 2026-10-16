@@ -2,21 +2,13 @@
 
 import { useEffect, useState, type FormEvent } from "react"
 import { Check, CircleAlert, CircleCheck, Copy, LoaderCircle, Minus, Plus, Timer } from "lucide-react"
+import { Confirm } from "@/components/ui/confirm"
 import { Button } from "@/components/ui/button"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
 import { TextField } from "@/components/ui/text-field"
 import { InlineStatus } from "@/components/common/inline-status"
+import { useCopied } from "@/components/common/use-copied"
 import { SlotItems } from "@/components/shell/slot-items"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { PROFILE_TEXTS, type ProfileTexts } from "@/lib/i18n/features/profile.screens"
@@ -30,7 +22,6 @@ import { diagnosticsReport } from "@/lib/profile/diagnostics"
 import { changeBase, lookupOwnEvents, OWN, type OwnLookup } from "@/lib/profile/own-events"
 import { addRelay, editableRelays, relayListTemplate, removeRelay } from "@/lib/profile/relay-list"
 import { probeRelays, relayHost, type RelayStatus } from "@/lib/profile/relay-status"
-import { copyText } from "@/lib/shell/share"
 import { submitOwn } from "@/lib/sync/publish"
 import { useSyncStatus } from "@/lib/sync/status"
 import { cn } from "@/lib/utils"
@@ -44,17 +35,6 @@ export default function AdvancedScreen() {
   const own = useOwnProfile()
   if (!own) return null
   return <Advanced own={own} />
-}
-
-// Copied texts say so for a moment, then read as before.
-function useCopied(): [boolean, (text: string) => Promise<void>] {
-  const [copied, setCopied] = useState(false)
-  const copy = async (text: string) => {
-    if (!(await copyText(text))) return
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-  return [copied, copy]
 }
 
 // Each relay's answer, asked again whenever the list changes and whenever a sync ends (it just
@@ -80,8 +60,8 @@ function Advanced({ own }: { own: OwnProfile }) {
   const a = tx.advanced
   const { session, events } = own
   const [npub, setNpub] = useState<string | null>(null)
-  const [keyCopied, copyKey] = useCopied()
-  const [reportCopied, copyReport] = useCopied()
+  const { copied: keyCopied, copy: copyKey } = useCopied()
+  const { copied: reportCopied, copy: copyReport } = useCopied()
   const relayList = events?.get(OWN.relayList) ?? null
   // Without a list here, the app's relays stand in only once every relay has said there is none.
   const listState: ListState = relayList ? "known" : (own.lookup?.state ?? "asking")
@@ -222,7 +202,6 @@ function RelayList({
   unanswered: readonly string[]
   status: Map<string, RelayStatus> | null
 }) {
-  const t = useT()
   const tx = useAreaT(PROFILE_TEXTS)
   const sx = useAreaT(SYNC_TEXTS)
   const a = tx.advanced
@@ -372,27 +351,19 @@ function RelayList({
           {problem}
         </InlineStatus>
       )}
-      <AlertDialog open={removing !== null} onOpenChange={(open) => !open && setRemoving(null)}>
-        <AlertDialogContent className="max-w-[calc(100vw-2rem)] rounded-2xl sm:max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="[overflow-wrap:anywhere]">{removing && a.removeTitle(relayHost(removing.url))}</AlertDialogTitle>
-            <AlertDialogDescription>{a.removeDescription}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel className="h-11">{t.common.cancel}</AlertDialogCancel>
-            <AlertDialogAction
-              className="h-11 bg-danger text-white hover:bg-danger/90"
-              onClick={() => {
-                const entry = removing
-                setRemoving(null)
-                if (entry) void save(entry.url, (current) => removeRelay(current, entry.url))
-              }}
-            >
-              {a.removeConfirm}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Confirm
+        open={removing !== null}
+        onOpenChange={(open) => !open && setRemoving(null)}
+        title={removing ? a.removeTitle(relayHost(removing.url)) : ""}
+        text={a.removeDescription}
+        confirm={a.removeConfirm}
+        destructive
+        onConfirm={() => {
+          const entry = removing
+          setRemoving(null)
+          if (entry) void save(entry.url, (current) => removeRelay(current, entry.url))
+        }}
+      />
     </>
   )
 }

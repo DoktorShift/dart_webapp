@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { renderResultImage, type ResultImage } from "@/lib/result-image"
 import { saveFile } from "@/lib/save-file"
+import { shareFile } from "@/lib/shell/share"
 
 const FILE_NAME = "blueline-darts.png"
 const ICON = "/icon/192"
@@ -35,13 +36,11 @@ export function useShareResult(model: ResultImage, text: string) {
   }, [model])
 
   return useCallback(() => {
-    const send = (picture: File) => {
-      if (!navigator.canShare?.({ files: [picture] })) return saveFile(picture, picture.name)
-      navigator.share({ files: [picture], text }).catch((error: unknown) => {
+    const send = (picture: File) =>
+      void shareFile(picture, text).then((outcome) => {
         // Closing the share sheet is fine; anything else saves the picture instead.
-        if (!(error instanceof DOMException && error.name === "AbortError")) saveFile(picture, picture.name)
+        if (outcome === "blocked" || outcome === "failed") saveFile(picture, picture.name)
       })
-    }
     if (file) send(file)
     else makeFile(model).then(send).catch(() => {})
   }, [file, model, text])

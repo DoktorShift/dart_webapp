@@ -1,14 +1,13 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { LoaderCircle, RefreshCw } from "lucide-react"
 import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { formatWhen } from "@/lib/i18n"
 import { SYNC_TEXTS } from "@/lib/i18n/features/sync.screens"
-import { onStorageChange } from "@/lib/storage/db"
-import { outboxCounts, type OutboxCounts } from "@/lib/sync/outbox"
+import { useStored } from "@/lib/storage/hooks"
+import { outboxCounts } from "@/lib/sync/outbox"
 import { useSyncStatus } from "@/lib/sync/status"
 import { cn } from "@/lib/utils"
 
@@ -51,23 +50,5 @@ function Turning({ className, ...props }: { className?: string; "aria-hidden"?: 
 }
 
 // What the outbox holds, kept current with this tab's and other tabs' writes. null until read.
-function useOutboxCounts() {
-  const [counts, setCounts] = useState<OutboxCounts | null>(null)
-  useEffect(() => {
-    let alive = true
-    const load = () =>
-      void outboxCounts().then(
-        (found) => alive && setCounts(found),
-        () => alive && setCounts(null),
-      )
-    load()
-    const stop = onStorageChange((message) => {
-      if (message.type === "wipe" || message.stores.includes("outbox")) load()
-    })
-    return () => {
-      alive = false
-      stop()
-    }
-  }, [])
-  return counts
-}
+const loadCounts = () => outboxCounts().catch(() => null)
+const useOutboxCounts = () => useStored("outbox", loadCounts)[0] ?? null

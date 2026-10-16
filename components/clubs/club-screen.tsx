@@ -9,8 +9,9 @@ import { InlineStatus } from "@/components/common/inline-status"
 import { useNav } from "@/components/nav/nav-context"
 import { SlotItems } from "@/components/shell/slot-items"
 import { useAreaT, useT } from "@/components/i18n-provider"
+import { formatDateTime } from "@/lib/i18n"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
-import { ClubHeader, SyncLine, formatDateTime, membershipLine, taskLabel, useChange } from "@/components/clubs/common"
+import { ClubHeader, SyncLine, membershipLine, taskLabel, useChange } from "@/components/clubs/common"
 import { Confirm } from "@/components/ui/confirm"
 import { DateAnswer, answerCounts } from "@/components/clubs/date-answer"
 import { useInlineProfile } from "@/components/profile/inline-profile"
@@ -200,7 +201,7 @@ function ClubBody({ view, params, refresh }: { view: ClubView; params: ScreenPar
               <>
                 <ListRow
                   title={next.title}
-                  subtitle={[formatDateTime(next.starts, t), next.place].filter(Boolean).join(" · ")}
+                  subtitle={[formatDateTime(t, next.starts * 1000), next.place].filter(Boolean).join(" · ")}
                   value={tx.dates.coming(answerCounts(next).yes, answerCounts(next).maybe)}
                   onClick={() => sub(CLUB_SCREENS.dates)}
                 />

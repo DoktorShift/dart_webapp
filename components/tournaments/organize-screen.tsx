@@ -22,7 +22,8 @@ import { useAutoAdmission, useTournament, type Entry } from "@/components/tourna
 import { waitingList, type Participant } from "@/lib/protocol/tournament-state"
 import type { ScreenProps } from "@/lib/shell/registry"
 import type { MatchView } from "@/lib/tournaments/engine"
-import { awaitingApproval, isGuestPlace, requests, shortKey } from "@/lib/tournaments/read"
+import { shortKey } from "@/lib/nostr/pointers"
+import { awaitingApproval, isGuestPlace, requests } from "@/lib/tournaments/read"
 import { approveTemplate, assignTemplate } from "@/lib/tournaments/records"
 
 type Tab = "participants" | "boards" | "results"

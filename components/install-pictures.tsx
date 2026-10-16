@@ -110,6 +110,19 @@ function Row({ icon: Icon, label, strong }: { icon: typeof Copy; label: string; 
   )
 }
 
+// A browser menu, the row to tap (`tap`) in bold with the ring.
+function MenuRows({ rows, tap }: { rows: [icon: typeof Copy, label: string][]; tap: number }) {
+  return rows.map(([icon, label], i) =>
+    i === tap ? (
+      <Spot key={label} round={false} className="flex w-full">
+        <Row icon={icon} label={label} strong />
+      </Spot>
+    ) : (
+      <Row key={label} icon={icon} label={label} />
+    ),
+  )
+}
+
 const PICTURES: Record<InstallPicture, (words: Messages["install"]["picture"]) => ReactNode> = {
   "ios-share": () => (
     <Phone edge="bottom">
@@ -130,12 +143,15 @@ const PICTURES: Record<InstallPicture, (words: Messages["install"]["picture"]) =
     <Phone edge="bottom">
       <PageBehind />
       <div className="space-y-1 rounded-t-2xl border-t border-border bg-card p-2 pb-3 shadow-[0_-8px_24px_rgba(0,0,0,0.25)]">
-        <Row icon={Copy} label={words.copy} />
-        <Row icon={BookmarkPlus} label={words.addBookmark} />
-        <Spot round={false} className="flex w-full">
-          <Row icon={SquarePlus} label={words.addToHome} strong />
-        </Spot>
-        <Row icon={Star} label={words.addToFavourites} />
+        <MenuRows
+          rows={[
+            [Copy, words.copy],
+            [BookmarkPlus, words.addBookmark],
+            [SquarePlus, words.addToHome],
+            [Star, words.addToFavourites],
+          ]}
+          tap={2}
+        />
       </div>
     </Phone>
   ),
@@ -202,12 +218,15 @@ const PICTURES: Record<InstallPicture, (words: Messages["install"]["picture"]) =
       <div className="relative flex-1">
         <PageBehind />
         <div className="absolute right-2 top-2 w-[72%] space-y-0.5 rounded-xl border border-border bg-card py-1.5 shadow-xl">
-          <Row icon={Plus} label={words.newTab} />
-          <Row icon={History} label={words.history} />
-          <Spot round={false} className="flex w-full">
-            <Row icon={Download} label={words.installApp} strong />
-          </Spot>
-          <Row icon={Settings} label={words.settings} />
+          <MenuRows
+            rows={[
+              [Plus, words.newTab],
+              [History, words.history],
+              [Download, words.installApp],
+              [Settings, words.settings],
+            ]}
+            tap={2}
+          />
         </div>
       </div>
     </Phone>

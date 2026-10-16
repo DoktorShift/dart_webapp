@@ -9,6 +9,10 @@ export interface ProfilePointer {
   relays: string[]
 }
 
+// The first characters of a key, grouped ("1a2b 3c4d"): shown to tell apart two people with the
+// same name, or one without a name (design rules, impostor prevention).
+export const shortKey = (key: string) => `${key.slice(0, 4)} ${key.slice(4, 8)}`
+
 const isHexKey = (value: unknown): value is string => typeof value === "string" && /^[0-9a-f]{64}$/.test(value)
 
 // The public key as npub, as other apps show it.

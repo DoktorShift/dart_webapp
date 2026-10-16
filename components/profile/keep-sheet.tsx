@@ -3,13 +3,12 @@
 import { useState, type FormEvent } from "react"
 import { Button } from "@/components/ui/button"
 import { ChoiceList } from "@/components/ui/choice-list"
-import { Sheet } from "@/components/ui/sheet"
+import { Sheet, SheetBody } from "@/components/ui/sheet"
 import { InlineStatus } from "@/components/common/inline-status"
 import { useAreaT } from "@/components/i18n-provider"
 import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
-import { createProfile } from "@/components/profile/create-profile"
 import { pictureProblem, ProfileFields } from "@/components/profile/profile-fields"
-import { useSignInGuard } from "@/components/profile/sign-in-guard"
+import { useCreateProfile } from "@/components/profile/use-create-profile"
 
 // The sheet behind "Deine Ergebnisse mitnehmen" (./keep-results.tsx): which seat of the finished
 // game is the person's, their display name (prefilled from it) and an optional picture, then
@@ -38,37 +37,26 @@ export default function KeepSheet({
   const tx = useAreaT(PROFILE_TEXTS)
   const k = tx.keep
   const f = tx.form
-  const { signIn, dialog } = useSignInGuard()
+  const { create, busy, failed, dialog } = useCreateProfile()
   const only = seats.length === 1 ? seats[0] : null
   const [seat, setSeat] = useState<number | null>(only?.seat ?? null)
   const [name, setName] = useState(only?.name ?? "")
   // The name follows the chosen seat until it is typed in.
   const [typed, setTyped] = useState(false)
   const [picture, setPicture] = useState("")
-  const [busy, setBusy] = useState(false)
-  const [failed, setFailed] = useState(false)
   const chosen = seats.find((s) => s.seat === seat) ?? null
   const ready = seat !== null && name.trim() !== "" && !pictureProblem(picture)
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
-    if (!ready || busy) return
-    setBusy(true)
-    setFailed(false)
-    try {
-      if (await signIn((options) => createProfile({ name, picture, claim: { matchId, seat } }, options))) onCreated()
-    } catch {
-      setFailed(true)
-    } finally {
-      setBusy(false)
-    }
+    if (ready && (await create({ name, picture, claim: { matchId, seat } }))) onCreated()
   }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title={k.offer} description={k.description}>
       {/* On short screens (phones in landscape) everything scrolls together, the action last. */}
       <form onSubmit={submit} className="flex min-h-0 flex-col overscroll-contain xshort:overflow-y-auto">
-        <div className="min-h-0 overflow-y-auto overscroll-contain pb-4 xshort:shrink-0 xshort:overflow-visible">
+        <SheetBody className="xshort:shrink-0 xshort:overflow-visible">
           {!only && (
             <section className="mt-2">
               <p className="mb-2 px-4 text-[0.8125rem] text-muted-foreground">{k.seat}</p>
@@ -101,7 +89,7 @@ export default function KeepSheet({
               {f.failed}
             </InlineStatus>
           )}
-        </div>
+        </SheetBody>
         {/* Outside the fields' scroll area: the one action stays in view while they scroll. */}
         <Button type="submit" disabled={!ready || busy} className="mt-2 h-14 w-full shrink-0 rounded-2xl text-[1.0625rem] font-semibold xshort:h-12">
           {busy ? f.creating : f.create}

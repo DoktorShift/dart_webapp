@@ -424,15 +424,7 @@ function applyCricketDart(s: MatchState, dart: Dart) {
 
   const closedAll = CRICKET_TARGETS.every((t) => s.marks[p][t] >= 3)
   const ahead = others.every((q) => (s.config.cutThroat ? s.points[p] <= s.points[q] : s.points[p] >= s.points[q]))
-  if (closedAll && ahead) {
-    endVisit(s, visitOf(s, p, { checkout: true }))
-    return
-  }
-  if (s.visitDarts.length === 3) {
-    endVisit(s, visitOf(s, p, {}))
-    return
-  }
-  s.outcome = { type: "dart", player: p }
+  afterDart(s, p, closedAll && ahead)
 }
 
 function applyClockDart(s: MatchState, dart: Dart) {
@@ -446,15 +438,15 @@ function applyClockDart(s: MatchState, dart: Dart) {
     s.progress[p]++
     st.hits++
   }
-  if (s.progress[p] >= s.clockTargets.length) {
-    endVisit(s, visitOf(s, p, { checkout: true }))
-    return
-  }
-  if (s.visitDarts.length === 3) {
-    endVisit(s, visitOf(s, p, {}))
-    return
-  }
-  s.outcome = { type: "dart", player: p }
+  afterDart(s, p, s.progress[p] >= s.clockTargets.length)
+}
+
+// After a cricket or clock dart: a won leg or a third dart ends the visit, otherwise the same
+// player throws again.
+function afterDart(s: MatchState, p: number, legWon: boolean) {
+  if (legWon) endVisit(s, visitOf(s, p, { checkout: true }))
+  else if (s.visitDarts.length === 3) endVisit(s, visitOf(s, p, {}))
+  else s.outcome = { type: "dart", player: p }
 }
 
 function applyDart(s: MatchState, dart: Dart, index: number) {

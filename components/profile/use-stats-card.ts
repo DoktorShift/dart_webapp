@@ -1,13 +1,14 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef } from "react"
 import type { OwnProfile } from "@/components/profile/use-profile"
 import { createdAt } from "@/lib/nostr/time"
 import { OWN } from "@/lib/profile/own-events"
 import { statsCardOf } from "@/lib/profile/stats-card"
 import { EMPTY_STATS_CARD, sharesNothing, type StatsCard } from "@/lib/protocol/profile"
 import { readStatsCard, statsCardTemplate } from "@/lib/protocol/stats-card"
-import { kvGet, kvSet, onStorageChange } from "@/lib/storage/db"
+import { kvGet, kvSet } from "@/lib/storage/db"
+import { useStored } from "@/lib/storage/hooks"
 import { submitOwn } from "@/lib/sync/publish"
 
 // "Statistik im Profil zeigen" (default off): whether the profile shares its stats card. The
@@ -17,22 +18,8 @@ import { submitOwn } from "@/lib/sync/publish"
 const CHOICE_KEY = "profile.stats-card"
 
 // The choice as stored: undefined while read, null without one.
-function useChoice() {
-  const [choice, setChoice] = useState<boolean | null | undefined>(undefined)
-  useEffect(() => {
-    let alive = true
-    const load = () => void kvGet<boolean>(CHOICE_KEY).then((value) => alive && setChoice(value ?? null), () => alive && setChoice(null))
-    load()
-    const stop = onStorageChange((message) => {
-      if (message.type === "change" && message.stores.includes("kv")) load()
-    })
-    return () => {
-      alive = false
-      stop()
-    }
-  }, [])
-  return choice
-}
+const loadChoice = () => kvGet<boolean>(CHOICE_KEY).then((value) => value ?? null, () => null)
+const useChoice = () => useStored("kv", loadChoice)[0]
 
 export function useStatsCard(own: OwnProfile) {
   const { session, events, history, key, sameAs } = own

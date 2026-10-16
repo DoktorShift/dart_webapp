@@ -7,6 +7,10 @@
 // experimental.optimizePackageImports in next.config.mjs, the lazy chunk is 22 KB gzip
 // (docs/implementation/evidence/P0.03/CORE.md, "Bundle-Messung").
 // Add a name here when lib/nostr starts using it.
+//
+// Import, then export, on purpose: the shorter `export { … } from "nostr-core"` defeats the
+// optimizePackageImports rewrite and pulls in the whole package (measured 2026-10-16: lazy
+// chunk 17.9 KB gzip with this form, 49.1 KB with the re-export form).
 import {
   buildCalendarEventAddress,
   createAuthEventTemplate,
@@ -43,6 +47,7 @@ import {
   verifyEventSignature,
 } from "nostr-core"
 
+// jscpd:ignore-start (the list above, exported: see the header)
 export {
   buildCalendarEventAddress,
   createAuthEventTemplate,
@@ -78,3 +83,4 @@ export {
   verifiedSymbol,
   verifyEventSignature,
 }
+// jscpd:ignore-end

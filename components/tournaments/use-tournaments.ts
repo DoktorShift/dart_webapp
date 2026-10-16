@@ -1,9 +1,9 @@
 "use client"
 
-import { useEffect, useState, useSyncExternalStore } from "react"
+import { useEffect, useState } from "react"
 import type { EventTemplate } from "@/lib/nostr/types"
 import { nowSeconds } from "@/lib/nostr/time"
-import { followProfile } from "@/components/profile/follow-profile"
+import { profileStore } from "@/components/profile/follow-profile"
 import { getSession, getSigner, loadSession } from "@/lib/profile/session"
 import type { Reason } from "@/lib/protocol/reasons"
 import { onStorageChange } from "@/lib/storage/db"
@@ -43,14 +43,11 @@ const live = new Map<string, LiveInput[]>()
 let waiting = new Map<string, number>()
 let drafts: TournamentDraft[] = []
 let boards: BoardDeviceRecord[] = []
-let snapshot: TournamentsSnapshot = { entries: [], drafts: [], boards: [], loaded: false, refreshing: false }
-const listeners = new Set<() => void>()
 let watching = false
 let reading = 0
 
 function emit(change: Partial<Omit<TournamentsSnapshot, "entries" | "drafts" | "boards">> = {}) {
-  snapshot = { ...snapshot, ...change, entries: [...entries.values()], drafts, boards }
-  for (const listener of listeners) listener()
+  store.set({ ...store.get(), ...change, entries: [...entries.values()], drafts, boards })
 }
 
 const read = (stored: StoredTournament, pubkey: string | null): Entry => ({
@@ -88,7 +85,7 @@ async function readWaiting() {
 }
 
 async function refreshAll() {
-  if (snapshot.refreshing) return
+  if (store.get().refreshing) return
   emit({ refreshing: true })
   const pubkey = (await loadSession())?.pubkey ?? null
   if (pubkey) await discoverTournaments(pubkey).catch(() => false)
@@ -111,26 +108,17 @@ function watch() {
   })
 }
 
-const start = followProfile(async () => {
-  watch()
-  await readLocal()
-}, refreshAll)
-
-function subscribe(listener: () => void) {
-  listeners.add(listener)
-  return () => {
-    listeners.delete(listener)
-  }
-}
-
-const EMPTY: TournamentsSnapshot = { entries: [], drafts: [], boards: [], loaded: false, refreshing: false }
+const store = profileStore<TournamentsSnapshot>(
+  { entries: [], drafts: [], boards: [], loaded: false, refreshing: false },
+  async () => {
+    watch()
+    await readLocal()
+  },
+  refreshAll,
+)
 
 export function useTournaments(): TournamentsSnapshot & { refresh: () => Promise<void> } {
-  useEffect(() => {
-    void start()
-  }, [])
-  const current = useSyncExternalStore(subscribe, () => snapshot, () => EMPTY)
-  return { ...current, refresh: refreshAll }
+  return { ...store.useSnapshot(), refresh: refreshAll }
 }
 
 // Re-reads one tournament's local copy (after a write by this tab, or new live matches).

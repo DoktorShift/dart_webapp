@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button"
 import { InlineStatus } from "@/components/common/inline-status"
 import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
+import { formatDate, formatDateTime } from "@/lib/i18n"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
-import { ClubHeader, formatDate, formatDateTime, useChange } from "@/components/clubs/common"
+import { ClubHeader, useChange } from "@/components/clubs/common"
 import { useInlineProfile } from "@/components/profile/inline-profile"
 import { CLUB_SCREENS } from "@/components/clubs/screens"
 import { clubAuthor, useClub } from "@/components/clubs/use-clubs"
@@ -143,8 +144,8 @@ function Invitation({ view }: { view: ClubView }) {
       <ClubHeader view={view} subtitle={hostName ? tx.invite.from(hostName) : tx.invite.fromClub} />
       <div className="mt-4 flex flex-col gap-1 px-4 text-[0.9375rem] leading-snug text-muted-foreground">
         {kind && !outcome && <p>{kind === "group" ? (state === "request" ? tx.invite.groupLimited : tx.invite.group) : tx.invite.personal}</p>}
-        {expires !== undefined && !over && <p>{tx.invite.until(formatDate(expires, t))}</p>}
-        {next && <p>{tx.home.next(formatDateTime(next.starts, t))}</p>}
+        {expires !== undefined && !over && <p>{tx.invite.until(formatDate(t, expires * 1000))}</p>}
+        {next && <p>{tx.home.next(formatDateTime(t, next.starts * 1000))}</p>}
         {view.info?.visibility === "closed" && <p>{tx.invite.closedHint}</p>}
       </div>
       {outcome ? (

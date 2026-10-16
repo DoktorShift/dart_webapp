@@ -3,12 +3,13 @@
 import { useState, type FormEvent } from "react"
 import { Button } from "@/components/ui/button"
 import { ChoiceRow } from "@/components/ui/group"
-import { Sheet } from "@/components/ui/sheet"
+import { Sheet, SheetBody } from "@/components/ui/sheet"
 import { TextField } from "@/components/ui/text-field"
 import { InlineStatus } from "@/components/common/inline-status"
 import { useAreaT, useT } from "@/components/i18n-provider"
+import { formatClock, formatDateTime } from "@/lib/i18n"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
-import { SheetBody, SheetButton, formatDateTime, formatTime, personName, useChange } from "@/components/clubs/common"
+import { SheetButton, personName, useChange } from "@/components/clubs/common"
 import { Confirm } from "@/components/ui/confirm"
 import { DateAnswer } from "@/components/clubs/date-answer"
 import { clubAuthor } from "@/components/clubs/use-clubs"
@@ -48,7 +49,7 @@ export function DateSheet({ view, state, date, open, onOpenChange }: { view: Clu
       open={open}
       onOpenChange={onOpenChange}
       title={date?.title ?? ""}
-      description={date ? [`${formatDateTime(date.starts, t)}${date.ends !== undefined ? ` – ${formatTime(date.ends * 1000, t)}` : ""}`, date.place].filter(Boolean).join(" · ") : undefined}
+      description={date ? [`${formatDateTime(t, date.starts * 1000)}${date.ends !== undefined ? ` – ${formatClock(t, date.ends * 1000)}` : ""}`, date.place].filter(Boolean).join(" · ") : undefined}
     >
       <SheetBody>
         {date?.cancelled && (

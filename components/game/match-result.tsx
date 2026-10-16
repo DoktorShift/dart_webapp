@@ -14,7 +14,7 @@ import { useShareResult } from "@/components/game/use-share-result"
 import { SlotItems } from "@/components/shell/slot-items"
 import { legsWonInGame, perfectLegDarts, playsSets, type MatchState } from "@/lib/game/engine"
 import { legName } from "@/lib/game/words"
-import { modeName, type Messages } from "@/lib/i18n"
+import { modeName, type Messages, formatDate } from "@/lib/i18n"
 import type { SavedMatch } from "@/lib/game/types"
 import { resultPrimaryFor, type FinishedMatch } from "@/lib/shell/registry"
 import type { ResultImage } from "@/lib/result-image"
@@ -197,7 +197,7 @@ export function MatchResult({ state, match, onRematch, onNewGame, onHome, onLead
       title,
       subtitle,
       badges,
-      date: new Date().toLocaleDateString(t.intl, { day: "numeric", month: "long", year: "numeric" }),
+      date: formatDate(t, Date.now(), "long"),
       players: state.config.players.map((p) => p.name),
       winner: state.config.players.length > 1 ? state.winner : null,
       rows: keyRows(state, t).map((row) => ({ label: row.label, short: row.short, values: rowValues(state, row, t) })),

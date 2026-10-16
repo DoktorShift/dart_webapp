@@ -5,13 +5,14 @@ import { Button } from "@/components/ui/button"
 import { ChoiceList } from "@/components/ui/choice-list"
 import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
-import { Sheet } from "@/components/ui/sheet"
+import { Sheet, SheetBody } from "@/components/ui/sheet"
 import { TextField } from "@/components/ui/text-field"
 import { InlineStatus } from "@/components/common/inline-status"
 import { useAreaT, useT } from "@/components/i18n-provider"
+import { formatDate } from "@/lib/i18n"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
 import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
-import { SheetBody, SheetButton, formatDate, useChange } from "@/components/clubs/common"
+import { SheetButton, useChange } from "@/components/clubs/common"
 import { Confirm } from "@/components/ui/confirm"
 import { GameSummary } from "@/components/clubs/game-summary"
 import { InviteSheet } from "@/components/clubs/invite-sheet"
@@ -203,7 +204,7 @@ export function InvitesSheet({ view, state, open, onOpenChange }: { view: ClubVi
                     {invite.label && `: ${invite.label}`}
                   </p>
                   <p className="mt-0.5 text-[0.8125rem] leading-snug text-muted-foreground">
-                    {tx.invites.uses(invite.uses.length)} · {tx.invites.until(formatDate(invite.expires, t))}
+                    {tx.invites.uses(invite.uses.length)} · {tx.invites.until(formatDate(t, invite.expires * 1000))}
                     {!token && ` · ${tx.invites.elsewhere}`}
                   </p>
                   <div className="mt-3 grid grid-cols-2 gap-2">

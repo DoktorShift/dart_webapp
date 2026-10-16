@@ -7,9 +7,10 @@ import { Group } from "@/components/ui/group"
 import { InlineStatus } from "@/components/common/inline-status"
 import { useAreaT } from "@/components/i18n-provider"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
-import { shortId, useChange } from "@/components/clubs/common"
+import { useChange } from "@/components/clubs/common"
 import { clubAuthor } from "@/components/clubs/use-clubs"
 import { useProfileNames } from "@/components/profile/use-profile-names"
+import { shortKey } from "@/lib/nostr/pointers"
 import { acceptRequest, declineRequest } from "@/lib/clubs/membership"
 import type { ClubState } from "@/lib/protocol/club-state"
 
@@ -50,7 +51,7 @@ export function RequestList({ state }: { state: ClubState }) {
               <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
                 <span className="block text-[1.0625rem] leading-snug">{info.name ?? tx.unnamed}</span>
                 <span className="block text-[0.8125rem] leading-snug text-muted-foreground">
-                  {info.name ? "" : `${tx.id(shortId(request.pubkey))} · `}
+                  {info.name ? "" : `${tx.id(shortKey(request.pubkey))} · `}
                   {request.check === "unverified" ? tx.members.unverified : ""}
                 </span>
               </span>

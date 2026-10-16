@@ -3,12 +3,14 @@
 import { useState, type FormEvent } from "react"
 import { Avatar } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
+import { SheetBody } from "@/components/ui/sheet"
 import { TextField } from "@/components/ui/text-field"
 import { InlineStatus } from "@/components/common/inline-status"
 import { QRScanner, type ScanVerdict } from "@/components/common/qr-scanner"
 import { useAreaT } from "@/components/i18n-provider"
 import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
 import { usePublicProfile } from "@/components/profile/use-profile"
+import { shortKey } from "@/lib/nostr/pointers"
 import { readMetadata } from "@/lib/profile/metadata"
 import { readProfileCode, type ProfileAddress } from "@/lib/profile/profile-link"
 import type { SetupSeat } from "@/lib/shell/registry"
@@ -29,9 +31,9 @@ export default function ScanSheetContent({ players, onAdd }: { players: readonly
   }
 
   return (
-    <div className="min-h-0 overflow-y-auto overscroll-contain pb-1">
+    <SheetBody>
       {found ? <FoundPlayer address={found} players={players} onAdd={onAdd} /> : <QRScanner onResult={onResult} manualLabel={s.scanManual} manualPlaceholder={s.scanPlaceholder} />}
-    </div>
+    </SheetBody>
   )
 }
 
@@ -62,7 +64,7 @@ function FoundPlayer({ address, players, onAdd }: { address: ProfileAddress; pla
         <Avatar seed={address.pubkey} name={name || undefined} src={metadata.picture} size={56} />
         <div className="min-w-0">
           <p className="text-[1.0625rem] font-semibold leading-snug [overflow-wrap:anywhere]">{metadata.name ?? (status === null ? tx.public.loading : tx.unnamed)}</p>
-          {sameName && <p className="mt-0.5 text-[0.8125rem] leading-snug text-muted-foreground">{s.sameName(`${address.pubkey.slice(0, 4)} ${address.pubkey.slice(4, 8)}`)}</p>}
+          {sameName && <p className="mt-0.5 text-[0.8125rem] leading-snug text-muted-foreground">{s.sameName(shortKey(address.pubkey))}</p>}
         </div>
       </div>
       {alreadyIn && <InlineStatus className="mt-4">{s.alreadyIn}</InlineStatus>}

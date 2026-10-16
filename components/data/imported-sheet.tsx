@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Sheet } from "@/components/ui/sheet"
 import { useT } from "@/components/i18n-provider"
+import { formatDate } from "@/lib/i18n"
 import type { ArchivedMatch } from "@/lib/storage/archive"
 import { assignImportedName, nameKey, type PlayerRecord } from "@/lib/storage/players"
 import type { Standing } from "@/lib/storage/stats"
@@ -59,7 +60,7 @@ export function ImportedSheet({
     .filter((p) => p.nameKey === key)
     .sort((a, b) => (Date.parse(b.lastPlayedAt ?? b.updatedAt) || 0) - (Date.parse(a.lastPlayedAt ?? a.updatedAt) || 0))
   const when = (p: PlayerRecord) =>
-    new Date(p.lastPlayedAt ?? p.updatedAt).toLocaleDateString(t.intl, { day: "numeric", month: "short", year: "numeric" })
+    formatDate(t, new Date(p.lastPlayedAt ?? p.updatedAt).getTime())
 
   const count = importedGames(matches, imported ? [key] : ownedNames)
   const title = imported ? d.importedTitle(name) : d.mergedTitle(name)

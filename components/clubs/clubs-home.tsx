@@ -9,8 +9,9 @@ import { ListRow } from "@/components/ui/list-row"
 import { CardSection } from "@/components/common/card-section"
 import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
+import { formatDateTime } from "@/lib/i18n"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
-import { formatDateTime, membershipLine, taskLabel, taskParams } from "@/components/clubs/common"
+import { membershipLine, taskLabel, taskParams } from "@/components/clubs/common"
 import { CLUB_SCREENS } from "@/components/clubs/screens"
 import { useClubs } from "@/components/clubs/use-clubs"
 import { clubTasks, nextDate, type ClubView } from "@/lib/clubs/club"
@@ -91,7 +92,7 @@ function ClubCard({ view, onOpen }: { view: ClubView; onOpen: (params?: Record<s
           <span className="block text-[1.0625rem] font-semibold leading-snug">{view.info?.name ?? tx.unnamed}</span>
           <span className="block text-[0.8125rem] leading-snug text-muted-foreground">{membershipLine(view, tx)}</span>
           {view.me.status === "member" && (
-            <span className="block text-[0.8125rem] leading-snug text-muted-foreground">{next ? tx.home.next(formatDateTime(next.starts, t)) : tx.club.noDate}</span>
+            <span className="block text-[0.8125rem] leading-snug text-muted-foreground">{next ? tx.home.next(formatDateTime(t, next.starts * 1000)) : tx.club.noDate}</span>
           )}
         </span>
         <ChevronRight className="-mr-1 h-5 w-5 shrink-0 text-muted-foreground/70" aria-hidden="true" />

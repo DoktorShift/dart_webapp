@@ -1,16 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+import { Confirm } from "@/components/ui/confirm"
 import { Button } from "@/components/ui/button"
 import { DisclosureRow, Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
@@ -172,7 +163,6 @@ function Visibility({ shown, published, onShow, onHide, busy, problem }: { shown
 
 // "Löschung anfragen" for one's own award whose result no longer holds.
 function DeletionRequest({ pubkey, award, onDone }: { pubkey: string; award: ValidAward; onDone: () => void }) {
-  const t = useT()
   const tx = useAreaT(BADGES_TEXTS)
   const d = tx.detail
   const [asking, setAsking] = useState(false)
@@ -187,23 +177,15 @@ function DeletionRequest({ pubkey, award, onDone }: { pubkey: string; award: Val
           {problem}
         </InlineStatus>
       )}
-      <AlertDialog open={asking} onOpenChange={setAsking}>
-        <AlertDialogContent className="max-w-[calc(100vw-2rem)] rounded-2xl sm:max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle>{d.requestDeletionTitle}</AlertDialogTitle>
-            <AlertDialogDescription>{d.requestDeletionDescription}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel className="h-11">{t.common.cancel}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => void run(() => requestDeletion(pubkey, [award], d.voided)).then(onDone)}
-              className="h-11 bg-danger text-white hover:bg-danger/90"
-            >
-              {d.requestDeletionConfirm}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Confirm
+        open={asking}
+        onOpenChange={setAsking}
+        title={d.requestDeletionTitle}
+        text={d.requestDeletionDescription}
+        confirm={d.requestDeletionConfirm}
+        destructive
+        onConfirm={() => void run(() => requestDeletion(pubkey, [award], d.voided)).then(onDone)}
+      />
     </>
   )
 }

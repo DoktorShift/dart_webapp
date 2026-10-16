@@ -1,3 +1,4 @@
+import { shortKey } from "../nostr/pointers.ts"
 import type { NostrEvent } from "../nostr/types.ts"
 import { parseRecord, type ContentOf } from "../protocol/records.ts"
 import type { FoundingProblem } from "../protocol/replay.ts"
@@ -79,9 +80,6 @@ export interface TournamentRead {
   relays: string[]
   loadedAt: number | null
 }
-
-// The first characters of a key, to show a player without a name or two with the same one.
-export const shortKey = (id: string) => `${id.slice(0, 4)} ${id.slice(4, 8)}`
 
 export const placeName = (p: Place) => p.alias ?? shortKey(p.id)
 

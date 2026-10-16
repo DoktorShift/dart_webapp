@@ -3,9 +3,8 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { CircleCheck, Download } from "lucide-react"
-import { InstallGuide } from "@/components/install-guide"
+import { InstallGuideSheet } from "@/components/install-guide"
 import { useT } from "@/components/i18n-provider"
-import { Sheet } from "@/components/ui/sheet"
 import { useInstallApp } from "@/hooks/use-install-app"
 
 // Whether this page already works without a connection: the service worker that keeps the app
@@ -95,11 +94,7 @@ export function InstallCard({ qrSvg, inApp = false }: { qrSvg: string; inApp?: b
         </>
       )}
 
-      <Sheet open={guideOpen} onOpenChange={setGuideOpen} title={t.install.title} description={t.install.description}>
-        <div className="min-h-0 overflow-y-auto overscroll-contain pb-1">
-          <InstallGuide qrSvg={qrSvg} onDone={() => setGuideOpen(false)} />
-        </div>
-      </Sheet>
+      <InstallGuideSheet open={guideOpen} onOpenChange={setGuideOpen} qrSvg={qrSvg} />
     </section>
   )
 }

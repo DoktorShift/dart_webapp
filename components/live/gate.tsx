@@ -4,7 +4,7 @@ import { lazy, useEffect, useState, useSyncExternalStore } from "react"
 import type { SavedMatch } from "@/lib/game/types"
 import { listBoards, loadBoard, recentJoined, type JoinedRecord } from "@/lib/live/store"
 import type { FinishedMatch } from "@/lib/shell/registry"
-import { onStorageChange } from "@/lib/storage/db"
+import { useStored } from "@/lib/storage/hooks"
 
 // The always-loaded part of the live area on the game screen and the Play tab: it decides
 // whether the live code is needed at all. A game that was never made live, the guest's usual
@@ -76,22 +76,9 @@ function useLeftoverBoards(match: string) {
 }
 
 // The seats this phone holds at boards, read once and again whenever the records change.
-function useJoinedSeats(): JoinedRecord[] {
-  const [records, setRecords] = useState<JoinedRecord[]>([])
-  useEffect(() => {
-    let current = true
-    const load = () => void recentJoined().then((found) => current && setRecords(found), () => {})
-    load()
-    const stop = onStorageChange((message) => {
-      if (message.type === "wipe" || message.stores.includes("pending")) load()
-    })
-    return () => {
-      current = false
-      stop()
-    }
-  }, [])
-  return records
-}
+const loadJoined = () => recentJoined().catch((): JoinedRecord[] => [])
+const NO_SEATS: JoinedRecord[] = []
+const useJoinedSeats = () => useStored("pending", loadJoined)[0] ?? NO_SEATS
 
 const LiveGame = lazy(() => import("@/components/live/live-game"))
 const Confirmations = lazy(() => import("@/components/live/confirmations"))

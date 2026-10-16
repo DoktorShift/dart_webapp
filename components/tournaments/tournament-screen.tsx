@@ -12,9 +12,10 @@ import { Waiting } from "@/components/common/waiting"
 import { readPayload } from "@/components/live/link-payload"
 import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
+import { formatDateTime } from "@/lib/i18n"
 import { TOURNAMENTS_TEXTS } from "@/lib/i18n/features/tournaments.screens"
 import { BracketView } from "@/components/tournaments/bracket-view"
-import { formatDateTime, rulesLine, SECONDARY, SyncLine, useParticipantNames } from "@/components/tournaments/common"
+import { rulesLine, SECONDARY, SyncLine, useParticipantNames } from "@/components/tournaments/common"
 import { MatchesList } from "@/components/tournaments/matches-list"
 import { PhaseCard } from "@/components/tournaments/phase-card"
 import { TOURNAMENT_SCREENS } from "@/components/tournaments/screens"
@@ -24,7 +25,8 @@ import { useProfileNames } from "@/components/profile/use-profile-names"
 import { useAutoAdmission, useTournament, type Entry } from "@/components/tournaments/use-tournaments"
 import { nowSeconds } from "@/lib/nostr/time"
 import { nextMatch } from "@/lib/tournaments/engine"
-import { awaitingApproval, admitted, requests, shortKey } from "@/lib/tournaments/read"
+import { shortKey } from "@/lib/nostr/pointers"
+import { awaitingApproval, admitted, requests } from "@/lib/tournaments/read"
 import type { ScreenProps } from "@/lib/shell/registry"
 
 type Tab = "matches" | "bracket" | "info"
@@ -103,7 +105,7 @@ function TournamentView({ entry, onRefresh }: { entry: Entry; onRefresh: () => v
           {s.final && ` · ${tx.finalLine(s.final.legsToWin, s.final.setsToWin)}`}
         </p>
         <p className="mt-1 text-[0.9375rem] leading-snug text-muted-foreground [overflow-wrap:anywhere]">
-          {[s.starts !== undefined ? (s.timezone ? tx.tournament.startsAtZone(formatDateTime(s.starts, t), s.timezone) : tx.tournament.startsAt(formatDateTime(s.starts, t))) : tx.home.noDate, s.online ? tx.tournament.online : s.place]
+          {[s.starts !== undefined ? (s.timezone ? tx.tournament.startsAtZone(formatDateTime(t, s.starts * 1000), s.timezone) : tx.tournament.startsAt(formatDateTime(t, s.starts * 1000))) : tx.home.noDate, s.online ? tx.tournament.online : s.place]
             .filter(Boolean)
             .join(" · ")}
         </p>
@@ -144,7 +146,7 @@ function TournamentView({ entry, onRefresh }: { entry: Entry; onRefresh: () => v
             <ListRow title={tx.seeding.reproducible} subtitle={tx.tournament.drawHint} />
           </Group>
           <Group title={tx.tournament.field}>
-            <ListRow title={tx.tournament.fieldLine(admitted(state).length, s.capacity)} subtitle={state.phase === "registration" && s.registrationCloses !== undefined && s.registrationCloses > now ? formatDateTime(s.registrationCloses, t) : undefined} />
+            <ListRow title={tx.tournament.fieldLine(admitted(state).length, s.capacity)} subtitle={state.phase === "registration" && s.registrationCloses !== undefined && s.registrationCloses > now ? formatDateTime(t, s.registrationCloses * 1000) : undefined} />
             <ListRow title={tx.tournament.boardsLine(Object.values(state.boards).filter((b) => b.active).length)} />
             {s.about && <ListRow title={s.about} />}
           </Group>

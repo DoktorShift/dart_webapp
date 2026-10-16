@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react"
 import { Button } from "@/components/ui/button"
-import { Sheet } from "@/components/ui/sheet"
+import { Sheet, SheetBody } from "@/components/ui/sheet"
 import { TextField } from "@/components/ui/text-field"
 import {
   AlertDialog,
@@ -98,7 +98,7 @@ export function EditSheet({ own, open, onOpenChange }: { own: OwnProfile; open: 
     <>
       <Sheet open={open} onOpenChange={onOpenChange} title={e.title}>
         <form onSubmit={submit} className="flex min-h-0 flex-col overscroll-contain xshort:overflow-y-auto">
-          <div className="min-h-0 overflow-y-auto overscroll-contain pb-4 xshort:shrink-0 xshort:overflow-visible">
+          <SheetBody className="xshort:shrink-0 xshort:overflow-visible">
             {/* What is known of the public profile comes first: it decides what saving does. */}
             {publicState === "asking" && (
               <p role="status" className="mt-2 px-4 text-[0.9375rem] text-muted-foreground">
@@ -132,7 +132,7 @@ export function EditSheet({ own, open, onOpenChange }: { own: OwnProfile; open: 
                 {problem}
               </InlineStatus>
             )}
-          </div>
+          </SheetBody>
           <Button type="submit" disabled={!ready || busy} className="mt-2 h-14 w-full shrink-0 rounded-2xl text-[1.0625rem] font-semibold xshort:h-12">
             {e.save}
           </Button>

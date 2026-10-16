@@ -5,13 +5,43 @@ import { motion, useReducedMotion } from "framer-motion"
 import { Check, ChevronLeft, ChevronRight } from "lucide-react"
 import { InstallPictureFrame } from "@/components/install-pictures"
 import { useT } from "@/components/i18n-provider"
+import { Sheet, SheetBody } from "@/components/ui/sheet"
 import { INSTALL_PICTURES, INSTALL_PLATFORMS, detectPlatform, type InstallPlatform } from "@/lib/install"
 import { SITE } from "@/lib/site"
 import { cn } from "@/lib/utils"
 
+// The guide in a sheet, opened from the About page's install card and from the settings.
+export function InstallGuideSheet({ open, onOpenChange, qrSvg }: { open: boolean; onOpenChange: (open: boolean) => void; qrSvg: string }) {
+  const t = useT()
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange} title={t.install.title} description={t.install.description}>
+      <SheetBody>
+        <InstallGuide qrSvg={qrSvg} onDone={() => onOpenChange(false)} />
+      </SheetBody>
+    </Sheet>
+  )
+}
+
+// The QR code of this site for the guide, drawn in the browser once `wanted` (the drawing code
+// loads then). Offline before it was ever fetched, the guide works without it.
+export function useSiteQr(wanted: boolean) {
+  const [svg, setSvg] = useState("")
+  useEffect(() => {
+    if (!wanted || svg) return
+    let cancelled = false
+    import("@/lib/qr").then(({ qrSvg }) => {
+      if (!cancelled) setSvg(qrSvg(SITE.url))
+    }, () => {})
+    return () => {
+      cancelled = true
+    }
+  }, [wanted, svg])
+  return svg
+}
+
 // Step-by-step help for putting BlueLine on a phone, tablet or computer: this device is picked
 // for you, each step has a picture, and a computer gets a QR code to carry on with a phone.
-export function InstallGuide({ qrSvg, onDone }: { qrSvg: string; onDone: () => void }) {
+function InstallGuide({ qrSvg, onDone }: { qrSvg: string; onDone: () => void }) {
   const t = useT()
   const reduceMotion = useReducedMotion()
   const [platform, setPlatform] = useState<InstallPlatform>("ios")

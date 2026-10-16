@@ -7,13 +7,14 @@ import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
 import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
+import { formatDate } from "@/lib/i18n"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
-import { formatDate, sameNames, shortId } from "@/components/clubs/common"
 import { InviteSheet } from "@/components/clubs/invite-sheet"
 import { MemberSheet } from "@/components/clubs/member-sheet"
 import { RequestList } from "@/components/clubs/request-list"
 import { useClub } from "@/components/clubs/use-clubs"
-import { useProfileNames } from "@/components/profile/use-profile-names"
+import { sameNames, useProfileNames } from "@/components/profile/use-profile-names"
+import { shortKey } from "@/lib/nostr/pointers"
 import { isLeader, isManager } from "@/lib/clubs/club"
 import type { ClubRole } from "@/lib/protocol/club"
 import { SCREENS, type ScreenProps } from "@/lib/shell/registry"
@@ -39,10 +40,7 @@ export default function MembersScreen({ params }: ScreenProps) {
   // Every leader opens a member's sheet (a recognition); managers also find roles and more there.
   const leader = isLeader(view.me.role)
   const nameOf = (pubkey: string) => names(pubkey).name ?? tx.unnamed
-  const dup = sameNames(
-    members.map((m) => m.pubkey),
-    (p) => names(p).name ?? tx.unnamed,
-  )
+  const dup = sameNames(members.map((m) => ({ pubkey: m.pubkey, name: nameOf(m.pubkey) })))
   const sorted = [...members].sort((a, b) => ORDER[a.role] - ORDER[b.role] || nameOf(a.pubkey).localeCompare(nameOf(b.pubkey)))
 
   return (
@@ -68,7 +66,7 @@ export default function MembersScreen({ params }: ScreenProps) {
                   </span>
                 </span>
               }
-              subtitle={[tx.roles[m.role], dup.has(m.pubkey) || !info.name ? tx.id(shortId(m.pubkey)) : null, tx.members.since(formatDate(m.since, t))].filter(Boolean).join(" · ")}
+              subtitle={[tx.roles[m.role], dup.has(m.pubkey) || !info.name ? tx.id(shortKey(m.pubkey)) : null, tx.members.since(formatDate(t, m.since * 1000))].filter(Boolean).join(" · ")}
               onClick={() => (leader && m.pubkey !== me ? setManaging(m.pubkey) : nav.push(SCREENS.profilePublic, { pubkey: m.pubkey }))}
             />
           )

@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
 import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
-import { PairColumns } from "@/components/devices/pair-columns"
+import { CheckWaiting, PairCancel, PairColumns } from "@/components/devices/pair-columns"
 import { DEVICES_TEXTS } from "@/lib/i18n/features/devices.screens"
 import type { AddDeviceControl, AddDevicePairing, HeldLink, PairingInput, PairingListener } from "@/lib/devices/pairing"
 import { useSession } from "@/lib/profile/session"
@@ -112,11 +112,7 @@ export default function AddDeviceScreen({ params }: ScreenProps) {
     setView(null)
   }
   const again = { label: s.again, onClick: () => startOver() }
-  const cancel = (
-    <Button variant="ghost" onClick={() => startOver()} className="h-11 w-full rounded-xl text-[1.0625rem] text-primary hover:bg-primary/10 hover:text-primary">
-      {t.common.cancel}
-    </Button>
-  )
+  const cancel = <PairCancel onClick={() => startOver()} />
 
   if (session === undefined) return null
   // A pairing link opened where no profile is (the camera app opened the browser instead of the
@@ -209,23 +205,7 @@ export default function AddDeviceScreen({ params }: ScreenProps) {
         />
       )
     case "confirmed":
-      return (
-        <PairColumns
-          first={
-            <>
-              <p className="text-[1.0625rem] leading-snug text-muted-foreground">{s.confirmed}</p>
-              <CheckCode code={state.checkCode} label={s.checkCode} />
-            </>
-          }
-          second={
-            <>
-              <Waiting className="py-1">{s.waiting}</Waiting>
-              {offlineStatus || (state.unanswered && <InlineStatus>{s.unanswered}</InlineStatus>)}
-              {cancel}
-            </>
-          }
-        />
-      )
+      return <CheckWaiting text={s.confirmed} code={state.checkCode} texts={s} offline={offlineStatus} unanswered={state.unanswered} onCancel={() => startOver()} />
     case "sending":
       return (
         <div className="mt-2 grid gap-4">

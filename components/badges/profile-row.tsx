@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useMemo } from "react"
 import { Award } from "lucide-react"
 import { ListRow } from "@/components/ui/list-row"
 import { useNav } from "@/components/nav/nav-context"
@@ -13,7 +13,7 @@ import { seenAwardIds } from "@/lib/badges/store"
 import { BADGES_TEXTS } from "@/lib/i18n/features/badges.screens"
 import { useMatchHistory } from "@/lib/leaderboard"
 import { useSession } from "@/lib/profile/session"
-import { onStorageChange } from "@/lib/storage/db"
+import { useStored } from "@/lib/storage/hooks"
 import { summarizePlayers } from "@/lib/storage/stats"
 
 // The "Auszeichnungen" row in the Profile tab (registry "profile.rows"): how many the profile
@@ -58,19 +58,5 @@ function GuestRow() {
 }
 
 // The award ids the person has looked at (lib/badges/store.ts); null while read.
-function useSeenAwardIds() {
-  const [seen, setSeen] = useState<string[] | null>(null)
-  useEffect(() => {
-    let alive = true
-    const load = () => void seenAwardIds().then((ids) => alive && setSeen(ids))
-    load()
-    const stop = onStorageChange((message) => {
-      if (message.type === "change" && message.stores.includes("kv")) load()
-    })
-    return () => {
-      alive = false
-      stop()
-    }
-  }, [])
-  return seen
-}
+const loadSeen = () => seenAwardIds().catch(() => null)
+const useSeenAwardIds = () => useStored("kv", loadSeen)[0] ?? null

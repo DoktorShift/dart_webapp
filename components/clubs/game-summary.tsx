@@ -1,8 +1,9 @@
 "use client"
 
 import { useAreaT, useT } from "@/components/i18n-provider"
+import { formatDateTime } from "@/lib/i18n"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
-import { formatDateTime, personName } from "@/components/clubs/common"
+import { personName } from "@/components/clubs/common"
 import { useProfileNames } from "@/components/profile/use-profile-names"
 import type { ClubGame } from "@/lib/clubs/games"
 import { cn } from "@/lib/utils"
@@ -35,7 +36,7 @@ export function GameSummary({ game, me, className }: { game: ClubGame; me: strin
           {" · "}
           {mine(result.by) ? tx.game.recordedByMe : tx.game.recordedBy(nameOf(result.by, tx.unnamed))}
           {" · "}
-          {formatDateTime(result.at, t)}
+          {formatDateTime(t, result.at * 1000)}
           {result.replaces && ` · ${tx.game.corrected}`}
         </p>
       )}
