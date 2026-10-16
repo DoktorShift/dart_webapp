@@ -12,6 +12,7 @@ import { archiveFinished, unarchive } from "../storage/archive.ts"
 import { listPlayers } from "../storage/players.ts"
 import { openChannel, repeat, type Channel } from "./channel.ts"
 import { resultGame } from "./content.ts"
+import type { MatchSource } from "./follow.ts"
 import { fromHex, keyOf, newKey, sealToMatch, toHex, type MatchKey } from "./keys.ts"
 import { BOARD_FLOW } from "./seating.ts"
 import { dropJoined, loadJoined, openKeys, saveJoined, sealKeys, type JoinedRecord, type JoinedSecrets } from "./store.ts"
@@ -52,8 +53,9 @@ export interface JoinedMatch {
   archived: string | null
 }
 
-// How long an unanswered look or join keeps being repeated.
-const ANSWER_WAIT_MS = 20_000
+// How long an unanswered look or join keeps being repeated. A board that is online answers
+// within a second or two; what is left is a board that is off, elsewhere, or past the code.
+const ANSWER_WAIT_MS = 10_000
 
 export interface BoardVisitControl {
   // `profile`: the signed-in profile's signer; null joins as a guest.
@@ -254,7 +256,19 @@ export const seatKey = (joined: JoinedMatch) => joined.profile ?? joined.guest?.
 // Whether the match, as replayed, has this phone's key on the seat.
 export const holdsSeat = (joined: JoinedMatch, state: MatchStateP) => state.seats[joined.seat]?.pubkey === seatKey(joined)
 
+// Where to follow the match from this seat (components/live/match-view.tsx useFollowed).
+export const seatSource = (joined: JoinedMatch): MatchSource => ({ match: joined.match, relays: joined.relays, key: joined.key ? toHex(joined.key.secret) : null })
+
 // ---- The verdict ---------------------------------------------------------------------------
+
+// This phone's verdict on the current result: the seat's verdict, when it was given from this
+// phone's key. It lapses with a correction or a withdrawal (reduceMatch drops the verdicts of a
+// replaced result), or once the seat's next holder gives their own; the board freeing the seat
+// afterwards changes nothing about the result the player confirmed.
+export const ownVerdict = (joined: JoinedMatch, state: MatchStateP) => {
+  const given = state.confirmations[joined.seat]
+  return given?.pubkey === seatKey(joined) ? given : null
+}
 
 // The seat's verdict on the current result, signed by the profile (`profile`) or the guest's key.
 // Dated after the result and the seat it rests on, whatever this device's clock says, so every
@@ -274,8 +288,7 @@ export async function giveVerdict(joined: JoinedMatch, state: MatchStateP, verdi
 // when that result is corrected or withdrawn, until they confirm the new one.
 export async function keepConfirmed(joined: JoinedMatch, state: MatchStateP): Promise<JoinedMatch> {
   const result = state.result
-  const mine = result && state.confirmations[joined.seat]?.verdict === "confirm" && holdsSeat(joined, state)
-  const wanted = mine && result ? result.event : null
+  const wanted = result && ownVerdict(joined, state)?.verdict === "confirm" ? result.event : null
   if (wanted === joined.archived) return joined
   if (joined.archived) await unarchive(joined.match)
   if (wanted && result) {

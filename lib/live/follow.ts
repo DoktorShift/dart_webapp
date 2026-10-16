@@ -43,10 +43,37 @@ export const matchFilters = (match: string): Filter[] => [
   { kinds: [KIND_STATE], "#d": [match] },
 ]
 
-export function followMatch(source: MatchSource, onChange: (followed: Followed) => void): { close: () => void } {
+// What arrived of the match, decrypted with its key where sealed, and the state it replays to.
+function collect(source: MatchSource) {
   const key = source.key ? keyOf(fromHex(source.key)) : null
   const events = new Map<string, SignedEvent>()
   const opened = new Map<string, string | null>()
+  return {
+    has: (id: string) => events.has(id),
+    // False for an event that was in already.
+    async take(event: SignedEvent) {
+      if (events.has(event.id)) return false
+      if (key && event.tags.some((t) => t[0] === "enc")) opened.set(event.id, await openFromMatch(event, await key))
+      events.set(event.id, event)
+      return true
+    },
+    reduce: () => reduceMatch([...events.values()], source.match, { open: (event) => opened.get(event.id) ?? null }),
+  }
+}
+
+// The match as the relays have it now, asked once: enough to notice a correction of a result
+// this phone confirmed, without following the match for the rest of the day. Null when no
+// relay answered or the match is not there.
+export async function readMatch(source: MatchSource): Promise<MatchStateP | null> {
+  const result = await query(matchFilters(source.match), source.relays).catch(() => null)
+  if (!result || result.answered.length === 0) return null
+  const events = collect(source)
+  for (const event of result.events) await events.take(event as SignedEvent)
+  return events.reduce().state
+}
+
+export function followMatch(source: MatchSource, onChange: (followed: Followed) => void): { close: () => void } {
+  const events = collect(source)
   let current: Followed = { state: null, problem: null, connection: "connecting", heardAt: null, settled: false }
   let closed = false
   let scheduled = false
@@ -65,7 +92,7 @@ export function followMatch(source: MatchSource, onChange: (followed: Followed) 
     scheduled = true
     queueMicrotask(() => {
       scheduled = false
-      const result = reduceMatch([...events.values()], source.match, { open: (event) => opened.get(event.id) ?? null })
+      const result = events.reduce()
       emit(result.state ? { state: result.state, problem: null } : { state: null, problem: current.settled ? result.problem : null })
     })
   }
@@ -73,9 +100,7 @@ export function followMatch(source: MatchSource, onChange: (followed: Followed) 
   const add = (event: SignedEvent) => (taking = taking.then(() => take(event)).catch(() => {}))
 
   async function take(event: SignedEvent) {
-    if (events.has(event.id)) return
-    if (key && event.tags.some((t) => t[0] === "enc")) opened.set(event.id, await openFromMatch(event, await key))
-    events.set(event.id, event)
+    if (!(await events.take(event))) return
     if (!events.has(source.match)) void check()
     replay()
   }

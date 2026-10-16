@@ -339,6 +339,9 @@ async function flush(board: Board) {
   } finally {
     board.flushing = false
   }
+  // Dropped meanwhile (handed over while this send was under way): nothing more goes out from
+  // here. forget() drops a board only once its outbox is empty, so no retry is ever owed.
+  if (boards.get(board.record.local) !== board) return
   if (board.record.outbox.length > 0 || board.snapshot) retryLater(board)
   else {
     stopRetrying(board)
@@ -553,6 +556,7 @@ export async function handedOver(local: string) {
   clearTimeout(board.timers.snapshot)
   clearTimeout(board.timers.result)
   stopRetrying(board)
+  board.snapshot = null
   board.follower?.close()
   board.follower = null
   boards.delete(local)

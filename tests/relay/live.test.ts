@@ -213,6 +213,23 @@ test("players join from their phones without any key leaving them; their verdict
   assert.equal(joined.archived, result.event)
   assert.ok((await archive.loadArchive()).some((m) => m.id === jonas.seated.match))
 
+  // The board frees the seat after the confirmation (and connects the phone again): the
+  // result Jonas confirmed is unchanged, so the game stays among his own games. Records of
+  // the same second are ordered by id, so the seat goes a second later, as it would in life.
+  const confirmedAt = phone.get()!.state!.confirmations[1].at
+  await until("the next second", () => Math.floor(Date.now() / 1000) > confirmedAt)
+  await live.seatPlayer(local, 1, null)
+  const freed = await until("the seat freed in the match", () => {
+    const s = phone.get()?.state
+    return s && s.seats[1] === null ? s : null
+  })
+  assert.equal(join.holdsSeat(joined, freed), false)
+  joined = await join.keepConfirmed(joined, freed)
+  assert.equal(joined.archived, result.event)
+  assert.ok((await archive.loadArchive()).some((m) => m.id === jonas.seated.match))
+  await live.seatPlayer(local, 1, { pubkey: profilePubkey, profile: true })
+  await until("Jonas back on his seat in the match", () => phone.get()?.state?.seats[1]?.pubkey === profilePubkey)
+
   // A correction after publication: a new result names the old one, and the verdicts lapse.
   const plan = correctDart(finished.config, finished.throws, visitBySeq(replay(finished.config, finished.throws), 0)!, 0, { segment: 19, multiplier: 3 })
   const corrected = plan.keepResult ? plan.keepResult.throws : plan.rescored
@@ -442,6 +459,51 @@ test("an offer closed right after 'Übergeben' is called off: the match stays he
     return now && now.n > first.n && now
   })
   assert.equal(next.sv, 1)
+})
+
+test("a device that leaves while asking to take over tells the writer, which keeps its code", async () => {
+  const local = "handoff-left-asking"
+  await live.goLive(newGame(local, fullGame.slice(0, 5)))
+  opened.push(() => live.stopHere(local))
+  let offer: import("../../lib/live/handoff.ts").HandoffOffer | null = null
+  keep(await handoff.offerHandoff(local, (next) => (offer = next)))
+  const waiting = await until("the handoff code", () => offer?.step === "waiting" && offer)
+
+  let take: import("../../lib/live/handoff.ts").HandoffTake | null = null
+  const taker = keep(handoff.takeHandoff(links.decodeLinkPayload("handoff", waiting.code), (next) => (take = next)))
+  taker.take()
+  await until("the request on the writer", () => offer?.step === "asked")
+  await until("the check code on the taker", () => take?.step === "asking")
+  // Back on the taker: the writer's offer is open again, under the same code.
+  taker.close()
+  const again = await until("the offer open again", () => offer?.step === "waiting" && offer)
+  assert.equal(again.code, waiting.code)
+  assert.ok(live.boardView(local), "the match is still live here")
+})
+
+test("a board handed over while a relay is out of reach sends nothing more from here", async () => {
+  const local = "handed-over-relay-down"
+  const port = await freePort()
+  process.env.NEXT_PUBLIC_BLUELINE_RELAYS = `${relay.url},ws://127.0.0.1:${port}`
+  let view: import("../../lib/live/board.ts").BoardView
+  try {
+    view = await live.goLive(newGame(local, fullGame.slice(0, 4)))
+  } finally {
+    process.env.NEXT_PUBLIC_BLUELINE_RELAYS = relay.url
+  }
+  const link = links.decodeLinkPayload("watch", view.watch)
+  assert.equal((await store.loadBoard(local))?.outbox.length, 1, "the founding waits for the second relay")
+  // The other device confirmed the package (lib/live/handoff.ts) while the founding still
+  // waits: this board is dropped, retries and all.
+  await live.handedOver(local)
+  assert.equal(live.boardView(local), null)
+  assert.equal(await store.loadBoard(local), null)
+  const second = await startRelay({ port })
+  opened.push(() => second.stop())
+  // A board still owing a retry would send the founding within its first pause (5 s).
+  await new Promise((resolve) => setTimeout(resolve, 6500))
+  const stored = await nostr.query(follow.matchFilters(link.match), [second.url])
+  assert.equal(stored.events.length, 0, "the dropped board sent nothing more")
 })
 
 test("spectators get the score while one relay is out of reach; the founding waits for that relay", async () => {
