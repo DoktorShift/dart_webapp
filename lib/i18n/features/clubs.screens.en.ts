@@ -42,6 +42,7 @@ export const clubsScreensEn: Widen<typeof clubsScreensDe> = {
     disputed: (game) => `Disputed result: ${game}`,
     decide: (game) => `Decide result: ${game}`,
     answer: (when) => `Are you coming on ${when}?`,
+    awards: (season) => `Give badges: ${season}`,
   },
 
   create: {
@@ -175,6 +176,14 @@ export const clubsScreensEn: Widen<typeof clubsScreensDe> = {
     offerExpired: (name) => `Offer to ${name} has expired.`,
     offerAgain: "Offer again",
     cancelOffer: "Withdraw offer",
+    recognize: "Give a badge",
+    recognitionName: "Name of the badge",
+    recognitionNamePlaceholder: "Helper of the night",
+    recognitionWhy: "What for?",
+    recognitionWhyPlaceholder: "Set up the boards.",
+    recognitionGive: "Give",
+    recognitionGiving: "Giving",
+    recognitionGiven: (name) => `${name} has the badge now.`,
   },
 
   invites: {
@@ -360,6 +369,9 @@ export const clubsScreensEn: Widen<typeof clubsScreensDe> = {
     endConfirm: "End",
     ended: "Ended",
     current: "Current season",
+    giving: "Giving",
+    awardsLapsed: "The badges couldn't be given yet: no connection.",
+    awardsLater: "You can also do this later under “Manage club”.",
   },
 
   game: {

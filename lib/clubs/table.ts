@@ -50,7 +50,7 @@ export const rulesOf = (season: ClubSeason): SeasonRules => season.versions[seas
 
 export function belongsTo(season: ClubSeason, game: ClubGame): boolean {
   if (!game.result || !rulesOf(season).modes.includes(game.agreement.rules.modeId)) return false
-  const end = Math.min(season.ends ?? Infinity, season.endedAt ?? Infinity)
+  const end = Math.min(season.ends ?? Infinity, season.ended?.at ?? Infinity)
   return game.result.at >= season.starts && game.result.at <= end
 }
 

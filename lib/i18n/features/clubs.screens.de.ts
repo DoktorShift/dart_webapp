@@ -44,6 +44,7 @@ export const clubsScreensDe = {
     disputed: (game: string) => `Bestrittenes Ergebnis: ${game}`,
     decide: (game: string) => `Ergebnis entscheiden: ${game}`,
     answer: (when: string) => `Kommst du am ${when}?`,
+    awards: (season: string) => `Auszeichnungen vergeben: ${season}`,
   },
 
   // "Club gründen".
@@ -182,6 +183,15 @@ export const clubsScreensDe = {
     offerExpired: (name: string) => `Angebot an ${name} abgelaufen.`,
     offerAgain: "Erneut anbieten",
     cancelOffer: "Angebot zurückziehen",
+    // One badge of the leader's own naming for this member (Anerkennung).
+    recognize: "Auszeichnung geben",
+    recognitionName: "Name der Auszeichnung",
+    recognitionNamePlaceholder: "Helfer des Abends",
+    recognitionWhy: "Wofür?",
+    recognitionWhyPlaceholder: "Hat die Boards aufgebaut.",
+    recognitionGive: "Geben",
+    recognitionGiving: "Wird gegeben",
+    recognitionGiven: (name: string) => `${name} hat die Auszeichnung bekommen.`,
   },
 
   // Invitations.
@@ -373,6 +383,10 @@ export const clubsScreensDe = {
     endConfirm: "Beenden",
     ended: "Beendet",
     current: "Aktuelle Saison",
+    // The badges of an ended season (winner, regulars), given right after "Beenden".
+    giving: "Wird vergeben",
+    awardsLapsed: "Die Auszeichnungen konnten noch nicht vergeben werden: keine Verbindung.",
+    awardsLater: "Das geht auch später unter „Club verwalten“.",
   },
 
   // Club games: starting one, recording it, confirming or correcting its result.

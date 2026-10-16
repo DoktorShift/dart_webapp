@@ -122,6 +122,9 @@ export interface ClubGame {
     finishedAt?: number
     replaces?: string
   } | null
+  // When the result was last corrected or voided (the newest entry of its chain replaces an
+  // earlier one); null while the first result stands. Badges of an ended season rest on it.
+  revisedAt: number | null
   confirmations: MatchStateP["confirmations"]
 }
 
@@ -134,6 +137,7 @@ export function readGames(state: ClubState, events: readonly NostrEvent[], plain
     const reduced = reduceMatch(records, named.match, { now, open: (e) => plaintexts.get(e.id) ?? null })
     if (!reduced.state || reduced.state.agreement.club !== state.id) continue
     const s = reduced.state
+    const last = s.results.at(-1)
     games.push({
       match: named.match,
       by: named.by,
@@ -142,6 +146,7 @@ export function readGames(state: ClubState, events: readonly NostrEvent[], plain
       agreement: s.agreement,
       authority: s.authority,
       result: s.result ? { event: s.result.event, by: s.result.by, at: s.result.at, winner: s.result.winner, legs: s.result.legs, ...resultDetails(records, s.result.event, plaintexts), ...(s.result.replaces ? { replaces: s.result.replaces } : {}) } : null,
+      revisedAt: last?.replaces ? last.at : null,
       confirmations: s.confirmations,
     })
   }

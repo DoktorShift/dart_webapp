@@ -23,7 +23,7 @@ export function clubExport(stored: StoredClub, view: ClubView, exportedAt = new 
       owner: state.owner,
       members: Object.values(state.members).map((m) => ({ pubkey: m.pubkey, role: m.role, since: m.since })),
       roles: state.history,
-      seasons: Object.values(state.seasons).map((s) => ({ id: s.id, name: s.name, starts: s.starts, ends: s.ends, ended: s.ended, rules: s.versions })),
+      seasons: Object.values(state.seasons).map((s) => ({ id: s.id, name: s.name, starts: s.starts, ends: s.ends, ended: s.ended !== null, rules: s.versions })),
       results: state.results,
       dates: view.dates.map((d) => ({ id: d.id, title: d.title, starts: d.starts, ends: d.ends, place: d.place, cancelled: d.cancelled })),
       games: view.games.map((g) => ({ match: g.match, seats: g.agreement.seats, result: g.result })),

@@ -4,6 +4,7 @@ import type { ComponentType, ReactNode } from "react";
 import { lazyScreen } from "@/components/nav/lazy-screen";
 import { featureOn } from "@/lib/shell/features";
 import { CLUB_SCREENS } from "@/components/clubs/screens";
+import { registerIssuerCheck } from "@/lib/badges/issuers";
 import { addDiagnostics } from "@/lib/profile/diagnostics";
 import type { ScreenProps, SlotListProps } from "@/lib/shell/registry";
 import {
@@ -69,6 +70,16 @@ if (featureOn("clubs")) {
   registerScreen(CLUB_SCREENS.discover, {
     title: (t) => t.clubs.titles.discover,
     Component: screen(() => import("@/components/clubs/discover-screen")),
+  });
+
+  // Who may award a club's badges and whether a season's awards still stand: asked by the badges
+  // area while it checks awards, answered from the club's copy here (./awards.ts, loaded then).
+  const awards = () => import("@/components/clubs/awards");
+  registerIssuerCheck("club", {
+    mayIssue: async (club, issuer, at) =>
+      (await awards()).mayAward(club, issuer, at),
+    evidenceValid: async (club, evidence) =>
+      (await awards()).awardsStand(club, evidence),
   });
 
   // "Diagnose kopieren" (Profil › Erweitert): how many records each club has here, how many of
