@@ -10,6 +10,8 @@ import { ImportedSheet } from "@/components/data/imported-sheet"
 import { useT } from "@/components/i18n-provider"
 import { formatNumber, formatPercent, formatWhen, modeName, type Messages } from "@/lib/i18n"
 import { computeStandings, useMatchHistory, type MatchRecord, type Standing, type StandingsFilter } from "@/lib/leaderboard"
+import { shortKey } from "@/lib/nostr/pointers"
+import { sameNames } from "@/lib/storage/players"
 import { cn } from "@/lib/utils"
 
 const FILTERS: StandingsFilter[] = ["all", "x01", "cricket", "clock"]
@@ -59,6 +61,12 @@ export function LeaderboardScreen({ onPlay }: { onPlay: () => void }) {
   const winners = PODIUM_ORDER.map((rank) => ({ rank, player: standings.at(rank) })).filter((p) => p.player && p.player.wins > 0)
   const podium = winners.length >= 2 ? winners : []
   const showAverage = filter === "all" || filter === "x01"
+  // Two rows of the same name (a guest seat and a profile, say): a profile's row says which one it is.
+  const twins = sameNames(standings.map((p) => ({ id: p.key, name: p.name })))
+  const profileHint = (p: Standing) => {
+    const pubkey = twins.has(p.key) ? players?.find((r) => r.id === p.playerId)?.pubkey : undefined
+    return pubkey ? t.leaderboard.profileId(shortKey(pubkey)) : null
+  }
 
   return (
     <div className="h-full overflow-y-auto overscroll-contain">
@@ -101,6 +109,7 @@ export function LeaderboardScreen({ onPlay }: { onPlay: () => void }) {
                   {(player!.imported || player!.unnamed) && (
                     <span className="text-center text-[0.75rem] text-muted-foreground">{tag(player!, t)}</span>
                   )}
+                  {profileHint(player!) && <span className="text-center text-[0.75rem] text-muted-foreground">{profileHint(player!)}</span>}
                   <span className="mb-2 text-[0.875rem] tabular-nums text-muted-foreground">
                     {t.leaderboard.wins(player!.wins)}
                   </span>
@@ -134,6 +143,7 @@ export function LeaderboardScreen({ onPlay }: { onPlay: () => void }) {
                 <ol className="divide-y divide-border">
                   {standings.map((player, index) => {
                     const label = tag(player, t)
+                    const profile = profileHint(player)
                     // Imported results can be assigned to a player (and separated again): the row
                     // opens a sheet, and its tinted tag with a chevron says so.
                     const opens = player.includesImported && !player.unnamed
@@ -143,6 +153,7 @@ export function LeaderboardScreen({ onPlay }: { onPlay: () => void }) {
                         {/* Spans, not paragraphs: the row can be a button. */}
                         <span className="block min-w-0 flex-1">
                           <span className="block font-medium [overflow-wrap:anywhere]">{player.name}</span>
+                          {profile && <span className="block text-[0.8125rem] text-muted-foreground">{profile}</span>}
                           <span className="block text-[0.875rem] tabular-nums text-muted-foreground">
                             {t.leaderboard.games(player.matches, formatPercent(t, player.winRate))}
                           </span>

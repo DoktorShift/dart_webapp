@@ -8,7 +8,7 @@ import { XSHORT, useMediaQuery } from "@/components/common/use-media-query"
 import { gameHandedOver } from "@/components/live/gate"
 import { Waiting } from "@/components/common/waiting"
 import { useAreaT, useT } from "@/components/i18n-provider"
-import { sameNames, useProfileNames, type NameInfo } from "@/components/profile/use-profile-names"
+import { useProfileNames, type NameInfo } from "@/components/profile/use-profile-names"
 import { LIVE_TEXTS } from "@/lib/i18n/features/live.screens"
 import { Confirm } from "@/components/ui/confirm"
 import { Avatar } from "@/components/ui/avatar"
@@ -25,6 +25,7 @@ import { shortKey } from "@/lib/nostr/pointers"
 import { nowSeconds } from "@/lib/nostr/time"
 import type { SeatHolder } from "@/lib/protocol/match-state"
 import { buildLink } from "@/lib/shell/links"
+import { sameNames } from "@/lib/storage/players"
 import { cn } from "@/lib/utils"
 
 // The sheets the live entries of the game menu open over the running game (HIG: sheets for a
@@ -157,7 +158,7 @@ export function PlayersSheet({ open, onClose, match, view, start }: SheetProps) 
   const profileOf = (h: SeatHolder | null) => (h?.profile ? info(h.pubkey) : null)
   // The name each connected phone shows: its profile's, else the seat's.
   const shown = holders.map((h, i) => (h ? (profileOf(h)?.name ?? names[i]) : null))
-  const twins = sameNames(holders.flatMap((h, i) => (h ? [{ pubkey: h.pubkey, name: shown[i] as string }] : [])))
+  const twins = sameNames(holders.flatMap((h, i) => (h ? [{ id: h.pubkey, name: shown[i] as string }] : [])))
   const boardLink = seating ? linkFor("board", seating.code) : null
   // On a phone in landscape the seats stand beside the code, right under the share buttons, so
   // the first of them is in view: the description, the caption and the group's title step aside.

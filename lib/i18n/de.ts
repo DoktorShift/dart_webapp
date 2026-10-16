@@ -382,6 +382,8 @@ export const de = {
 
   leaderboard: {
     title: "Rangliste",
+    // Under a name two rows share: the start of the profile's key.
+    profileId: (short: string) => `Kennung ${short}`,
     subtitle: "Sortiert nach Siegen, dann Siegquote. Auf diesem Gerät gespeichert.",
     filter: "Spielart",
     filters: { all: "Alle", x01: "X01", cricket: "Cricket", clock: "Clock" },

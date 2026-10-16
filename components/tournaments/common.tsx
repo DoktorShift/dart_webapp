@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { InlineStatus } from "@/components/common/inline-status"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { signerProblem } from "@/components/profile/signer-status"
-import { sameNames, useProfileNames } from "@/components/profile/use-profile-names"
+import { useProfileNames } from "@/components/profile/use-profile-names"
 import { act, type Entry } from "@/components/tournaments/use-tournaments"
 import type { EventTemplate } from "@/lib/nostr/types"
 import { formatClock } from "@/lib/i18n"
@@ -15,6 +15,7 @@ import { TOURNAMENTS_TEXTS } from "@/lib/i18n/features/tournaments.screens"
 import type { Widen } from "@/lib/i18n"
 import type { tournamentsScreensDe } from "@/lib/i18n/features/tournaments.screens.de"
 import type { TournamentState } from "@/lib/protocol/tournament-state"
+import { sameNames } from "@/lib/storage/players"
 import type { MatchView } from "@/lib/tournaments/engine"
 import { roundLabel } from "@/lib/tournaments/labels"
 import type { Reason } from "@/lib/protocol/reasons"
@@ -38,7 +39,7 @@ export function useParticipantNames(read: TournamentRead | undefined): { nameOf:
   const pubkeys = state ? Object.values(state.participants).filter((p) => !isGuestPlace(p)).map((p) => p.id) : []
   const info = useProfileNames(pubkeys)
   const shown = (id: string) => (state?.participants[id] && !isGuestPlace(state.participants[id]) ? info(id).name : null) ?? read?.names[id] ?? tx.unnamed
-  const twins = sameNames(Object.keys(state?.participants ?? {}).map((id) => ({ pubkey: id, name: shown(id) })))
+  const twins = sameNames(Object.keys(state?.participants ?? {}).map((id) => ({ id, name: shown(id) })))
   return {
     nameOf: (id) => (id ? shown(id) : tx.tournament.tbd),
     hintOf: (id) => (twins.has(id) ? tx.tournament.sameName(shortKey(id)) : null),
