@@ -176,7 +176,7 @@ export function PhaseCard({ entry, names }: { entry: Entry; names: Names }) {
     const champion = view?.champion ?? null
     return (
       <Card title={x.finished} text={champion ? x.champion(names.nameOf(champion)) : undefined} tone="success">
-        {place && <p className="text-[1.0625rem] font-semibold">{x.yourPlace(tx.place(place.place, place.placeTo))}</p>}
+        {place && <p className="text-[1.0625rem] font-semibold">{x.yourPlace(place.place, place.placeTo)}</p>}
         {place && session && featureOn("badges") && <p className="text-[0.9375rem] text-muted-foreground">{x.badgeHint}</p>}
       </Card>
     )

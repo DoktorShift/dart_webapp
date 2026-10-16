@@ -279,7 +279,7 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
     waitingCall: "Wait until your match is called.",
     eliminated: "You're out. Thanks for playing!",
     finished: "Tournament finished",
-    yourPlace: (place) => `Your place: ${place}`,
+    yourPlace: (place, placeTo) => `Your place: ${place === placeTo ? ordinal(place) : `${ordinal(place)}–${ordinal(placeTo)}`}`,
     champion: (name) => `Champion: ${name}`,
     badgeHint: "Your badge appears in your profile once the organizer awards it.",
     paused: "Paused",

@@ -291,7 +291,7 @@ export const tournamentsScreensDe = {
     waitingCall: "Warte, bis dein Spiel aufgerufen wird.",
     eliminated: "Du bist ausgeschieden. Danke fürs Mitspielen!",
     finished: "Turnier beendet",
-    yourPlace: (place: string) => `Dein Platz: ${place}`,
+    yourPlace: (place: number, placeTo: number) => `Dein Platz: ${place === placeTo ? place : `${place}–${placeTo}`}`,
     champion: (name: string) => `Turniersieger: ${name}`,
     badgeHint: "Deine Auszeichnung erscheint in deinem Profil, sobald die Leitung sie vergibt.",
     paused: "Unterbrochen",
