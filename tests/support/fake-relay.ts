@@ -17,6 +17,8 @@ export interface FakeRelayOptions {
   onReq?: (filters: Filter[]) => string | null
   // Require NIP-42 AUTH for EVENT and REQ.
   auth?: boolean
+  // Answers every message this much later (ms), like a slow public relay.
+  delayMs?: number
 }
 
 export class FakeRelay {
@@ -35,15 +37,18 @@ export class FakeRelay {
     this.options = options
   }
 
-  // Drops every connection, as a relay restart or a network change would.
+  // Drops every connection, as a relay restart or a network change would. Resolves once the
+  // clients have heard the close (a message sent before that is lost, as on a real socket).
   dropAll() {
     for (const socket of [...this.sockets]) socket.serverClose()
+    return new Promise<void>((resolve) => setTimeout(resolve, 1))
   }
 
   async handle(socket: FakeSocket, message: Message) {
     const core = await loadCore()
     const mode = this.options.mode ?? "up"
     if (mode === "silent") return
+    if (this.options.delayMs) await new Promise((resolve) => setTimeout(resolve, this.options.delayMs))
     const [type] = message
     if (type === "EVENT") {
       const event = message[1] as NostrEvent

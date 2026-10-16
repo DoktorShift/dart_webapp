@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BlueLine badges record content",
+  "$defs": {
+    "badge.evidence": {
+      "description": "What a self-earned milestone or a recognition rests on",
+      "kind": 1180,
+      "encryption": "none",
+      "type": "object",
+      "properties": {
+        "badge": {
+          "type": "string",
+          "maxLength": 200,
+          "pattern": "^blueline:(self|club|tournament|recognition):(?:([0-9a-f]{64}):)?([a-z0-9][a-z0-9-]{0,47}):v([1-9][0-9]{0,3})$",
+          "description": "d of the badge definition: the versioned condition"
+        },
+        "result": {
+          "type": "object",
+          "properties": {
+            "game": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9-]+$",
+              "description": "The game's id on the player's devices"
+            },
+            "finishedAt": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            "mode": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 16,
+              "pattern": "^[a-z0-9]{1,16}$",
+              "description": "Game mode id"
+            },
+            "value": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000000,
+              "description": "The figure that met the condition, in the badge's unit (docs/protocol/families/badges.md)"
+            }
+          },
+          "required": ["game", "finishedAt", "mode", "value"],
+          "additionalProperties": true
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 280,
+          "description": "Plain text, never HTML"
+        }
+      },
+      "required": ["badge"],
+      "additionalProperties": true
+    }
+  }
+}

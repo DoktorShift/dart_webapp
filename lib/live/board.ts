@@ -1,19 +1,21 @@
 import { replay } from "../game/engine.ts"
 import { loadMatch, parseSavedMatch, saveMatch } from "../game/storage.ts"
 import type { SavedMatch } from "../game/types.ts"
-import { publish, type PublishResult } from "../nostr/client.ts"
-import { isPublished, normalizeRelayUrl } from "../nostr/relays.ts"
+import { normalizeRelayUrl } from "../nostr/relays.ts"
 import { createdAt, nowSeconds, syncClock } from "../nostr/time.ts"
+import type { NostrEvent } from "../nostr/types.ts"
+import { KIND_RECORD } from "../protocol/kinds.ts"
 import { encodeLinkPayload } from "../protocol/links.ts"
 import { MAX_SESSION_SECONDS, type Agreement } from "../protocol/match.ts"
 import type { SeatHolder } from "../protocol/match-state.ts"
 import { buildRecord, type ContentOf, type RecordType } from "../protocol/records.ts"
-import { isSignedEventShape, type SignedEvent } from "../protocol/tags.ts"
+import { isSignedEventShape, tagValue, type SignedEvent } from "../protocol/tags.ts"
 import { decodeThrows, encodeThrows } from "../protocol/throws.ts"
+import { enqueue, pendingEvents, withdraw, type Delivery } from "../sync/outbox.ts"
 import { agreementFor, resultFor, snapshotFor } from "./content.ts"
 import { followMatch, type Followed } from "./follow.ts"
 import { fromHex, keyOf, liveRelays, newKey, sealToMatch, toHex, type MatchKey } from "./keys.ts"
-import { dropBoard, listBoards, loadBoard, openKeys, saveBoard, sealKeys, type BoardRecord, type BoardSecrets } from "./store.ts"
+import { dropBoard, listBoards, loadBoard, openKeys, saveBoard, sealKeys, type BoardRecord, type BoardSecrets, type StoredBoard } from "./store.ts"
 
 // The writing side of a live match: the board (docs/protocol/families/session-authorization.md,
 // match-live.md, match-result.md). Going live founds the match under a key made for it; from
@@ -24,9 +26,16 @@ import { dropBoard, listBoards, loadBoard, openKeys, saveBoard, sealKeys, type B
 // - publishes the result once the game is won and stays won for a moment, a correction when a
 //   corrected game ends differently, and withdraws it ("void") while a reopened game runs;
 // - connects players' phones to their seats (match.seat), so they can give their verdict;
-// - keeps every regular record in an outbox until relays have it, across reloads;
 // - follows its own match, to show the players' verdicts and to notice when another device
 //   has taken the match over (two branches): then it stops writing.
+//
+// Everything leaves through the outbox of lib/sync (decision 0002 §2, amendment of 16 October
+// 2026), which keeps a record until relays of two operators have it, across reloads, and tries
+// again with its backoff. Readable (one relay has it) and safely stored (that rule) stay apart:
+// every record names the ones it rests on (`after`: the founding, the session it cites, a
+// result's pieces and the result it replaces), and goes out once those are readable. The
+// snapshot (rule "any", newest per coordinate) goes out as soon as the founding and its session
+// are, so one relay out of reach never freezes the spectators' score.
 //
 // The keys never leave the device except in a handoff package, and then only to the device the
 // person here confirmed (lib/live/handoff.ts).
@@ -56,18 +65,9 @@ interface Board {
   keys: MatchKeys
   game: SavedMatch
   attached: boolean
-  // The newest snapshot that no relay has yet.
-  snapshot: SignedEvent | null
-  // Outbox records that at least one relay accepted (readable there, not yet safely stored).
-  accepted: Set<string>
   timers: { snapshot?: ReturnType<typeof setTimeout>; result?: ReturnType<typeof setTimeout>; detach?: ReturnType<typeof setTimeout> }
-  // The next try while something waits for a relay: after a pause, or as soon as online again.
-  retry: { timer: ReturnType<typeof setTimeout>; again: () => void } | null
-  retryMs: number
   // Signing and the record change one step at a time (the result chain depends on it).
   queue: Promise<unknown>
-  flushing: boolean
-  flushAgain: boolean
   follower: { close: () => void } | null
   followed: Followed | null
   // Handed over, or another device took the match: nothing more is written here.
@@ -81,7 +81,6 @@ const SNAPSHOT_MS = 1000
 const RESULT_SETTLE_MS = 3000
 // A game left with "Spiel beenden" can come back with Undo for 8 s (components/undo-banner.tsx).
 const UNDO_WINDOW_MS = 10_000
-const RETRY_MS = { first: 5000, max: 60_000 }
 // A new session is signed this long before the current one's window ends.
 const RENEW_BEFORE_S = 600
 
@@ -144,18 +143,19 @@ async function foundBoard(match: SavedMatch, { tournament }: GoLiveOptions): Pro
     seats: match.config.players.map(() => null),
     seatAt: 0,
     result: null,
-    outbox: [founding],
   }
+  await enqueue([{ event: founding, relays }])
   await saveBoard(record)
   return register(record, { authority, session, match: key }, match)
 }
 
 async function openBoard(match: SavedMatch): Promise<Board | null> {
-  const record = await loadBoard(match.id).catch(() => null)
-  if (!record) return null
-  const secrets = await openKeys<BoardSecrets>(record.keys)
+  const stored = await loadBoard(match.id).catch(() => null)
+  if (!stored) return null
+  const secrets = await openKeys<BoardSecrets>(stored.keys)
   // The vault key is gone (signed out, data deleted): the match is no longer live here.
   if (!secrets) return null
+  const record = await queueLeftovers(stored)
   const [authority, session, key] = await Promise.all([keyOf(fromHex(secrets.authority)), keyOf(fromHex(secrets.session)), keyOf(fromHex(secrets.match))])
   return boards.get(match.id) ?? register(record, { authority, session, match: key }, match)
 }
@@ -168,14 +168,8 @@ function register(record: BoardRecord, keys: MatchKeys, game: SavedMatch): Board
     keys,
     game,
     attached: false,
-    snapshot: null,
-    accepted: new Set(),
     timers: {},
-    retry: null,
-    retryMs: RETRY_MS.first,
     queue: Promise.resolve(),
-    flushing: false,
-    flushAgain: false,
     follower: null,
     followed: null,
     ended: false,
@@ -243,11 +237,9 @@ async function settleDetached(board: Board) {
   await forget(board)
 }
 
-// Once nothing waits for a relay any more, the board's keys and record go.
+// The board's keys and record go; what still waits for a relay is the outbox's to send.
 async function forget(board: Board) {
   board.ended = true
-  await flush(board)
-  if (board.record.outbox.length > 0 || board.snapshot) return
   boards.delete(board.record.local)
   changed()
   await dropBoard(board.record.local).catch(() => {})
@@ -268,9 +260,10 @@ async function sendSnapshot(board: Board, opts: { abandoned?: boolean } = {}) {
   const n = record.n + 1
   const at = createdAt(record.snapshotAt)
   const content = snapshotFor(game, replay(game.config, game.throws), { sv: record.sv, n, auth: record.session, abandoned: opts.abandoned })
-  board.snapshot = await sign(board, keys.session, "match.live", content, at, { d: record.match })
+  const snapshot = await sign(board, keys.session, "match.live", content, at, { d: record.match })
+  // Readable as soon as the founding and the session it cites are; a newer one replaces it.
+  await enqueue([{ event: snapshot, relays: record.relays, after: [record.match, record.session.id] }], { rule: "any", coalesce: true })
   await persist(board, { n, snapshotAt: at })
-  void flush(board)
 }
 
 // The result chain this session published, brought in line with the game as it stands.
@@ -280,12 +273,14 @@ async function settleResult(board: Board) {
   const { record, keys, game } = board
   const state = replay(game.config, game.throws)
   const head = record.result
+  // A result rests on the session it cites and the result it replaces.
+  const after = head ? [record.session.id, head.event] : [record.session.id]
   if (state.winner === null) {
     if (!head || head.key === "void") return
     const content = { sv: record.sv, status: "void" as const, winner: null, legs: game.config.players.map(() => 0), finishedAt: nowSeconds(), replaces: head.event, reason: "Reopened on the board", auth: record.session }
     const event = await sign(board, keys.session, "match.result", content, createdAt(), {})
-    await persist(board, { result: { event: event.id, key: "void" }, outbox: [...board.record.outbox, event] })
-    void flush(board)
+    await queue(board, [{ event, after }])
+    await persist(board, { result: { event: event.id, key: "void" } })
     return
   }
   const result = resultFor(game, state, { sv: record.sv, auth: record.session, finishedAt: nowSeconds() })
@@ -294,8 +289,8 @@ async function settleResult(board: Board) {
   for (const piece of result.pieces) pieces.push(await sign(board, keys.session, "match.log", piece, createdAt(), {}))
   const content = head ? { ...result.content, replaces: head.event, reason: "Corrected on the board" } : result.content
   const event = await sign(board, keys.session, "match.result", content, createdAt(), {})
-  await persist(board, { result: { event: event.id, key: result.key }, outbox: [...board.record.outbox, ...pieces, event] })
-  void flush(board)
+  await queue(board, [...pieces.map((piece) => ({ event: piece, after: [record.session.id] })), { event, after: [...after, ...pieces.map((piece) => piece.id)] }])
+  await persist(board, { result: { event: event.id, key: result.key } })
 }
 
 // A session lasts a day at most (MAX_SESSION_SECONDS); a game that runs longer, or is picked up
@@ -311,8 +306,9 @@ async function handover(board: Board, session: MatchKey) {
   const at = createdAt(record.session.created_at)
   const content = { sv: record.sv + 1, session: session.pubkey, from: at, until: at + MAX_SESSION_SECONDS, prev: record.session.id }
   const event = await sign(board, keys.authority, "match.session", content, at, {})
+  await queue(board, [{ event, after: [record.session.id] }])
   board.keys = { ...keys, session }
-  await persist(board, { session: event, sv: content.sv, until: content.until, result: null, keys: await sealKeys(secretsOf(board.keys)), outbox: [...board.record.outbox, event] })
+  await persist(board, { session: event, sv: content.sv, until: content.until, result: null, keys: await sealKeys(secretsOf(board.keys)) })
 }
 
 async function sign<T extends RecordType>(board: Board, key: MatchKey, type: T, content: ContentOf<T>, at: number, opts: { d?: string }): Promise<SignedEvent> {
@@ -331,91 +327,35 @@ async function persist(board: Board, change: Partial<BoardRecord>) {
 
 // ---- Sending ---------------------------------------------------------------------------------
 
-// Two questions about a record: is it readable somewhere (one relay has it), and is it safely
-// stored (relays of two operators have it, or every relay answered for good, none merely out of
-// reach)? The outbox keeps a record until it is safely stored, trying again with growing pauses
-// and as soon as the board is back online. The snapshot needs only the founding and the session
-// it cites to be readable: it goes out as soon as they are, so one relay out of reach never
-// freezes the spectators' score.
-async function flush(board: Board) {
-  if (board.flushing) {
-    board.flushAgain = true
-    return
-  }
-  board.flushing = true
-  try {
-    do {
-      board.flushAgain = false
-      await sendOutbox(board)
-      await sendLatestSnapshot(board)
-    } while (board.flushAgain)
-  } finally {
-    board.flushing = false
-  }
-  // Dropped meanwhile (handed over while this send was under way): nothing more goes out from
-  // here. forget() drops a board only once its outbox is empty, so no retry is ever owed.
-  if (boards.get(board.record.local) !== board) return
-  if (board.record.outbox.length > 0 || board.snapshot) retryLater(board)
-  else {
-    stopRetrying(board)
-    board.retryMs = RETRY_MS.first
-  }
+// Hands records to the outbox (rule "published"), each after the records it rests on. Always
+// before the record changes: should the app die in between, the relays still get what was
+// signed, and the board goes on from the older record.
+const queue = (board: Board, records: { event: SignedEvent; after: string[] }[]) => enqueue(records.map((r) => ({ ...r, relays: board.record.relays })))
+
+// Records in their order, each after the one before it.
+const chained = (events: readonly SignedEvent[], relays: readonly string[]): Delivery[] => events.map((event, i) => ({ event, relays, after: i === 0 ? [] : [events[i - 1].id] }))
+
+// Everything of the match in the outbox: the founding (its id is the match id) and every event
+// naming it as root, the snapshot included.
+const ofMatch = (match: string) => (event: NostrEvent) => event.id === match || tagValue(event.tags, "e") === match
+
+// A record written before the board's records moved to the outbox (October 2026) still carries
+// the ones no relay had yet: they are queued once, in their order, and the field goes.
+async function queueLeftovers({ outbox, ...record }: StoredBoard): Promise<BoardRecord> {
+  if (!outbox) return record
+  await enqueue(chained(outbox, record.relays))
+  await saveBoard(record)
+  return record
 }
 
-// In order, stopping at the first record no relay took: what follows builds on it.
-async function sendOutbox(board: Board) {
-  for (const event of board.record.outbox) {
-    const results = await publish(event, board.record.relays)
-    if (!results.some((r) => r.ok)) return
-    if (!delivered(results)) {
-      board.accepted.add(event.id)
-      continue
-    }
-    board.accepted.delete(event.id)
-    await persist(board, { outbox: board.record.outbox.filter((e) => e.id !== event.id) })
-  }
-}
-
-async function sendLatestSnapshot(board: Board) {
-  const snapshot = board.snapshot
-  if (!snapshot || !readable(board, board.record.match) || !readable(board, board.record.session.id)) return
-  const results = await publish(snapshot, board.record.relays)
-  if (results.some((r) => r.ok) && board.snapshot === snapshot) board.snapshot = null
-}
-
-// A record out of the outbox is safely stored; one still in it may be on a relay already.
-const readable = (board: Board, id: string) => board.accepted.has(id) || !board.record.outbox.some((e) => e.id === id)
-
-const TRANSIENT = new Set(["timeout", "unreachable", "rate-limited", "auth-required", "error", ""])
-
-const delivered = (results: PublishResult[]) =>
-  isPublished(results.filter((r) => r.ok).map((r) => r.url)) || results.every((r) => r.ok || !TRANSIENT.has(r.code))
-
-function retryLater(board: Board) {
-  if (board.retry) return
-  const again = () => {
-    stopRetrying(board)
-    void flush(board)
-  }
-  board.retry = { timer: setTimeout(again, board.retryMs), again }
-  board.retryMs = Math.min(board.retryMs * 2, RETRY_MS.max)
-  if (typeof window !== "undefined") window.addEventListener("online", again)
-}
-
-function stopRetrying(board: Board) {
-  if (!board.retry) return
-  clearTimeout(board.retry.timer)
-  if (typeof window !== "undefined") window.removeEventListener("online", board.retry.again)
-  board.retry = null
-}
-
-// Records that wait for a relay while their game is no longer on the screen (the app was closed
-// after a game): sent once the app runs again, then forgotten. The game kept here (`current`)
-// stays live for when it goes on.
+// Records of boards whose game is no longer on the screen (the app was closed after a game,
+// before the board let go of it): dropped once a game is on the screen again. What they still
+// owe the relays waits in the outbox, not here. The game kept here (`current`) stays live for
+// when it goes on.
 export async function settleBoards(current: string | null) {
   for (const record of await listBoards()) {
     if (record.local === current || boards.has(record.local)) continue
-    for (const event of record.outbox) if (!delivered(await publish(event, record.relays))) return
+    await queueLeftovers(record)
     await dropBoard(record.local)
   }
 }
@@ -454,10 +394,10 @@ export function seatPlayer(local: string, seat: number, holder: SeatHolder | nul
   return step(board, async () => {
     const at = createdAt(board.record.seatAt)
     const event = await sign(board, board.keys.authority, "match.seat", { seat, player: holder }, at, {})
+    await queue(board, [{ event, after: [board.record.match] }])
     const seats = board.record.seats.map((h, i) => (i === seat ? holder : h))
-    await persist(board, { seats, seatAt: at, outbox: [...board.record.outbox, event] })
+    await persist(board, { seats, seatAt: at })
     refreshView(board)
-    void flush(board)
   })
 }
 
@@ -556,7 +496,9 @@ export async function packBoard(local: string): Promise<HandoffPackage> {
     snapshotAt: record.snapshotAt,
     seats: record.seats,
     seatAt: record.seatAt,
-    outbox: record.outbox,
+    // The records relays don't have safely yet, for the other device to send; it signs snapshots
+    // of its own.
+    outbox: (await pendingEvents(ofMatch(record.match))).filter((event) => event.kind === KIND_RECORD),
     game: { id: game.id, config: game.config, throws: encodeThrows(game.throws), startedAt: game.startedAt, acknowledgedLegs: game.acknowledgedLegs },
     ...(record.public ? { public: true as const } : {}),
   }
@@ -570,14 +512,16 @@ export async function handedOver(local: string) {
   board.ended = true
   clearTimeout(board.timers.snapshot)
   clearTimeout(board.timers.result)
-  stopRetrying(board)
-  board.snapshot = null
   board.follower?.close()
   board.follower = null
   boards.delete(local)
   changed()
   if (loadMatch()?.id === local) saveMatch(null)
   await dropBoard(local).catch(() => {})
+  // A step under way (a snapshot being signed) ends first, so nothing of the match is queued
+  // after it is withdrawn: the other device sends what the relays don't have yet.
+  await board.queue
+  await withdraw(ofMatch(board.record.match))
 }
 
 // On the device that takes over: the match becomes live here under a session key of its own
@@ -607,9 +551,10 @@ export async function adoptBoard(data: unknown): Promise<SavedMatch | null> {
     seats: pkg.seats,
     seatAt: pkg.seatAt,
     result: null,
-    outbox: pkg.outbox,
     ...(pkg.public ? { public: true as const } : {}),
   }
+  // What the relays don't have yet goes out from here, in its order; the handover follows it.
+  await enqueue(chained(pkg.outbox, pkg.relays))
   const board = register(record, keys, game)
   await step(board, () => handover(board, session))
   return game

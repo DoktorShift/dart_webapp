@@ -10,8 +10,9 @@ import { cn } from "@/lib/utils"
 
 // "Teilen" and "Link kopieren" for a link. Confirmation happens in place: the copy button says
 // "Kopiert" with a check for a moment, and VoiceOver hears it. No toast. If copying is impossible,
-// the link appears as selectable text instead.
-export function ShareActions({ url, title, text, className }: { url: string; title?: string; text?: string; className?: string }) {
+// the link appears as selectable text instead. `copyLabel` names what is copied when it isn't a
+// link to this app (a payment request).
+export function ShareActions({ url, title, text, copyLabel, className }: { url: string; title?: string; text?: string; copyLabel?: string; className?: string }) {
   const t = useT()
   const [native, setNative] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -45,7 +46,7 @@ export function ShareActions({ url, title, text, className }: { url: string; tit
         )}
         <Button variant={native ? "secondary" : "default"} onClick={() => run(true)} className={cn("h-12 rounded-xl text-[1.0625rem]", !native && "font-semibold")}>
           {copied ? <Check className="mr-2 h-5 w-5" aria-hidden="true" /> : <Copy className="mr-2 h-5 w-5" aria-hidden="true" />}
-          {copied ? t.shell.qr.copied : t.shell.qr.copy}
+          {copied ? t.shell.qr.copied : (copyLabel ?? t.shell.qr.copy)}
         </Button>
       </div>
       <p role="status" className="sr-only">

@@ -1,6 +1,7 @@
 // Live games end to end over a real relay (nak serve on 127.0.0.1): the board founds a private
 // match and sends snapshots, a spectator replays them, players join from their phones and give
 // their verdicts, a correction voids them, and the board hands the match to another device.
+// Everything leaves through the outbox of lib/sync, resumed here as the app does at its start.
 // Run: npm run test:relay
 import { after, before, test } from "node:test"
 import assert from "node:assert/strict"
@@ -23,12 +24,13 @@ let store: typeof import("../../lib/live/store.ts")
 let nostr: typeof import("../../lib/nostr/client.ts")
 let signers: typeof import("../../lib/nostr/signers.ts")
 let links: typeof import("../../lib/protocol/links.ts")
+let outbox: typeof import("../../lib/sync/outbox.ts")
 
 before(async () => {
   relay = await startRelay()
   // Read whenever the live code picks its relays: never a public relay in these tests.
   process.env.NEXT_PUBLIC_BLUELINE_RELAYS = relay.url
-  ;[live, seating, join, handoff, follow, content, store, nostr, signers, links] = await Promise.all([
+  ;[live, seating, join, handoff, follow, content, store, nostr, signers, links, outbox] = await Promise.all([
     import("../../lib/live/board.ts"),
     import("../../lib/live/seating.ts"),
     import("../../lib/live/join.ts"),
@@ -39,7 +41,9 @@ before(async () => {
     import("../../lib/nostr/client.ts"),
     import("../../lib/nostr/signers.ts"),
     import("../../lib/protocol/links.ts"),
+    import("../../lib/sync/outbox.ts"),
   ])
+  await outbox.resumeOutbox()
 })
 
 // What a test opened (followers, board codes, boards, a worker), closed after the tests even
@@ -492,15 +496,17 @@ test("a board handed over while a relay is out of reach sends nothing more from 
     process.env.NEXT_PUBLIC_BLUELINE_RELAYS = relay.url
   }
   const link = links.decodeLinkPayload("watch", view.watch)
-  assert.equal((await store.loadBoard(local))?.outbox.length, 1, "the founding waits for the second relay")
+  assert.equal((await outbox.deliveryStatus(link.match))?.state, "waiting", "the founding waits for the second relay")
   // The other device confirmed the package (lib/live/handoff.ts) while the founding still
-  // waits: this board is dropped, retries and all.
+  // waits: this board is dropped, and what it owed the relays is withdrawn from the outbox.
   await live.handedOver(local)
   assert.equal(live.boardView(local), null)
   assert.equal(await store.loadBoard(local), null)
+  assert.equal(await outbox.deliveryStatus(link.match), null)
+  assert.deepEqual(await outbox.pendingEvents((e) => e.id === link.match || e.tags.some((t) => t[0] === "e" && t[1] === link.match)), [])
   const second = await startRelay({ port })
   opened.push(() => second.stop())
-  // A board still owing a retry would send the founding within its first pause (5 s).
+  // An entry still in the outbox would reach the relay within its first pause (5 s at most).
   await new Promise((resolve) => setTimeout(resolve, 6500))
   const stored = await nostr.query(follow.matchFilters(link.match), [second.url])
   assert.equal(stored.events.length, 0, "the dropped board sent nothing more")
@@ -524,13 +530,49 @@ test("spectators get the score while one relay is out of reach; the founding wai
   const spectator = watcher({ match: link.match, key: link.key ?? null, relays: link.relays })
   const first = await until("the first snapshot with one relay down", () => spectator.get()?.state?.live)
   assert.equal(first.sv, 1)
-  assert.equal((await store.loadBoard(local))?.outbox.length, 1, "the founding stays in the outbox")
+  const founding = await outbox.deliveryStatus(link.match)
+  assert.equal(founding?.state, "waiting", "the founding stays in the outbox")
+  assert.deepEqual(founding?.confirmed, [relay.url])
 
-  // The relay comes up: the next send stores the founding safely, and the outbox empties.
+  // The relay comes up: the outbox's retry stores the founding safely, and the entry is done.
   const second = await startRelay({ port })
   opened.push(() => second.stop())
   live.updateBoard(newGame(local, fullGame.slice(0, 6)))
-  await until("the founding on both relays", async () => (await store.loadBoard(local))?.outbox.length === 0)
+  await until("the founding on both relays", async () => (await outbox.deliveryStatus(link.match)) === null)
   const stored = await nostr.query(follow.matchFilters(link.match), [second.url])
   assert.ok(stored.events.some((e) => e.id === link.match))
+})
+
+test("a record from before the outbox moved, still carrying unsent records: queued once when the game is opened again, or settled", async () => {
+  const local = "legacy-game"
+  const game = newGame(local, fullGame.slice(0, 4))
+  await live.goLive(game)
+  const record = (await store.loadBoard(local))!
+  await live.stopHere(local)
+  // A seat record no relay ever got, signed as the board would have, waiting in the record
+  // itself as an older build left it.
+  const secrets = (await store.openKeys<import("../../lib/live/store.ts").BoardSecrets>(record.keys))!
+  const keys = await import("../../lib/live/keys.ts")
+  const authority = await keys.keyOf(keys.fromHex(secrets.authority))
+  const matchKey = await keys.keyOf(keys.fromHex(secrets.match))
+  const records = await import("../../lib/protocol/records.ts")
+  const seatOf = async (seat: number) => {
+    const template = records.buildRecord("match.seat", { seat, player: null }, { created_at: Math.floor(Date.now() / 1000), root: record.match })
+    return authority.signer.signEvent(await keys.sealToMatch(template, authority.pubkey, matchKey))
+  }
+  const [seat, otherSeat] = [await seatOf(0), await seatOf(1)]
+  const legacy: import("../../lib/live/store.ts").StoredBoard = { ...record, outbox: [seat] }
+  await store.saveBoard(legacy)
+  assert.ok(await live.attachBoard(game))
+  opened.push(() => live.stopHere(local))
+  assert.equal("outbox" in (await store.loadBoard(local))!, false, "the record is written without the field")
+  await until("the seat on the relay", async () => (await nostr.query(follow.matchFilters(record.match), [relay.url])).events.some((e) => e.id === seat.id))
+
+  // The same for a board whose game is no longer on the screen: settled and dropped.
+  const left: import("../../lib/live/store.ts").StoredBoard = { ...legacy, local: "legacy-left", outbox: [otherSeat] }
+  await store.saveBoard(left)
+  await live.settleBoards(local)
+  assert.equal(await store.loadBoard("legacy-left"), null)
+  assert.ok(await store.loadBoard(local), "the game on the screen keeps its board")
+  await until("the other seat on the relay", async () => (await nostr.query(follow.matchFilters(record.match), [relay.url])).events.some((e) => e.id === otherSeat.id))
 })

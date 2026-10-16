@@ -33,12 +33,15 @@ export interface BoardRecord extends Keyed {
   // The newest result this session published: its event and what it states (content.ts
   // resultKey; "void" for a withdrawn one).
   result: { event: string; key: string } | null
-  // Records signed but not yet on enough relays, in order.
-  outbox: SignedEvent[]
   // A tournament's match: written in the clear, found by the authority's key (lib/live/board.ts
   // goLive). Missing in a private match.
   public?: true
 }
+
+// A board record as stored: one written before the board's records moved to the outbox of
+// lib/sync (October 2026) still carries the ones no relay had yet; lib/live/board.ts queues
+// them once and writes the record without them.
+export type StoredBoard = BoardRecord & { outbox?: SignedEvent[] }
 
 export interface BoardSecrets {
   authority: string
@@ -88,10 +91,10 @@ export async function openKeys<T extends BoardSecrets | JoinedSecrets>(sealed: S
   }
 }
 
-export const loadBoard = async (local: string) => (await dbGet<BoardRecord>("pending", boardId(local))) ?? null
+export const loadBoard = async (local: string) => (await dbGet<StoredBoard>("pending", boardId(local))) ?? null
 export const saveBoard = (record: Omit<BoardRecord, "id">) => dbPut("pending", { ...record, id: boardId(record.local) })
 export const dropBoard = (local: string) => dbDelete("pending", boardId(local))
-export const listBoards = async () => (await dbGetAll<BoardRecord>("pending")).filter((r) => r.id.startsWith(BOARD_PREFIX))
+export const listBoards = async () => (await dbGetAll<StoredBoard>("pending")).filter((r) => r.id.startsWith(BOARD_PREFIX))
 
 export const loadJoined = async (match: string) => (await dbGet<JoinedRecord>("pending", joinedId(match))) ?? null
 export const saveJoined = (record: Omit<JoinedRecord, "id">) => dbPut("pending", { ...record, id: joinedId(record.match) })

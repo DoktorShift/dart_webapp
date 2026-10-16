@@ -44,7 +44,11 @@ test("NIP-55 links: get_public_key carries permissions; the callback keeps its f
   assert.ok(url.startsWith("nostrsigner:?"))
   const params = new URLSearchParams(url.slice("nostrsigner:?".length))
   assert.equal(params.get("type"), "get_public_key")
-  assert.equal(params.get("callbackUrl"), `${CALLBACK}&id=${request.id}&result=`)
+  const callback = params.get("callbackUrl")!
+  assert.equal(callback, `${CALLBACK}=${request.id}.`)
+  // Amber decodes the callback once and splits it at "?" and "&", so neither may be in it; the
+  // result is appended right after the dot.
+  assert.ok(!/[?&]/.test(callback))
   assert.deepEqual(JSON.parse(params.get("permissions")!), [{ type: "sign_event", kind: 1180 }, { type: "nip44_decrypt" }])
   // The raw link has no second "#": the callback's fragment is encoded inside the parameter.
   assert.equal(url.split("#").length, 1)
@@ -59,20 +63,23 @@ test("NIP-55 links: sign_event carries the event as payload and the current user
   assert.deepEqual([params.get("type"), params.get("current_user"), params.get("returnType"), params.get("compressionType")], ["sign_event", userPub, "event", "gzip"])
 })
 
-test("NIP-55 links: a callback without fragment is refused (results must never reach a server)", async () => {
+test("NIP-55 links: a callback without a fragment name is refused (results must never reach a server)", async () => {
   assert.equal(await codeOf(() => buildSignerUrl(createGetPublicKeyRequest(), { callbackUrl: "https://blueline21.netlify.app/?result=" })), "malformed")
+  assert.equal(await codeOf(() => buildSignerUrl(createGetPublicKeyRequest(), { callbackUrl: "https://blueline21.netlify.app/#" })), "malformed")
   assert.equal(await codeOf(() => createSignEventRequest(template(), "npub-not-hex")), "malformed")
 })
 
 test("NIP-55 answers: parsed whether the signer appended raw or URL-encoded; other URLs are not answers", () => {
   const id = "0123456789abcdef0123456789abcdef"
-  assert.deepEqual(parseCallback(`${CALLBACK}&id=${id}&result=${userPub}`), { id, result: userPub })
-  assert.deepEqual(parseCallback(`${CALLBACK}&id=${id}&result=Signer1H4sI+ab/cd==`), { id, result: "Signer1H4sI+ab/cd==" })
-  assert.deepEqual(parseCallback(`${CALLBACK}&id=${id}&result=Signer1H4sI%2Bab%2Fcd%3D%3D`), { id, result: "Signer1H4sI+ab/cd==" })
-  assert.deepEqual(parseCallback(`${CALLBACK}&id=${id}&result=`), { id, result: "" })
+  assert.deepEqual(parseCallback(`${CALLBACK}=${id}.${userPub}`), { id, result: userPub })
+  assert.deepEqual(parseCallback(`${CALLBACK}=${id}.Signer1H4sI+ab/cd==`), { id, result: "Signer1H4sI+ab/cd==" })
+  assert.deepEqual(parseCallback(`${CALLBACK}=${id}.Signer1H4sI%2Bab%2Fcd%3D%3D`), { id, result: "Signer1H4sI+ab/cd==" })
+  assert.deepEqual(parseCallback(`${CALLBACK}=${id}.`), { id, result: "" })
   assert.equal(parseCallback("https://blueline21.netlify.app/#watch=abc"), null)
   assert.equal(parseCallback("https://blueline21.netlify.app/"), null)
-  assert.equal(parseCallback(`${CALLBACK}&id=short&result=x`), null)
+  assert.equal(parseCallback(`${CALLBACK}=short.x`), null)
+  assert.equal(parseCallback(`${CALLBACK}=${id}${userPub}`), null, "no dot between id and result")
+  assert.equal(parseCallback(`${CALLBACK}${id}.${userPub}`), null, "no '=' after the name")
 })
 
 test("NIP-55 answers: matched to the stored request; unknown and stale answers are refused", async () => {

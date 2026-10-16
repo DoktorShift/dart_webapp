@@ -1,8 +1,7 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { ANNA, BEN } from "./storage-helpers.ts"
-import { matchA, matchB, matchD, matchE, matchF, matchG, matchH, matchI, matchJ, recordC } from "./storage-fixtures.ts"
-import { ENGINE_VERSION, replay } from "../lib/game/engine.ts"
+import { archivedAt, matchA, matchB, matchD, matchE, matchF, matchG, matchH, matchI, matchJ, recordC } from "./storage-fixtures.ts"
 import type { SavedMatch } from "../lib/game/types.ts"
 import { fromV1Record, type ArchivedMatch } from "../lib/storage/archive.ts"
 import { computeStandings, headToHead, playerKey, recentPlayerNames, summarizePlayer, summarizePlayers } from "../lib/storage/stats.ts"
@@ -10,32 +9,8 @@ import { computeStandings, headToHead, playerKey, recentPlayerNames, summarizePl
 // Every expected number below is worked out by hand from the games in storage-fixtures.ts.
 
 let minute = 0
-// An archive entry as archiveFinished writes it (the archive itself is tested elsewhere).
-function archived(match: SavedMatch): ArchivedMatch {
-  const state = replay(match.config, match.throws)
-  minute++
-  return {
-    id: match.id,
-    schemaVersion: 1,
-    source: "local",
-    finishedAt: new Date(Date.UTC(2026, 9, 1, 20, minute)).toISOString(),
-    archivedAt: new Date(Date.UTC(2026, 9, 1, 20, minute)).toISOString(),
-    startedAt: match.startedAt,
-    modeId: match.config.modeId,
-    modeName: match.config.modeName,
-    modeType: match.config.type,
-    config: match.config,
-    throws: match.throws,
-    engineVersion: ENGINE_VERSION,
-    players: match.config.players.map((p, i) => ({
-      playerId: p.id,
-      name: p.name,
-      won: i === state.winner,
-      darts: state.stats[i].darts,
-      points: match.config.type === "x01" ? state.stats[i].points : 0,
-    })),
-  }
-}
+// Finished a minute after the one before, in the order they are made.
+const archived = (match: SavedMatch): ArchivedMatch => archivedAt(match, new Date(Date.UTC(2026, 9, 1, 20, ++minute)).toISOString())
 
 const A = archived(matchA())
 const B = archived(matchB())

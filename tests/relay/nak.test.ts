@@ -14,7 +14,9 @@ import { KIND_EPHEMERAL, KIND_RECORD, KIND_STATE } from "../../lib/protocol/kind
 //   node --test tests/relay/nak.test.ts        (needs nak on PATH or in /opt/homebrew/bin)
 
 const NAK = ["/opt/homebrew/bin/nak", "/usr/local/bin/nak"].find((p) => spawnSync(p, ["--version"]).status === 0) ?? (spawnSync("nak", ["--version"]).status === 0 ? "nak" : null)
-const PORT = 10604
+// This file spawns nak itself (not through tests/support/nak.ts, which hands out NAK_PORT_RANGE),
+// so NAK_TEST_PORT moves its relay into a run's assigned range.
+const PORT = Number(process.env.NAK_TEST_PORT ?? 10604)
 const RELAY = `ws://localhost:${PORT}`
 const skip = NAK ? false : "nak is not installed"
 

@@ -1,6 +1,6 @@
 # Familie: Private Datensätze des Profils
 
-Stand: P0.05. Code: [`private.ts`](../../../lib/protocol/private.ts), [`chunks.ts`](../../../lib/protocol/chunks.ts). Schema: [`schemas/private-records.schema.json`](../schemas/private-records.schema.json). Vektoren: [`vectors/private-records.json`](../vectors/private-records.json). Grundlage: Entscheidung 0001 F2, Entscheidung 0002 §4 und §6.
+Stand: P0.05, umgesetzt in P3b.01 (Verschlüsselung und Abgleich: [`lib/sync/records.ts`](../../../lib/sync/records.ts), [`lib/sync/data-key.ts`](../../../lib/sync/data-key.ts), [`lib/sync/engine.ts`](../../../lib/sync/engine.ts)). Code: [`private.ts`](../../../lib/protocol/private.ts), [`chunks.ts`](../../../lib/protocol/chunks.ts). Schema: [`schemas/private-records.schema.json`](../schemas/private-records.schema.json). Vektoren: [`vectors/private-records.json`](../vectors/private-records.json). Grundlage: Entscheidung 0001 F2, Entscheidung 0002 §4 und §6.
 
 ## Zweck
 

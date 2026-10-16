@@ -141,6 +141,21 @@ export function mergeV1Records(records: V1MatchRecord[]) {
   return writeEntries([...entries, ...added].sort((a, b) => time(b) - time(a)))
 }
 
+// Results changed on another device of the profile (lib/sync), in one write: each one replaced
+// where it stands or added by date, removed ones gone.
+export function replaceV1Records(records: V1MatchRecord[], removed: readonly string[]) {
+  const gone = new Set(removed)
+  const changed = new Map(records.map((r) => [r.id, r]))
+  const idOf = (e: unknown) => (isObject(e) && typeof e.id === "string" ? e.id : null)
+  const before = readEntries()
+  const kept = before.filter((e) => !gone.has(idOf(e) ?? "")).map((e) => changed.get(idOf(e) ?? "") ?? e)
+  const known = new Set(kept.map(idOf))
+  const added = records.filter((r) => !known.has(r.id))
+  if (records.length === 0 && kept.length === before.length) return true
+  const time = (e: unknown) => (isObject(e) && typeof e.finishedAt === "string" ? Date.parse(e.finishedAt) || 0 : 0)
+  return writeEntries(added.length > 0 ? [...kept, ...added].sort((a, b) => time(b) - time(a)) : kept)
+}
+
 // "Alle Daten auf diesem Gerät löschen": every key 1.0.0 uses, and any other key of this app.
 export function removeAllV1Data() {
   const store = storage()

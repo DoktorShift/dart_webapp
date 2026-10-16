@@ -11,7 +11,7 @@ Es gibt keinen eigenen Relay und keine Zugriffsrechte durch einen Server. **Schu
 | Familie | Immer sichtbar | Nur für Berechtigte lesbar |
 | --- | --- | --- |
 | Öffentlicher Club | alles außer Schlüsselfreigaben: Name, Beschreibung, Saisons, Rollen, wer beigetreten ist und wer wen aufgenommen hat, Einladungen mit Art, Ablauf und öffentlichem Einladungsschlüssel (ohne Bezeichnung) | Schlüsselfreigaben; der Token eines Einladungslinks steht in keinem Event |
-| Geschlossener Club | Club-ID (Gründungs-ID), Pubkeys aller, die im Club **handeln** (Gründer, Beitretende, Verantwortliche, Austretende), Zeitpunkte, Anzahl und Größe der Datensätze, Datensatztyp im Label, Zahl der Verpackungen je Datensatz (≈ Mitgliederzahl aus Sicht des Autors) | Name, Beschreibung, Mitgliederliste und Rollen, Einladungen, Saisons, Termine, Ergebnisentscheidungen, Gründe |
+| Geschlossener Club | Club-ID (Gründungs-ID), Pubkeys aller, die im Club **handeln** (Gründer, Beitretende, Verantwortliche, Austretende), Zeitpunkte, Anzahl und Größe der Datensätze, Datensatztyp im Label, Zahl der Verpackungen je Datensatz (≈ Mitgliederzahl aus Sicht des Autors) | Name, Beschreibung, Mitgliederliste und Rollen, Einladungen, Saisons, Termine und Antworten darauf, Clubspiele samt Spielschlüssel (die Spiele selbst sind privat), Ergebnisentscheidungen, Gründe |
 | Einladungslink | – (geht nie an einen Server) | Vorschau und Beitritt für jeden, der den Link hat |
 | Öffentliches Turnier | Regeln, Phase, Teilnehmende als Pubkey oder **Gast-Alias**, Auslosung, Boards, Ergebnisse | – |
 | Turnier eines geschlossenen Clubs | wie geschlossener Club | wie geschlossener Club |

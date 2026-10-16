@@ -4,6 +4,7 @@ import type { Nip46Connection } from "../nostr/signers.ts"
 import type { Signer } from "../nostr/types.ts"
 import { dbGet, dbKeys, dbWrite, onStorageChange, type Keyed, type WriteOp } from "../storage/db.ts"
 import { isPubkey } from "../storage/players.ts"
+import { OWN_OBJECT_PREFIX, PROFILE_KV_PREFIX, SESSION_KEY, SIGNER_PENDING_PREFIX } from "./storage-keys.ts"
 import { forgetVaultKey, openSecret, sealSecret, type SealedSecret } from "./vault.ts"
 
 // The one current session of this device (docs/decisions/0002 §4): a guest (no session), a key
@@ -16,9 +17,10 @@ import { forgetVaultKey, openSecret, sealSecret, type SealedSecret } from "./vau
 // (./vault.ts) and are opened only when a signer is needed. Nothing here loads nostr-core: a
 // guest opening the app reads one small record, and lib/nostr arrives only with getSigner().
 //
-// Per-profile data goes with the profile: kv entries named "profile.*", objects named "own:*" and
-// pending requests named "signer:*" are deleted when the profile signs out or another one signs
-// in on this device. Other areas clean up theirs in onSessionEnd.
+// Per-profile data goes with the profile: kv entries named "profile.*", objects named "own:*" or
+// "club:*" (the clubs as this profile reads them, lib/clubs/store.ts) and pending requests named
+// "signer:*" are deleted when the profile signs out or another one signs in on this device.
+// Other areas clean up theirs in onSessionEnd.
 //
 // Another profile signs in only with `replace`: otherwise the start is refused with SessionError
 // "occupied", so the UI can say who is being signed out (and that a key kept only here is lost)
@@ -31,6 +33,9 @@ export interface Session {
   kind: SessionKind
   // When this device signed in (ms).
   createdAt: number
+  // The key was made on this device just now (startLocalProfile): the profile has no past
+  // anywhere else yet.
+  madeHere?: true
 }
 
 interface StoredSession extends Session {
@@ -60,10 +65,12 @@ export interface SessionOptions {
   replace?: boolean
 }
 
-export const SESSION_KEY = "profile.session"
-export const PROFILE_KV_PREFIX = "profile."
-export const OWN_OBJECT_PREFIX = "own:"
-export const SIGNER_PENDING_PREFIX = "signer:"
+// The storage names live in ./storage-keys.ts (no code), so the start page can look for a stored
+// session without this module.
+export { OWN_OBJECT_PREFIX, PROFILE_KV_PREFIX, SESSION_KEY, SIGNER_PENDING_PREFIX }
+// Objects of a profile's clubs (lib/clubs), deleted with the profile like its own events.
+export const CLUB_OBJECT_PREFIX = "club:"
+const PROFILE_OBJECT_PREFIXES = [OWN_OBJECT_PREFIX, CLUB_OBJECT_PREFIX]
 // Device-wide, kept across profiles: the session itself and the vault key are handled apart.
 const KEPT_ON_SWITCH = new Set([SESSION_KEY, "profile.vault-key"])
 
@@ -84,7 +91,7 @@ interface OpenSigner {
 }
 let open: Promise<OpenSigner> | null = null
 
-const publicPart = ({ pubkey, kind, createdAt }: StoredSession): Session => ({ pubkey, kind, createdAt })
+const publicPart = ({ pubkey, kind, createdAt, madeHere }: StoredSession): Session => ({ pubkey, kind, createdAt, ...(madeHere ? { madeHere } : {}) })
 const same = (a: Session | null | undefined, b: Session | null) => (a ?? null) === b || (!!a && !!b && a.pubkey === b.pubkey && a.kind === b.kind && a.createdAt === b.createdAt)
 
 function setCurrent(next: Session | null) {
@@ -276,7 +283,7 @@ async function profileDataOps(all: boolean): Promise<WriteOp[]> {
   const [kv, objects] = await Promise.all([dbKeys("kv"), dbKeys("objects")])
   return [
     ...kv.filter((id) => id.startsWith(PROFILE_KV_PREFIX) && (all || !KEPT_ON_SWITCH.has(id))).map((id): WriteOp => ({ store: "kv", delete: id })),
-    ...objects.filter((id) => id.startsWith(OWN_OBJECT_PREFIX)).map((id): WriteOp => ({ store: "objects", delete: id })),
+    ...objects.filter((id) => PROFILE_OBJECT_PREFIXES.some((prefix) => id.startsWith(prefix))).map((id): WriteOp => ({ store: "objects", delete: id })),
     ...(await pendingSignerOps()),
   ]
 }
@@ -308,7 +315,7 @@ async function begin(stored: StoredSession, options: SessionOptions, signer?: Op
 export async function startLocalProfile(options: SessionOptions = {}): Promise<Session> {
   const { createLocalKey } = await import("../nostr/signers.ts")
   const { secretKey, pubkey } = await createLocalKey()
-  return begin({ pubkey, kind: "local", createdAt: Date.now(), secret: await sealSecret(secretKey, "local-key") }, options)
+  return begin({ pubkey, kind: "local", createdAt: Date.now(), madeHere: true, secret: await sealSecret(secretKey, "local-key") }, options)
 }
 
 // A key brought from elsewhere: another device of the same person, or a backup.

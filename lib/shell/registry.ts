@@ -14,16 +14,23 @@
 //   path looks exactly as before. A piece that throws or fails to load is left out.
 //     "result.actions"  On the result of a finished game, below the result and above its
 //                       buttons. Gets the finished game and where the piece stands
-//                       ({ match: FinishedMatch, placement }). One row each (a button or a
-//                       one-line card, at most 44 pt, one element), or nothing when there is
-//                       nothing to show for this game: the result is one fixed screen. On a
-//                       phone in landscape (heights up to 500 pt, Tailwind's `xshort`) it has
-//                       no row to spare: a single piece sits in the free middle of its top bar
-//                       as a bar button (placement "bar": no border or background, text in the
-//                       primary colour, one short line that shrinks to fit,
-//                       components/fit-text.tsx). Two or more pieces become one button with
-//                       their count there, which opens a sheet with the pieces as their rows
-//                       (placement "row") and closes once one of them is tapped.
+//                       ({ match: FinishedMatch, placement }). One row each (one element, 48 pt,
+//                       44 pt on short screens), or nothing when there is nothing to show for
+//                       this game: the result is one fixed screen. The row is a ResultRow
+//                       (components/shell/result-row.tsx: icon, one line that shrinks to fit,
+//                       tone, a trailing "Später", X or chevron), which carries the look and the
+//                       placements; a row put away per game remembers that with useDismissedFor
+//                       (components/shell/use-dismissed-for.ts). On a short phone in portrait
+//                       (heights up to 740 pt, Tailwind's `short`) the key numbers can spare one
+//                       row: the first piece shows as its row, and with more a count ("+1") at
+//                       its end opens a sheet with every piece as its row (placement "row"). On a
+//                       phone in landscape (heights up to 500 pt, `xshort`) there is no row to
+//                       spare: a single piece sits in the free middle of the top bar as a bar
+//                       button (placement "bar": no border or background, no icon or trailing
+//                       part, text in the primary colour, one short line that shrinks to fit);
+//                       two or more become one button with their count there, which opens the
+//                       same sheet. The pieces live in that sheet while it is open, so it stays
+//                       under whatever a piece opens from it (its own sheet) until Fertig.
 //     "setup.extras"    At the end of game setup's options, before Start. Gets the game as it
 //                       would start now, plus the area's own value and onChange. The value is
 //                       saved with the started game as config.extras[id] (JSON only). Rematch and
@@ -55,9 +62,17 @@
 //                       board above gives way to it. Nothing here may slow the tab down: read
 //                       the device's database once, and load the rest only when there is
 //                       something to show.
+//     "club.tournaments" A club's tournaments (the tournaments area): in the club's overview
+//                        (compact: a running or next tournament, one row at most) and in
+//                        "Termine & Turniere" (the list, and for leaders a way to create one).
+//                        Gets { club (its id), name, leader, compact }. Renders nothing when the
+//                        club has none and the person can't create one.
 // - Game menu items: entries at the end of the running game's options menu (the "…" button), each
 //   { id, label, icon?, onSelect }. onSelect gets the running game; the menu closes first.
 //   Nothing else on the game screen can be changed from outside.
+// - Start tasks: work an area does once per page, after the first screen is up and the browser is
+//   idle (the shell picks the moment): resuming a queue, catching up with relays. Load the code
+//   behind an import() inside the task, so the start page carries only the call.
 //
 //   registerSlotItem("result.actions", "profile.keep", KeepResultCard)
 //   registerSlotItem("setup.extras", "live", LiveSwitch)
@@ -66,7 +81,11 @@
 // Slot items and game menu items return a function that removes them again (e.g. on sign-out).
 //
 // Areas register from components/shell/extensions.ts at module load, before the first render.
-// Registering later (after a lazy import) also works; open screens pick it up.
+// Registering later (after a lazy import) also works; open screens pick it up. Each area's
+// register module wraps all its registrations in `if (featureOn("<area>"))` (lib/shell/features.ts,
+// the build-time switch NEXT_PUBLIC_BLUELINE_FEATURES): switched off, the area registers nothing,
+// so its tab shows the shell's own view, its links "can't be opened yet", and its data on the
+// device stays as it is.
 //
 // Screens and slots stay mounted while hidden (another tab, a screen pushed over them, or setup and
 // the game over all tabs), so they keep their state. Under setup and the game the tabs are frozen:
@@ -93,11 +112,21 @@ export interface ShellNavigator {
   pop(): void
   popToRoot(tab?: TabId): void
   // Opens game setup for X01, Cricket or Around the Clock on top of everything. Back in setup,
-  // and leaving or finishing the game, return to the screen it was opened from.
-  openSetup(type: "x01" | "cricket" | "clock"): void
+  // and leaving or finishing the game, return to the screen it was opened from. An area may hand
+  // over the players and its extras (a club game: the chosen members and the club).
+  openSetup(type: "x01" | "cricket" | "clock", preset?: SetupPreset): void
   // Goes on with a game that arrived from another device, on the game screen. It replaces the
   // game kept here (a paused one): ask first.
   resumeMatch(match: SavedMatch): void
+}
+
+// Game setup as an area opens it: these seats instead of the last game's players, and initial
+// values of config.extras by area id ("setup.extras" below). Players can change both in setup.
+export interface SetupPreset {
+  players?: readonly SetupSeat[]
+  extras?: Readonly<Record<string, unknown>>
+  // What setup's back button says: the screen it was opened from (a club's name).
+  backLabel?: string
 }
 
 export interface ScreenProps {
@@ -157,7 +186,8 @@ const ACTION_TABS: Record<ShellAction, TabId> = {
 }
 
 // Where a link opens when no area handles it yet; the payload arrives as params.payload. A
-// signer answer only makes sense to the flow that asked for it, so without a handler it is dropped.
+// signer's or wallet's answer only makes sense to the flow that asked for it, so without a
+// handler it is dropped.
 export const LINK_ROUTES: Record<LinkKind, { tab: TabId; screen: string } | null> = {
   p: { tab: "profile", screen: SCREENS.profilePublic },
   watch: { tab: "play", screen: SCREENS.liveWatch },
@@ -167,6 +197,7 @@ export const LINK_ROUTES: Record<LinkKind, { tab: TabId; screen: string } | null
   board: { tab: "play", screen: SCREENS.liveBoard },
   handoff: { tab: "play", screen: SCREENS.liveHandoff },
   "signer-return": null,
+  "wallet-return": null,
 }
 
 // How the link arrived: in the page address (opened from outside), or scanned / pasted inside
@@ -298,6 +329,7 @@ export interface SlotListProps {
   "profile.card": { pubkey: string; own: boolean }
   "profile.actions": { pubkey: string; name: string }
   "profile.advanced": { pubkey: string }
+  "club.tournaments": { club: string; name: string; leader: boolean; compact: boolean }
 }
 export type SlotListId = keyof SlotListProps
 export interface SlotItem<K extends SlotListId> {
@@ -315,6 +347,7 @@ const slotLists: { [K in SlotListId]: Map<string, ComponentType<SlotListProps[K]
   "profile.card": new Map(),
   "profile.actions": new Map(),
   "profile.advanced": new Map(),
+  "club.tournaments": new Map(),
 }
 
 // Adds a piece to a slot list. The same id again replaces the piece in its place.
@@ -362,3 +395,22 @@ export function registerGameMenuItem(item: GameMenuItem) {
 
 // The game menu's entries from areas, in registration order.
 export const getGameMenuItems = (): GameMenuItem[] => [...gameMenu.values()]
+
+const startTasks = new Set<() => void>()
+
+export function registerStartTask(task: () => void) {
+  startTasks.add(task)
+}
+
+// Runs every area's start task once; a task that throws stops no other.
+export function runStartTasks() {
+  const tasks = [...startTasks]
+  startTasks.clear()
+  for (const task of tasks) {
+    try {
+      task()
+    } catch {
+      // The area's own problem; the app goes on.
+    }
+  }
+}

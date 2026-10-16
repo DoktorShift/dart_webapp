@@ -6,9 +6,19 @@
 // The payload is an opaque string here; each area defines and checks its own format. No React
 // and no browser APIs, so the rules run in the Node unit tests.
 
-export type LinkKind = "p" | "watch" | "club" | "tournament" | "pair" | "board" | "handoff" | "signer-return"
+export type LinkKind = "p" | "watch" | "club" | "tournament" | "pair" | "board" | "handoff" | "signer-return" | "wallet-return"
 
-export const LINK_KINDS: readonly LinkKind[] = ["p", "watch", "club", "tournament", "pair", "board", "handoff", "signer-return"]
+export const LINK_KINDS: readonly LinkKind[] = ["p", "watch", "club", "tournament", "pair", "board", "handoff", "signer-return", "wallet-return"]
+
+// Answers of other apps to a request this app made: they append their answer to the callback
+// address they were given, so the payload may be empty or start with "?".
+//   signer-return  a signer app (NIP-55), callback "#signer-return=<id>." (lib/nostr/ext/nip55.ts)
+//   wallet-return  a wallet app that created a connection (NWC deep link), callback "#wallet-return"
+const ANSWERS: readonly LinkKind[] = ["signer-return", "wallet-return"]
+
+// An answer goes back to where the request was made; it opens no screen of its own, so setup or
+// a game that is open stay as they are.
+export const isAnswerLink = (kind: LinkKind): boolean => ANSWERS.includes(kind)
 
 export interface AppLink {
   kind: LinkKind
@@ -25,13 +35,13 @@ const INVALID_PAYLOAD = /[\s\u0000-\u001f\u007f]/
 
 function parseFragment(fragment: string): AppLink | null {
   const body = fragment.startsWith("#") ? fragment.slice(1) : fragment
-  // A signer app appends its answer to the callback address it was given, which ends in
-  // "#signer-return=" (NIP-55). Whatever follows is passed on unchanged, without that "=".
-  if (body.startsWith("signer-return")) {
-    const rest = body.slice("signer-return".length)
+  // An app's answer: whatever follows its kind is passed on unchanged, without a leading "=".
+  const answer = ANSWERS.find((kind) => body.startsWith(kind))
+  if (answer) {
+    const rest = body.slice(answer.length)
     if (rest !== "" && !"=?&/".includes(rest[0])) return null
     const payload = rest.startsWith("=") ? rest.slice(1) : rest
-    return payload.length <= MAX_PAYLOAD_LENGTH && !INVALID_PAYLOAD.test(payload) ? { kind: "signer-return", payload } : null
+    return payload.length <= MAX_PAYLOAD_LENGTH && !INVALID_PAYLOAD.test(payload) ? { kind: answer, payload } : null
   }
   const split = body.indexOf("=")
   if (split <= 0) return null
@@ -82,7 +92,7 @@ function originOf(address: string): string | null {
 
 // The address for a link, on the given site ("https://blueline21.netlify.app").
 export function buildLink(site: string, kind: LinkKind, payload: string): string {
-  if (kind !== "signer-return" && payload.length === 0) throw new Error("An app link needs a payload")
+  if (!ANSWERS.includes(kind) && payload.length === 0) throw new Error("An app link needs a payload")
   if (payload.length > MAX_PAYLOAD_LENGTH || INVALID_PAYLOAD.test(payload)) throw new Error("Invalid app link payload")
   const origin = originOf(site)
   if (!origin) throw new Error(`Not an address: ${site}`)
