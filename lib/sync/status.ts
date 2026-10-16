@@ -5,18 +5,22 @@ import { useSyncExternalStore } from "react"
 // on demand and reports here.
 
 // "complete": every relay answered and every record could be read. "partial": some relays didn't
-// answer or some records couldn't be read. "unavailable": nothing could be read or written.
+// answer, some records couldn't be read, or some changes couldn't be written. "unavailable":
+// nothing could be read or written.
 export type SyncState = "complete" | "partial" | "unavailable"
 
-// Why not complete: no relay answered ("offline"), the signer didn't answer or declined
-// ("signer"), it can't decrypt ("unsupported", the Android signer), or the profile's data key
-// doesn't open ("unreadable").
-export type SyncProblem = "offline" | "signer" | "unsupported" | "unreadable"
+// Why not complete: no relay answered ("offline"), not every relay did ("relays"), the signer
+// didn't answer or declined ("signer"), it can't decrypt ("unsupported", the Android signer), the
+// profile's data key doesn't open ("key"), some records don't ("records"), or this device's clock
+// is too far behind to write versions relays would keep ("clock").
+export type SyncProblem = "offline" | "relays" | "signer" | "unsupported" | "key" | "records" | "clock"
 
 export interface SyncStatus {
   // The profile it is about; null without one.
   pubkey: string | null
   running: boolean
+  // When the last sync in this tab ended (ms), whatever came of it; null before the first.
+  endedAt: number | null
   // How the last sync went; null before the first on this device.
   state: SyncState | null
   problem: SyncProblem | null
@@ -25,9 +29,12 @@ export interface SyncStatus {
   lastSync: number | null
   // When the copies on relays were last read back and checked (ms).
   lastCheck: number | null
+  // Records changed here that the last sync left unwritten (it only read, or couldn't write
+  // them); they go out with the next sync that writes.
+  pending: number
 }
 
-const NOTHING: SyncStatus = { pubkey: null, running: false, state: null, problem: null, lastSync: null, lastCheck: null }
+const NOTHING: SyncStatus = { pubkey: null, running: false, endedAt: null, state: null, problem: null, lastSync: null, lastCheck: null, pending: 0 }
 
 let status = NOTHING
 const listeners = new Set<() => void>()

@@ -1,6 +1,6 @@
 import { ENGINE_VERSION, replay, type MatchState } from "../game/engine.ts"
 import type { MatchConfig, SavedMatch, Throw } from "../game/types.ts"
-import { dbDelete, dbGet, dbGetAll, dbKeys, dbWrite, type Keyed, type WriteOp } from "./db.ts"
+import { dbGet, dbGetAll, dbKeys, dbWrite, type Keyed, type WriteOp } from "./db.ts"
 import { isUnnamed, listPlayers, resolvePlayers, type PlayerRecord } from "./players.ts"
 import {
   clearV1Records,
@@ -22,6 +22,11 @@ import {
 // Results from version 1.0.0 are taken over as "imported-v1": only the totals it stored, never
 // invented throws. Games with two or more players are also written in the 1.0.0 format to its
 // own history (dart-scorer.matches.v1), so going back to 1.0.0 loses no game.
+//
+// A game taken off again (unarchive) leaves a mark, "deleted:<id>" in the kv store, until it is
+// archived again. By it lib/sync tells a deletion (the game is gone, from the profile's other
+// devices too) from a game that is merely gone here: resetting the Rangliste (clearLeaderboard)
+// stays on this device and leaves no mark.
 
 export const ARCHIVE_SCHEMA = 1
 
@@ -122,6 +127,15 @@ async function snapshotOps(now: Date): Promise<WriteOp[]> {
   return [{ store: "kv", putNew: { id: V1_SNAPSHOT_KEY, value: snapshot } as Keyed }]
 }
 
+const DELETED_PREFIX = "deleted:"
+const deletedMark = (id: string, now: Date): WriteOp => ({ store: "kv", put: { id: `${DELETED_PREFIX}${id}`, value: now.toISOString() } as Keyed })
+const noDeletedMark = (id: string): WriteOp => ({ store: "kv", delete: `${DELETED_PREFIX}${id}` })
+
+// The ids of games deleted on this device and not archived again since.
+export async function deletedMatches(): Promise<string[]> {
+  return (await dbKeys("kv")).filter((key) => key.startsWith(DELETED_PREFIX)).map((key) => key.slice(DELETED_PREFIX.length))
+}
+
 const sameGame = (stored: ArchivedMatch, match: SavedMatch) =>
   JSON.stringify(stored.throws) === JSON.stringify(match.throws) && JSON.stringify(stored.config) === JSON.stringify(match.config)
 
@@ -176,7 +190,7 @@ export function archiveFinished(match: SavedMatch, state: MatchState = replay(ma
     if (readable) {
       try {
         const snapshot = await snapshotOps(now)
-        await dbWrite([...snapshot, { store: "matches", put: record }, ...records.map((put): WriteOp => ({ store: "players", put }))])
+        await dbWrite([...snapshot, { store: "matches", put: record }, noDeletedMark(match.id), ...records.map((put): WriteOp => ({ store: "players", put }))])
       } catch {
         ok = false
       }
@@ -188,12 +202,13 @@ export function archiveFinished(match: SavedMatch, state: MatchState = replay(ma
   })
 }
 
-// Takes a game off again when its winning dart is undone (or a correction reopens it).
-export function unarchive(id: string) {
+// Takes a game off again when its winning dart is undone (or a correction reopens it), and marks
+// it deleted here.
+export function unarchive(id: string, now = new Date()) {
   return serial(async () => {
     let ok = removeV1Record(id)
     try {
-      if (await dbGet("matches", id)) await dbDelete("matches", id)
+      if (await dbGet("matches", id)) await dbWrite([{ store: "matches", delete: id }, deletedMark(id, now)])
     } catch {
       ok = false
     }
@@ -209,7 +224,7 @@ export function applySynced(changes: { put: ArchivedMatch[]; remove: readonly st
   return serial(async () => {
     const { put, remove, players } = changes
     await dbWrite([
-      ...put.map((m): WriteOp => ({ store: "matches", put: m })),
+      ...put.flatMap((m): WriteOp[] => [{ store: "matches", put: m }, noDeletedMark(m.id)]),
       ...remove.map((id): WriteOp => ({ store: "matches", delete: id })),
       ...players.map((p): WriteOp => ({ store: "players", put: p })),
     ])
@@ -251,7 +266,7 @@ export async function loadArchive(): Promise<ArchivedMatch[]> {
 // "Rangliste zurücksetzen": the games on the Rangliste (two or more players), here and in the
 // 1.0.0 history. Solo games stay for personal statistics. The copy of 1.0.0's history taken
 // before the upgrade goes too (in the same write), so deleted results don't live on in it or in
-// an export.
+// an export. No deletion marks: a profile's games stay in its profile and on its other devices.
 export function clearLeaderboard() {
   return serial(async () => {
     let ok = clearV1Records()

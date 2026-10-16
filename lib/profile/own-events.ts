@@ -1,10 +1,10 @@
-import { isAddressableKind, isReplaceableKind, query } from "../nostr/client.ts"
+import { isAddressableKind, isReplaceableKind, query, supersedes } from "../nostr/client.ts"
 import type { NostrEvent } from "../nostr/types.ts"
 import { dbGetAll, dbWrite, type Keyed } from "../storage/db.ts"
 import { STATS_CARD_D } from "../protocol/profile.ts"
 import { ROUND_D_PREFIX } from "./rounds.ts"
 import { BLOCKED_RELAYS_KIND, ownReadRelays, RELAY_LIST_KIND, relaySettings, type RelaySettings } from "./relay-list.ts"
-import { onSessionEnd, OWN_OBJECT_PREFIX } from "./session.ts"
+import { getSession, onSessionEnd, OWN_OBJECT_PREFIX } from "./session.ts"
 
 // The signed-in profile's own replaceable events, as last seen: its metadata (0), relay list
 // (10002), blocked relays (10006), stats card (31180 "stats") and player rounds (30000). Kept in
@@ -24,9 +24,6 @@ function coordinate(event: Pick<NostrEvent, "kind" | "tags">): string {
   return `${event.kind}:${d}`
 }
 
-// NIP-01: the newer created_at wins; on a tie, the lower id.
-const newer = (a: NostrEvent, b: NostrEvent) => a.created_at > b.created_at || (a.created_at === b.created_at && a.id < b.id)
-
 export async function ownEvents(pubkey: string): Promise<Map<string, NostrEvent>> {
   const stored = await dbGetAll<StoredEvent>("objects")
   return new Map(stored.filter((s) => s.id.startsWith(OWN_OBJECT_PREFIX) && s.event.pubkey === pubkey).map((s) => [coordinate(s.event), s.event]))
@@ -41,7 +38,7 @@ export async function rememberOwn(pubkey: string, events: readonly NostrEvent[])
     if (event.pubkey !== pubkey || !(isReplaceableKind(event.kind) || isAddressableKind(event.kind))) continue
     const key = coordinate(event)
     const current = fresh.get(key) ?? known.get(key)
-    if (!current || newer(event, current)) fresh.set(key, event)
+    if (!current || supersedes(event, current)) fresh.set(key, event)
   }
   await dbWrite([...fresh].map(([key, event]) => ({ store: "objects", put: { id: `${OWN_OBJECT_PREFIX}${key}`, event } as Keyed })))
 }
@@ -69,7 +66,8 @@ const ownFilters = (pubkey: string) => [
 ]
 
 // Looks for the profile's events on every relay they may be on, and keeps what is newer here.
-// A relay list found on the way (a new device) names more relays to look at.
+// A relay list found on the way (a new device) names more relays to look at. What arrives after
+// the profile signed out meanwhile is dropped: "Abmelden und alles löschen" leaves nothing behind.
 export async function fetchOwnEvents(pubkey: string): Promise<FetchResult> {
   const answered: string[] = []
   const failed: string[] = []
@@ -79,6 +77,7 @@ export async function fetchOwnEvents(pubkey: string): Promise<FetchResult> {
     if (relays.length === 0) break
     for (const url of relays) asked.add(url)
     const result = await query(ownFilters(pubkey), relays)
+    if (getSession()?.pubkey !== pubkey) break
     answered.push(...result.answered)
     failed.push(...result.failed.map((f) => f.url))
     await rememberOwn(

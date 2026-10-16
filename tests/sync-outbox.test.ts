@@ -9,8 +9,9 @@ import { closeDatabase } from "../lib/storage/db.ts"
 import { backoffMs, deliverNow, deliveryStatus, enqueue, flushDue, outboxStatus, resumeOutbox } from "../lib/sync/outbox.ts"
 
 // The persistent outbox (lib/sync/outbox.ts) against in-memory relays: delivery rules, which
-// answers are tried again, backoff, coalescing, duplicates, relays going down and up, and a reload
-// in the middle. Time is passed in, so retries are checked without waiting for them.
+// answers are tried again, backoff, coalescing, duplicates, relays going down and up, a reload in
+// the middle, and the lock that covers the queue but never the sends. Time is passed in, so
+// retries are checked without waiting for them.
 
 const network = new FakeNetwork()
 Object.assign(globalThis, { WebSocket: network.WebSocket })
@@ -44,7 +45,9 @@ after(() => relayClient().close())
 let serial = 0
 const event = (kind = 1180, tags: string[][] = [], at = 1_790_000_000): NostrEvent => core.finalizeEvent({ kind, tags, content: `n${++serial}`, created_at: at }, key)
 const stored = (relay: FakeRelay, e: NostrEvent) => relay.events.some((x) => x.id === e.id)
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 const T0 = 1_000_000
+const WEEK_MS = 7 * 24 * 60 * 60_000
 
 test("delivered once relays of two operators confirm; two relays of one operator are not enough", async () => {
   const e = event()
@@ -165,6 +168,44 @@ test("waiting events survive a reload and go out once the relays are back", asyn
   await flushDue(() => reloaded!.retryAt!)
   assert.equal(await deliveryStatus(e.id), null)
   assert.ok(stored(relays[0], e) && stored(relays[1], e))
+})
+
+test("queueing never waits behind a round's sends", async () => {
+  relays[0].options.delayMs = 1500
+  const first = event()
+  const second = event()
+  await enqueue([{ event: first, relays: [URLS[0]] }])
+  const round = flushDue()
+  await sleep(50)
+  const started = Date.now()
+  await enqueue([{ event: second, relays: [URLS[1]] }])
+  assert.ok(Date.now() - started < 500, "enqueue waited for the sends")
+  await round
+  assert.ok(stored(relays[0], first) && stored(relays[1], second))
+})
+
+test("an entry one round is sending is left alone by another", async () => {
+  relays[0].options.delayMs = 300
+  down(relays[2])
+  const e = event()
+  await enqueue([{ event: e, relays: URLS.slice(0, 3) }])
+  const round = flushDue()
+  await sleep(50)
+  const [meanwhile] = await deliverNow([e.id])
+  assert.equal(meanwhile.attempts, 0)
+  await round
+  const after = await deliveryStatus(e.id)
+  assert.deepEqual([after?.state, after?.attempts], ["delivered", 1])
+})
+
+test("an entry no relay accepts for good is given up after a week", async () => {
+  relays[0].options.onEvent = () => [false, "error: not now"]
+  const e = event()
+  await enqueue([{ event: e, relays: [URLS[0]] }], {}, () => T0)
+  const [status] = await deliverNow([e.id], () => T0)
+  assert.equal(status.state, "waiting")
+  await flushDue(() => T0 + WEEK_MS + 1)
+  assert.equal(await deliveryStatus(e.id), null)
 })
 
 test("copies still missing once delivered are sent again when the app starts", async () => {

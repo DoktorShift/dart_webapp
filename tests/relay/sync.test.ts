@@ -12,17 +12,21 @@ import { relayClient } from "../../lib/nostr/client.ts"
 import { loadCore, type Core } from "../../lib/nostr/core.ts"
 import { relayAnswers } from "../../lib/nostr/relay-info.ts"
 import { connectBunker, startNostrConnect } from "../../lib/nostr/signers.ts"
+import { adjustClock } from "../../lib/nostr/time.ts"
+import type { NostrEvent } from "../../lib/nostr/types.ts"
 import { changeBase, lookupOwnEvents, OWN } from "../../lib/profile/own-events.ts"
 import { addRelay, editableRelays, relayListTemplate } from "../../lib/profile/relay-list.ts"
 import { connectExternal, importLocalKey, signOut } from "../../lib/profile/session.ts"
 import { dataKeySlot } from "../../lib/protocol/private.ts"
 import type { ArchivedMatch } from "../../lib/storage/archive.ts"
-import { archiveFinished } from "../../lib/storage/archive.ts"
+import { archiveFinished, unarchive } from "../../lib/storage/archive.ts"
 import { dbGetAll } from "../../lib/storage/db.ts"
 import { newPlayerRecord, savePlayers, type PlayerRecord } from "../../lib/storage/players.ts"
+import { storedDataKey } from "../../lib/sync/data-key.ts"
 import { syncHistory } from "../../lib/sync/engine.ts"
 import { deliverNow, flushDue, outboxStatus } from "../../lib/sync/outbox.ts"
 import { publishOwn } from "../../lib/sync/publish.ts"
+import { openRecords } from "../../lib/sync/records.ts"
 
 let core: Core
 let a: NakRelay
@@ -58,6 +62,7 @@ async function on(device: Device) {
 const send = async () => deliverNow((await outboxStatus()).map((s) => s.id))
 async function sync(full = true) {
   const result = await syncHistory(pubkey, { full })
+  assert.ok(result, "the sync ran for the signed-in session")
   await send()
   return result
 }
@@ -85,7 +90,7 @@ async function addRelayUnderErweitert(url: string) {
 }
 
 // What nak reads from a relay: the profile's private records, as any outsider sees them.
-async function recordsOn(relay: NakRelay): Promise<{ id: string; kind: number; tags: string[][]; content: string }[]> {
+async function recordsOn(relay: NakRelay): Promise<NostrEvent[]> {
   const out = await runNak(["req", "-k", "30078", "-a", pubkey, relay.url])
   return out ? out.split("\n").map((line) => JSON.parse(line)) : []
 }
@@ -139,7 +144,7 @@ test("a relay down and up again: waiting events go out after the restart, and a 
   await play101("game-2", "2026-10-02T20:00:00.000Z")
   const partial = await sync(false)
   assert.equal(partial.state, "partial")
-  assert.equal(partial.problem, "offline")
+  assert.equal(partial.problem, "relays")
   // The game is on the relay that answered, and waits for the other one.
   assert.equal((await recordsOn(a)).length, 4)
   const waiting = await outboxStatus()
@@ -188,6 +193,30 @@ test("two devices play while every relay is down; afterwards both have every gam
   assert.equal(records.length, 5)
   assert.equal(new Set(records.map((r) => r.tags[0][1])).size, 5)
   assert.deepEqual((await recordsOn(b)).map((r) => r.id).sort(), records.map((r) => r.id).sort())
+})
+
+test("a deletion from a device whose clock runs behind reaches the relays and the other device", async () => {
+  const [first, second] = [newDevice(), newDevice()]
+  await on(first)
+  await savePlayers([profilePlayer()])
+  await play101("game-1", "2026-10-01T20:00:00.000Z")
+  await sync()
+  await on(second)
+  await sync()
+  try {
+    // Ten minutes behind: the deletion is signed above the version the relays hold, so they keep it
+    // (nak, like other relays, drops an older version of an addressable event).
+    adjustClock(new Date(Date.now() - 10 * 60_000))
+    assert.ok(await unarchive("game-1"))
+    assert.equal((await sync(false)).state, "complete")
+  } finally {
+    adjustClock(new Date())
+  }
+  const key = (await storedDataKey(pubkey))!.key
+  for (const relay of [a, b]) assert.equal(openRecords(await recordsOn(relay), key, pubkey).versions.get("match:game-1")?.data, null, relay.url)
+  await on(first)
+  await sync(false)
+  assert.deepEqual(await ids(), [])
 })
 
 test("a profile kept in a signer app (nak bunker) makes its data key through the signer; a second device reads the games with it", async () => {

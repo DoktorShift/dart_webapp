@@ -1,6 +1,7 @@
 import { xchacha20poly1305 } from "@noble/ciphers/chacha.js"
 import { randomBytes } from "@noble/hashes/utils.js"
 import type { EventTemplate, NostrEvent } from "../nostr/types.ts"
+import { MAX_FUTURE_SKEW_SECONDS } from "../protocol/kinds.ts"
 import {
   decodeEnvelope,
   encodeEnvelope,
@@ -36,6 +37,15 @@ export interface RecordVersion {
 // higher device id for two devices that wrote the same counter offline.
 export const compareVersions = (a: Pick<PrivateRecord, "rev" | "device">, b: Pick<PrivateRecord, "rev" | "device">) =>
   a.rev - b.rev || (a.device < b.device ? -1 : a.device > b.device ? 1 : 0)
+
+// created_at for a new version of a record: `wanted` (now, or spread into the past for paging),
+// but above the version the relays hold (`replaces`), or they would keep that one. Null when that
+// would be further ahead of now than relays accept: this device's clock is behind the one that
+// wrote the current version, and the write has to wait.
+export function nextCreatedAt(wanted: number, replaces: number, now: number): number | null {
+  const created_at = Math.max(wanted, replaces + 1)
+  return created_at <= now + MAX_FUTURE_SKEW_SECONDS ? created_at : null
+}
 
 function seal(dataKey: Uint8Array, slot: string, plaintext: unknown, created_at: number): EventTemplate {
   const nonce = randomBytes(24)

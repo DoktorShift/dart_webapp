@@ -147,8 +147,8 @@ export function coordinateOf(event: Pick<NostrEvent, "kind" | "pubkey" | "tags">
   return null
 }
 
-// NIP-01: the newer created_at wins; on a tie, the lowest id.
-const supersedes = (a: NostrEvent, b: NostrEvent) => a.created_at > b.created_at || (a.created_at === b.created_at && a.id < b.id)
+// NIP-01: the newer created_at wins; on a tie, the lowest id. Whether `a` replaces `b` on relays.
+export const supersedes = (a: NostrEvent, b: NostrEvent) => a.created_at > b.created_at || (a.created_at === b.created_at && a.id < b.id)
 
 // Deduplicates by id and keeps only the newest event per replaceable or addressable coordinate.
 export function latestEvents(events: Iterable<NostrEvent>): NostrEvent[] {

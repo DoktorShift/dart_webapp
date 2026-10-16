@@ -6,22 +6,26 @@ import { newDevice, switchTo, type Device } from "./support/devices.ts"
 import { FakeNetwork, type FakeRelay } from "./support/fake-relay.ts"
 import { relayClient } from "../lib/nostr/client.ts"
 import { loadCore, type Core } from "../lib/nostr/core.ts"
+import { createLocalSigner } from "../lib/nostr/signers.ts"
+import { adjustClock } from "../lib/nostr/time.ts"
 import { importLocalKey, signOut } from "../lib/profile/session.ts"
 import { dataKeySlot } from "../lib/protocol/private.ts"
-import { archiveFinished, unarchive, type ArchivedMatch } from "../lib/storage/archive.ts"
-import { closeDatabase, dbGetAll, kvGet } from "../lib/storage/db.ts"
+import { archiveFinished, clearLeaderboard, deletedMatches, unarchive, type ArchivedMatch } from "../lib/storage/archive.ts"
+import { closeDatabase, dbGetAll, dbKeys, kvGet } from "../lib/storage/db.ts"
 import { newPlayerRecord, savePlayers, type PlayerRecord } from "../lib/storage/players.ts"
 import { readV1Records } from "../lib/storage/v1.ts"
-import { storedDataKey } from "../lib/sync/data-key.ts"
+import { DataKeyError, isDataKeyEvent, storedDataKey, unwrapDataKey } from "../lib/sync/data-key.ts"
 import { syncHistory } from "../lib/sync/engine.ts"
 import { deliverNow, outboxStatus } from "../lib/sync/outbox.ts"
 import { openRecords } from "../lib/sync/records.ts"
 
 // The private history across devices (lib/sync/engine.ts) on in-memory relays: a new device
 // finds the profile's games and nothing else, two devices that played offline end up with the
-// same games without duplicates, deletions stay deleted, large records come in parts, relays
-// that don't answer give "unavailable" or "partial" (never an empty history), and a data key
-// made twice ends as one. Each device is its own IndexedDB and localStorage; they take turns.
+// same games without duplicates, deletions stay deleted (a reset of the Rangliste is no deletion),
+// large records come in parts, relays that don't answer give "unavailable" or "partial" (never an
+// empty history), a data key made twice ends as one and is only ever the profile's own, a device
+// whose clock runs behind still writes versions relays keep, and a sync whose session ends keeps
+// nothing. Each device is its own IndexedDB and localStorage; they take turns.
 
 const URLS = ["wss://one.example", "wss://two.example", "wss://three.example"]
 process.env.NEXT_PUBLIC_BLUELINE_RELAYS = URLS.join(",")
@@ -38,6 +42,7 @@ before(async () => {
 })
 
 beforeEach(async () => {
+  adjustClock(new Date())
   await signOut({ keepLocalData: true })
   await resetStorage()
   secret = core.generateSecretKey()
@@ -64,14 +69,25 @@ async function send() {
   await deliverNow((await outboxStatus()).map((s) => s.id))
 }
 
-async function sync(full = true) {
+// One sync without sending. The session stays signed in, so it never ends without a result.
+async function syncOnly(full: boolean) {
   const result = await syncHistory(pubkey, { full })
+  assert.ok(result, "the sync ran for the signed-in session")
+  return result
+}
+
+async function sync(full = true) {
+  const result = await syncOnly(full)
   await send()
   return result
 }
 
 const profilePlayer = (): PlayerRecord => ({ ...newPlayerRecord("Anna", "2026-09-01T10:00:00.000Z", ANNA), pubkey })
 const person = (name: string, n: number) => ({ id: `pl_${n.toString(16).padStart(32, "0")}`, name })
+const annaBen = [
+  { id: ANNA, name: "Anna" },
+  { id: BEN, name: "Ben" },
+]
 
 // A won 101 (T20, 1, D20): seat 0 wins in three darts.
 async function play101(id: string, seats: { id: string; name: string }[], finishedAt: string) {
@@ -143,7 +159,7 @@ test("two devices that played offline end up with the same games, each written o
 
   // Both offline: relays don't answer, nothing is lost, nothing claims to be empty.
   for (const relay of relays) relay.options.mode = "down"
-  for (const relay of relays) relay.dropAll()
+  await Promise.all(relays.map((relay) => relay.dropAll()))
   await on(a)
   await play101("game-2", [{ id: ANNA, name: "Anna" }, person("Carl", 3)], "2026-10-02T20:00:00.000Z")
   const offline = await sync(false)
@@ -185,7 +201,7 @@ test("a game deleted on one device goes on the others, and an old copy never bri
 
   // The third relay misses the deletion.
   relays[2].options.mode = "down"
-  relays[2].dropAll()
+  await relays[2].dropAll()
   await on(a)
   assert.ok(await unarchive("game-1"))
   await sync(false)
@@ -242,17 +258,15 @@ test("relays that don't answer: unavailable without any, partial with some; neve
 
   const b = newDevice()
   await on(b)
-  for (const relay of relays) {
-    relay.options.mode = "down"
-    relay.dropAll()
-  }
-  const none = await syncHistory(pubkey, { full: true })
+  for (const relay of relays) relay.options.mode = "down"
+  await Promise.all(relays.map((relay) => relay.dropAll()))
+  const none = await syncOnly(true)
   assert.deepEqual([none.state, none.problem, none.lastSync], ["unavailable", "offline", null])
   assert.deepEqual(await ids(), [])
 
   relays[1].options.mode = "up"
-  const some = await syncHistory(pubkey, { full: true })
-  assert.deepEqual([some.state, some.problem], ["partial", "offline"])
+  const some = await syncOnly(true)
+  assert.deepEqual([some.state, some.problem], ["partial", "relays"])
   assert.ok(some.lastSync)
   assert.deepEqual(await ids(), ["game-1"])
 })
@@ -316,4 +330,139 @@ test("two data keys made apart end as one, and every game stays readable", async
   await on(newDevice())
   assert.equal((await sync()).state, "complete")
   assert.deepEqual(await ids(), ["game-a", "game-b"])
+})
+
+test("resetting the Rangliste on one device deletes nothing from the profile and brings nothing back", async () => {
+  const [a, b] = [newDevice(), newDevice()]
+  await on(a)
+  await savePlayers([profilePlayer()])
+  await play101("game-1", annaBen, "2026-10-01T20:00:00.000Z")
+  await play101("game-2", annaBen, "2026-10-02T20:00:00.000Z")
+  await sync()
+  await on(b)
+  await sync()
+  assert.deepEqual(await ids(), ["game-1", "game-2"])
+
+  // The reset stays on device A: no deletion goes out, and the games don't come back there.
+  await on(a)
+  assert.ok(await clearLeaderboard())
+  assert.deepEqual(await deletedMatches(), [])
+  assert.equal((await sync(false)).state, "complete")
+  assert.equal((await sync(true)).state, "complete")
+  assert.deepEqual(await ids(), [])
+  const games = [...(await opened(relays[0])).versions.values()].filter((v) => v.record.type === "match")
+  assert.deepEqual(games.map((v) => [v.record.id, v.record.rev, v.data !== null]).sort(), [
+    ["match:game-1", 1, true],
+    ["match:game-2", 1, true],
+  ])
+  await on(b)
+  assert.equal((await sync(false)).state, "complete")
+  assert.deepEqual(await ids(), ["game-1", "game-2"])
+
+  // A game deleted on purpose still goes everywhere.
+  assert.ok(await unarchive("game-2"))
+  assert.deepEqual(await deletedMatches(), ["game-2"])
+  await sync(false)
+  assert.equal((await opened(relays[0])).versions.get("match:game-2")?.data, null)
+  await on(newDevice())
+  await sync()
+  assert.deepEqual(await ids(), ["game-1"])
+})
+
+test("signing out with 'delete everything' during a sync leaves nothing of it behind; the profile keeps its games", async () => {
+  const [a, b] = [newDevice(), newDevice()]
+  await on(a)
+  await savePlayers([profilePlayer()])
+  await play101("game-1", annaBen, "2026-10-01T20:00:00.000Z")
+  await sync()
+  await on(b)
+  await sync()
+  assert.deepEqual(await ids(), ["game-1"])
+
+  // Relays answer slowly, as public ones do: the sync is in flight while the person signs out.
+  for (const relay of relays) relay.options.delayMs = 400
+  const running = syncHistory(pubkey, { full: true })
+  await new Promise((resolve) => setTimeout(resolve, 100))
+  await signOut({ keepLocalData: false })
+  assert.equal(await running, null)
+  assert.deepEqual(await dbKeys("kv"), [])
+  // Nor do the profile's public events, which the full sync looked up on the way.
+  await new Promise((resolve) => setTimeout(resolve, 600))
+  assert.deepEqual(await dbKeys("objects"), [])
+  for (const relay of relays) relay.options.delayMs = undefined
+
+  // Signed in again here, nothing is deleted; device A keeps its game.
+  await importLocalKey(secret)
+  assert.equal((await sync()).state, "complete")
+  assert.deepEqual(await ids(), ["game-1"])
+  assert.notEqual((await opened(relays[0])).versions.get("match:game-1")?.data, null)
+  await on(a)
+  await sync(false)
+  assert.deepEqual(await ids(), ["game-1"])
+})
+
+test("a device whose clock runs behind still writes above the version relays hold, or waits and says why", async () => {
+  const [a, b] = [newDevice(), newDevice()]
+  await on(a)
+  await savePlayers([profilePlayer()])
+  await play101("game-1", annaBen, "2026-10-01T20:00:00.000Z")
+  await play101("game-2", annaBen, "2026-10-02T20:00:00.000Z")
+  await sync()
+  await on(b)
+  await sync()
+  const before = (await opened(relays[0])).versions.get("match:game-1")!
+
+  // Ten minutes behind: the deletion is signed just above the version the relays hold.
+  adjustClock(new Date(Date.now() - 10 * 60_000))
+  assert.ok(await unarchive("game-1"))
+  assert.equal((await sync(false)).state, "complete")
+  const deletion = (await opened(relays[0])).versions.get("match:game-1")!
+  assert.equal(deletion.data, null)
+  assert.ok(deletion.events[0].created_at > before.events[0].created_at)
+
+  // Further behind than relays accept ahead of their time: the change waits, and the sync says so.
+  adjustClock(new Date(Date.now() - 20 * 60_000))
+  assert.ok(await unarchive("game-2"))
+  const late = await sync(false)
+  assert.deepEqual([late.state, late.problem], ["partial", "clock"])
+  assert.notEqual((await opened(relays[0])).versions.get("match:game-2")?.data, null)
+  adjustClock(new Date())
+  assert.equal((await sync(false)).state, "complete")
+  assert.equal((await opened(relays[0])).versions.get("match:game-2")?.data, null)
+  await on(a)
+  await sync(false)
+  assert.deepEqual(await ids(), [])
+})
+
+test("the data key is only ever taken from the profile's own record", async () => {
+  await on(newDevice())
+  await savePlayers([profilePlayer()])
+  await play101("game-1", annaBen, "2026-10-01T20:00:00.000Z")
+  await sync()
+  const own = privateEvents(relays[0]).find((e) => e.tags[0][1] === dataKeySlot(pubkey))!
+  // Someone else's event at the profile's key slot, as a bad relay could answer with.
+  const forged = core.finalizeEvent({ kind: 30078, tags: [["d", dataKeySlot(pubkey)]], content: own.content, created_at: own.created_at - 1000 }, core.generateSecretKey())
+  const signer = await createLocalSigner(secret)
+  assert.equal(isDataKeyEvent(forged, pubkey), false)
+  await assert.rejects(unwrapDataKey(forged, signer, pubkey), (error: unknown) => error instanceof DataKeyError && error.problem === "key")
+  const unwrapped = await unwrapDataKey(own, signer, pubkey)
+  assert.equal(Buffer.from(unwrapped.key).toString("hex"), Buffer.from((await storedDataKey(pubkey))!.key).toString("hex"))
+})
+
+test("without `write` a sync only reads: nothing is signed, nothing is sent", async () => {
+  await on(newDevice())
+  await savePlayers([profilePlayer()])
+  await play101("game-1", annaBen, "2026-10-01T20:00:00.000Z")
+  const result = await syncHistory(pubkey, { full: true, write: false })
+  // The game and the players record wait for a sync that writes, and the screens can say so.
+  assert.deepEqual([result?.state, result?.pending], ["complete", 2])
+  assert.equal((await outboxStatus()).length, 0)
+  assert.equal(privateEvents(relays[0]).length, 0)
+  assert.equal(await storedDataKey(pubkey), null)
+  // Once a sync writes, nothing waits any more, and a new device gets the game.
+  const written = await sync()
+  assert.deepEqual([written.state, written.pending], ["complete", 0])
+  await on(newDevice())
+  await sync()
+  assert.deepEqual(await ids(), ["game-1"])
 })

@@ -6,7 +6,7 @@ import { loadCore, type Core } from "../lib/nostr/core.ts"
 import type { NostrEvent } from "../lib/nostr/types.ts"
 import { decodeEnvelope, recordSlot } from "../lib/protocol/private.ts"
 import { decideMatch, mergePlayers, type HistoryRecord, type Version } from "../lib/sync/history.ts"
-import { openRecords, sealRecord } from "../lib/sync/records.ts"
+import { nextCreatedAt, openRecords, sealRecord } from "../lib/sync/records.ts"
 import { newPlayerRecord, type PlayerRecord } from "../lib/storage/players.ts"
 
 // Private records (lib/sync/records.ts) in the documented format, and which version of a record
@@ -92,11 +92,24 @@ test("a change made here since the last sync wins and becomes the next version",
   // Corrected here, deleted elsewhere: the correction stays.
   assert.equal(decideMatch(record("h2"), version(1, "h1"), version(2, "", "b", true)), "write")
   // Deleted here: a tombstone, even over a newer version from elsewhere.
-  assert.equal(decideMatch(undefined, version(1, "h1"), undefined), "write")
-  assert.equal(decideMatch(undefined, version(1, "h1"), version(2, "h2")), "write")
+  assert.equal(decideMatch("deleted", version(1, "h1"), undefined), "write")
+  assert.equal(decideMatch("deleted", version(1, "h1"), version(2, "h2")), "write")
+  assert.equal(decideMatch("deleted", undefined, version(1, "h1")), "write")
   // Already the same everywhere: nothing.
   assert.equal(decideMatch(record("h1"), version(1, "h1"), version(1, "h1")), "keep")
-  assert.equal(decideMatch(undefined, version(2, "", "a", true), version(1, "h1")), "keep")
+  assert.equal(decideMatch("deleted", version(2, "", "a", true), version(1, "h1")), "keep")
+  // A deletion no relay and no earlier sync knows of: nothing to delete anywhere.
+  assert.equal(decideMatch("deleted", undefined, undefined), "keep")
+})
+
+test("a game synced here and gone without a deletion was removed from this device only", () => {
+  // No tombstone (the Rangliste was reset), and no newer version brings it back here.
+  assert.equal(decideMatch(undefined, version(1, "h1"), undefined), "keep")
+  assert.equal(decideMatch(undefined, version(1, "h1"), version(1, "h1")), "keep")
+  assert.equal(decideMatch(undefined, version(1, "h1"), version(2, "h2")), "keep")
+  assert.equal(decideMatch(undefined, version(1, "h1"), version(2, "", "b", true)), "keep")
+  // Never here at all: a game from elsewhere comes in.
+  assert.equal(decideMatch(undefined, undefined, version(1, "h1")), "take")
 })
 
 test("an old copy never brings back a deleted game, and imported totals never undo a deletion", () => {
@@ -123,4 +136,11 @@ test("players merge entry by entry: the more recent change, played last at the l
   )
   // Order of arrival doesn't matter.
   assert.deepEqual(mergePlayers([anna("2026-10-02T10:00:00.000Z", "Anna Schmidt"), ben], [anna("2026-10-01T10:00:00.000Z", "Anna S.")]).map((p) => p.name), ["Anna Schmidt", "Ben"])
+})
+
+test("a new version's created_at stays above the one relays hold, as far ahead as they accept", () => {
+  assert.equal(nextCreatedAt(NOW - 60, NOW - 100, NOW), NOW - 60)
+  assert.equal(nextCreatedAt(NOW - 60, NOW + 10, NOW), NOW + 11)
+  assert.equal(nextCreatedAt(NOW, NOW + 899, NOW), NOW + 900)
+  assert.equal(nextCreatedAt(NOW, NOW + 900, NOW), null)
 })

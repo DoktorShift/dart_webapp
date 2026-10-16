@@ -32,6 +32,7 @@ import { addRelay, editableRelays, relayListTemplate, removeRelay } from "@/lib/
 import { probeRelays, relayHost, type RelayStatus } from "@/lib/profile/relay-status"
 import { copyText } from "@/lib/shell/share"
 import { submitOwn } from "@/lib/sync/publish"
+import { useSyncStatus } from "@/lib/sync/status"
 import { cn } from "@/lib/utils"
 import { version } from "@/package.json"
 
@@ -56,8 +57,10 @@ function useCopied(): [boolean, (text: string) => Promise<void>] {
   return [copied, copy]
 }
 
-// Each relay's answer, asked again whenever the list changes. null while asking.
-function useRelayStatus(urls: readonly string[], pubkey: string) {
+// Each relay's answer, asked again whenever the list changes and whenever a sync ends (it just
+// found out which relays answer, so the rows and the Abgleich group never disagree). null while
+// asking.
+function useRelayStatus(urls: readonly string[], pubkey: string, syncEndedAt: number | null) {
   const [status, setStatus] = useState<Map<string, RelayStatus> | null>(null)
   const key = urls.join(",")
   useEffect(() => {
@@ -67,7 +70,7 @@ function useRelayStatus(urls: readonly string[], pubkey: string) {
     return () => {
       alive = false
     }
-  }, [key, pubkey])
+  }, [key, pubkey, syncEndedAt])
   return status
 }
 
@@ -87,6 +90,7 @@ function Advanced({ own }: { own: OwnProfile }) {
   const status = useRelayStatus(
     entries.map((e) => e.url),
     session.pubkey,
+    useSyncStatus().endedAt,
   )
 
   useEffect(() => {

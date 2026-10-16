@@ -1,4 +1,4 @@
-import { coordinateOf, publish as send, type PublishResult, type RelayCode } from "../nostr/client.ts"
+import { coordinateOf, publish as send, supersedes, type PublishResult, type RelayCode } from "../nostr/client.ts"
 import { countOperators, isPublished, mergeRelays } from "../nostr/relays.ts"
 import type { NostrEvent } from "../nostr/types.ts"
 import { dbGetAll, dbWrite, onStorageChange, type Keyed, type WriteOp } from "../storage/db.ts"
@@ -22,8 +22,13 @@ import { dbGetAll, dbWrite, onStorageChange, type Keyed, type WriteOp } from "..
 //   live score replaces the waiting one); an older one handed over later is dropped.
 // - Copies still missing on some relay once the rule is met are sent again on every start of the
 //   app, for a week (decision 0002 §5: "Fehlende Kopien werden beim Öffnen der App erneut gesendet").
-// - One tab of a browser sends at a time (Web Locks); the others only add. resumeOutbox() runs the
-//   sending in a tab (lib/sync/service.ts calls it at start). Nothing here ever waits on a UI path.
+//   After a week an entry is given up, met or not: a record a relay keeps refusing is written anew
+//   by the next full sync, not chased forever.
+// - The lock (Web Locks, one per browser) covers the queue's state only, never the network: a
+//   round picks its entries under it and leases them, sends without it, and merges the answers
+//   under it again. Other tabs' rounds pass leased entries over; enqueue() only ever waits for
+//   state writes. Nothing here ever waits on a UI path. The sending runs in a page once
+//   resumeOutbox() was called (lib/sync/service.ts at start) or something was queued.
 
 export type DeliveryRule = "published" | "any"
 
@@ -59,6 +64,8 @@ interface Entry extends Keyed {
   queuedAt: number
   // When to try the relays without a final answer again (ms); null once the rule is met.
   retryAt: number | null
+  // Until when a round is sending it (ms): other rounds pass it over meanwhile.
+  sendingUntil: number | null
 }
 
 // "waiting": the rule isn't met yet, it is tried again. "delivered": the rule is met (copies on
@@ -85,12 +92,14 @@ type Clock = () => number
 const LOCK = "blueline-outbox"
 const PERMANENT = new Set<RelayCode>(["invalid", "blocked", "restricted", "pow"])
 const BACKOFF = { firstMs: 5000, maxMs: 10 * 60_000 }
-// Entries sent at once per round. The lock is given up between rounds, so deliverNow() from
-// another call or tab never waits behind a long queue.
+// Entries sent at once per round.
 const ROUND_SIZE = 16
+// A round's lease on the entries it sends: longer than a send can take (connect and publish
+// timeouts, lib/nostr/client.ts), short enough that a closed tab's entries are soon free again.
+const LEASE_MS = 30_000
 // Another tab holds the lock: look again this much later (it may have been closed meanwhile).
 const BUSY_RETRY_MS = 2000
-// How long missing copies are sent again on each start, once the rule is met.
+// How long an entry is kept: missing copies are sent again on each start until then.
 const HEAL_FOR_MS = 7 * 24 * 60 * 60_000
 
 // ---- Rules ------------------------------------------------------------------------------------
@@ -130,9 +139,8 @@ function statusOf(entry: Entry): DeliveryStatus {
   }
 }
 
-// Gone from the outbox: every relay answered for good, or the rule was met so long ago that
-// missing copies are no longer chased.
-const finished = (entry: Entry, now: number) => openRelays(entry).length === 0 || (entry.retryAt === null && now - entry.queuedAt > HEAL_FOR_MS)
+// Gone from the outbox: every relay answered for good, or it is a week old.
+const finished = (entry: Entry, now: number) => openRelays(entry).length === 0 || now - entry.queuedAt > HEAL_FOR_MS
 const saveEntry = (entry: Entry, now: number): WriteOp => (finished(entry, now) ? { store: "outbox", delete: entry.id } : putEntry(entry))
 
 // ---- One sender per browser -------------------------------------------------------------------
@@ -156,8 +164,6 @@ const readEntries = () => dbGetAll<Entry>("outbox")
 const putEntry = (entry: Entry): WriteOp => ({ store: "outbox", put: entry })
 
 // ---- Adding -----------------------------------------------------------------------------------
-
-const newer = (a: NostrEvent, b: NostrEvent) => a.created_at > b.created_at || (a.created_at === b.created_at && a.id < b.id)
 
 // Queues signed events for their relays. An event already queued gets the new relays added and
 // is due again; a coalesced one older than a queued version of its coordinate is dropped.
@@ -183,79 +189,88 @@ export async function enqueue(deliveries: readonly Delivery[], options: EnqueueO
       const coalesce = options.coalesce ? coordinateOf(event) : null
       if (coalesce) {
         const versions = [...entries.values()].filter((e) => e.coalesce === coalesce)
-        if (versions.some((e) => newer(e.event, event))) continue
+        if (versions.some((e) => supersedes(e.event, event))) continue
         for (const old of versions) {
           entries.delete(old.id)
           ops.set(old.id, { store: "outbox", delete: old.id })
         }
       }
-      put({ id: event.id, event, relays, rule: options.rule ?? "published", coalesce, answers: {}, attempts: 0, queuedAt: now(), retryAt: now() })
+      put({ id: event.id, event, relays, rule: options.rule ?? "published", coalesce, answers: {}, attempts: 0, queuedAt: now(), retryAt: now(), sendingUntil: null })
     }
     await dbWrite([...ops.values()])
   })
-  schedule()
+  // In a page the sending starts with the first thing queued; elsewhere (tests) it is explicit.
+  if (resumed || typeof document === "undefined") schedule()
+  else void resumeOutbox()
 }
 
 // ---- Sending ----------------------------------------------------------------------------------
 
-// One attempt for each entry, on its relays without a final answer, all at once. Each comes back
-// with its next try set: after a backoff, or none once the rule is met.
-function attempt(entries: readonly Entry[], now: Clock): Promise<Entry[]> {
-  return Promise.all(
-    entries.map(async (entry) => {
-      const results = await send(entry.event, openRelays(entry))
-      const answers = { ...entry.answers }
-      for (const r of results) answers[r.url] = { ok: r.ok, code: r.code, reason: r.reason, at: now() }
-      const tried = { ...entry, answers, attempts: entry.attempts + 1 }
-      return { ...tried, retryAt: ruleMet(tried) ? null : now() + backoffMs(tried.attempts) }
-    }),
-  )
+// One round: picks entries under the lock (`choose`, among those not final and not leased) and
+// leases them, sends to their relays without a final answer, then merges the answers under the
+// lock again. Null when `wait` is false and another tab or call holds the lock.
+async function sendRound(choose: (open: Entry[], at: number) => Entry[], wait: boolean, now: Clock): Promise<Entry[] | null> {
+  const picked = await withLock(wait, async () => {
+    const at = now()
+    const open = (await readEntries()).filter((e) => openRelays(e).length > 0 && (e.sendingUntil ?? 0) <= at)
+    const chosen = choose(open, at)
+    await dbWrite(chosen.map((e) => putEntry({ ...e, sendingUntil: at + LEASE_MS })))
+    return chosen
+  })
+  if (!picked || picked.length === 0) return picked
+  const answers = await Promise.all(picked.map(async (entry) => ({ id: entry.id, results: await send(entry.event, openRelays(entry)) })))
+  return withLock(true, async () => {
+    const at = now()
+    const current = new Map((await readEntries()).map((e) => [e.id, e]))
+    const merged = answers.flatMap(({ id, results }) => {
+      const entry = current.get(id)
+      return entry ? [withAnswers(entry, results, at)] : []
+    })
+    await dbWrite(merged.map((e) => saveEntry(e, at)))
+    return merged
+  })
+}
+
+// The entry as stored now (relays may have been added meanwhile) with a round's answers. Due
+// again after a backoff, at once for relays not tried yet, or never once the rule is met.
+function withAnswers(entry: Entry, results: readonly PublishResult[], at: number): Entry {
+  const answers = { ...entry.answers }
+  for (const r of results) answers[r.url] = { ok: r.ok, code: r.code, reason: r.reason, at }
+  const tried: Entry = { ...entry, answers, attempts: entry.attempts + 1, sendingUntil: null }
+  const untried = tried.relays.some((url) => !answers[url])
+  return { ...tried, retryAt: untried ? at : ruleMet(tried) ? null : at + backoffMs(tried.attempts) }
 }
 
 // Sends the given entries now, due or not, and returns their state. Entries not in the outbox
 // (never queued, or done and gone) are left out.
 export async function deliverNow(ids: readonly string[], now: Clock = Date.now): Promise<DeliveryStatus[]> {
   const wanted = new Set(ids)
-  const statuses = await withLock(true, async () => {
-    const entries = (await readEntries()).filter((e) => wanted.has(e.id))
-    const tried = await attempt(
-      entries.filter((e) => openRelays(e).length > 0),
-      now,
-    )
-    await dbWrite(tried.map((e) => saveEntry(e, now())))
-    return [...new Map([...entries, ...tried].map((e) => [e.id, e])).values()].map(statusOf)
-  })
+  const sent = (await sendRound((open) => open.filter((e) => wanted.has(e.id)), true, now)) ?? []
+  const rest = (await readEntries()).filter((e) => wanted.has(e.id) && !sent.some((s) => s.id === e.id))
   schedule()
-  return statuses ?? []
+  return [...sent, ...rest].map(statusOf)
 }
 
 // Sends what is due, a round at a time, until nothing is due or another tab is sending.
 export async function flushDue(now: Clock = Date.now): Promise<void> {
   let busy = false
   for (;;) {
-    const sent = await withLock(false, async () => {
-      const at = now()
-      const due = (await readEntries()).filter((e) => e.retryAt !== null && e.retryAt <= at).slice(0, ROUND_SIZE)
-      if (due.length === 0) return false
-      const tried = await attempt(due, now)
-      await dbWrite(tried.map((e) => saveEntry(e, now())))
-      return true
-    })
+    const sent = await sendRound((open, at) => open.filter((e) => e.retryAt !== null && e.retryAt <= at).slice(0, ROUND_SIZE), false, now)
     busy = sent === null
-    if (!sent) break
+    if (!sent || sent.length === 0) break
   }
   schedule(busy ? BUSY_RETRY_MS : 0)
 }
 
 // Makes entries due now and sends them: every waiting one, or also the delivered ones still
-// missing copies (a start of the app). Missing copies older than a week are given up instead.
+// missing copies (a start of the app). Entries older than a week are given up instead.
 async function dueNow(withMissingCopies: boolean, now: Clock) {
   await withLock(true, async () => {
     const at = now()
     const ops = (await readEntries()).flatMap((e): WriteOp[] => {
+      if (finished(e, at)) return [{ store: "outbox", delete: e.id }]
       if (e.retryAt !== null) return e.retryAt > at ? [putEntry({ ...e, retryAt: at })] : []
-      if (!withMissingCopies || openRelays(e).length === 0) return []
-      return [finished(e, at) ? { store: "outbox", delete: e.id } : putEntry({ ...e, retryAt: at })]
+      return withMissingCopies && openRelays(e).length > 0 ? [putEntry({ ...e, retryAt: at })] : []
     })
     await dbWrite(ops)
   })
