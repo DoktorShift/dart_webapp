@@ -1,0 +1,81 @@
+PASS se: the menu's extra entries stand in their own card under "Mit anderen Geräten"
+PASS se: "Auf anderem Gerät fortsetzen" can be scrolled into reach, above Fertig
+PASS se: a finger's tap on it opens the handoff sheet
+PASS no page errors: menu se
+PASS land568: the menu's extra entries stand in their own card under "Mit anderen Geräten"
+PASS land568: "Auf anderem Gerät fortsetzen" can be scrolled into reach, above Fertig
+PASS land568: a finger's tap on it opens the handoff sheet
+PASS no page errors: menu land568
+PASS Zuschauen lassen at land568-de-light: the share button is in view without scrolling
+PASS Spieler verbinden at land568-de-light: the share button is in view without scrolling
+PASS Spieler verbinden at land568-de-light: the first seat row is in view without scrolling
+PASS Auf anderem Gerät fortsetzen at land568-de-light: the share button is in view without scrolling
+PASS no page errors: sheets land568-de-light
+PASS Let others watch at land548-en-dark: the share button is in view without scrolling
+PASS Connect players at land548-en-dark: the share button is in view without scrolling
+PASS Connect players at land548-en-dark: the first seat row is in view without scrolling
+PASS Continue on another device at land548-en-dark: the share button is in view without scrolling
+PASS no page errors: sheets land548-en-dark
+PASS Zuschauen lassen at se-de-light: the share button is in view without scrolling
+PASS Zuschauen lassen at se-de-light: the sheet shows all its words (nothing to scroll) (0 px hidden)
+PASS Spieler verbinden at se-de-light: the share button is in view without scrolling
+PASS Auf anderem Gerät fortsetzen at se-de-light: the share button is in view without scrolling
+PASS no page errors: sheets se-de-light
+PASS at 568x320 'Übergeben' and 'Ablehnen' stand beside the check code, both in view
+PASS while asked, the sheet (dismissible) shows its grabber
+PASS the taker shows an activity indicator with its wait
+PASS after the wait the taker says the other device has not answered, with the next step (lab: 19.9 s)
+PASS the check code stays on the taker meanwhile
+PASS 'Abbrechen' on the taker brings the writer's sheet back to its code
+PASS declined: the taker shows an empty state with 'Noch einmal anfragen'
+PASS 'Noch einmal anfragen' asks the writer again
+PASS while handing over, the locked sheet shows no grabber and no Fertig
+PASS without the other device's confirmation the game stays here, with 'Neuen Code zeigen'
+PASS no page errors: handoff states
+PASS done: the old device is on the Play tab with the word that the game went on, no tap needed
+PASS the game goes on on the other device
+PASS a link opened right after the handover does not save the game again
+PASS after a reload the old device offers no game to continue
+PASS the word about the handover is gone with the reload (it was for the moment)
+PASS no page errors: handoff done
+PASS at 548x320 one piece is a one-line bar button in the bar's blue, the result's actions all in view ({"height":44,"lines":1,"color":"rgb(37, 99, 235)"})
+PASS at 548x320 a stand-in piece could be registered through the bundle's registry (ok)
+PASS at 548x320 two pieces become one bar button with the count 2; neither piece shows inline
+PASS at 548x320 the sheet lists both pieces as their rows
+PASS at 548x320 tapping the live row closes the sheet and opens the seats
+PASS no page errors: result 548x320
+PASS at 568x320 one piece is a one-line bar button in the bar's blue, the result's actions all in view ({"height":44,"lines":1,"color":"rgb(37, 99, 235)"})
+PASS at 568x320 a stand-in piece could be registered through the bundle's registry (ok)
+PASS at 568x320 two pieces become one bar button with the count 2; neither piece shows inline
+PASS at 568x320 the sheet lists both pieces as their rows
+PASS at 568x320 tapping the live row closes the sheet and opens the seats
+PASS no page errors: result 568x320
+PASS '0 von 2 bestätigt' carries a neutral symbol, not the green check
+PASS '1 von 2 bestätigt' is still neutral
+PASS '2 von 2 bestätigt' shows the green check
+PASS no page errors: result status
+PASS a guest's result has no empty pieces wrapper taking room ({"children":0,"display":"none"})
+PASS a guest's result opens no connection (0 sockets)
+PASS no page errors: guest result
+FAIL at 568x320 the spectator sees the board and the current visit without scrolling (40 px of content below the edge)
+PASS no page errors: spectator landscape
+PASS while the board is asked, the phone shows activity with the words
+PASS a silent board is reported within about ten seconds (lab: 9.8 s)
+PASS after the board frees the seat, the game Mia confirmed stays among her games
+PASS the phone says the board disconnected it, with the next step
+PASS no page errors: phone states
+PASS a confirmed seat's row finds a correction made while the app was away and asks again
+PASS no page errors: correction found
+67/68 checks passed
+
+---- spectator scenario run again after correcting the check's measure (the frame's own bottom padding was counted as content) ----
+FAIL at 568x320 the spectator sees the board and the current visit without scrolling (40 px of content below the edge)
+PASS no page errors: spectator landscape
+1/2 checks passed
+exit 1
+
+---- spectator scenario run once more after correcting the measure again (the frame is the scroll area's last child, after the sticky bar) ----
+PASS at 568x320 the spectator sees the board and the current visit without scrolling (-8 px of content below the edge)
+PASS no page errors: spectator landscape
+2/2 checks passed
+exit 0
