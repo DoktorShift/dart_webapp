@@ -4,6 +4,7 @@ import { A_CONFIG, matchA, matchB } from "./storage-fixtures.ts"
 import { ANNA, at, resetStorage, saved } from "./storage-helpers.ts"
 import { dart, play } from "./helpers.ts"
 import { FakeNetwork } from "./support/fake-relay.ts"
+import { outboxTried } from "./support/outbox.ts"
 import { finalizeEvent, generateSecretKey, getPublicKey } from "nostr-core"
 import { relayClient } from "../lib/nostr/client.ts"
 import type { NostrEvent } from "../lib/nostr/types.ts"
@@ -60,6 +61,7 @@ test("showing a milestone: definition, evidence, award and the list, signed by t
   await device()
   const milestone = milestoneById("first-180")!
   assert.equal(await showMilestone(pubkey, milestone, await first180(), TEXTS, REASON), "done")
+  await outboxTried()
   assert.deepEqual(kinds(), [8, 1180, 10008, 30009])
   assert.ok(relays[0].events.every((e) => e.pubkey === pubkey))
 
@@ -78,6 +80,7 @@ test("showing a milestone: definition, evidence, award and the list, signed by t
 
   // Again (another tap, a second try): nothing new is signed or sent.
   assert.equal(await showMilestone(pubkey, milestone, await first180(), TEXTS, REASON), "done")
+  await outboxTried()
   assert.deepEqual(kinds(), [8, 1180, 10008, 30009])
 })
 
@@ -88,6 +91,7 @@ test("the former list is taken over with everything another app put in it", asyn
   const legacy = finalizeEvent({ kind: 30008, created_at: 1_790_000_000, content: "", tags: [["d", "profile_badges"], foreign, ["e", "5".repeat(64)], ["client", "other"]] }, secret) as NostrEvent
   relays[0].events.push(legacy)
   assert.equal(await showMilestone(pubkey, milestoneById("first-180")!, await first180(), TEXTS, REASON), "done")
+  await outboxTried()
   const [list] = published(10008)
   const [award] = published(8)
   assert.deepEqual(list.tags, [["a", `30009:${pubkey}:blueline:self:first-180:v1`], ["e", award.id], foreign, ["e", "5".repeat(64)], ["client", "other"]])
@@ -102,6 +106,7 @@ test("without any relay answering nothing is signed, kept or sent", async () => 
     relay.dropAll()
   }
   assert.equal(await showMilestone(pubkey, milestoneById("first-180")!, await first180(), TEXTS, REASON), "offline")
+  await outboxTried()
   assert.deepEqual(await storedBadgeEvents(pubkey), [])
   assert.deepEqual(relays.flatMap((r) => r.events), [])
 })
@@ -109,6 +114,7 @@ test("without any relay answering nothing is signed, kept or sent", async () => 
 test("a correction takes the evidence away; the deletion request takes the award back", async () => {
   await device()
   await showMilestone(pubkey, milestoneById("first-180")!, await first180(), TEXTS, REASON)
+  await outboxTried()
   const events = await storedBadgeEvents(pubkey)
   const [award] = await validAwards(events, pubkey)
   const evidence = readEvidence(events.find((e) => e.id === award.blueline?.evidence)!)
@@ -119,6 +125,7 @@ test("a correction takes the evidence away; the deletion request takes the award
   assert.equal(selfAwardHolds(award, evidence, await loadArchive(), anna), false)
 
   assert.equal(await requestDeletion(pubkey, [award], "Das Spiel wurde korrigiert."), "done")
+  await outboxTried()
   const [deletion] = published(5)
   assert.deepEqual(
     deletion.tags.filter((t) => t[0] === "e").map((t) => t[1]).sort(),
@@ -131,6 +138,7 @@ test("a correction takes the evidence away; the deletion request takes the award
 test("a second device finds the badges on relays, each once however often it is fetched", async () => {
   await device()
   await showMilestone(pubkey, milestoneById("first-180")!, await first180(), TEXTS, REASON)
+  await outboxTried()
   // Another app gave the player a badge, sent to both relays.
   const otherApp = generateSecretKey()
   const definition = finalizeEvent({ kind: 30009, created_at: 1_790_000_000, content: "", tags: [["d", "darts-fan"], ["name", "Darts-Fan"]] }, otherApp) as NostrEvent
@@ -175,6 +183,7 @@ test("corrected, then reached again: the old award is taken back, the new game i
   await device()
   const milestone = milestoneById("first-180")!
   await showMilestone(pubkey, milestone, await first180(), TEXTS, REASON)
+  await outboxTried()
   const [old] = await validAwards(await storedBadgeEvents(pubkey), pubkey)
 
   // A corrected to 177; a later game C has the real 180.
@@ -183,6 +192,7 @@ test("corrected, then reached again: the old award is taken back, the new game i
   const achieved = await first180()
   assert.equal(achieved.matchId, "match-c")
   assert.equal(await showMilestone(pubkey, milestone, achieved, TEXTS, REASON), "done")
+  await outboxTried()
 
   // One deletion request for the old award and its evidence, saying why; the definition stays.
   const [deletion] = published(5)
@@ -208,6 +218,7 @@ test("showing several at once writes the list once, the rarest first", async () 
   assert.equal(statuses.length, 9)
   const items = statuses.map(({ milestone, achieved }) => ({ milestone, achieved: achieved!, texts: { name: milestone.id, description: "" } }))
   assert.equal(await showMilestones(pubkey, items, REASON), "done")
+  await outboxTried()
   assert.equal(published(10008).length, 1)
   assert.equal(published(8).length, 9)
   assert.equal(published(30009).length, 9)

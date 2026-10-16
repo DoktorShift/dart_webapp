@@ -12,7 +12,7 @@ import { registerExportSection } from "@/lib/storage/export-sections"
 
 const screen = (load: () => Promise<{ default: ComponentType<ScreenProps> }>) => lazyScreen<ScreenProps>(load)
 
-registerSlotItem("result.actions", "badges.earned", lazyScreen<{ match: FinishedMatch }>(() => import("@/components/badges/earned-card")))
+registerSlotItem("result.actions", "badges.earned", lazyScreen<SlotListProps["result.actions"]>(() => import("@/components/badges/earned-card")))
 registerSlotItem("profile.rows", "badges.row", lazyScreen<Record<string, never>>(() => import("@/components/badges/profile-row")))
 registerSlotItem("profile.card", "badges.line", lazyScreen<{ pubkey: string; own: boolean }>(() => import("@/components/badges/profile-line")))
 

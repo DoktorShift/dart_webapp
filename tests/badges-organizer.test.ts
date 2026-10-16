@@ -2,6 +2,7 @@ import { after, beforeEach, test } from "node:test"
 import assert from "node:assert/strict"
 import { resetStorage } from "./storage-helpers.ts"
 import { FakeNetwork } from "./support/fake-relay.ts"
+import { outboxTried } from "./support/outbox.ts"
 import { finalizeEvent, generateSecretKey, getPublicKey } from "nostr-core"
 import { relayClient } from "../lib/nostr/client.ts"
 import type { NostrEvent } from "../lib/nostr/types.ts"
@@ -111,11 +112,13 @@ test("the plan: what was given counts, what no longer fits is stale", () => {
 test("issuing sends only what is missing, however often the end is processed", async () => {
   await importLocalKey(organizerKey)
   assert.deepEqual(await issueAwards(organizer, herbstcup, texts), { given: 6, known: 0 })
+  await outboxTried()
   const sent = () => relays[0].events.filter((e) => e.kind === 8)
   assert.equal(sent().length, 6)
   assert.equal(relays[0].events.filter((e) => e.kind === 30009).length, 3)
   // Processed again (a reload, a second device of the organizer after its sync): nothing new.
   assert.deepEqual(await issueAwards(organizer, herbstcup, texts), { given: 0, known: 6 })
+  await outboxTried()
   assert.equal(sent().length, 6)
   const [award] = sent()
   assert.deepEqual(award.tags.filter((t) => t[0] === "e" || t[0] === "occasion"), [["e", ENDED], ["occasion", TOURNAMENT]])
@@ -137,13 +140,16 @@ test("issuing sends only what is missing, however often the end is processed", a
 test("a correction: stale awards are withdrawn, the new ones given; a withdrawn award is gone for readers", async () => {
   await importLocalKey(organizerKey)
   await issueAwards(organizer, herbstcup, texts)
+  await outboxTried()
   // The final's result was corrected: Ben won.
   const corrected: BadgeOccasion = { ...herbstcup, places: herbstcup.places.map((p) => (p.pubkey === anna ? { ...p, place: 2 } : p.pubkey === ben ? { ...p, place: 1 } : p)) }
   const plan = await currentPlan(organizer, corrected)
   assert.ok(plan)
   assert.deepEqual(pairs(plan.stale), pairs([{ badge: "tournament-winner", recipient: anna }, { badge: "tournament-finalist", recipient: ben }]))
   await withdrawAwards(organizer, plan.stale, "Ergebnis korrigiert")
+  await outboxTried()
   assert.deepEqual(await issueAwards(organizer, corrected, texts), { given: 2, known: 4 })
+  await outboxTried()
   const stop = registerIssuerCheck("tournament", { mayIssue: async () => true })
   try {
     const annas = await validAwards(relays[0].events, anna)
@@ -158,6 +164,7 @@ test("a correction: stale awards are withdrawn, the new ones given; a withdrawn 
 test("a recognition: its own badge with the issuer's words as evidence, valid for its recipient", async () => {
   await importLocalKey(organizerKey)
   const award = await giveRecognition(organizer, carla, { name: "Helferin des Abends", description: "Hat den Clubabend möglich gemacht.", note: "Carla hat den ganzen Abend die Boards betreut." })
+  await outboxTried()
   const [shown] = await validAwards(relays[1].events, carla)
   assert.equal(shown.award.id, award.id)
   assert.equal(shown.name, "Helferin des Abends")
