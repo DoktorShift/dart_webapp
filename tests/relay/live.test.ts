@@ -129,7 +129,12 @@ test("a spectator replays the board's newest snapshot; without the match key not
   // The founding and every snapshot are encrypted: names and throws are not on the relay in the clear.
   const stored = await nostr.query(follow.matchFilters(link.match), [relay.url])
   assert.ok(stored.events.length >= 2)
-  assert.ok(!JSON.stringify(stored.events).includes("Mia"))
+  // Names only ever inside ciphertext: no tag carries one, and every content is base64 (a word
+  // search in the ciphertext itself would fail by chance now and then).
+  for (const event of stored.events) {
+    assert.ok(!JSON.stringify(event.tags).includes("Mia"))
+    assert.match(event.content, /^[A-Za-z0-9+/]+=*$/)
+  }
   const blind = watcher({ match: link.match, key: null, relays: link.relays })
   await until("the founding as sealed", () => blind.get()?.problem === "sealed")
 })

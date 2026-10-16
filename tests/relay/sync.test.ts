@@ -111,7 +111,9 @@ test("games reach both relays as opaque encrypted records that nak verifies but 
       assert.equal(r.kind, 30078)
       assert.deepEqual(r.tags.map((t) => t[0]), ["d"])
       assert.match(r.tags[0][1], /^[0-9a-f]{64}$/)
-      for (const word of ["Anna", "Ben", "game-1", "301", "match"]) assert.ok(!r.content.includes(word), word)
+      // Ciphertext only: base64 of a NIP-44 payload. (A word search in the content itself would fail
+      // by chance now and then: base64 can spell "Ben".)
+      assert.match(r.content, /^[A-Za-z0-9+/]+=*$/)
     }
     assert.equal(await runNak(["verify"], { input: `${records.map((r) => JSON.stringify(r)).join("\n")}\n` }), "")
     // nak itself can open the data key record with the profile's key: it is NIP-44 to the profile.
