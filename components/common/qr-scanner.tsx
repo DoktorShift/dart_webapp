@@ -76,6 +76,7 @@ export function QRScanner({
   manualLabel,
   manualPlaceholder,
   inputMode = "url",
+  typeFirst = false,
   className,
 }: {
   onResult: (text: string, source: "camera" | "typed") => ScanVerdict | Promise<ScanVerdict>
@@ -83,6 +84,9 @@ export function QRScanner({
   manualLabel?: string
   manualPlaceholder?: string
   inputMode?: "url" | "text" | "numeric"
+  // The person chose to type the code: the field is focused (and so scrolled into view), and the
+  // camera waits for "Code scannen" even where it is allowed.
+  typeFirst?: boolean
   className?: string
 }) {
   const t = useT()
@@ -93,6 +97,7 @@ export function QRScanner({
   const runRef = useRef(0)
   const resumeRef = useRef(false)
   const rootRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   // Whether the camera is on or on its way; read by the visibility handlers below.
   const liveRef = useRef(false)
   const onResultRef = useRef(onResult)
@@ -180,7 +185,7 @@ export function QRScanner({
       ?.query({ name: "camera" as PermissionName })
       .then((status) => {
         if (cancelled) return
-        if (status.state === "granted") start()
+        if (status.state === "granted" && !typeFirst) start()
         else if (status.state === "denied") setState("denied")
       })
       .catch(() => {
@@ -190,7 +195,17 @@ export function QRScanner({
       cancelled = true
       stop()
     }
-  }, [start, stop])
+  }, [start, stop, typeFirst])
+
+  // Typing first: the field is focused, and kept in view while the camera card above it settles
+  // (its state arrives a moment later and changes its height).
+  useEffect(() => {
+    if (typeFirst) inputRef.current?.focus({ preventScroll: true })
+  }, [typeFirst])
+  useEffect(() => {
+    const input = inputRef.current
+    if (typeFirst && input && input === document.activeElement) input.scrollIntoView({ block: "center" })
+  }, [typeFirst, state])
 
   // The camera is never on while nobody can see the scanner: a hidden page, another tab of the
   // app (tabs stay mounted, display: none) or a screen pushed over this one.
@@ -331,6 +346,7 @@ export function QRScanner({
         <div className="flex items-center gap-2 rounded-2xl border border-border bg-card py-1 pl-4 pr-1">
           <input
             id={inputId}
+            ref={inputRef}
             value={typed}
             onChange={(event) => {
               setTyped(event.target.value)

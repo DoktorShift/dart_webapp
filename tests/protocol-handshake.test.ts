@@ -47,12 +47,17 @@ test("a pairing lasts at most ten minutes", () => {
 test("pairing steps refuse anything out of order or from elsewhere", () => {
   let s: PairingSession = sessionNew()
   assert.equal(applyPairingMessage(s, peer, { t: "hello", sid: "cd".repeat(16), device: "X" }, NOW).error?.reason, "session_mismatch")
+  // Before any device answered, an abort comes from whoever read the announce: it ends nothing.
+  const outsider = applyPairingMessage(s, peer, { t: "abort", sid: SID, reason: "declined" }, NOW)
+  assert.equal(outsider.error?.reason, "out_of_order")
+  assert.deepEqual(outsider.session, s)
   assert.equal(applyPairingMessage(s, peer, { t: "accept", sid: SID, device: "X" }, NOW).error?.reason, "out_of_order")
   assert.equal(confirmPairingHere(s, NOW).error?.reason, "out_of_order")
   s = applyPairingMessage(s, peer, { t: "hello", sid: SID, device: "iPhone" }, NOW).session
   assert.equal(s.step, "confirm")
   // The same hello again changes nothing.
   assert.deepEqual(applyPairingMessage(s, peer, { t: "hello", sid: SID, device: "iPhone" }, NOW).session, s)
+  assert.equal(applyPairingMessage(s, getPublicKey(generateSecretKey()), { t: "abort", sid: SID, reason: "declined" }, NOW).error?.reason, "session_taken")
   assert.equal(applyPairingMessage(s, peer, { t: "abort", sid: SID, reason: "declined" }, NOW).session.step, "aborted")
   assert.equal(confirmPairingHere(s, NOW + 601).session.step, "expired")
 

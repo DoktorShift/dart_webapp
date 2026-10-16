@@ -10,12 +10,13 @@
 export type Feature = "profile" | "payments" | "live" | "sync" | "clubs" | "badges" | "devices" | "tournaments"
 
 // What an area can't work without: everything but live games and payments builds on the profile
-// (its session, keys and relays), so with the profile off they are off too.
+// (its session, keys and relays), so with the profile off they are off too. Devices also carry
+// the sync area's data key, device list record and history pull to the new device.
 const REQUIRES: Partial<Record<Feature, readonly Feature[]>> = {
   sync: ["profile"],
   clubs: ["profile"],
   badges: ["profile"],
-  devices: ["profile"],
+  devices: ["profile", "sync"],
   tournaments: ["profile"],
 }
 

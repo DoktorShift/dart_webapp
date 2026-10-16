@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState, useSyncExternalStore, type ReactNode 
 import { CircleDot, Hourglass, Maximize2, Pause, Trophy, WifiOff, X } from "lucide-react"
 import { ClockScoreboard, CricketScoreboard, X01Scoreboard } from "@/components/game/scoreboards"
 import { slotLabel } from "@/components/game/visit-panel"
-import { Waiting } from "@/components/live/waiting"
+import { Waiting } from "@/components/common/waiting"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { LIVE_TEXTS } from "@/lib/i18n/features/live.screens"
 import { Group } from "@/components/ui/group"

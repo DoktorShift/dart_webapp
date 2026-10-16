@@ -127,6 +127,17 @@ export async function markSyncedAtBirth(pubkey: string, at: number) {
   if (meta.lastSync === null) await kvSet(META_ID, { ...meta, lastSync: at, state: "complete" })
 }
 
+// A device that gets the profile from another one syncs under the id that one knows it by
+// (lib/devices/pairing.ts), so both name it alike in the profile's device list. Kept before the
+// profile signs in here, so the first sync already runs under it; a device that synced the
+// profile before keeps its id, and another profile signed in here keeps its sync state.
+export async function adoptDeviceId(pubkey: string, device: string) {
+  const signedIn = getSession()
+  if (signedIn && signedIn.pubkey !== pubkey) return
+  const meta = await syncMeta(pubkey)
+  if (meta.state === null) await kvSet(META_ID, { ...meta, device })
+}
+
 async function loadCopies(pubkey: string): Promise<Copies> {
   const stored = await kvGet<{ pubkey: string; copies: Copies }>(COPIES_ID)
   return stored?.pubkey === pubkey ? stored.copies : {}

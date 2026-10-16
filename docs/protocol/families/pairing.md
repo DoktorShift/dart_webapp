@@ -67,7 +67,18 @@ Flüchtig, NIP-44 zwischen den Einmalschlüsseln, Empfänger im `p`-Tag. Nur die
 
 Ablauf QR: neues Gerät zeigt `P1`-QR → vorhandenes Gerät scannt, sendet `hello` → beide zeigen die Prüfkennung → neues Gerät bestätigt und sendet `accept` → vorhandenes Gerät bestätigt → `package` (wiederholt bis `ack`) → `ack` → beide fertig. Code-Weg: zuerst `announce` unter `x` = lookup, das vorhandene Gerät prüft deren MAC (`checkAnnounce`), danach wie oben mit MAC in `hello`.
 
-`applyPairingMessage` und `confirmPairingHere` führen den Zustand (`waiting` → `confirm` → `transfer` → `done`, oder `aborted` / `expired`) rein funktional; `lib/devices` speichert ihn.
+`applyPairingMessage` und `confirmPairingHere` führen den Zustand (`waiting` → `confirm` → `transfer` → `done`, oder `aborted` / `expired`) rein funktional; `lib/devices` speichert ihn. Ein `abort` gilt nur vom Gegenüber: Solange das neue Gerät noch auf eine Antwort wartet, kennt jeder Mitleser seine Ankündigung, deshalb wird ein `abort` dann abgelehnt (`out_of_order`).
+
+## Profilpaket
+
+`data` der `package`-Nachricht ([`lib/recovery/package.ts`](../../../lib/recovery/package.ts), dasselbe Paket steckt verschlüsselt in der Sicherungsdatei und im Passkey-Paket):
+
+```
+{ v: 1, pubkey, access: { kind: "local", key } | { kind: "nip07" | "nip46" | "nip55" },
+  dataKey?: { key, created, event }, events: [<Relay-Liste 10002>, <Metadaten 0>] }
+```
+
+`access.kind` „local“ trägt den Profilschlüssel; ein Profil in einer Signer-App trägt keinen Schlüssel, das neue Gerät verbindet seinen eigenen Signer. `dataKey` ist der Datenschlüssel der privaten Datensatze samt seinem signierten Datensatz ([private-records.md](private-records.md)); `events` sind die eigenen ersetzbaren Events, wie das sendende Gerät sie kennt, damit das neue Gerät Name und Relays sofort hat. Das empfangende Gerät prüft jede Signatur und dass der Schlüssel zum `pubkey` gehört, bevor es etwas behält. Name und Relay-Liste werden zuerst weggelassen, wenn das Paket sonst nicht in die Nachricht passt. Das neue Gerät zeigt auf beiden Wegen zuerst den QR-Link und den eintippbaren Code zugleich (zwei Sitzungen auf einem Einmalschlüssel; die zuerst beantwortete gilt, die andere schließt).
 
 ## Ablehnungen
 

@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { ArrowRightLeft, Clock } from "lucide-react"
+import { CheckCode } from "@/components/common/check-code"
 import { InlineStatus } from "@/components/common/inline-status"
-import { CheckCode } from "@/components/live/board-sheets"
 import { readPayload } from "@/components/live/link-payload"
-import { Waiting } from "@/components/live/waiting"
+import { Waiting } from "@/components/common/waiting"
 import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { LIVE_TEXTS } from "@/lib/i18n/features/live.screens"
@@ -63,7 +63,7 @@ export default function TakeoverScreen({ params }: ScreenProps) {
     return (
       <div className="mt-2 grid gap-4">
         <p className="text-[1.0625rem] leading-snug text-muted-foreground">{s.asking}</p>
-        <CheckCode code={take.checkCode} />
+        <CheckCode code={take.checkCode} label={s.checkCode} />
         <Waiting className="py-1">{s.waiting}</Waiting>
         {take.unanswered && <InlineStatus>{s.unanswered}</InlineStatus>}
         <Button variant="ghost" onClick={() => nav.pop()} className="h-11 w-full rounded-xl text-[1.0625rem] text-primary hover:bg-primary/10 hover:text-primary">

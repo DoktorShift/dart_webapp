@@ -1,12 +1,12 @@
 import type { SavedMatch } from "../game/types.ts"
+import { openChannel, repeat, type ChannelFlow } from "../nostr/channel.ts"
 import { nowSeconds } from "../nostr/time.ts"
 import type { HandoffLink, HandoffMessage } from "../protocol/handoff.ts"
 import { encodeHandoffLink, handoffPlaintext, handoffTemplate, MAX_HANDOFF_PACKAGE_BYTES, parseHandoffEvent } from "../protocol/handoff.ts"
-import { MAX_HANDSHAKE_SECONDS } from "../protocol/kinds.ts"
+import { KIND_EPHEMERAL, MAX_HANDSHAKE_SECONDS } from "../protocol/kinds.ts"
 import { packageHash, pairingCheckCode } from "../protocol/pairing.ts"
 import { utf8Length } from "../protocol/schema.ts"
 import { adoptBoard, handedOver, packBoard, seatInfo } from "./board.ts"
-import { openChannel, repeat, type ChannelFlow } from "./channel.ts"
 import { newKey, toHex } from "./keys.ts"
 
 // "Auf anderem Gerät fortsetzen" (docs/protocol/families/session-authorization.md,
@@ -17,7 +17,7 @@ import { newKey, toHex } from "./keys.ts"
 // is made; from then on the other device may have the match at any moment, so the screen keeps
 // the offer open until "done" or the wait for it runs out.
 
-const HANDOFF_FLOW: ChannelFlow<HandoffMessage> = { plaintext: handoffPlaintext, template: handoffTemplate, parse: parseHandoffEvent }
+const HANDOFF_FLOW: ChannelFlow<HandoffMessage> = { kind: KIND_EPHEMERAL, plaintext: handoffPlaintext, template: handoffTemplate, parse: parseHandoffEvent }
 
 // How long the writing device waits for the other one to confirm the package.
 const DELIVERY_WAIT_MS = 30_000

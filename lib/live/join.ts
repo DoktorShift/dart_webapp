@@ -1,3 +1,4 @@
+import { openChannel, repeat, type Channel } from "../nostr/channel.ts"
 import { nowSeconds, syncClock } from "../nostr/time.ts"
 import type { Signer } from "../nostr/types.ts"
 import type { BoardLink, BoardMessage } from "../protocol/board.ts"
@@ -10,7 +11,6 @@ import { createdAtAfter, type SignedEvent } from "../protocol/tags.ts"
 import { archiveFinished, unarchive } from "../storage/archive.ts"
 import { listPlayers } from "../storage/players.ts"
 import { deliverNow, enqueue } from "../sync/outbox.ts"
-import { openChannel, repeat, type Channel } from "./channel.ts"
 import { resultGame } from "./content.ts"
 import type { MatchSource } from "./follow.ts"
 import { fromHex, keyOf, newKey, sealToMatch, toHex, type MatchKey } from "./keys.ts"
@@ -99,7 +99,7 @@ export function visitBoard(link: BoardLink, onChange: (visit: BoardVisit) => voi
     clearTimeout(waiting)
   }
   // Sends until the board answers, or says it stayed silent.
-  const ask = (send: (to: Channel<BoardMessage>) => Promise<void>) => {
+  const ask = (send: (to: Channel<BoardMessage>) => Promise<unknown>) => {
     stop()
     const current = channel
     if (!current) return

@@ -22,8 +22,8 @@ Dieses Dokument ist der Vertrag für alle Umsetzungsschritte. Abweichungen brauc
 | `lib/protocol/` | BlueLine-Kinds, Tags, Inhaltsschemas und Prüfer je Eventfamilie | `lib/nostr` (Typen), `lib/game` |
 | `lib/profile/` | Sitzung, Identität, Profilmetadaten, Avatar, Profilansichten-Daten | `lib/nostr`, `lib/storage` |
 | `lib/sync/` | Warteschlange (Outbox), private Historie, Selbstheilung, Diagnose | `lib/nostr`, `lib/storage`, `lib/profile` |
-| `lib/devices/` | Gerätekopplung per QR, Link und Code | `lib/nostr`, `lib/profile` |
-| `lib/recovery/` | Sicherungsdatei (NIP-49), Passkey-Paket | `lib/nostr`, `lib/profile`, `lib/storage` |
+| `lib/devices/` | Gerätekopplung per QR, Link und Code | `lib/nostr`, `lib/profile`; seit dem Nachtrag vom 16. Oktober 2026 auch `lib/protocol`, `lib/storage`, `lib/sync` und `lib/recovery` |
+| `lib/recovery/` | Sicherungsdatei (NIP-49), Passkey-Paket | `lib/nostr`, `lib/profile`, `lib/storage`; seit dem Nachtrag vom 16. Oktober 2026 auch `lib/protocol` und `lib/sync` |
 | `lib/live/` | Zuschauen, Spieler am Board verbinden, Schreiberwechsel, Ergebnisbestätigung | `lib/nostr`, `lib/protocol`, `lib/game`; seit dem Nachtrag vom 6. Oktober 2026 auch `lib/storage` und `lib/profile/vault.ts`, seit dem 16. Oktober 2026 `lib/sync/outbox.ts` |
 | `lib/clubs/` | Clubs, Rollen, Einladungen, Saisons, Tabellen | `lib/protocol`, `lib/nostr`; seit dem 16. Oktober 2026 `lib/sync/outbox.ts` (alle Club-Events gehen durch die eine Outbox) |
 | `lib/tournaments/` | `engine.ts` (rein, ohne Netz) und Turnierdaten | `lib/protocol`, `lib/nostr` |
@@ -36,6 +36,8 @@ Dateien unter `lib/`, die in Node getestet werden, verwenden relative Importe mi
 **Nachtrag 6. Oktober 2026 (Review P4 Runde 1, Entscheidung a):** `lib/live` darf zusätzlich `lib/storage` und `lib/profile/vault.ts` importieren. Ein Board hält seine Datensätze bis zur sicheren Speicherung und die Plätze seiner Spieler im Store „pending“ (`lib/storage/db.ts`), ein bestätigtes Ergebnis wandert in das eigene Archiv des Spielers (`lib/storage/archive.ts`), und die Schlüssel eines Spiels liegen versiegelt mit dem Geräteschlüssel (`lib/profile/vault.ts`), weil §4 Klartextschlüssel verbietet. Zwei Folgen: Wer sich abmeldet (`forgetVaultKey`), kann die Schlüssel eines laufenden Live-Spiels nach einem Neustart nicht mehr öffnen, das Spiel ist dann einfach nicht mehr live. Und die eigene Outbox des Boards verdoppelt, was die generische Outbox von `lib/sync` (P3a.02) übernehmen soll; sobald es sie gibt, zieht das Board dorthin um, statt zwei zu halten.
 
 **Nachtrag 16. Oktober 2026 (Zusammenführung Welle 3):** `lib/live` darf `lib/sync/outbox.ts` importieren; das Board hält keine eigene Warteschlange mehr, alle seine Datensätze und der Stand gehen durch die eine Outbox (Reihenfolge je Eintrag über `after`, Endgültigkeit nach deren Regel).
+
+**Nachtrag 16. Oktober 2026 (Review P2.03/P2.04 Runde 1):** `lib/devices` importiert `lib/protocol` (Kopplungsprotokoll, Kinds, Links, private Datensätze), `lib/storage` (Store „pending“ für den laufenden Vorgang), `lib/sync` (Datenschlüssel, Geräte-ID des Abgleichs, Outbox, versiegelte Datensätze für die Geräteliste) und `lib/recovery` (das Profilpaket `package.ts`, den Sicherungsstand `status.ts`). `lib/recovery` importiert `lib/protocol` (Tag-Prüfungen, Kinds) und `lib/sync` (Datenschlüssel, Outbox), aber nie `lib/devices`: Die Abhängigkeit geht nur in eine Richtung. Dass eine gespeicherte Sicherungsdatei in der Geräteliste vermerkt wird, verbindet die Oberfläche (`components/devices`), nicht die Module.
 
 ## 3 Speicherung
 

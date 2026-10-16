@@ -1,13 +1,13 @@
+import { openChannel, type ChannelFlow } from "../nostr/channel.ts"
 import { loadCore } from "../nostr/core.ts"
 import { nowSeconds } from "../nostr/time.ts"
 import type { BoardMessage } from "../protocol/board.ts"
 import { boardPlaintext, boardTemplate, checkClaim, checkJoin, encodeBoardLink, parseBoardEvent } from "../protocol/board.ts"
-import { MAX_BOARD_CODE_SECONDS } from "../protocol/kinds.ts"
+import { KIND_EPHEMERAL, MAX_BOARD_CODE_SECONDS } from "../protocol/kinds.ts"
 import type { SeatHolder } from "../protocol/match-state.ts"
 import type { Reason } from "../protocol/reasons.ts"
 import type { SignedEvent } from "../protocol/tags.ts"
 import { seatInfo, seatPlayer } from "./board.ts"
-import { openChannel, type ChannelFlow } from "./channel.ts"
 import { newKey, toHex } from "./keys.ts"
 
 // The board side of "Spieler verbinden" (docs/protocol/families/board-join.md): a board code
@@ -16,7 +16,7 @@ import { newKey, toHex } from "./keys.ts"
 // and the match key, or says why not. No one here confirms anything: the seat is the player's
 // own choice, and the board can free it again.
 
-export const BOARD_FLOW: ChannelFlow<BoardMessage> = { plaintext: boardPlaintext, template: boardTemplate, parse: parseBoardEvent }
+export const BOARD_FLOW: ChannelFlow<BoardMessage> = { kind: KIND_EPHEMERAL, plaintext: boardPlaintext, template: boardTemplate, parse: parseBoardEvent }
 
 export interface Seating {
   // The board code's payload (B1…) and when it runs out (unix seconds).

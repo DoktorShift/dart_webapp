@@ -27,3 +27,8 @@ test("an area whose profile is off is off, however it is named", () => {
   assert.deepEqual(on("sync,clubs,badges,devices,tournaments"), [])
   assert.deepEqual(on("profile,clubs,tournaments"), ["profile", "clubs", "tournaments"])
 })
+
+test("devices also need sync: they hand over its data key and pull the history", () => {
+  assert.deepEqual(on("profile,devices"), ["profile"])
+  assert.deepEqual(on("profile,sync,devices"), ["profile", "sync", "devices"])
+})

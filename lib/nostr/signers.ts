@@ -146,6 +146,24 @@ export async function createLocalKey(): Promise<{ secretKey: Uint8Array; pubkey:
   return { secretKey, pubkey: core.getPublicKey(secretKey) }
 }
 
+// A key made on this device together with the signer that uses it: the one-time keys of a
+// handshake (./channel.ts), a live match's own keys (lib/live).
+export interface LocalKey {
+  secret: Uint8Array
+  pubkey: string
+  signer: Signer
+}
+
+export async function newLocalKey(): Promise<LocalKey> {
+  const { secretKey } = await createLocalKey()
+  return localKeyOf(secretKey)
+}
+
+export async function localKeyOf(secret: Uint8Array): Promise<LocalKey> {
+  const signer = await createLocalSigner(secret)
+  return { secret, pubkey: await signer.getPublicKey(), signer }
+}
+
 // A signer for a key kept by the app itself (a local profile).
 export async function createLocalSigner(secretKey: Uint8Array): Promise<Signer> {
   if (!(secretKey instanceof Uint8Array) || secretKey.length !== 32) throw new SignerError("invalid", "a secret key has 32 bytes")
