@@ -7,7 +7,8 @@ import { replay } from "../lib/game/engine.ts"
 import type { SavedMatch } from "../lib/game/types.ts"
 import { agreementFor, resultFor } from "../lib/live/content.ts"
 import { followMatch, type Followed } from "../lib/live/follow.ts"
-import { holdsSeat, ownVerdict, type JoinedMatch } from "../lib/live/join.ts"
+import { giveVerdict, holdsSeat, ownVerdict, type JoinedMatch } from "../lib/live/join.ts"
+import { createLocalSigner } from "../lib/nostr/signers.ts"
 import { adjustClock, createdAt } from "../lib/nostr/time.ts"
 import { MAX_SESSION_SECONDS } from "../lib/protocol/match.ts"
 import { reduceMatch, type MatchStateP } from "../lib/protocol/match-state.ts"
@@ -16,8 +17,9 @@ import type { SignedEvent } from "../lib/protocol/tags.ts"
 import { config, dart, play } from "./helpers.ts"
 
 // Whose verdict a seat's verdict is, as the phone decides it (ownVerdict): its own key's, for
-// as long as the result it names stands, whatever happens to the seat afterwards. A phone whose
-// clock runs off still reads the match by the app's corrected clock (lib/nostr/time.ts).
+// as long as the result it names stands, whatever happens to the seat afterwards. A changed
+// verdict wins over the seat's earlier one, and a phone whose clock runs off still reads the match
+// by the app's corrected clock (lib/nostr/time.ts).
 
 const network = new FakeNetwork()
 Object.assign(globalThis, { WebSocket: network.WebSocket })
@@ -93,3 +95,29 @@ test("a match signed by the corrected clock is read by it: a device whose clock 
   assert.ok(seen.at(-1)?.state, "the board's own follower sees its founding")
 })
 
+test("a changed verdict wins over the seat's earlier one, even when both fall into the same second", async () => {
+  // The phone's clock runs ten minutes behind the board's: every verdict is dated by what it builds on.
+  adjustClock(new Date(Date.now() - 600_000))
+  const T = Math.floor(Date.now() / 1000) - 60
+  for (let i = 0; i < 16; i++) {
+    const [board, scorer, player] = [generateSecretKey(), generateSecretKey(), generateSecretKey()]
+    const opened = finalizeEvent(buildRecord("match.session", { sv: 1, session: getPublicKey(scorer), from: T, until: T + MAX_SESSION_SECONDS, agreement: { ...agreementFor(c), visibility: "public" } }, { created_at: T }), board) as SignedEvent
+    const on = <K extends RecordType>(by: Uint8Array, type: K, content: ContentOf<K>, at: number) => finalizeEvent(buildRecord(type, content, { created_at: T + at, root: opened.id }), by) as SignedEvent
+    relay.events.push(
+      opened,
+      on(board, "match.seat", { seat: 0, player: { pubkey: getPublicKey(player), profile: true } }, 1),
+      on(scorer, "match.result", resultFor(game, replay(c, game.throws), { sv: 1, auth: opened, finishedAt: T + 10 }).content, 10),
+    )
+    const joined: JoinedMatch = { match: opened.id, relays: [URL], seat: 0, profile: getPublicKey(player), key: null, guest: null, archived: null }
+    const signer = await createLocalSigner(player)
+    const read = () => {
+      const reduced = reduceMatch(relay.events.filter((e) => e.id === opened.id || e.tags.some((t) => t[0] === "e" && t[1] === opened.id)), opened.id)
+      assert.ok(reduced.state)
+      return reduced.state
+    }
+    assert.equal(await giveVerdict(joined, read(), "dispute", signer), "delivered")
+    assert.equal(ownVerdict(joined, read())?.verdict, "dispute")
+    assert.equal(await giveVerdict(joined, read(), "confirm", signer), "delivered")
+    assert.equal(ownVerdict(joined, read())?.verdict, "confirm", `trial ${i + 1}`)
+  }
+})

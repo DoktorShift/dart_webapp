@@ -271,8 +271,9 @@ export const ownVerdict = (joined: JoinedMatch, state: MatchStateP) => {
 }
 
 // The seat's verdict on the current result, signed by the profile (`profile`) or the guest's key.
-// Dated after the result and the seat it rests on, whatever this device's clock says, so every
-// reader replays it after them. "delivered" once a relay has it; "waiting" while the outbox
+// Dated after the result, the seat it rests on and the seat's earlier verdict, whatever this
+// device's clock says, so every reader replays it after them: a changed mind (confirm after a
+// dispute) always wins, even within the same second. "delivered" once a relay has it; "waiting" while the outbox
 // (lib/sync) keeps trying, and the match shows the verdict once it lands; "refused" when every
 // relay refused it for good.
 export async function giveVerdict(joined: JoinedMatch, state: MatchStateP, verdict: "confirm" | "dispute", profile: Signer | null): Promise<DeliveryState> {
@@ -280,7 +281,7 @@ export async function giveVerdict(joined: JoinedMatch, state: MatchStateP, verdi
   const result = state.result
   if (!signer || !result) throw new Error("no result to give a verdict on")
   const author = await signer.getPublicKey()
-  const at = createdAtAfter(nowSeconds(), result.at, state.seats[joined.seat]?.since ?? 0)
+  const at = createdAtAfter(nowSeconds(), result.at, state.seats[joined.seat]?.since ?? 0, state.confirmations[joined.seat]?.at ?? 0)
   const template = buildRecord("match.confirm", { result: result.event, verdict, seat: joined.seat }, { created_at: at, root: joined.match })
   const event = await signer.signEvent(joined.key ? await sealToMatch(template, author, joined.key) : template)
   await enqueue([{ event, relays: joined.relays }], { rule: "any" })
