@@ -281,7 +281,7 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
     finished: "Tournament finished",
     yourPlace: (place, placeTo) => `Your place: ${place === placeTo ? ordinal(place) : `${ordinal(place)}–${ordinal(placeTo)}`}`,
     champion: (name) => `Champion: ${name}`,
-    badgeHint: "Your badge appears in your profile once the organizer awards it.",
+    badgeHint: "You’ll find your badge under Profile\u00a0›\u00a0Badges once the organizer awards it.",
     paused: "Paused",
     pausedText: "The organizer has paused the tournament. It goes on here.",
     cancelled: "Cancelled",

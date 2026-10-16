@@ -9,11 +9,11 @@ import { InlineStatus } from "@/components/common/inline-status"
 import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { BadgeIcon } from "@/components/badges/badge-icon"
-import { awardTexts, milestoneOf, milestoneTexts, problemText, progressText } from "@/components/badges/texts"
-import { awardVoided, selfAwardFor, useMilestones, useOwnBadges } from "@/components/badges/use-badges"
+import { awardTexts, milestoneOf, milestoneTexts, progressText } from "@/components/badges/texts"
+import { awardVoided, selfAwardFor, useChange, useMilestones, useOwnBadges } from "@/components/badges/use-badges"
 import { PROFILE_SCREENS } from "@/components/profile/screens"
 import { useOwnProfile, usePublicProfile, type OwnProfile } from "@/components/profile/use-profile"
-import { hideAwards, requestDeletion, showAward, showMilestone, type Outcome } from "@/lib/badges/actions"
+import { hideAwards, requestDeletion, showAward, showMilestone } from "@/lib/badges/actions"
 import type { ValidAward } from "@/lib/badges/awards"
 import { milestoneById } from "@/lib/badges/catalog"
 import type { Achievement } from "@/lib/badges/milestones"
@@ -105,25 +105,6 @@ function Advanced({ award }: { award: ValidAward }) {
       </DisclosureRow>
     </Group>
   )
-}
-
-// Runs one change and says what went wrong, in place.
-function useChange() {
-  const tx = useAreaT(BADGES_TEXTS)
-  const [busy, setBusy] = useState(false)
-  const [problem, setProblem] = useState<string | null>(null)
-  const run = async (change: () => Promise<Outcome>) => {
-    setBusy(true)
-    setProblem(null)
-    try {
-      if ((await change()) === "offline") setProblem(problemText(tx, "offline"))
-    } catch (error) {
-      setProblem(problemText(tx, error))
-    } finally {
-      setBusy(false)
-    }
-  }
-  return { busy, problem, run }
 }
 
 // Before a change, the profile's list is looked up again (like editing the profile).

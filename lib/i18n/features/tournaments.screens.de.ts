@@ -293,7 +293,7 @@ export const tournamentsScreensDe = {
     finished: "Turnier beendet",
     yourPlace: (place: number, placeTo: number) => `Dein Platz: ${place === placeTo ? place : `${place}–${placeTo}`}`,
     champion: (name: string) => `Turniersieger: ${name}`,
-    badgeHint: "Deine Auszeichnung erscheint in deinem Profil, sobald die Leitung sie vergibt.",
+    badgeHint: "Deine Auszeichnung findest du unter Profil\u00a0›\u00a0Auszeichnungen, sobald die Leitung sie vergibt.",
     paused: "Unterbrochen",
     pausedText: "Die Turnierleitung hat das Turnier unterbrochen. Hier geht es weiter.",
     cancelled: "Abgesagt",

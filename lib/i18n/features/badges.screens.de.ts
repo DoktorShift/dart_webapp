@@ -57,6 +57,12 @@ export const badgesScreensDe = {
     already: "Schon in deinem Profil.",
   },
 
+  // A tournament's page, once its organizer gave the player a badge (components/badges/occasion-award.tsx).
+  occasion: {
+    given: (badge: string) => `Deine Auszeichnung „${badge}“ liegt unter Profil\u00a0›\u00a0Auszeichnungen.`,
+    shown: (badge: string) => `Deine Auszeichnung „${badge}“ steht auf deiner Profilkarte.`,
+  },
+
   // The badges screen.
   list: {
     row: "Auszeichnungen",

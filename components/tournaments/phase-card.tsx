@@ -9,6 +9,7 @@ import { useAreaT, useT } from "@/components/i18n-provider"
 import { formatDateTime } from "@/lib/i18n"
 import { TOURNAMENTS_TEXTS } from "@/lib/i18n/features/tournaments.screens"
 import { boardName, PRIMARY, QUIET, refusalText, scoreText, useProblemText, useRoundLabel, type Names } from "@/components/tournaments/common"
+import { OccasionAward } from "@/components/badges/occasion-award"
 import { useInlineProfile } from "@/components/profile/inline-profile"
 import { useLiveStanding } from "@/components/tournaments/use-live-matches"
 import { useOwnEvents } from "@/components/profile/use-profile"
@@ -177,7 +178,7 @@ export function PhaseCard({ entry, names }: { entry: Entry; names: Names }) {
     return (
       <Card title={x.finished} text={champion ? x.champion(names.nameOf(champion)) : undefined} tone="success">
         {place && <p className="text-[1.0625rem] font-semibold">{x.yourPlace(place.place, place.placeTo)}</p>}
-        {place && session && featureOn("badges") && <p className="text-[0.9375rem] text-muted-foreground">{x.badgeHint}</p>}
+        {place && session && featureOn("badges") && <OccasionAward pubkey={session.pubkey} issuer={state.organizer} scopeId={state.id} pending={x.badgeHint} />}
       </Card>
     )
   }
