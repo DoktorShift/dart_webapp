@@ -70,9 +70,9 @@ export interface ClubSeason {
   name: string
   starts: number
   ends?: number
-  ended: boolean
-  // When it was ended (club.season.end): games after that are no longer part of it.
-  endedAt?: number
+  // The record that ended it (club.season.end), who wrote it and when: games after that are no
+  // longer part of it, and it is the evidence of the season's badges. null while it runs.
+  ended: { event: string; by: string; at: number } | null
   versions: { version: number; rules: SeasonRules; event: string; at: number; reason?: string }[]
 }
 
@@ -489,7 +489,7 @@ function apply(s: ClubState, r: AnyRecord, ctx: Context): Problem {
         name: c.name,
         starts: c.starts,
         ...(c.ends !== undefined ? { ends: c.ends } : {}),
-        ended: false,
+        ended: null,
         versions: [{ version: 1, rules: c.rules, event: r.id, at: r.created_at }],
       }
       return null
@@ -512,8 +512,7 @@ function apply(s: ClubState, r: AnyRecord, ctx: Context): Problem {
       if (!manager) return ["not_authorized", "only the owner or an admin ends seasons"]
       if (!season) return ["season_unknown", "no such season"]
       if (season.ended) return ["season_ended", "the season has ended"]
-      season.ended = true
-      season.endedAt = r.created_at
+      season.ended = { event: r.id, by: r.pubkey, at: r.created_at }
       return null
     }
 

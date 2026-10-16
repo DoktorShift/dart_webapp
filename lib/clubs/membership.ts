@@ -241,7 +241,7 @@ export const needsCapacity = (state: ClubState) =>
 // for those readers only: each wrap is one encryption by the signer.
 export function shareAccess(state: ClubState, events: readonly NostrEvent[], keys: Readonly<Record<string, string>>, author: Author, readers: readonly string[]): Promise<Sent> {
   const shareable = events.filter((e) => keys[e.id] && readLabels(e.tags)?.type !== "club.keys").map((e): [string, string] => [e.id, keys[e.id]])
-  if (readers.length === 0 || shareable.length === 0) return Promise.resolve({ events: [], published: true })
+  if (readers.length === 0 || shareable.length === 0) return Promise.resolve({ events: [] })
   const per = maxSharedKeys(readers.length)
   // Dated after every member's join (afterState): the share counts for them (waitingAccess).
   const items: Outgoing[] = []

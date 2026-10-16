@@ -13,7 +13,7 @@ export const shellEn: Messages["shell"] = {
   backTo: (screen) => `Back to ${screen}`,
 
   screens: {
-    clubCreate: "Start a club",
+    clubCreate: "Create a club",
     clubInvite: "Invitation",
     openInvite: "Open invitation",
     tournamentCreate: "Create tournament",
@@ -32,8 +32,8 @@ export const shellEn: Messages["shell"] = {
 
   clubs: {
     emptyTitle: "No clubs yet",
-    emptyText: "Start a club for your darts nights, or join one with an invitation.",
-    create: "Start a club",
+    emptyText: "Create a club for your darts nights, or join one with an invitation.",
+    create: "Create a club",
     openInvite: "Open invitation",
   },
 

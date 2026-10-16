@@ -59,8 +59,6 @@ export interface ClubView {
   tokens: Record<string, string>
   // Relays an invite link named, asked along with the usual ones.
   relays: string[]
-  // Own events no relay has confirmed yet.
-  unsent: NostrEvent[]
   // Games of this device recorded for the club, by local match id.
   recorded: Record<string, string>
   // Members of a closed club who can't read earlier records yet; only a manager's device
@@ -120,7 +118,6 @@ export async function readClub(
       ...(stored.invite ? { invite: stored.invite } : {}),
       tokens: stored.tokens,
       relays: stored.relays,
-      unsent: stored.events.filter((e) => stored.unsent.includes(e.id)),
       recorded: stored.recorded,
       access: state && reader && isManager(me.role) ? waitingAccess(state, records, reader) : [],
       loadedAt: stored.loadedAt,

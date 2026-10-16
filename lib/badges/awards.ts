@@ -4,6 +4,7 @@ import type { NostrEvent } from "../nostr/types.ts"
 import { checkBadgeAward, dedupeAwards, type BadgeScope } from "../protocol/badges.ts"
 import { KIND_BADGE_AWARD, KIND_BADGE_DEFINITION } from "../protocol/kinds.ts"
 import { readLabels, tagValue, tagValues } from "../protocol/tags.ts"
+import { issuerCheck, type IssuerScope } from "./issuers.ts"
 
 // Received or given badges (NIP-58 kind 8 with their kind 30009 definitions), checked strictly
 // before anything is shown (PLAN.md: "Vor Anzeige werden Signaturen, Definition, Aussteller,
@@ -14,8 +15,8 @@ import { readLabels, tagValue, tagValues } from "../protocol/tags.ts"
 // - BlueLine's own badges also by their rules (lib/protocol/badges.ts checkBadgeAward): a
 //   "Selbst erreicht" badge only for its issuer, a club or tournament badge only from someone
 //   that club or tournament lets award it. Who that is, only the clubs and tournaments areas
-//   know: they register a check (registerIssuerCheck). Until one answers yes, such a badge is
-//   not shown at all.
+//   know: they register a check (./issuers.ts registerIssuerCheck), asked about the issuer at
+//   the award's time. Until one answers yes, such a badge is not shown at all.
 // - An award its issuer asked to delete (NIP-09) is gone; the same badge for the same occasion
 //   counts once however often it arrives.
 //
@@ -36,24 +37,6 @@ export interface ValidAward {
   blueline: { scope: BadgeScope; scopeId?: string; badge: string; version: number; evidence: string; occasion: string } | null
   // The result or decision it rests on was corrected or voided since (its issuer's area says so).
   voided: boolean
-}
-
-// What the clubs and tournaments areas know about who may award their badges.
-export interface IssuerCheck {
-  // Whether `issuer` may award badges of this club or tournament; undefined while unknown.
-  mayIssue(scopeId: string, issuer: string): Promise<boolean | undefined>
-  // false once the result or decision an award rests on was corrected or voided.
-  evidenceValid?(scopeId: string, evidence: string): Promise<boolean | undefined>
-}
-
-const issuerChecks = new Map<"club" | "tournament", IssuerCheck>()
-
-// Registered by the clubs and tournaments areas (their register modules), once at start.
-export function registerIssuerCheck(scope: "club" | "tournament", check: IssuerCheck) {
-  issuerChecks.set(scope, check)
-  return () => {
-    if (issuerChecks.get(scope) === check) issuerChecks.delete(scope)
-  }
 }
 
 const HTTPS = /^https:\/\/[^\s"<>\\]+$/
@@ -80,9 +63,10 @@ export function withoutDeleted(events: readonly NostrEvent[]): NostrEvent[] {
 const isBlueLine = (event: NostrEvent) => readLabels(event.tags) !== null
 
 interface Scoped {
-  scope: "club" | "tournament"
+  scope: IssuerScope
   scopeId: string
   issuer: string
+  at: number
   evidence: string
 }
 
@@ -91,14 +75,14 @@ async function askIssuers(scoped: readonly Scoped[]) {
   const may = new Map<string, boolean | undefined>()
   const valid = new Map<string, boolean | undefined>()
   await Promise.all(
-    scoped.map(async ({ scope, scopeId, issuer, evidence }) => {
-      const check = issuerChecks.get(scope)
-      may.set(`${scope}|${scopeId}|${issuer}`, await check?.mayIssue(scopeId, issuer).catch(() => undefined))
+    scoped.map(async ({ scope, scopeId, issuer, at, evidence }) => {
+      const check = issuerCheck(scope)
+      may.set(`${scope}|${scopeId}|${issuer}|${at}`, await check?.mayIssue(scopeId, issuer, at).catch(() => undefined))
       valid.set(evidence, await check?.evidenceValid?.(scopeId, evidence).catch(() => undefined))
     }),
   )
   return {
-    mayIssue: (scope: "club" | "tournament", scopeId: string, issuer: string) => may.get(`${scope}|${scopeId}|${issuer}`) === true,
+    mayIssue: (scope: IssuerScope, scopeId: string, issuer: string, at: number) => may.get(`${scope}|${scopeId}|${issuer}|${at}`) === true,
     evidenceValid: (id: string) => valid.get(id),
   }
 }
@@ -108,7 +92,7 @@ function scopedOf(award: NostrEvent, definition: NostrEvent): Scoped | null {
   const scope = definition.tags.find((t) => t[0] === "scope")
   const evidence = tagValue(award.tags, "e")
   if ((scope?.[1] !== "club" && scope?.[1] !== "tournament") || !scope[2] || !evidence) return null
-  return { scope: scope[1], scopeId: scope[2], issuer: award.pubkey, evidence }
+  return { scope: scope[1], scopeId: scope[2], issuer: award.pubkey, at: award.created_at, evidence }
 }
 
 // The valid awards among `events` (awards, definitions and deletion requests, in any order and
