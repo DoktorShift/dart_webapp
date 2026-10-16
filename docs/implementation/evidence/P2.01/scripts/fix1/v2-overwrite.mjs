@@ -5,7 +5,7 @@ import { spawn } from "node:child_process"
 import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { BASE, OTHER, check, done, idb, nak, open, req, scrollAll, shot, startBunker, tab, wait } from "./lib.mjs"
+import { BASE, OTHER, check, done, nak, open, req, scrollAll, shot, startBunker, tab, wait } from "./lib.mjs"
 
 const secret = nak(["key", "generate"])
 const pubkey = nak(["key", "public", secret])

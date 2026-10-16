@@ -1,7 +1,7 @@
 // Findings 6 and 7: the stats-card opt-in holds before the first game; "Zum Spiel hinzufügen" on
 // someone's profile opens setup with them seated. Plus the local sign-out dialog's title.
 import { execFileSync } from "node:child_process"
-import { BASE, RELAYS, check, done, idb, nak, open, scrollAll, shot, tab, wait } from "./lib.mjs"
+import { RELAYS, check, done, idb, nak, open, scrollAll, shot, tab, wait } from "./lib.mjs"
 
 // Someone with a public profile on the app relays.
 const secret = nak(["key", "generate"])

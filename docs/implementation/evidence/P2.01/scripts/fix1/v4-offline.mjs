@@ -1,7 +1,7 @@
 // Finding 5: relays down (one refused, one accepting TCP but never answering). Creating a profile
 // finishes at once; the sheet stays until then; Bearbeiten works on the local version; Erweitert
 // says what it knows. Run with nak :18971 stopped and blackhole.py holding :18972.
-import { BASE, check, done, finishSeeded, nearWin, open, scrollAll, shot, tab, wait } from "./lib.mjs"
+import { check, done, finishSeeded, nearWin, open, scrollAll, shot, tab, wait } from "./lib.mjs"
 
 const { ctx, page, errors } = await open({ seed: nearWin(["Anna", "Ben"]), viewport: { width: 390, height: 844 } })
 await finishSeeded(page)
