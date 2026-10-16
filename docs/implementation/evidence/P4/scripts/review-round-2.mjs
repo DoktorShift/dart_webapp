@@ -8,14 +8,16 @@
 //   npx next start -p 3315 &
 //   node docs/implementation/evidence/P4/scripts/review-round-2.mjs
 //
-// Writes screenshots to ../screens (r2-*.jpg) and prints one PASS/FAIL line per check.
+// BASE, RELAY_PORTS ("20160,20161", the build's relays) and ONLY (see `scenario`) move a run
+// to another port or scenario. Writes screenshots to ../screens (r2-*.jpg) and prints one
+// PASS/FAIL line per check.
 import { mkdirSync } from "node:fs"
 import { spawn } from "node:child_process"
 import { connect } from "node:net"
 import { chromium } from "playwright"
 
 const BASE = process.env.BASE ?? "http://localhost:3315"
-const RELAY_PORTS = [20160, 20161]
+const RELAY_PORTS = (process.env.RELAY_PORTS ?? "20160,20161").split(",").map(Number)
 const NAK = process.env.NAK_BIN ?? "/opt/homebrew/bin/nak"
 const SHOTS = new URL("../screens/", import.meta.url).pathname
 mkdirSync(SHOTS, { recursive: true })
@@ -100,13 +102,6 @@ const text = (page, t, opts = {}) =>
     .locator("visible=true")
     .first()
     .waitFor({ timeout: opts.timeout ?? 20_000 })
-const gone = (page, t, timeout = 10_000) =>
-  page
-    .getByText(t)
-    .locator("visible=true")
-    .first()
-    .waitFor({ state: "hidden", timeout })
-    .then(() => true, () => false)
 const button = (page, name) => page.getByRole("button", { name, exact: true }).locator("visible=true").first()
 const copied = async (page) => {
   await page.getByRole("button", { name: /Link kopieren|Copy link/ }).last().click()
@@ -363,12 +358,13 @@ const registerStandIn = (page) =>
     const req = await new Promise((resolve) => self.webpackChunk_N_E.push([[`probe-${Date.now()}`], {}, (r) => resolve(r)]))
     const ids = Object.keys(req.m)
     const source = (id) => req.m[id].toString()
-    const registryId = ids.find((id) => source(id).includes('"result.actions"') && source(id).includes('"setup.extras"') && source(id).includes('"profile.rows"'))
+    // The page's own module names the three slot lists as well: the registry is the module among
+    // them that exports registerSlotItem (list, id, component; sets the piece, the remover deletes it).
+    const registryIds = ids.filter((id) => source(id).includes('"result.actions"') && source(id).includes('"setup.extras"') && source(id).includes('"profile.rows"'))
     // Several modules know React's element marker (react-dom among them): React is the one that exports createElement.
     const reactId = ids.filter((id) => source(id).includes("react.transitional.element")).find((id) => typeof req(id).createElement === "function")
-    if (!registryId || !reactId) return `registry ${registryId ?? "missing"}, react ${reactId ?? "missing"}`
-    const registry = req(registryId)
-    const register = Object.values(registry).find((f) => typeof f === "function" && f.length === 3 && f.toString().includes(".set("))
+    if (registryIds.length === 0 || !reactId) return `registry ${registryIds.length === 0 ? "missing" : "found"}, react ${reactId ?? "missing"}`
+    const register = registryIds.flatMap((id) => Object.values(req(id))).find((f) => typeof f === "function" && f.length === 3 && f.toString().includes(".set(") && f.toString().includes(".delete("))
     const React = req(reactId)
     if (!register || !React.createElement) return "registerSlotItem or createElement not found"
     register("result.actions", "standin", ({ placement }) =>
@@ -395,6 +391,14 @@ const resultLandscape = (viewport, name) =>
     await text(jonas.page, "Ergebnis bestätigen", { timeout: 30_000 })
     await button(jonas.page, "Widersprechen").click()
     await jonas.page.getByRole("alertdialog").getByRole("button", { name: "Widersprechen" }).click()
+    // With the profile and badges tracks merged, a guest board's result carries their pieces too
+    // (the offer to keep the results, the badges Mia reached): three, so the bar shows their
+    // count. Put away for this game, they leave the live piece alone.
+    await board.page.getByRole("button", { name: "Mehr zum Ergebnis, 3 Einträge" }).click({ timeout: 30_000 })
+    await text(board.page, "Mehr zum Ergebnis")
+    await board.page.getByRole("button", { name: "Später, nicht für dieses Spiel" }).click()
+    await board.page.getByRole("button", { name: "Ausblenden" }).click()
+    await closeSheet(board.page)
     await text(board.page, "1/2 bestätigt · 1 Widerspruch", { timeout: 30_000 })
     await board.page.waitForTimeout(800)
     await shot(board.page, `result-one-piece-${name}-de-light`)
@@ -425,9 +429,11 @@ const resultLandscape = (viewport, name) =>
     check(`at ${name} the sheet lists both pieces as their rows`, rows)
     await board.page.getByRole("button", { name: /1 von 2 bestätigt/ }).click()
     // The seats' sheet (in landscape without its group title): the first seat's connection shows.
+    // The pieces' sheet stays under it until Fertig (lib/shell/registry.ts "result.actions").
     const players = await text(board.page, "Als Gast verbunden", { timeout: 10_000 }).then(() => true, () => false)
-    const closed = await gone(board.page, "Mehr zum Ergebnis")
-    check(`at ${name} tapping the live row closes the sheet and opens the seats`, players && closed)
+    const stays = (await board.page.getByText("Mehr zum Ergebnis", { exact: true }).locator("visible=true").count()) === 1
+    check(`at ${name} tapping the live row opens the seats over the sheet, which stays`, players && stays)
+    await board.page.waitForTimeout(600)
     await shot(board.page, `result-players-from-sheet-${name}-de-light`)
     noErrors(`result ${name}`, board, mia, jonas)
   })
