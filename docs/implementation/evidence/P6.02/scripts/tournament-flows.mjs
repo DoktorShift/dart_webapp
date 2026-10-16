@@ -1,0 +1,221 @@
+// P6.02–P6.04 tournaments in the production build, end to end in Chromium (Playwright), against
+// a local in-memory relay. Several browser contexts play the devices: the organizer's phone,
+// two players' phones, a board device, a TV. Nothing reaches a public relay.
+//
+//   nak serve --hostname 127.0.0.1 --port 20640 &
+//   NEXT_PUBLIC_BLUELINE_RELAYS=ws://127.0.0.1:20640 npm run build
+//   npx next start -p 3322 &
+//   node docs/implementation/evidence/P6.02/scripts/tournament-flows.mjs
+//
+// Writes screenshots to ../screens and prints one PASS/FAIL line per check. Timings are lab
+// values on a loaded development machine, not field measurements.
+import { mkdirSync } from "node:fs"
+import { chromium } from "playwright"
+
+const BASE = process.env.BASE ?? "http://localhost:3322"
+const RELAY_PORT = process.env.RELAY_PORT ?? "20640"
+const SHOTS = new URL("../screens/", import.meta.url).pathname
+mkdirSync(SHOTS, { recursive: true })
+
+const results = []
+const check = (name, ok, detail = "") => {
+  results.push(ok)
+  console.log(`${ok ? "PASS" : "FAIL"} ${name}${detail ? ` (${detail})` : ""}`)
+}
+
+const PHONE = { width: 390, height: 844 }
+const SE = { width: 320, height: 548 }
+const TV = { width: 1280, height: 720 }
+
+const browser = await chromium.launch()
+const contexts = []
+const devices = []
+
+// Whatever goes wrong, every device's screen is kept for the diagnosis.
+process.on("uncaughtException", async (error) => {
+  console.log(`FAIL ${String(error).split("\n")[0]}`)
+  for (const [i, d] of devices.entries()) {
+    await d.page.screenshot({ path: `${SHOTS}fail-${i}.jpg`, type: "jpeg", quality: 60 }).catch(() => {})
+    if (d.errors.length > 0) console.log(`errors on device ${i}: ${d.errors.slice(0, 3).join(" | ")}`)
+  }
+  await browser.close().catch(() => {})
+  process.exit(1)
+})
+
+async function device(viewport, { locale = "de-DE", colorScheme = "light", mobile = true } = {}) {
+  const ctx = await browser.newContext({ viewport, locale, colorScheme, hasTouch: mobile, isMobile: mobile, serviceWorkers: "block" })
+  contexts.push(ctx)
+  await ctx.grantPermissions(["clipboard-read", "clipboard-write"], { origin: BASE })
+  await ctx.addInitScript((theme) => localStorage.setItem("theme", theme), colorScheme)
+  const page = await ctx.newPage()
+  const errors = []
+  const sockets = []
+  page.on("pageerror", (e) => errors.push(String(e)))
+  page.on("console", (m) => m.type() === "error" && errors.push(m.text()))
+  page.on("websocket", (ws) => sockets.push(ws.url()))
+  const made = { ctx, page, errors, sockets }
+  devices.push(made)
+  return made
+}
+
+const shot = (page, name) => page.screenshot({ path: `${SHOTS}${name}.jpg`, type: "jpeg", quality: 70 })
+// Covered screens stay in the page (hidden): only what can be seen counts.
+const text = (page, t, opts = {}) => page.getByText(t, opts).locator("visible=true").first().waitFor({ timeout: opts.timeout ?? 20_000 })
+const button = (page, name) => page.getByRole("button", { name, exact: true }).first()
+const copied = async (page) => {
+  await page.getByRole("button", { name: "Link kopieren" }).last().click()
+  await page.waitForTimeout(300)
+  return page.evaluate(() => navigator.clipboard.readText())
+}
+const noHorizontalScroll = (page) => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
+// Links name the published site; the devices here open them on the local build.
+const local = (url) => url.replace(/^https?:\/\/[^/]+/, BASE)
+// The tab bar (phones) or the sidebar (wide screens): whichever is visible.
+const tabs = (page) => page.locator('nav[aria-label="Bereiche"]:visible')
+const tab = (page, name) => tabs(page).getByText(name, { exact: true }).click()
+const radio = (page, name) => page.getByRole("radio", { name, exact: true }).first().click()
+
+// ---- The organizer creates the tournament in four steps ----------------------------------------
+
+const orga = await device(PHONE)
+await orga.page.goto(BASE)
+await tabs(orga.page).waitFor({ timeout: 20_000 })
+await tab(orga.page, "Turniere")
+await text(orga.page, "Noch kein Turnier")
+await orga.page.waitForTimeout(500)
+await shot(orga.page, "home-empty-de-light-iphone")
+check("the guest's Tournaments tab opens no connection", orga.sockets.length === 0, `${orga.sockets.length} sockets`)
+await button(orga.page, "Turnier erstellen").click()
+await text(orga.page, "Schritt 1 von 4")
+await orga.page.getByLabel("Titel").fill("Pub Open")
+await orga.page.getByLabel("Beginn").fill("2026-10-24T19:00")
+await orga.page.getByLabel("Ort").fill("Goldener Anker")
+await orga.page.waitForTimeout(300)
+await shot(orga.page, "create-1-de-light-iphone")
+await button(orga.page, "Weiter").click()
+await text(orga.page, "Schritt 2 von 4")
+await radio(orga.page, "301")
+await orga.page.getByRole("radiogroup", { name: "Legs pro Spiel" }).getByRole("radio", { name: "1", exact: true }).click()
+await orga.page.waitForTimeout(300)
+await shot(orga.page, "create-2-de-light-iphone")
+await button(orga.page, "Weiter").click()
+await text(orga.page, "Schritt 3 von 4")
+await orga.page.getByRole("radiogroup", { name: "Plätze" }).getByRole("radio", { name: "4", exact: true }).click()
+await orga.page.getByRole("switch", { name: "Check-in vor der Auslosung" }).click()
+await orga.page.getByLabel("Gäste ohne Profil").fill("Mia\nJonas")
+await orga.page.getByLabel("Boards").fill("Board 1\nBoard 2")
+await orga.page.waitForTimeout(300)
+await shot(orga.page, "create-3-de-light-iphone")
+await button(orga.page, "Weiter").click()
+await text(orga.page, "Schritt 4 von 4")
+await text(orga.page, "So wird gespielt")
+await text(orga.page, "Dein Name")
+check("the preview asks a guest for a name, nothing more", (await orga.page.getByText(/Schlüssel|Relay|Nostr/).count()) === 0)
+await orga.page.getByLabel("Dein Name").fill("Orga Olaf")
+await orga.page.waitForTimeout(300)
+await shot(orga.page, "create-4-de-light-iphone")
+await button(orga.page, "Turnier veröffentlichen").click()
+await text(orga.page, "Dein Turnier ist veröffentlicht", { timeout: 40_000 })
+await orga.page.waitForTimeout(500)
+await shot(orga.page, "published-de-light-iphone")
+check("publishing connects to the local relay only", orga.sockets.length > 0 && orga.sockets.every((u) => u.includes(`:${RELAY_PORT}`)), orga.sockets.join(","))
+await button(orga.page, "Teilen").click()
+await text(orga.page, "Link kopieren")
+await orga.page.waitForTimeout(600)
+await shot(orga.page, "share-de-light-iphone")
+const inviteUrl = await copied(orga.page)
+check("the tournament link carries the tournament in the fragment", /\/#tournament=T1\./.test(inviteUrl), inviteUrl.slice(0, 40))
+await button(orga.page, "Fertig").click()
+await orga.page.waitForTimeout(300)
+await button(orga.page, "Zum Turnier").click()
+await text(orga.page, "Turnierleitung")
+await orga.page.waitForTimeout(800)
+await shot(orga.page, "tournament-organizer-de-light-iphone")
+check("the organizer's view names rules, start, place and free places", (await orga.page.getByText("301, First to 1 Legs").count()) > 0 && (await orga.page.getByText("2 Plätze frei").count()) > 0)
+check("the tournament page has no horizontal scrolling", await noHorizontalScroll(orga.page))
+
+// ---- Two players register from their phones; the organizer's device admits them ---------------
+
+const anna = await device(PHONE)
+await anna.page.goto(local(inviteUrl))
+await text(anna.page, "2 Plätze frei", { timeout: 30_000 })
+await anna.page.waitForTimeout(600)
+await shot(anna.page, "player-register-de-light-iphone")
+await anna.page.getByLabel("Dein Name").fill("Anna")
+await button(anna.page, "Anmelden").click()
+// The request is pending for a moment; the organizer's device admits it as it arrives.
+await text(anna.page, "Du bist angemeldet", { timeout: 40_000 })
+await anna.page.waitForTimeout(500)
+await shot(anna.page, "player-registered-de-light-iphone")
+check("a registration is admitted by the organizer's device without anyone tapping", true)
+
+const ben = await device(SE, { colorScheme: "dark" })
+await ben.page.goto(local(inviteUrl))
+await text(ben.page, "1 Platz frei", { timeout: 30_000 })
+await ben.page.getByLabel("Dein Name").fill("Ben")
+await button(ben.page, "Anmelden").click()
+await text(ben.page, "Du bist angemeldet", { timeout: 40_000 })
+await ben.page.waitForTimeout(500)
+await shot(ben.page, "player-registered-de-dark-se")
+check("the SE page has no horizontal scrolling", await noHorizontalScroll(ben.page))
+
+await text(orga.page, "Ausgebucht", { timeout: 30_000 })
+
+// ---- Draw, start, boards --------------------------------------------------------------------
+
+await orga.page.getByRole("button", { name: /^Turnierleitung/ }).click()
+await text(orga.page, "Jetzt dran")
+await orga.page.waitForTimeout(500)
+await shot(orga.page, "organize-participants-de-light-iphone")
+check("the workspace lists the four participants", (await orga.page.getByText("Angemeldet (4)").count()) === 1)
+await button(orga.page, "Auslosen").click()
+await text(orga.page, "4 Spieler im Feld")
+await orga.page.waitForTimeout(600)
+await shot(orga.page, "draw-sheet-de-light-iphone")
+await button(orga.page, "Jetzt auslosen").click()
+await text(orga.page, "Turnier starten", { timeout: 30_000 })
+await button(orga.page, "Turnier starten").click()
+await text(orga.page, "Läuft", { timeout: 30_000 })
+await orga.page.getByRole("radio", { name: "Boards" }).click()
+await text(orga.page, "2 Spiele aufrufen")
+await orga.page.waitForTimeout(500)
+await shot(orga.page, "organize-boards-de-light-iphone")
+await button(orga.page, "2 Spiele aufrufen").click()
+await text(orga.page, "Aufgerufen:", { timeout: 30_000 })
+await orga.page.getByRole("button", { name: /^Board 1/ }).click()
+await text(orga.page, "Link kopieren")
+await orga.page.waitForTimeout(600)
+await shot(orga.page, "board-code-de-light-iphone")
+const boardUrl = await copied(orga.page)
+check("the board code is a board authorization link", /\/#tournament=TB1\./.test(boardUrl))
+await button(orga.page, "Fertig").click()
+
+await text(anna.page, "Dein nächstes Spiel", { timeout: 40_000 })
+await anna.page.waitForTimeout(500)
+await shot(anna.page, "player-next-de-light-iphone")
+check("a player sees opponent and board once called", (await anna.page.getByText(/^Board Board/).count()) === 1)
+
+// ---- The board device plays its match on the game screen -----------------------------------
+
+const board = await device(PHONE)
+await board.page.goto(local(boardUrl))
+await text(board.page, "Dieses Gerät wird zum Board", { timeout: 30_000 })
+await board.page.waitForTimeout(400)
+await shot(board.page, "board-become-de-light-iphone")
+await button(board.page, "Board verwenden").click()
+await text(board.page, "Jetzt an diesem Board", { timeout: 30_000 })
+await board.page.waitForTimeout(500)
+await shot(board.page, "board-called-de-light-iphone")
+await button(board.page, "Spiel starten").click()
+await board.page.getByRole("button", { name: "Spieloptionen" }).waitFor({ timeout: 30_000 })
+await board.page.waitForTimeout(1500)
+await shot(board.page, "board-game-de-light-iphone")
+check("the board's match goes live on the local relay", board.sockets.length > 0 && board.sockets.every((u) => u.includes(`:${RELAY_PORT}`)))
+
+const errorsOf = (d, name) => check(`${name}: no page errors`, d.errors.length === 0, d.errors.slice(0, 3).join(" | "))
+for (const [d, name] of [[orga, "organizer"], [anna, "Anna"], [ben, "Ben"], [board, "board"]]) errorsOf(d, name)
+
+for (const ctx of contexts) await ctx.close()
+await browser.close()
+console.log(`${results.filter(Boolean).length}/${results.length} checks passed`)
+process.exit(results.every(Boolean) ? 0 : 1)
