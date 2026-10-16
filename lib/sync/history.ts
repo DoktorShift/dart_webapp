@@ -49,7 +49,7 @@ export interface Version {
   hash: string
 }
 
-export const matchRecordId = (matchId: string) => `${MATCH_PREFIX}${PLAIN_ID.test(matchId) ? matchId : bytesToHex(sha256(utf8ToBytes(matchId))).slice(0, 32)}`
+const matchRecordId = (matchId: string) => `${MATCH_PREFIX}${PLAIN_ID.test(matchId) ? matchId : bytesToHex(sha256(utf8ToBytes(matchId))).slice(0, 32)}`
 
 export const isMatchRecord = (recordId: string) => recordId.startsWith(MATCH_PREFIX)
 

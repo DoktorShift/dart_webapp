@@ -24,7 +24,7 @@ const TONES: Record<RowTone, string> = {
   teal: "bg-[#1e9fbf]",
 }
 
-export function RowIcon({ icon: Icon, tone = "blue" }: { icon: ComponentType<{ className?: string; "aria-hidden"?: boolean }>; tone?: RowTone }) {
+function RowIcon({ icon: Icon, tone = "blue" }: { icon: ComponentType<{ className?: string; "aria-hidden"?: boolean }>; tone?: RowTone }) {
   return (
     <span className={cn("flex h-[1.875rem] w-[1.875rem] shrink-0 items-center justify-center rounded-lg text-white", TONES[tone])}>
       <Icon className="h-[1.125rem] w-[1.125rem]" aria-hidden />

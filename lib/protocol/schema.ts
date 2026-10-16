@@ -71,7 +71,6 @@ export const hex = (bytes: number, description?: string) =>
   str({ min: bytes * 2, max: bytes * 2, pattern: new RegExp(`^[0-9a-f]{${bytes * 2}}$`), description })
 
 export const id32 = (description?: string) => hex(32, description)
-export const id16 = (description?: string) => hex(16, description)
 
 export function int(min: number, max: number, description?: string): Schema<number> {
   return make(
@@ -196,6 +195,3 @@ export const utf8Length = (s: string) => new TextEncoder().encode(s).length
 
 // Absolute https URL for pictures and links in public content; nothing else is ever loaded.
 export const httpsUrl = (max = 512) => str({ max, pattern: /^https:\/\/[^\s"<>\\]+$/, description: "https URL" })
-
-// wss:// (or ws:// for local test relays) relay address.
-export const relayUrl = () => str({ max: 256, pattern: /^wss?:\/\/[^\s,#"<>\\]+$/, description: "Relay URL" })

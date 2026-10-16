@@ -1,5 +1,5 @@
 import type { Schema } from "./schema.ts"
-import { arr, bool, hex, id32, int, obj, oneOf, opt, refine, relayUrl, str, time } from "./schema.ts"
+import { arr, bool, hex, id32, int, obj, oneOf, opt, refine, str, time } from "./schema.ts"
 
 // Schemas several families share: match rules, seats, stakes, embedded events.
 
@@ -65,8 +65,6 @@ export const stake = obj({
   msat: refine(int(1000, 100_000_000_000, "Whole sats, written as msat"), (v) => (v % 1000 === 0 ? null : "not whole sats")),
   note: opt(shortText(140)),
 })
-
-export const relays = () => arr(relayUrl(), { max: 8, unique: true })
 
 // A signed event carried inside another event's content (session authorization embedded in
 // a snapshot or result). Shape only: lib/nostr verifies its signature like any other event.

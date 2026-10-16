@@ -8,7 +8,7 @@
 
 export type LinkKind = "p" | "watch" | "club" | "tournament" | "pair" | "board" | "handoff" | "signer-return" | "wallet-return"
 
-export const LINK_KINDS: readonly LinkKind[] = ["p", "watch", "club", "tournament", "pair", "board", "handoff", "signer-return", "wallet-return"]
+const LINK_KINDS: readonly LinkKind[] = ["p", "watch", "club", "tournament", "pair", "board", "handoff", "signer-return", "wallet-return"]
 
 // Answers of other apps to a request this app made: they append their answer to the callback
 // address they were given, so the payload may be empty or start with "?".

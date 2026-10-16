@@ -704,9 +704,3 @@ export function relayClient(): RelayClient {
 export const publish: RelayClient["publish"] = (...args) => relayClient().publish(...args)
 export const query: RelayClient["query"] = (...args) => relayClient().query(...args)
 export const subscribe: RelayClient["subscribe"] = (...args) => relayClient().subscribe(...args)
-export const setAuthSigner: RelayClient["setAuthSigner"] = (signer) => relayClient().setAuthSigner(signer)
-
-// --- time -----------------------------------------------------------------------------------
-
-// The skew-corrected clock lives in ./time.ts (no dependencies); re-exported for convenience.
-export { adjustClock, clockOffset, createdAt, nowSeconds, syncClock } from "./time.ts"

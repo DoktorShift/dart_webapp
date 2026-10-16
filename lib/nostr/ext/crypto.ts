@@ -18,7 +18,7 @@ import { loadCore } from "../core.ts"
 import { nowSeconds } from "../time.ts"
 import type { EventTemplate, NostrEvent, Signer } from "../types.ts"
 
-export const SEAL_KIND = 13
+const SEAL_KIND = 13
 export const GIFT_WRAP_KIND = 1059
 // The ephemeral gift wrap, for live handshakes that must not be stored.
 export const EPHEMERAL_GIFT_WRAP_KIND = 21059
@@ -150,7 +150,7 @@ export async function unwrapWithSigner(wrap: NostrEvent, signer: Signer): Promis
 
 // --- data key --------------------------------------------------------------------------------
 
-export const DATA_KEY_ENVELOPE_VERSION = 1
+const DATA_KEY_ENVELOPE_VERSION = 1
 
 export function generateDataKey(): Uint8Array {
   return randomBytes(32)

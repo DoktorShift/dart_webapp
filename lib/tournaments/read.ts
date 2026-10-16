@@ -81,7 +81,7 @@ export interface TournamentRead {
   loadedAt: number | null
 }
 
-export const placeName = (p: Place) => p.alias ?? shortKey(p.id)
+const placeName = (p: Place) => p.alias ?? shortKey(p.id)
 
 export const isGuestPlace = (p: Pick<Place, "id">) => isGuestId(p.id)
 
@@ -369,6 +369,3 @@ export function drawPreview(state: TournamentState, field: readonly string[], se
     return null
   }
 }
-
-// The participant a seat of the match holds, by side.
-export const sideOf = (m: MatchView, participant: string): 0 | 1 | null => (m.slots[0].participant === participant ? 0 : m.slots[1].participant === participant ? 1 : null)

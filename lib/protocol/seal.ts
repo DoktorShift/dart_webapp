@@ -25,7 +25,7 @@ import { encryptionOf, HEX64, isSignedEventShape, readLabels } from "./tags.ts"
 // NIP-44 itself runs where the signer is (lib/nostr); this module fixes the format and does the
 // symmetric part, so nothing here needs a secret key of a person.
 
-export const SEAL_VERSION = 1
+const SEAL_VERSION = 1
 // Readers one event can wrap for: each wrap costs about 190 bytes of the 32 KiB event budget.
 export const MAX_SEAL_READERS = 100
 

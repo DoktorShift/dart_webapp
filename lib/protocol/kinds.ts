@@ -10,9 +10,6 @@ export const KIND_STATE = 31180
 export const KIND_EPHEMERAL = 21180
 // NIP-78 private records of a profile, encrypted, one opaque "d" per record.
 export const KIND_PRIVATE = 30078
-// NIP-59 gift wrap (payment requests between players) and its seal.
-export const KIND_GIFT_WRAP = 1059
-export const KIND_SEAL = 13
 // NIP-58 badges.
 export const KIND_BADGE_DEFINITION = 30009
 export const KIND_BADGE_AWARD = 8

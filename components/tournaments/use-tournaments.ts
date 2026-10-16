@@ -60,14 +60,14 @@ const read = (stored: StoredTournament, pubkey: string | null): Entry => ({
 async function readLocal() {
   const run = ++reading
   const pubkey = (await loadSession())?.pubkey ?? null
-  const [stored, found, devices, unsent] = await Promise.all([
+  const [stored, found, devices, counts] = await Promise.all([
     storedTournaments().catch(() => []),
     listDrafts().catch(() => []),
     listBoardDevices().catch(() => []),
     waitingRecords().catch(() => new Map<string, number>()),
   ])
   if (run !== reading) return
-  waiting = unsent
+  waiting = counts
   entries.clear()
   for (const s of stored) entries.set(s.tournament, read(s, pubkey))
   drafts = found
@@ -77,10 +77,10 @@ async function readLocal() {
 
 // The outbox changed (something was queued or reached relays): only the counts change.
 async function readWaiting() {
-  const unsent = await waitingRecords().catch(() => null)
-  if (!unsent) return
-  waiting = unsent
-  for (const [id, entry] of entries) if (entry.waiting !== (unsent.get(id) ?? 0)) entries.set(id, { ...entry, waiting: unsent.get(id) ?? 0 })
+  const counts = await waitingRecords().catch(() => null)
+  if (!counts) return
+  waiting = counts
+  for (const [id, entry] of entries) if (entry.waiting !== (counts.get(id) ?? 0)) entries.set(id, { ...entry, waiting: counts.get(id) ?? 0 })
   emit()
 }
 

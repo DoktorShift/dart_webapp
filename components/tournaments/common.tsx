@@ -20,6 +20,7 @@ import { roundLabel } from "@/lib/tournaments/labels"
 import type { Reason } from "@/lib/protocol/reasons"
 import { shortKey } from "@/lib/nostr/pointers"
 import { isGuestPlace, type TournamentRead } from "@/lib/tournaments/read"
+import { TournamentError } from "@/lib/tournaments/types"
 
 // Small pieces every tournament screen shares: how times, people and matches are written,
 // what to say when signing fails, and the honest lines about the local copy.
@@ -68,6 +69,8 @@ export function useProblemText() {
   const px = useAreaT(PROFILE_TEXTS)
   const tx = useAreaT(TOURNAMENTS_TEXTS)
   return (error: unknown) => {
+    // A change the bracket can't take says why; it is no signing problem.
+    if (error instanceof TournamentError) return tx.errors[error.code]
     const code = (error as { code?: unknown } | null)?.code
     return typeof code === "string" ? signerProblem(px, error) : tx.failed
   }

@@ -15,9 +15,9 @@ export const IMPOSSIBLE_VISITS = new Set([163, 166, 169, 172, 173, 175, 176, 178
 
 const MISS: Dart = { segment: 0, multiplier: 1 }
 
-export const dartValue = (d: Dart) => d.segment * d.multiplier
+const dartValue = (d: Dart) => d.segment * d.multiplier
 
-export const isDoubleDart = (d: Dart) => d.multiplier === 2 && d.segment > 0
+const isDoubleDart = (d: Dart) => d.multiplier === 2 && d.segment > 0
 
 // Remaining scores that one dart at a double (or the bull) can finish.
 export const onADouble = (remaining: number, doubleOut: boolean) =>
@@ -556,7 +556,7 @@ export function replay(config: MatchConfig, throws: Throw[]): MatchState {
 
 // Drops entries that replay ignores (darts of a visit or leg that a correction ended
 // earlier), so the saved log only holds darts that count.
-export function cleanLog(config: MatchConfig, throws: Throw[]) {
+function cleanLog(config: MatchConfig, throws: Throw[]) {
   const skipped = new Set(replay(config, throws).skipped)
   return skipped.size === 0 ? throws : throws.filter((_, i) => !skipped.has(i))
 }

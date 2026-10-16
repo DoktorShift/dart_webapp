@@ -25,7 +25,7 @@ function kindOf(status: SyncStatus, pubkey: string): EmptyHistoryKind {
   return status.problem === "signer" || status.problem === "key" ? status.problem : "offline"
 }
 
-export function useEmptyHistory(pubkey: string): EmptyHistoryKind {
+function useEmptyHistory(pubkey: string): EmptyHistoryKind {
   const kind = kindOf(useSyncStatus(), pubkey)
   const [waited, setWaited] = useState(false)
   useEffect(() => {

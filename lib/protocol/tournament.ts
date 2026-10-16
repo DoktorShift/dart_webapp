@@ -11,7 +11,7 @@ import { arr, bool, hex, httpsUrl, id32, int, nullable, obj, oneOf, opt, refine,
 // fixes who may decide what, the order of the draw and how results move from submitted to
 // approved. Formats, seed and draw order use the engine's names and derivations.
 
-export const TOURNAMENT_FORMATS = ["single", "double", "roundRobin", "groups"] as const
+const TOURNAMENT_FORMATS = ["single", "double", "roundRobin", "groups"] as const
 export const TOURNAMENT_PHASES = ["registration", "checkin", "drawn", "running", "paused", "finished", "cancelled"] as const
 export type TournamentPhase = (typeof TOURNAMENT_PHASES)[number]
 
@@ -22,7 +22,7 @@ export const TOURNAMENT_ENGINE = 1
 export const MAX_PARTICIPANTS = 128
 
 // A participant is a profile (64 hex pubkey) or a guest the organizer runs (32 hex guest id).
-export const participantId = () => str({ min: 32, max: 64, pattern: /^([0-9a-f]{64}|[0-9a-f]{32})$/, description: "Pubkey of a player, or guest id" })
+const participantId = () => str({ min: 32, max: 64, pattern: /^([0-9a-f]{64}|[0-9a-f]{32})$/, description: "Pubkey of a player, or guest id" })
 export const isGuestId = (id: string) => id.length === 32
 
 // Match slots are named by the tournament engine ("R1-3", "GF2", …); opaque here.

@@ -41,8 +41,8 @@ export interface TournamentDraft {
   updatedAt: number
 }
 
-export const DEFAULT_CAPACITY = 16
-export const MAX_BOARDS = 16
+const DEFAULT_CAPACITY = 16
+const MAX_BOARDS = 16
 
 export function newDraft(id: string, timezone: string, now = Date.now(), overrides: Partial<TournamentDraft> = {}): TournamentDraft {
   return {
@@ -117,7 +117,7 @@ export function localTime(value: string): number | undefined {
 }
 
 // The rules the tournament's matches are played by (the protocol form of an X01 game).
-export const draftMatchRules = (draft: TournamentDraft) => configToRules(configFor("x01", draft.rules, [], "x01"))
+const draftMatchRules = (draft: TournamentDraft) => configToRules(configFor("x01", draft.rules, [], "x01"))
 
 export function foundContent(draft: TournamentDraft, seedCommit: string): ContentOf<"tournament.found"> {
   const rules = draftMatchRules(draft)

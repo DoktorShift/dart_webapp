@@ -19,7 +19,7 @@ import { encodeThrowsTail } from "./throws.ts"
 // on ("from" > 0) and the standing covers the rest.
 export const MAX_LIVE_THROWS_BYTES = 16000
 
-export const standing = obj({
+const standing = obj({
   leg: int(0, 999, "Leg number in the match, from 0"),
   set: opt(int(0, 99)),
   current: int(0, 5, "Seat to throw"),
@@ -46,7 +46,7 @@ export const LIVE_TYPES = {
   "match.live": { kind: KIND_STATE, root: "required", d: true, encryption: "link", schema: snapshot, description: "Live state of a match" },
 } satisfies Record<string, RecordSpec>
 
-export function standingFromState(s: MatchState): Standing {
+function standingFromState(s: MatchState): Standing {
   const sets = (s.config.setsToWin ?? 1) > 1
   const scores = s.config.type === "x01" ? s.scores : s.config.type === "cricket" ? s.points : s.progress
   return {

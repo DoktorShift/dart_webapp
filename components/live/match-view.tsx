@@ -64,7 +64,7 @@ export function useFollowed(source: MatchSource | null): Followed {
 }
 
 // Loading, missing and unreadable matches, or null once there is something to show.
-export function MatchProblem({ followed }: { followed: Followed }) {
+function MatchProblem({ followed }: { followed: Followed }) {
   const tx = useAreaT(LIVE_TEXTS)
   const w = tx.watch
   if (followed.state) return null

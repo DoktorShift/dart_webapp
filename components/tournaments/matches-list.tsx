@@ -42,7 +42,7 @@ export function MatchesList({ read, names, me, onSelect }: { read: TournamentRea
   )
 }
 
-export function MatchRow({ read, m, names, me, onClick }: { read: TournamentRead; m: MatchView; names: Names; me: string | null; onClick?: () => void }) {
+function MatchRow({ read, m, names, me, onClick }: { read: TournamentRead; m: MatchView; names: Names; me: string | null; onClick?: () => void }) {
   const tx = useAreaT(TOURNAMENTS_TEXTS)
   const liveMatch = read.live[m.id]?.match ?? null
   const live = useLiveStanding(liveMatch, read.relays)

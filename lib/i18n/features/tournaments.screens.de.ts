@@ -34,12 +34,6 @@ export const tournamentsScreensDe = {
     order: "Bei Punktgleichheit entscheidet der Reihe nach:",
     walkover: "Ein kampflos gewonnenes Spiel zählt als Sieg ohne Legs.",
     inactive: "Wer zurückzieht oder disqualifiziert wird, steht am Ende der Tabelle und kommt nicht weiter. Noch offene Spiele gewinnt der Gegner kampflos.",
-    inactiveAfterGroup: "War die eigene Gruppe schon fertig, bleibt der Tabellenplatz. Das nächste Spiel gewinnt dann der Gegner kampflos.",
-  },
-  // Final places.
-  placing: {
-    shared: "Wer in derselben Runde ausscheidet, teilt sich den Platz.",
-    disqualified: "Disqualifizierte bekommen keinen Platz, die anderen rücken auf.",
   },
   tiebreak: {
     points: "Punkte",
@@ -71,7 +65,6 @@ export const tournamentsScreensDe = {
     bye: "Freilos",
   },
   affected: "Betroffen von einer Korrektur",
-  affectedHint: "Ein früheres Ergebnis wurde geändert. Dieses Spiel bleibt, wie es eingetragen ist, bis die Turnierleitung entscheidet.",
   consequence: {
     result: "Neues Ergebnis",
     players: "Neue Paarung",
@@ -329,7 +322,6 @@ export const tournamentsScreensDe = {
     unreadableText: "Es gehört zu einem Club, dessen Mitglied du nicht bist.",
     newer: "Dieses Turnier stammt aus einer neueren Version von BlueLine.",
     loading: "Wird geladen",
-    noMatches: "Noch keine Spiele",
     noMatchesText: "Die Paarungen stehen nach der Auslosung.",
     tbd: "Noch offen",
     bye: "Freilos",

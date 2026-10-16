@@ -23,7 +23,7 @@ import { ProtocolError } from "./reasons.ts"
 // "Lossless" means: decode(encode(log)) equals the log as stored (JSON), so a key holding
 // undefined counts as absent and a false flag as unset, exactly as the engine treats them.
 
-export const THROWS_FORMAT = "1"
+const THROWS_FORMAT = "1"
 export const DART_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-"
 
 const MISS_INDEX = 60

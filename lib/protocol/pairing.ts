@@ -119,7 +119,7 @@ export const PAIRING_MESSAGES = {
 
 export type PairingMessage = { [K in keyof typeof PAIRING_MESSAGES]: Infer<(typeof PAIRING_MESSAGES)[K]> }[keyof typeof PAIRING_MESSAGES]
 
-export const BOARD_MESSAGE_TYPES = ["look", "table", "join", "seat", "decline", "leave"] as const
+const BOARD_MESSAGE_TYPES = ["look", "table", "join", "seat", "decline", "leave"] as const
 
 export function pairingTemplate(opts: { message: PairingMessage; created_at: number; recipient?: string; lookup?: string; ciphertext?: string }): EventTemplate {
   const checked = PAIRING_MESSAGES[opts.message.t].check(opts.message, "")

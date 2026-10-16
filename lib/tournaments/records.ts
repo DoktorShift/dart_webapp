@@ -13,7 +13,7 @@ import { MAX_OFFER_SECONDS } from "../protocol/kinds.ts"
 
 // created_at for a record written on top of the state: after everything in it, even within
 // the same second (lib/protocol/tags.ts).
-export const afterState = (state: TournamentState, ...basedOn: number[]) => createdAtAfter(nowSeconds(), state.log.applied.at(-1)?.at ?? 0, ...basedOn)
+const afterState = (state: TournamentState, ...basedOn: number[]) => createdAtAfter(nowSeconds(), state.log.applied.at(-1)?.at ?? 0, ...basedOn)
 
 function record<T extends RecordType>(state: TournamentState, type: T, content: ContentOf<T>): EventTemplate {
   return buildRecord(type, content, { created_at: afterState(state), root: state.id })
@@ -25,7 +25,7 @@ const slotHead = (state: TournamentState, slot: string) => state.slots[slot]?.he
 
 // Hand-over offers are open for a day (docs/protocol/families/tournament.md, "Vorgaben für
 // lib/tournaments"), well within the protocol's seven.
-export const OFFER_SECONDS = Math.min(24 * 3600, MAX_OFFER_SECONDS)
+const OFFER_SECONDS = Math.min(24 * 3600, MAX_OFFER_SECONDS)
 
 export const foundTemplate = (content: ContentOf<"tournament.found">, at = nowSeconds()) => buildRecord("tournament.found", content, { created_at: at })
 

@@ -21,9 +21,9 @@ export interface Chunk {
   data: string
 }
 
-export const GENESIS = "0".repeat(64)
+const GENESIS = "0".repeat(64)
 
-export const chainHash = (prev: string, data: string) => bytesToHex(sha256(utf8ToBytes(prev + data)))
+const chainHash = (prev: string, data: string) => bytesToHex(sha256(utf8ToBytes(prev + data)))
 
 // Bytes a character (code point) occupies once the piece is written as a JSON string value.
 function jsonCost(ch: string) {

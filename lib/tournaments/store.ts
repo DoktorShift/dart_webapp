@@ -19,7 +19,7 @@ import type { TournamentDraft } from "./draft.ts"
 // What this device signed waits in the persistent outbox (lib/sync/outbox.ts) until relays have
 // it; nothing here keeps a second list of it (send.ts).
 
-export const TOURNAMENT_OBJECT_PREFIX = "tournament:"
+const TOURNAMENT_OBJECT_PREFIX = "tournament:"
 const DRAFT_PREFIX = "tournament-draft:"
 const BOARD_PREFIX = "tournament-board:"
 

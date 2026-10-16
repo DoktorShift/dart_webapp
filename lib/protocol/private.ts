@@ -28,12 +28,12 @@ import { HEX64, isSignedEventShape, signedEventBytes } from "./tags.ts"
 // The cipher itself runs in lib/sync (@noble/ciphers); this module fixes slots, envelope and
 // the plaintext schema.
 
-export const ENVELOPE_VERSION = 1
+const ENVELOPE_VERSION = 1
 const NONCE_BYTES = 24
 const TAG_BYTES = 16
 
 // Plaintext one record event carries at most; larger data is split (chunks.ts) into parts.
-export const MAX_RECORD_PLAINTEXT_BYTES = 20000
+const MAX_RECORD_PLAINTEXT_BYTES = 20000
 
 const keyBytes = (key: Uint8Array | string) => (typeof key === "string" ? hexToBytes(key) : key)
 
