@@ -62,8 +62,8 @@ function useLiveHere(match: string): [boolean, () => void] {
   return [live, () => setLive(true)]
 }
 
-// Records of an earlier live game that never reached a relay (the app was closed right after
-// it): sent now that a game is on the screen again.
+// Board records of earlier live games (the app was closed before the board let go of them):
+// dropped now that a game is on the screen again. What they owe the relays waits in the outbox.
 function useLeftoverBoards(match: string) {
   useEffect(() => {
     void listBoards().then(
