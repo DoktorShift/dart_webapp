@@ -3,6 +3,7 @@ import { latestEvents } from "../nostr/client.ts"
 import type { EventTemplate, NostrEvent } from "../nostr/types.ts"
 import type { ClubState } from "../protocol/club-state.ts"
 import { clubRoleAt } from "../protocol/club-state.ts"
+import { KIND_CALENDAR_RSVP, KIND_CALENDAR_TIME } from "../protocol/kinds.ts"
 import { buildRecord } from "../protocol/records.ts"
 import { newObjectId } from "../storage/ids.ts"
 import { afterState, send, type Author, type Sent } from "./send.ts"
@@ -13,8 +14,6 @@ import { afterState, send, type Author, type Sent } from "./send.ts"
 // which NIP-52 has no encrypted form for. Both read as the same ClubDate below. A recurring
 // club night is one date per evening (PLAN.md "Turniere": "als einzelne Termine").
 
-export const CALENDAR_TIME_KIND = 31923
-export const CALENDAR_RSVP_KIND = 31925
 const CANCELLED: string[] = ["status", "cancelled"]
 const ANSWER_OF = { accepted: "yes", tentative: "maybe", declined: "no" } as const
 const STATUS_OF = { yes: "accepted", maybe: "tentative", no: "declined" } as const
@@ -69,14 +68,14 @@ const isLeader = (state: ClubState, pubkey: string, at: number) => {
 // them (newest version each); answers by members, the newest per member.
 export async function publicDates(events: readonly NostrEvent[], state: ClubState): Promise<ClubDate[]> {
   const core = await loadCore()
-  const calendar = latestEvents(events.filter((e) => e.kind === CALENDAR_TIME_KIND && e.tags.some((t) => t[0] === "e" && t[1] === state.id)))
-  const answers = latestEvents(events.filter((e) => e.kind === CALENDAR_RSVP_KIND))
+  const calendar = latestEvents(events.filter((e) => e.kind === KIND_CALENDAR_TIME && e.tags.some((t) => t[0] === "e" && t[1] === state.id)))
+  const answers = latestEvents(events.filter((e) => e.kind === KIND_CALENDAR_RSVP))
   const dates: ClubDate[] = []
   for (const event of calendar) {
     if (!isLeader(state, event.pubkey, event.created_at)) continue
     const parsed = core.parseTimeBasedCalendarEvent(event)
     if (!parsed.identifier || !parsed.title || !Number.isSafeInteger(parsed.start)) continue
-    const address = core.buildCalendarEventAddress(CALENDAR_TIME_KIND, event.pubkey, parsed.identifier)
+    const address = core.buildCalendarEventAddress(KIND_CALENDAR_TIME, event.pubkey, parsed.identifier)
     const said: ClubDate["answers"] = {}
     for (const rsvp of answers) {
       const r = core.parseCalendarEventRSVP(rsvp)

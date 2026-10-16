@@ -4,7 +4,7 @@ import type { Nip46Connection } from "../nostr/signers.ts"
 import type { Signer } from "../nostr/types.ts"
 import { dbGet, dbKeys, dbWrite, onStorageChange, type Keyed, type WriteOp } from "../storage/db.ts"
 import { isPubkey } from "../storage/players.ts"
-import { OWN_OBJECT_PREFIX, PROFILE_KV_PREFIX, SESSION_KEY, SIGNER_PENDING_PREFIX } from "./storage-keys.ts"
+import { CLUB_OBJECT_PREFIX, OWN_OBJECT_PREFIX, PROFILE_KV_PREFIX, SESSION_KEY, SIGNER_PENDING_PREFIX } from "./storage-keys.ts"
 import { forgetVaultKey, openSecret, sealSecret, type SealedSecret } from "./vault.ts"
 
 // The one current session of this device (docs/decisions/0002 §4): a guest (no session), a key
@@ -67,9 +67,6 @@ export interface SessionOptions {
 
 // The storage names live in ./storage-keys.ts (no code), so the start page can look for a stored
 // session without this module.
-export { OWN_OBJECT_PREFIX, PROFILE_KV_PREFIX, SESSION_KEY, SIGNER_PENDING_PREFIX }
-// Objects of a profile's clubs (lib/clubs), deleted with the profile like its own events.
-export const CLUB_OBJECT_PREFIX = "club:"
 const PROFILE_OBJECT_PREFIXES = [OWN_OBJECT_PREFIX, CLUB_OBJECT_PREFIX]
 // Device-wide, kept across profiles: the session itself and the vault key are handled apart.
 const KEPT_ON_SWITCH = new Set([SESSION_KEY, "profile.vault-key"])

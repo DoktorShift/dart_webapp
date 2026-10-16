@@ -1,7 +1,7 @@
 import { beforeEach, test } from "node:test"
 import assert from "node:assert/strict"
 import { localStore, resetStorage } from "./storage-helpers.ts"
-import { PROFILE_KV_PREFIX } from "../lib/profile/session.ts"
+import { PROFILE_KV_PREFIX } from "../lib/profile/storage-keys.ts"
 import { WALLET_KEY } from "../lib/payments/in-use.ts"
 import { acceptWalletReturn, forgetReturnedConnection, returnedConnection, returnsWatched, subscribeReturned, walletAppLink, watchReturns } from "../lib/payments/wallet-return.ts"
 

@@ -5,17 +5,8 @@ import { loadCore } from "../lib/nostr/core.ts"
 import type { Nip46Connection } from "../lib/nostr/signers.ts"
 import type { Signer } from "../lib/nostr/types.ts"
 import { dbGet, dbGetAll, dbKeys, dbPut, kvSet } from "../lib/storage/db.ts"
-import {
-  connectExternal,
-  getSession,
-  getSigner,
-  importLocalKey,
-  loadSession,
-  onSessionEnd,
-  signOut,
-  startLocalProfile,
-  SESSION_KEY,
-} from "../lib/profile/session.ts"
+import { connectExternal, getSession, getSigner, importLocalKey, loadSession, onSessionEnd, signOut, startLocalProfile } from "../lib/profile/session.ts"
+import { SESSION_KEY } from "../lib/profile/storage-keys.ts"
 import { openSecret, sealSecret } from "../lib/profile/vault.ts"
 
 // The session contract of decision 0002 §4: one current session, every signer checked, the local

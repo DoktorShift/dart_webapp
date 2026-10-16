@@ -6,7 +6,8 @@ import { KIND_PROFILE_BADGES } from "../protocol/kinds.ts"
 import { STATS_CARD_D } from "../protocol/profile.ts"
 import { ROUND_D_PREFIX } from "./rounds.ts"
 import { BLOCKED_RELAYS_KIND, ownReadRelays, RELAY_LIST_KIND, relaySettings, type RelaySettings } from "./relay-list.ts"
-import { getSession, onSessionEnd, OWN_OBJECT_PREFIX } from "./session.ts"
+import { getSession, onSessionEnd } from "./session.ts"
+import { OWN_OBJECT_PREFIX } from "./storage-keys.ts"
 
 // The signed-in profile's own replaceable events, as last seen: its metadata (0), relay list
 // (10002), blocked relays (10006), stats card (31180 "stats"), player rounds (30000) and the

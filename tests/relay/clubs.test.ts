@@ -11,7 +11,8 @@ import { relayClient } from "../../lib/nostr/client.ts"
 import { loadCore, type Core } from "../../lib/nostr/core.ts"
 import type { Throw } from "../../lib/game/types.ts"
 import { clubTasks } from "../../lib/clubs/club.ts"
-import { answerDate, cancelDate, CALENDAR_TIME_KIND, repeatDates, saveDates } from "../../lib/clubs/dates.ts"
+import { answerDate, cancelDate, repeatDates, saveDates } from "../../lib/clubs/dates.ts"
+import { KIND_CALENDAR_TIME } from "../../lib/protocol/kinds.ts"
 import { answerGame, correctGame, gameSeats, recordGame, recordedGame, type FinishedGame } from "../../lib/clubs/games.ts"
 import { acceptInvitation, invitationState, openInvitation } from "../../lib/clubs/invitation.ts"
 import { clubLink, readClubPayload } from "../../lib/clubs/links.ts"
@@ -398,7 +399,7 @@ test("a public club's dates are calendar events other apps read; members answer,
   const first = now() + 86400
   await saveDates(view.state!, repeatDates({ title: "Clubabend", starts: first, ends: first + 3 * 3600, place: "Vereinsheim" }, 7, 3), author)
   await sent()
-  const calendar = await relayClient().query([{ kinds: [CALENDAR_TIME_KIND], "#e": [club] }], [a.url])
+  const calendar = await relayClient().query([{ kinds: [KIND_CALENDAR_TIME], "#e": [club] }], [a.url])
   assert.equal(calendar.events.length, 3)
   assert.equal(await runNak(["verify"], { input: `${calendar.events.map((e) => JSON.stringify(e)).join("\n")}\n` }), "")
   assert.deepEqual(calendar.events.map((e) => e.tags.find((t) => t[0] === "title")?.[1]), ["Clubabend", "Clubabend", "Clubabend"])

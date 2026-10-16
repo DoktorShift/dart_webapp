@@ -5,7 +5,8 @@ import type { NostrEvent } from "@/lib/nostr/types"
 import { readMetadata } from "@/lib/profile/metadata"
 import { OWN } from "@/lib/profile/own-events"
 import { cachedProfile, loadProfiles } from "@/lib/profile/public-profile"
-import { getSession, OWN_OBJECT_PREFIX } from "@/lib/profile/session"
+import { getSession } from "@/lib/profile/session"
+import { OWN_OBJECT_PREFIX } from "@/lib/profile/storage-keys"
 import { dbGet, type Keyed } from "@/lib/storage/db"
 
 // Names and pictures of people a club or a tournament names only by key, from their public

@@ -1,7 +1,7 @@
 import type { Nip55Request } from "../nostr/ext/nip55.ts"
 import type { Signer, VerifiedEvent } from "../nostr/types.ts"
 import { dbGet, dbWrite, onStorageChange, type Keyed } from "../storage/db.ts"
-import { SIGNER_PENDING_PREFIX } from "./session.ts"
+import { SIGNER_PENDING_PREFIX } from "./storage-keys.ts"
 
 // An Android signer app (NIP-55) from a web page. A request leaves the page as a nostrsigner:
 // link; the answer comes back as a new address of the app (/#signer-return=<id>.<result>), in

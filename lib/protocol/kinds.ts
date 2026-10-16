@@ -14,6 +14,9 @@ export const KIND_PRIVATE = 30078
 export const KIND_BADGE_DEFINITION = 30009
 export const KIND_BADGE_AWARD = 8
 export const KIND_PROFILE_BADGES = 10008
+// NIP-52 time-based calendar events and their RSVPs: a public club's dates (lib/clubs/dates.ts).
+export const KIND_CALENDAR_TIME = 31923
+export const KIND_CALENDAR_RSVP = 31925
 
 // NIP-32 label namespace of every BlueLine record.
 export const LABEL_NAMESPACE = "blueline"
