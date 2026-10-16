@@ -1,6 +1,16 @@
 "use client"
 
 import { RefreshCw } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Avatar } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { InlineStatus } from "@/components/common/inline-status"
@@ -15,8 +25,8 @@ import { ClubSignerError, resend } from "@/lib/clubs/send"
 import type { NameInfo } from "@/components/clubs/use-names"
 
 // Small pieces every club screen shares: how times and people are written, what to say when
-// signing fails, and the honest lines about the local copy (when relays last answered, what is
-// not sent yet).
+// signing fails, the honest lines about the local copy (when relays last answered, what is not
+// sent yet), and the one question before something is removed or given away.
 
 export const formatDateTime = (unix: number, t: Messages) =>
   new Date(unix * 1000).toLocaleString(t.intl, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
@@ -136,4 +146,41 @@ export function taskLabel(task: ClubTask, tx: ClubsTexts, t: Messages): string {
     case "answer":
       return tx.tasks.answer(formatDateTime(task.date.starts, t))
   }
+}
+
+// One question with a cancel and one answer; red when the answer removes something.
+export function Confirm({
+  open,
+  onOpenChange,
+  title,
+  text,
+  confirm,
+  destructive,
+  onConfirm,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  title: string
+  text: string
+  confirm: string
+  destructive?: boolean
+  onConfirm: () => void
+}) {
+  const t = useT()
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent className="max-w-[calc(100vw-2rem)] rounded-2xl sm:max-w-md">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="[overflow-wrap:anywhere]">{title}</AlertDialogTitle>
+          <AlertDialogDescription>{text}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter className="gap-2">
+          <AlertDialogCancel className="h-11">{t.common.cancel}</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm} className={destructive ? "h-11 bg-danger text-white hover:bg-danger/90" : "h-11"}>
+            {confirm}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
 }

@@ -104,13 +104,13 @@ export const revokeInvite = (state: ClubState, invite: string, author: Author) =
   send(state.id, [record(state, "club.invite.revoke", { invite })], author)
 
 // Joins with an invite link (proof of its token, bound to this profile), or asks to join
-// without one. Dated after the invite, which the reducer requires.
-export async function joinClub(club: string, invite: { id: string; token: string; at: number } | null, author: Author): Promise<Sent> {
+// without one. Dated after the invite, which the reducer requires. The opened invitation stays
+// with the club: in a closed club its preview is all the joiner can read until a leader shares
+// access.
+export function joinClub(club: string, invite: { id: string; token: string; at: number } | null, author: Author): Promise<Sent> {
   const content = invite ? { invite: invite.id, proof: inviteProof(invite.token, author.pubkey) } : {}
   const template = buildRecord("club.join", content, { created_at: recordTime(invite?.at ?? 0), root: club })
-  const sent = await send(club, [{ template }], author)
-  await updateClub(club, { invite: null })
-  return sent
+  return send(club, [{ template }], author)
 }
 
 // Leaves the club, or withdraws a waiting request. Always in the clear (club.md).

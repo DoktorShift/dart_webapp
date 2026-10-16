@@ -8,8 +8,7 @@ import { InlineStatus } from "@/components/common/inline-status"
 import { useNav } from "@/components/nav/nav-context"
 import { useAreaT } from "@/components/i18n-provider"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
-import { Confirm } from "@/components/clubs/club-screen"
-import { gameLabel, useChange } from "@/components/clubs/common"
+import { Confirm, gameLabel, useChange } from "@/components/clubs/common"
 import { DecideSheet, EditSheet, InvitesSheet } from "@/components/clubs/manage-sheets"
 import { RequestList } from "@/components/clubs/request-list"
 import { CLUB_SCREENS } from "@/components/clubs/screens"
@@ -50,7 +49,8 @@ export default function ManageScreen({ params }: ScreenProps) {
   const season = currentSeason(state, now)
   const decisions = season ? (state.results[season.id] ?? {}) : {}
   const disputed = season ? view.games.filter((g) => belongsTo(season, g) && countsFor(g, rulesOf(season), decisions[g.match]) === "disputed") : []
-  const requests = Object.keys(state.requests).length
+  // Requests are a manager's task; a tournament director has none here.
+  const requests = manager ? Object.keys(state.requests).length : 0
   const offer = state.offer && state.offer.expires > now ? state.offer : null
   const nothing = requests === 0 && disputed.length === 0 && !offer
   const name = params.name ?? state.info.name

@@ -1,13 +1,12 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useState } from "react"
 import { Check, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Segmented } from "@/components/ui/segmented"
 import { Sheet } from "@/components/ui/sheet"
 import { TextField } from "@/components/ui/text-field"
 import { InlineStatus } from "@/components/common/inline-status"
-import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
 import { personName, shortId } from "@/components/clubs/common"
@@ -25,12 +24,23 @@ import { cn } from "@/lib/utils"
 const MAX_PLAYERS = 6
 
 // "Spiel starten" from a club: tap the members who play (you are in already), add guests by
-// name, pick the game, and setup opens with those seats. The game is played like any other;
-// its result is recorded for the club when it is finished (./result-action.tsx).
-export function StartGameSheet({ view, state, open, onOpenChange }: { view: ClubView; state: ClubState; open: boolean; onOpenChange: (open: boolean) => void }) {
+// name, pick the game, and setup opens with those seats (onStart). The game is played like any
+// other; its result is recorded for the club when it is finished (./result-action.tsx).
+export function StartGameSheet({
+  view,
+  state,
+  open,
+  onOpenChange,
+  onStart,
+}: {
+  view: ClubView
+  state: ClubState
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onStart: (type: GameType, preset: SetupPreset) => void
+}) {
   const t = useT()
   const tx = useAreaT(CLUBS_TEXTS)
-  const nav = useNav()
   const own = useOwnProfile()
   const me = view.me.pubkey
   const members = Object.values(state.members).filter((m) => m.pubkey !== me)
@@ -51,26 +61,16 @@ export function StartGameSheet({ view, state, open, onOpenChange }: { view: Club
     setGuests((current) => [...current, name])
     setGuestName("")
   }
-  // Setup opens once the sheet has slid away (Sheet onAnimationEnd): opened at once, it would
-  // cover and freeze the tabs with the sheet still on its way out.
-  const pending = useRef<SetupPreset | null>(null)
   const start = () => {
     const players: SetupSeat[] = [
       ...chosen.map((pubkey) => ({ name: seatName(pubkey === me ? (own?.name ?? tx.you) : nameOf(pubkey)), pubkey })),
       ...guests.map((name) => ({ name })),
     ]
-    pending.current = { players, extras: { [CLUB_EXTRA]: { club: view.id } } }
-    onOpenChange(false)
-  }
-  const settled = (shown: boolean) => {
-    if (shown || !pending.current) return
-    const preset = pending.current
-    pending.current = null
-    nav.openSetup(type, preset)
+    onStart(type, { players, extras: { [CLUB_EXTRA]: { club: view.id } } })
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange} onAnimationEnd={settled} title={tx.game.title} description={tx.game.description}>
+    <Sheet open={open} onOpenChange={onOpenChange} title={tx.game.title} description={tx.game.description}>
       <div className="min-h-0 overflow-y-auto overscroll-contain pb-1">
         <p className="mb-2 px-1 text-[0.8125rem] font-medium text-muted-foreground">{tx.game.members}</p>
         <div className="flex flex-wrap gap-2">

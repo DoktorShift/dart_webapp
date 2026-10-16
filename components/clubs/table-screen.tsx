@@ -11,20 +11,26 @@ import { Sheet } from "@/components/ui/sheet"
 import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
-import { formatDate, gameLabel, sameNames, shortId } from "@/components/clubs/common"
+import { formatDate, formatDateTime, gameLabel, sameNames, shortId } from "@/components/clubs/common"
 import { ScoringText } from "@/components/clubs/scoring"
 import { CLUB_SCREENS } from "@/components/clubs/screens"
 import { useClub } from "@/components/clubs/use-clubs"
 import { useNames } from "@/components/clubs/use-names"
+import { VerdictSheet } from "@/components/clubs/verdict-sheet"
 import { isManager } from "@/lib/clubs/club"
+import type { ClubGame } from "@/lib/clubs/games"
 import { currentSeason, seasonTable, type Standing } from "@/lib/clubs/table"
 import { nowSeconds } from "@/lib/nostr/time"
 import type { ScreenProps } from "@/lib/shell/registry"
 import { cn } from "@/lib/utils"
 
+// How many of the club's games the list below the table shows.
+const RECENT_GAMES = 10
+
 // "Tabelle" (PLAN.md): rank, name, games and points; the detail columns on wide screens. Your
 // own row is marked, unconfirmed results are listed apart as not counted, and "So wird
-// gewertet" explains the rules. Without a season: what a season is for, and how to set one up.
+// gewertet" explains the rules. Below it the club's last games, each opening its result.
+// Without a season: what a season is for, how to set one up, and the games played so far.
 export default function TableScreen({ params }: ScreenProps) {
   const t = useT()
   const tx = useAreaT(CLUBS_TEXTS)
@@ -32,6 +38,7 @@ export default function TableScreen({ params }: ScreenProps) {
   const { view } = useClub(params.club ?? null)
   const [chosen, setChosen] = useState<string | null>(null)
   const [scoringOpen, setScoringOpen] = useState(false)
+  const [shown, setShown] = useState<ClubGame | null>(null)
   const state = view?.state
   const now = nowSeconds()
   const seasons = state ? Object.values(state.seasons).sort((a, b) => b.starts - a.starts) : []
@@ -41,14 +48,37 @@ export default function TableScreen({ params }: ScreenProps) {
   const names = useNames(rows.map((r) => r.pubkey))
   if (!view || !state) return null
   const manager = isManager(view.me.role) && !state.info.archived
+  const legs = (game: ClubGame) => (game.result ? tx.game.legs(game.result.legs.join(":")) : undefined)
+  // The game as the club reads it now (an answer may have arrived since it was opened).
+  const shownGame = shown ? (view.games.find((g) => g.match === shown.match) ?? shown) : null
+  const recent = (
+    <>
+      <Group title={tx.game.recent} footer={view.games.length === 0 ? tx.game.noneHint : undefined}>
+        {view.games.length === 0 && <ListRow title={tx.game.none} />}
+        {view.games.slice(0, RECENT_GAMES).map((game) => (
+          <ListRow
+            key={game.match}
+            title={gameLabel(game)}
+            subtitle={game.result ? [formatDateTime(game.result.at, t), game.result.replaces ? tx.game.corrected : null].filter(Boolean).join(" · ") : undefined}
+            value={legs(game)}
+            onClick={() => setShown(game)}
+          />
+        ))}
+      </Group>
+      <VerdictSheet view={view} state={state} game={shownGame} open={shownGame !== null} onOpenChange={(open) => !open && setShown(null)} />
+    </>
+  )
   if (!season || !table) {
     return (
-      <EmptyState
-        icon={Trophy}
-        title={tx.table.noSeason}
-        description={manager ? tx.table.noSeasonLeader : tx.table.noSeasonText}
-        primary={manager ? { label: tx.table.setup, onClick: () => nav.push(CLUB_SCREENS.season, { club: view.id, name: params.name ?? "" }) } : undefined}
-      />
+      <div className="pb-4">
+        <EmptyState
+          icon={Trophy}
+          title={tx.table.noSeason}
+          description={manager ? tx.table.noSeasonLeader : tx.table.noSeasonText}
+          primary={manager ? { label: tx.table.setup, onClick: () => nav.push(CLUB_SCREENS.season, { club: view.id, name: params.name ?? "" }) } : undefined}
+        />
+        {recent}
+      </div>
     )
   }
   const nameOf = (row: Standing) => names(row.pubkey).name ?? row.alias
@@ -147,13 +177,14 @@ export default function TableScreen({ params }: ScreenProps) {
       {table.open.length > 0 && (
         <Group title={tx.table.open}>
           {table.open.map(({ game, why }) => (
-            <ListRow key={game.match} title={gameLabel(game)} subtitle={tx.table.why[why]} value={game.result?.legs.join(":")} />
+            <ListRow key={game.match} title={gameLabel(game)} subtitle={tx.table.why[why]} value={legs(game)} onClick={() => setShown(game)} />
           ))}
         </Group>
       )}
       <Group>
         <ListRow icon={Info} iconTone="gray" title={tx.table.scoring} onClick={() => setScoringOpen(true)} />
       </Group>
+      {recent}
 
       <Sheet open={scoringOpen} onOpenChange={setScoringOpen} title={tx.table.scoring}>
         <div className="min-h-0 overflow-y-auto overscroll-contain pb-1">

@@ -2,16 +2,6 @@
 
 import { useEffect, useState } from "react"
 import { Calendar, ChartColumn, ChevronRight, Settings, Users } from "lucide-react"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
@@ -20,7 +10,7 @@ import { useNav } from "@/components/nav/nav-context"
 import { SlotItems } from "@/components/shell/slot-items"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
-import { ClubHeader, SyncLine, formatDateTime, membershipLine, taskLabel, useChange } from "@/components/clubs/common"
+import { ClubHeader, Confirm, SyncLine, formatDateTime, membershipLine, taskLabel, useChange } from "@/components/clubs/common"
 import { DateAnswer, answerCounts } from "@/components/clubs/date-answer"
 import { useGuestProfile } from "@/components/clubs/guest-profile"
 import { InviteSheet } from "@/components/clubs/invite-sheet"
@@ -79,7 +69,9 @@ function ClubBody({ view, refresh }: { view: ClubView; refresh: () => void }) {
   const leader = isLeader(me.role)
   const manager = isManager(me.role)
   const archived = !!info?.archived
-  const [playing, setPlaying] = useState(false)
+  // The start sheet: open, closed (slides away), or left behind when a game starts: setup
+  // covers and freezes the tabs at once, and a sheet still sliding away would never finish.
+  const [sheet, setSheet] = useState<"closed" | "open" | "left">("closed")
   const [inviting, setInviting] = useState(false)
   const [verdict, setVerdict] = useState<ClubGame | null>(null)
   const [leaving, setLeaving] = useState(false)
@@ -143,7 +135,7 @@ function ClubBody({ view, refresh }: { view: ClubView; refresh: () => void }) {
           )}
           {!archived && (
             <div className="mt-4 grid gap-2 min-[360px]:grid-cols-[minmax(0,1fr)_auto]">
-              <Button onClick={() => setPlaying(true)} className="h-12 whitespace-normal rounded-xl text-[1.0625rem] font-semibold">
+              <Button onClick={() => setSheet("open")} className="h-12 whitespace-normal rounded-xl text-[1.0625rem] font-semibold">
                 {tx.club.play}
               </Button>
               {manager && (
@@ -213,7 +205,18 @@ function ClubBody({ view, refresh }: { view: ClubView; refresh: () => void }) {
             </Group>
           )}
 
-          <StartGameSheet view={view} state={state} open={playing} onOpenChange={setPlaying} />
+          {sheet !== "left" && (
+            <StartGameSheet
+              view={view}
+              state={state}
+              open={sheet === "open"}
+              onOpenChange={(open) => setSheet(open ? "open" : "closed")}
+              onStart={(type, preset) => {
+                setSheet("left")
+                nav.openSetup(type, preset)
+              }}
+            />
+          )}
           <InviteSheet view={view} state={state} open={inviting} onOpenChange={setInviting} />
           <VerdictSheet view={view} state={state} game={verdict} open={verdict !== null} onOpenChange={(open) => !open && setVerdict(null)} />
           <Confirm
@@ -291,7 +294,7 @@ function Outsider({ view, state, busy, problem, run }: { view: ClubView; state: 
           {tx.club.withdraw}
         </Button>
       )}
-      {view.invite && me.status !== "request" && (
+      {view.invite && me.status === "none" && (
         <Button onClick={() => nav.replaceTop(SCREENS.clubInvite, { club: view.id })} className="mt-4 h-12 w-full rounded-xl text-[1.0625rem] font-semibold">
           {tx.home.status.invitation}
         </Button>
@@ -311,42 +314,5 @@ function Outsider({ view, state, busy, problem, run }: { view: ClubView; state: 
         </>
       )}
     </>
-  )
-}
-
-// One question with a cancel and one answer; red when the answer removes something.
-export function Confirm({
-  open,
-  onOpenChange,
-  title,
-  text,
-  confirm,
-  destructive,
-  onConfirm,
-}: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  title: string
-  text: string
-  confirm: string
-  destructive?: boolean
-  onConfirm: () => void
-}) {
-  const t = useT()
-  return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-[calc(100vw-2rem)] rounded-2xl sm:max-w-md">
-        <AlertDialogHeader>
-          <AlertDialogTitle className="[overflow-wrap:anywhere]">{title}</AlertDialogTitle>
-          <AlertDialogDescription>{text}</AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter className="gap-2">
-          <AlertDialogCancel className="h-11">{t.common.cancel}</AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm} className={destructive ? "h-11 bg-danger text-white hover:bg-danger/90" : "h-11"}>
-            {confirm}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
   )
 }

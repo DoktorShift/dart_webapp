@@ -28,8 +28,8 @@ const SITE = "https://blueline21.netlify.app"
 
 before(async () => {
   core = await loadCore()
-  // The nak ports assigned to this track (20000-20009).
-  ;[a, b] = await Promise.all([startRelay({ port: 20000 }), startRelay({ port: 20001 })])
+  // The nak ports assigned to this track (20600-20609).
+  ;[a, b] = await Promise.all([startRelay({ port: 20600 }), startRelay({ port: 20601 })])
   process.env.NEXT_PUBLIC_BLUELINE_RELAYS = `${a.url},${b.url}`
 })
 
@@ -265,6 +265,14 @@ test("a season table follows the games: a confirmed result counts, a correction 
   assert.deepEqual(table.ranked.map((r) => [r.pubkey, r.points]), [[ben.pubkey, 2], [owner.pubkey, 0]])
 })
 
+// A week later at the same local time: across a change of daylight-saving time that is not
+// 7 × 86400 seconds (lib/clubs/dates.ts repeatDates keeps the hour of the club night).
+const weeksLater = (unix: number, weeks: number) => {
+  const date = new Date(unix * 1000)
+  date.setDate(date.getDate() + 7 * weeks)
+  return Math.floor(date.getTime() / 1000)
+}
+
 test("a public club's dates are calendar events other apps read; members answer, a cancellation shows", async () => {
   const owner = person()
   const ben = person()
@@ -284,7 +292,7 @@ test("a public club's dates are calendar events other apps read; members answer,
 
   const phone = await device(ben)
   view = await refreshClub(club, phone)
-  assert.deepEqual(view.dates.map((d) => d.starts), [first, first + 7 * 86400, first + 14 * 86400])
+  assert.deepEqual(view.dates.map((d) => d.starts), [first, weeksLater(first, 1), weeksLater(first, 2)])
   await answerDate(view.state!, view.dates[0], "maybe", phone)
   view = await refreshClub(club, phone)
   await answerDate(view.state!, view.dates[0], "yes", phone)

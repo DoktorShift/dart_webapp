@@ -12,8 +12,7 @@ import { InlineStatus } from "@/components/common/inline-status"
 import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
-import { Confirm } from "@/components/clubs/club-screen"
-import { useChange } from "@/components/clubs/common"
+import { Confirm, useChange } from "@/components/clubs/common"
 import { clubAuthor } from "@/components/clubs/use-clubs"
 import { useNames } from "@/components/clubs/use-names"
 import type { ClubView } from "@/lib/clubs/club"
@@ -45,6 +44,9 @@ export function MemberSheet({ view, state, member, open, onOpenChange }: { view:
   const canRole = !!current && !mine && (myRole === "owner" ? current.role !== "owner" : myRole === "admin" && current.role !== "admin" && current.role !== "owner")
   const roles: GivenRole[] = myRole === "owner" ? ["admin", "director", "member"] : ["director", "member"]
   const canOffer = !!member && myRole === "owner" && !state.offer && mayReceiveOwnership(state, member)
+  // The owner could hand over, but this member came in through a group link and no leader
+  // confirmed them (lib/clubs/membership.ts mayReceiveOwnership): say why there is no button.
+  const unofferable = !!member && myRole === "owner" && !state.offer && !mine && !mayReceiveOwnership(state, member)
 
   const run = async (action: (author: Author) => Promise<unknown>) => {
     setBusy(true)
@@ -97,6 +99,7 @@ export function MemberSheet({ view, state, member, open, onOpenChange }: { view:
             {tx.members.offer}
           </Button>
         )}
+        {unofferable && <p className="mt-6 px-4 text-[0.8125rem] leading-snug text-muted-foreground">{tx.members.noCandidates}</p>}
         {canRole && (
           <>
             <TextField label={tx.members.reason} value={reason} onChange={(event) => setReason(event.target.value)} maxLength={280} />

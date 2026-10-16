@@ -32,10 +32,6 @@ export const clubsScreensEn: Widen<typeof clubsScreensDe> = {
       outsider: "Not a member",
     },
     next: (when) => `Next date: ${when}`,
-    members: (n) => (n === 1 ? "1 member" : `${n} members`),
-    open: "View",
-    loadedAt: (time) => `As of ${time}`,
-    neverLoaded: "Not loaded yet",
   },
 
   tasks: {
@@ -100,7 +96,6 @@ export const clubsScreensEn: Widen<typeof clubsScreensDe> = {
     offline: "No connection. The invitation can't be loaded right now.",
     invalid: "That is not a complete invitation link.",
     loading: "Loading invitation",
-    failed: "That didn't work. Please try again.",
   },
 
   club: {
@@ -126,12 +121,11 @@ export const clubsScreensEn: Widen<typeof clubsScreensDe> = {
     withdraw: "Withdraw request",
     requestNone: "Ask to join",
     requestHint: "One of the club's leaders decides on your joining.",
-    requestSent: "Your request is waiting for approval.",
     state: {
       request: "Your request is waiting for approval. You can keep playing meanwhile.",
       joined: "You have joined. Once one of the leaders opens the club, you'll see everything.",
-      removed: "You are no longer a member of this club.",
-      left: "You have left this club.",
+      removed: "You are no longer a member of this club. A new invitation lets you back in.",
+      left: "You have left this club. A new invitation lets you back in.",
       archived: "This club is archived. Everything stays readable; no new games or dates are added.",
       sealed: "This club is by invitation only. Without an invitation nothing of it is visible.",
       missing: "Nothing was found for this club. Check the connection.",
@@ -189,7 +183,6 @@ export const clubsScreensEn: Widen<typeof clubsScreensDe> = {
     days: (n) => (n === 1 ? "1 day" : `${n} days`),
     create: "Create invitation",
     creating: "Creating invitation",
-    failed: "The invitation couldn't be created. Please try again.",
     caption: "Scan to join, or open the link.",
     shareTitle: (club) => `Invitation: ${club}`,
     active: "Active invitations",
@@ -274,11 +267,11 @@ export const clubsScreensEn: Widen<typeof clubsScreensDe> = {
       place: "Place (optional)",
       note: "Note (optional)",
       repeat: "Repeat",
+      repeatHint: "Weekly; each evening becomes a date of its own.",
       once: "Once",
-      weekly: (n) => `${n}× weekly`,
+      weekly: (n) => `${n}×`,
       save: "Add",
       saving: "Adding",
-      failed: "The date couldn't be added. Please try again.",
       invalid: "The end is before the start.",
     },
     cancel: "Cancel date",
@@ -313,7 +306,6 @@ export const clubsScreensEn: Widen<typeof clubsScreensDe> = {
       visibilityHint: "Public or by invitation only. To close a club it may have at most 100 members.",
       save: "Save",
       saving: "Saving",
-      failed: "That couldn't be saved. Please try again.",
     },
   },
 
@@ -341,7 +333,6 @@ export const clubsScreensEn: Widen<typeof clubsScreensDe> = {
     tiebreakHint: "In this order.",
     save: "Start season",
     saving: "Setting up",
-    failed: "The season couldn't be set up. Please try again.",
     needsMode: "Choose at least one game.",
     rules: "Rules",
     changeRules: "Change rules",
@@ -354,7 +345,6 @@ export const clubsScreensEn: Widen<typeof clubsScreensDe> = {
     endConfirm: "End",
     ended: "Ended",
     current: "Current season",
-    versions: (n) => (n === 1 ? "Version 1" : `Version ${n}`),
   },
 
   game: {

@@ -33,10 +33,6 @@ export const clubsScreensDe = {
       outsider: "Kein Mitglied",
     },
     next: (when: string) => `Nächster Termin: ${when}`,
-    members: (n: number) => (n === 1 ? "1 Mitglied" : `${n} Mitglieder`),
-    open: "Ansehen",
-    loadedAt: (time: string) => `Stand ${time}`,
-    neverLoaded: "Noch nicht geladen",
   },
 
   // What a club wants from this person next; one line each.
@@ -105,7 +101,6 @@ export const clubsScreensDe = {
     offline: "Keine Verbindung. Die Einladung lässt sich gerade nicht laden.",
     invalid: "Das ist kein vollständiger Einladungslink.",
     loading: "Einladung wird geladen",
-    failed: "Das hat nicht geklappt. Versuch es noch einmal.",
   },
 
   // A club's overview.
@@ -132,12 +127,11 @@ export const clubsScreensDe = {
     withdraw: "Anfrage zurückziehen",
     requestNone: "Beitritt anfragen",
     requestHint: "Ein Verantwortlicher des Clubs entscheidet über deinen Beitritt.",
-    requestSent: "Deine Anfrage wartet auf Bestätigung.",
     state: {
       request: "Deine Anfrage wartet auf Bestätigung. Du kannst solange weiterspielen.",
       joined: "Du bist beigetreten. Sobald ein Verantwortlicher den Club öffnet, siehst du alles.",
-      removed: "Du bist nicht mehr Mitglied dieses Clubs.",
-      left: "Du hast diesen Club verlassen.",
+      removed: "Du bist nicht mehr Mitglied dieses Clubs. Mit einer neuen Einladung kannst du zurück.",
+      left: "Du hast diesen Club verlassen. Mit einer neuen Einladung kannst du zurück.",
       archived: "Dieser Club ist archiviert. Alles bleibt lesbar; neue Spiele und Termine kommen nicht mehr dazu.",
       sealed: "Dieser Club ist nur auf Einladung. Ohne Einladung siehst du nichts davon.",
       missing: "Zu diesem Club wurde nichts gefunden. Prüfe die Verbindung.",
@@ -197,7 +191,6 @@ export const clubsScreensDe = {
     days: (n: number) => (n === 1 ? "1 Tag" : `${n} Tage`),
     create: "Einladung erstellen",
     creating: "Einladung wird erstellt",
-    failed: "Die Einladung konnte nicht erstellt werden. Versuch es noch einmal.",
     caption: "Zum Beitreten scannen oder den Link öffnen.",
     shareTitle: (club: string) => `Einladung: ${club}`,
     active: "Aktive Einladungen",
@@ -284,11 +277,11 @@ export const clubsScreensDe = {
       place: "Ort (optional)",
       note: "Hinweis (optional)",
       repeat: "Wiederholen",
+      repeatHint: "Wöchentlich; jeder Abend wird ein eigener Termin.",
       once: "Einmal",
-      weekly: (n: number) => `${n}× wöchentlich`,
+      weekly: (n: number) => `${n}×`,
       save: "Eintragen",
       saving: "Wird eingetragen",
-      failed: "Der Termin konnte nicht eingetragen werden. Versuch es noch einmal.",
       invalid: "Das Ende liegt vor dem Beginn.",
     },
     cancel: "Termin absagen",
@@ -324,7 +317,6 @@ export const clubsScreensDe = {
       visibilityHint: "Öffentlich oder nur auf Einladung. Beim Schließen darf der Club höchstens 100 Mitglieder haben.",
       save: "Sichern",
       saving: "Wird gesichert",
-      failed: "Das konnte nicht gesichert werden. Versuch es noch einmal.",
     },
   },
 
@@ -353,7 +345,6 @@ export const clubsScreensDe = {
     tiebreakHint: "In dieser Reihenfolge.",
     save: "Saison starten",
     saving: "Wird eingerichtet",
-    failed: "Die Saison konnte nicht eingerichtet werden. Versuch es noch einmal.",
     needsMode: "Wähle mindestens eine Spielart.",
     rules: "Regeln",
     changeRules: "Regeln ändern",
@@ -366,7 +357,6 @@ export const clubsScreensDe = {
     endConfirm: "Beenden",
     ended: "Beendet",
     current: "Aktuelle Saison",
-    versions: (n: number) => (n === 1 ? "Fassung 1" : `Fassung ${n}`),
   },
 
   // Club games: starting one, recording it, confirming its result.

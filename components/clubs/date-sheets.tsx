@@ -8,8 +8,7 @@ import { TextField } from "@/components/ui/text-field"
 import { InlineStatus } from "@/components/common/inline-status"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
-import { Confirm } from "@/components/clubs/club-screen"
-import { formatDateTime, formatTime, personName, useChange } from "@/components/clubs/common"
+import { Confirm, formatDateTime, formatTime, personName, useChange } from "@/components/clubs/common"
 import { DateAnswer } from "@/components/clubs/date-answer"
 import { clubAuthor } from "@/components/clubs/use-clubs"
 import { useNames } from "@/components/clubs/use-names"
@@ -156,7 +155,7 @@ export function DateFormSheet({ state, open, onOpenChange }: { state: ClubState;
         <TextField label={f.place} value={place} onChange={(event) => setPlace(event.target.value)} maxLength={140} />
         <TextField label={f.note} value={note} onChange={(event) => setNote(event.target.value)} maxLength={500} />
         <div className="mt-6 rounded-2xl border border-border bg-card">
-          <ChoiceRow title={f.repeat} options={REPEATS.map((n) => ({ value: n, label: n === 1 ? f.once : f.weekly(n) }))} value={repeat} onChange={setRepeat} />
+          <ChoiceRow title={f.repeat} hint={f.repeatHint} options={REPEATS.map((n) => ({ value: n, label: n === 1 ? f.once : f.weekly(n) }))} value={repeat} onChange={setRepeat} />
         </div>
         {problem && (
           <InlineStatus tone="error" className="mt-4">
