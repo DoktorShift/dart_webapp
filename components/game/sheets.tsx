@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react"
 import { Button } from "@/components/ui/button"
 import { ChoiceRow } from "@/components/ui/group"
 import { Sheet } from "@/components/ui/sheet"
-import { slotLabel, visitResult } from "@/components/game/visit-panel"
+import { LegVisits, playedLegs } from "@/components/game/visit-list"
 import { GamePreferences } from "@/components/game-preferences"
 import { useT } from "@/components/i18n-provider"
 import { useRegistryVersion } from "@/components/nav/use-registry"
@@ -65,10 +65,7 @@ export function HistorySheet({
   onSelect: (visit: Visit) => void
 }) {
   const t = useT()
-  const players = state.config.players
-  const legs = [...state.pastLegs.map((visits, leg) => ({ leg, visits })), { leg: state.legIndex, visits: state.legVisits }]
-    .filter((l) => l.visits.length > 0)
-    .reverse()
+  const legs = playedLegs(state)
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title={t.sheets.history.title} description={t.sheets.history.description}>
@@ -76,39 +73,7 @@ export function HistorySheet({
         <p className="pb-4 text-[0.9375rem] text-muted-foreground">{t.sheets.history.empty}</p>
       ) : (
         <div className="min-h-0 space-y-4 overflow-y-auto">
-          {legs.map(({ leg, visits }) => {
-            const result = state.legResults[leg]
-            return (
-              <section key={leg} aria-label={legName(t, state, leg)}>
-                <h3 className="mb-1.5 px-1 text-[0.8125rem] text-muted-foreground">
-                  {t.sheets.history.leg(legName(t, state, leg), result ? players[result.winner].name : null)}
-                </h3>
-                <ol className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
-                  {[...visits].reverse().map((v) => (
-                    <li key={v.seq}>
-                      <button
-                        type="button"
-                        onClick={() => onSelect(v)}
-                        className="flex min-h-14 w-full items-center gap-3 px-4 py-2 text-left active:bg-secondary/70"
-                      >
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-[1.0625rem] font-medium [overflow-wrap:anywhere]">{players[v.player].name}</span>
-                          <span className="block text-[0.8125rem] text-muted-foreground">
-                            {v.enteredAsTotal ? t.sheets.history.totalOf(v.dartCount) : v.darts.map((d) => slotLabel(state, d, t)).join("  ")}
-                            {v.edited && <span className="ml-2 text-warning">{t.sheets.history.corrected}</span>}
-                            {v.keptResult && <span className="ml-2 text-warning">{t.sheets.history.kept}</span>}
-                          </span>
-                        </span>
-                        <span className={cn("shrink-0 text-right text-[0.9375rem] tabular-nums", v.bust && "font-medium text-danger")}>
-                          {visitResult(state, v, t)}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ol>
-              </section>
-            )
-          })}
+          <LegVisits state={state} legs={legs} onSelect={onSelect} />
         </div>
       )}
       <Button variant="ghost" onClick={() => onOpenChange(false)} className={cn(secondary, "mt-2 w-full shrink-0")}>

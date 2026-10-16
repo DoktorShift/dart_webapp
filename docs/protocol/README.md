@@ -19,6 +19,7 @@ Stand: **P0.05**, 4. Oktober 2026, nach den Review-Runden 1 bis 3 am 5. Oktober 
 | [`families/private-records.md`](families/private-records.md) | Private, verschlüsselte Datensätze des Profils (NIP-78) |
 | [`families/badges.md`](families/badges.md) | Auszeichnungen (NIP-58) |
 | [`families/payment-request.md`](families/payment-request.md) | Private Zahlungsanfrage zwischen Spielern (NIP-59) |
+| [`families/profile.md`](families/profile.md) | Profil: Metadaten, Relay-Liste, Spielerrunden (NIP-51), Statistikkarte |
 | [`permissions.md`](permissions.md) | Rechte von Eigentümer, Admin, Turnierleiter, Mitglied, Gast, Veranstalter, Board, Schreiber, Spieler |
 | [`conflicts.md`](conflicts.md) | Abspielreihenfolge, erwarteter Vorgänger, Einladungswettläufe, Uhren, alle Ablehnungsgründe |
 | [`privacy.md`](privacy.md) | Was öffentliche Relays sehen; Gäste nur als Alias |

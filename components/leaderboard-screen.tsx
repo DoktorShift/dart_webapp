@@ -8,7 +8,7 @@ import { Dartboard } from "@/components/dartboard"
 import { FitText } from "@/components/fit-text"
 import { ImportedSheet } from "@/components/data/imported-sheet"
 import { useT } from "@/components/i18n-provider"
-import { formatNumber, formatPercent, modeName, type Messages } from "@/lib/i18n"
+import { formatNumber, formatPercent, formatWhen, modeName, type Messages } from "@/lib/i18n"
 import { computeStandings, useMatchHistory, type MatchRecord, type Standing, type StandingsFilter } from "@/lib/leaderboard"
 import { cn } from "@/lib/utils"
 
@@ -18,17 +18,6 @@ const FILTERS: StandingsFilter[] = ["all", "x01", "cricket", "clock"]
 const PODIUM_HEIGHT = ["h-28", "h-20", "h-14"]
 const PODIUM_COLUMN = ["col-start-2", "col-start-1", "col-start-3"]
 const PODIUM_ORDER = [1, 0, 2]
-
-function formatWhen(iso: string, t: Messages) {
-  const date = new Date(iso)
-  const now = new Date()
-  const time = date.toLocaleTimeString(t.intl, { hour: "2-digit", minute: "2-digit" })
-  if (date.toDateString() === now.toDateString()) return t.leaderboard.today(time)
-  const yesterday = new Date(now)
-  yesterday.setDate(now.getDate() - 1)
-  if (date.toDateString() === yesterday.toDateString()) return t.leaderboard.yesterday(time)
-  return date.toLocaleDateString(t.intl, { day: "numeric", month: "short", year: "numeric" })
-}
 
 // What a row is, besides a person: results from the earlier version, or an empty seat's label.
 function tag(player: Standing, t: Messages) {

@@ -1,0 +1,75 @@
+// Finding 2: after "Deine Ergebnisse mitnehmen" with a longer display name, the next game typed
+// as "Anna" and the next game seated as "Du" both count for the profile. Also: the guest path
+// opens no socket before the profile exists.
+import { check, done, finishSeeded, idb, nearWin, open, shot, wait } from "./lib.mjs"
+
+const { ctx, page, sockets, errors } = await open({ seed: nearWin(["Anna", "Ben"]), viewport: { width: 390, height: 844 } })
+await finishSeeded(page)
+check("no socket opened as a guest, up to the result screen", sockets.length === 0, sockets.join(","))
+await page.getByRole("button", { name: "Deine Ergebnisse mitnehmen" }).click()
+await wait(page, 900)
+await page.getByRole("radio", { name: "Anna" }).click()
+await page.getByLabel("Anzeigename").fill("Anna Schmidt")
+await wait(page, 300)
+await shot(page, "70-keep-sheet-hint")
+check("the sheet says the board name stays Anna", (await page.getByText(/Am Board bleibst du „Anna“/).count()) === 1)
+const t0 = Date.now()
+await page.getByRole("button", { name: "Profil anlegen" }).click()
+await page.getByText("Dein Profil ist angelegt", { exact: false }).waitFor({ timeout: 30000 })
+console.log(`created in ${Date.now() - t0} ms (lab value)`)
+const pubkey = (await idb(page, "kv", "profile.session")).value.pubkey
+const players = await idb(page, "players")
+console.log("players after create", JSON.stringify(players.map((p) => [p.name, p.pubkey?.slice(0, 8) ?? null])))
+check("Anna keeps her board name and is linked", players.some((p) => p.name === "Anna" && p.pubkey === pubkey) && !players.some((p) => p.name === "Anna Schmidt"))
+
+await page.getByRole("button", { name: "Neues Spiel" }).click()
+await wait(page, 1500)
+await shot(page, "71-setup-with-du")
+check("setup offers 'Du' for the signed-in profile", (await page.getByRole("button", { name: "Du", exact: true }).count()) === 1)
+const seats = page.locator("main input")
+await seats.nth(0).fill("Anna")
+await seats.nth(1).fill("Ben")
+await page.getByRole("button", { name: /Spiel starten/ }).click()
+await wait(page, 2000)
+let current = JSON.parse(await page.evaluate(() => localStorage.getItem("dart-scorer.current-match.v1")))
+let annaId = current.config.players[0].id
+check("typed as 'Anna': the seat is the profile's player", (await idb(page, "players")).find((p) => p.id === annaId)?.pubkey === pubkey, `seat id ${annaId}`)
+
+// Leave the game, start another one with "Du".
+await page.getByRole("button", { name: /Optionen|Options/ }).click().catch(() => {})
+await wait(page, 500)
+await page.evaluate(() => localStorage.removeItem("dart-scorer.current-match.v1"))
+await page.goto(BASE)
+await wait(page, 1500)
+await page.getByRole("button", { name: /^501$|X01/ }).first().click().catch(() => {})
+await wait(page, 1000)
+if ((await page.getByRole("button", { name: "Du", exact: true }).count()) === 0) {
+  await page.getByRole("button", { name: /Spielen/ }).first().click().catch(() => {})
+  await wait(page, 800)
+}
+await shot(page, "72-setup-again")
+const inputs = page.locator("main input")
+for (let i = 0; i < (await inputs.count()); i++) await inputs.nth(i).fill("")
+await page.getByRole("button", { name: "Du", exact: true }).click()
+await wait(page, 500)
+await shot(page, "73-setup-du-seated")
+check("'Du' fills a seat with the board name and the linked mark", (await inputs.nth(0).inputValue()) === "Anna" && (await page.getByRole("img", { name: "Mit Profil verbunden" }).count()) === 1)
+await inputs.nth(1).fill("Ben")
+await page.getByRole("button", { name: /Spiel starten/ }).click()
+await wait(page, 2000)
+current = JSON.parse(await page.evaluate(() => localStorage.getItem("dart-scorer.current-match.v1")))
+annaId = current.config.players[0].id
+check("seated as 'Du': the seat is the profile's player", (await idb(page, "players")).find((p) => p.id === annaId)?.pubkey === pubkey, `seat id ${annaId}`)
+// Statistik with one finished game: the trend row says what it needs before it shows anything.
+await page.evaluate(() => localStorage.removeItem("dart-scorer.current-match.v1"))
+await page.goto(BASE)
+await wait(page, 1500)
+await page.getByRole("navigation", { name: /^(Bereiche|Sections)$/ }).last().getByRole("button", { name: "Profil", exact: true }).click()
+await wait(page, 1500)
+await page.getByRole("button", { name: "Statistik" }).click()
+await wait(page, 1500)
+await shot(page, "74-stats-trend")
+check("Statistik shows a Verlauf row, '—' with its minimum while there are too few games", (await page.getByText("Verlauf").count()) === 1 && (await page.getByText(/Ab 15 Spielen/).count()) === 1)
+check("no console errors", errors.length === 0, errors.join(" | "))
+await ctx.close()
+await done()

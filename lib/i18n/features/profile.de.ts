@@ -1,4 +1,7 @@
-// German texts for the profile area. The English file must have the same shape (see ../index.ts).
+// German texts of the profile area the start page needs: the guest view, the titles of the
+// area's screens (registered at start, components/profile/register.ts) and setup's mark for a
+// seat filled from a profile. Everything else loads with the screens (profile.screens.de.ts).
+// The English file must have the same shape (see ../index.ts).
 export const profileDe = {
   // The Profile tab without a profile: this device's results and an offer, never a sign-in wall.
   guest: {
@@ -20,4 +23,16 @@ export const profileDe = {
     fromApp: "Mit einer anderen App",
     fromAppHint: "Browser-Erweiterung oder Amber",
   },
+
+  titles: {
+    stats: "Statistik",
+    games: "Spiele",
+    game: "Spiel",
+    player: "Spieler",
+    preview: "So sehen andere dein Profil",
+    advanced: "Erweitert",
+  },
+
+  // Game setup: a seat filled from a profile.
+  seatLinked: "Mit Profil verbunden",
 }

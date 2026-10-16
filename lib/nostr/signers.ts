@@ -139,6 +139,13 @@ function failedOnError(methods: Signer["nip44"]): Signer["nip44"] {
   }
 }
 
+// A new key for a profile kept by the app itself, with its public key.
+export async function createLocalKey(): Promise<{ secretKey: Uint8Array; pubkey: string }> {
+  const core = await loadCore()
+  const secretKey = core.generateSecretKey()
+  return { secretKey, pubkey: core.getPublicKey(secretKey) }
+}
+
 // A signer for a key kept by the app itself (a local profile).
 export async function createLocalSigner(secretKey: Uint8Array): Promise<Signer> {
   if (!(secretKey instanceof Uint8Array) || secretKey.length !== 32) throw new SignerError("invalid", "a secret key has 32 bytes")

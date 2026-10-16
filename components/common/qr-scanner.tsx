@@ -5,6 +5,7 @@ import { CameraOff, ScanQrCode, VideoOff } from "lucide-react"
 import { InlineStatus } from "@/components/common/inline-status"
 import { Button } from "@/components/ui/button"
 import { useT } from "@/components/i18n-provider"
+import { containsSecretKey } from "@/lib/shell/links"
 import { cn } from "@/lib/utils"
 
 // Scans a QR code with the camera, and always offers typing or pasting the code instead.
@@ -15,6 +16,7 @@ import { cn } from "@/lib/utils"
 //   macOS), otherwise jsQR, loaded only at this point.
 // - Denied permission, no camera, an insecure page and a busy camera each get their own message;
 //   the field below works in every case.
+// - A profile's secret key is never passed on, scanned or typed: the field drops it and says why.
 // - The camera stops when a code is accepted, when the scanner closes and while it can't be seen:
 //   the page is hidden, another tab is open or another screen covers it. It comes back on when
 //   the scanner shows again.
@@ -99,7 +101,7 @@ export function QRScanner({
   const [typed, setTyped] = useState("")
 
   useEffect(() => {
-    onResultRef.current = onResult
+    onResultRef.current = (text, source) => (containsSecretKey(text) ? t.shell.secretKey : onResult(text, source))
     liveRef.current = state === "starting" || state === "scanning"
   })
 
@@ -227,6 +229,11 @@ export function QRScanner({
     event.preventDefault()
     const text = typed.trim()
     if (!text) return
+    if (containsSecretKey(text)) {
+      setTyped("")
+      setMessage(t.shell.secretKey)
+      return
+    }
     const verdict = await onResult(text, "typed")
     if (typeof verdict === "string") setMessage(verdict)
     else {

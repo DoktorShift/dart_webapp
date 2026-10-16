@@ -7,6 +7,7 @@ import { FORMAT_VERSION, KIND_RECORD, KIND_STATE, MAX_EVENT_BYTES, MAX_FUTURE_SK
 import { LIVE_TYPES } from "./live.ts"
 import { MATCH_TYPES } from "./match.ts"
 import { PAYMENT_TYPES } from "./payment.ts"
+import { PROFILE_TYPES } from "./profile.ts"
 import type { Reason } from "./reasons.ts"
 import { ProtocolError } from "./reasons.ts"
 import type { Infer } from "./schema.ts"
@@ -21,7 +22,7 @@ import { TOURNAMENT_TYPES } from "./tournament.ts"
 // event into a typed record (or say exactly why not). Signatures are checked by lib/nostr
 // before parsing; authority is checked by the state reducers after it.
 
-export const RECORD_TYPES = { ...CLUB_TYPES, ...TOURNAMENT_TYPES, ...MATCH_TYPES, ...LIVE_TYPES, ...PAYMENT_TYPES }
+export const RECORD_TYPES = { ...CLUB_TYPES, ...TOURNAMENT_TYPES, ...MATCH_TYPES, ...LIVE_TYPES, ...PAYMENT_TYPES, ...PROFILE_TYPES }
 export type RecordType = keyof typeof RECORD_TYPES
 export type ContentOf<T extends RecordType> = Infer<(typeof RECORD_TYPES)[T]["schema"]>
 

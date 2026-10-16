@@ -1,6 +1,6 @@
 import type { Messages } from "../index"
 
-// English texts for the profile area. Same shape as profile.de.ts.
+// English texts of the profile area the start page needs. Same shape as profile.de.ts.
 export const profileEn: Messages["profile"] = {
   guest: {
     name: "Guest",
@@ -21,4 +21,15 @@ export const profileEn: Messages["profile"] = {
     fromApp: "With another app",
     fromAppHint: "Browser extension or Amber",
   },
+
+  titles: {
+    stats: "Statistics",
+    games: "Games",
+    game: "Game",
+    player: "Player",
+    preview: "How others see your profile",
+    advanced: "Advanced",
+  },
+
+  seatLinked: "Linked to a profile",
 }

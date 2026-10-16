@@ -12,7 +12,7 @@ import { RECORD_TYPES } from "../lib/protocol/records.ts"
 const DOCS = fileURLToPath(new URL("../docs/protocol/", import.meta.url))
 const read = (path: string) => readFileSync(resolve(DOCS, path), "utf8")
 
-const FAMILIES = ["club", "tournament", "match-live", "match-result", "session-authorization", "board-join", "pairing", "private-records", "badges", "payment-request"]
+const FAMILIES = ["club", "tournament", "match-live", "match-result", "session-authorization", "board-join", "pairing", "private-records", "badges", "payment-request", "profile"]
 
 test("every family has its contract", () => {
   for (const family of FAMILIES) assert.ok(existsSync(resolve(DOCS, `families/${family}.md`)), family)
@@ -23,7 +23,7 @@ test("kinds.md lists every record type, and every type has its family contract",
   const kinds = read("kinds.md")
   for (const type of Object.keys(RECORD_TYPES)) {
     assert.ok(kinds.includes(`\`${type}\``), `${type} in kinds.md`)
-    const family = type.startsWith("club.") ? "club" : type.startsWith("tournament.") ? "tournament" : type === "match.live" ? "match-live" : type === "match.session" ? "session-authorization" : type === "payment.request" ? "payment-request" : "match-result"
+    const family = type.startsWith("club.") ? "club" : type.startsWith("tournament.") ? "tournament" : type === "match.live" ? "match-live" : type === "match.session" ? "session-authorization" : type === "payment.request" ? "payment-request" : type.startsWith("profile.") ? "profile" : "match-result"
     assert.ok(read(`families/${family}.md`).includes(`\`${type}`), `${type} in families/${family}.md`)
   }
   assert.match(kinds, /\*\*1180\*\*/)

@@ -9,13 +9,13 @@ Eine Kind-Nummer je NIP-01-Bereich; der Datensatztyp ist ein NIP-32-Label. Relay
 | Kind | Bereich | Inhalt | Familien |
 | --- | --- | --- | --- |
 | **1180** | regulär | Unveränderliche Datensätze: Gründungen, Änderungen, Anfragen, Ergebnisse, Bestätigungen, Log-Stücke | [club](families/club.md), [tournament](families/tournament.md), [session-authorization](families/session-authorization.md), [match-result](families/match-result.md); als ungesignetes Rumor in [payment-request](families/payment-request.md) |
-| **31180** | adressierbar | Aktueller Zustand unter `d`: Live-Spielstand (`d` = Match-ID) | [match-live](families/match-live.md) |
+| **31180** | adressierbar | Aktueller Zustand unter `d`: Live-Spielstand (`d` = Match-ID), Statistikkarte (`d` = `stats`) | [match-live](families/match-live.md), [profile](families/profile.md) |
 | **21180** | flüchtig | Kopplungs- und Board-Nachrichten, nie gespeichert | [pairing](families/pairing.md), [board-join](families/board-join.md) |
 | 30078 | NIP-78 | Private, verschlüsselte Datensätze des Profils mit nicht sprechendem `d` | [private-records](families/private-records.md) |
 | 1059 / 13 | NIP-59 | Gift Wrap und Seal um Zahlungsanfragen | [payment-request](families/payment-request.md) |
 | 30009 / 8 / 10008 | NIP-58 | Auszeichnungs-Definition, Vergabe, Profilauswahl | [badges](families/badges.md) |
 
-Reserviert, aber noch ohne Vertrag: 31180 mit `d` = `stats` für die selbst veröffentlichte Statistikkarte (Entscheidung 0002 §6, Recherche PR-13). Der Vertrag entsteht mit P2.01; bis dahin wird kein solches Event geschrieben.
+Die selbst veröffentlichte Statistikkarte (31180 mit `d` = `stats`, Entscheidung 0002 §6, Recherche PR-13) hat ihren Vertrag seit P2.01 in [profile.md](families/profile.md). Profilmetadaten (0), Relay-Liste (10002), blockierte Relays (10006) und Spielerrunden (30000) sind Standardformate; wie BlueLine sie liest und schreibt, steht ebenfalls dort.
 
 ## Pflicht-Tags für 1180 und 31180
 
@@ -25,7 +25,7 @@ Reserviert, aber noch ohne Vertrag: 31180 mit `d` = `stats` für die selbst ver�
 | `["l","<typ>","blueline"]` | ja, genau einmal | Datensatztyp, siehe unten |
 | `["v","1"]` | ja, genau einmal | Hauptversion des Inhaltsformats dieses Typs |
 | `["e","<id>"]` | ja, außer bei Gründungen | Wurzelobjekt: Club-, Turnier- oder Match-ID. Genau ein `e`-Tag. Gründungen haben keines, ihre eigene Event-ID ist die Objekt-ID. |
-| `["d","<match-id>"]` | nur 31180 | Gleich dem `e`-Tag |
+| `["d","<match-id>"]` | nur 31180 | Gleich dem `e`-Tag; bei der Statistikkarte `stats` (ohne `e`-Tag) |
 | `["enc","seal"]` | wenn versiegelt | Inhalt ist ein versiegelter Umschlag für seine Leser (unten) |
 | `["enc","nip44","<pubkey>"]` | wenn mit Link-Schlüssel verschlüsselt | Inhalt ist NIP-44 vom Autor an den Schlüssel aus einem Link (privates Spiel) |
 | `["alt","BlueLine Darts <typ>"]` | empfohlen | NIP-31-Hinweis für andere Clients; Leser verlangen ihn nicht |
@@ -78,6 +78,7 @@ Die vollständigen Inhaltsschemas stehen maschinenlesbar in [`schemas/`](schemas
 | Turnier (1180) | `tournament.found`, `tournament.update`, `tournament.phase`, `tournament.seed`, `tournament.draw`, `tournament.register`, `tournament.withdraw`, `tournament.admit`, `tournament.waitlist`, `tournament.remove`, `tournament.guest`, `tournament.claim`, `tournament.link`, `tournament.checkin`, `tournament.board`, `tournament.board.revoke`, `tournament.assign`, `tournament.result`, `tournament.approve`, `tournament.correct`, `tournament.handover.offer`, `tournament.handover.cancel`, `tournament.handover.accept` |
 | Match (1180) | `match.session`, `match.result`, `match.log`, `match.confirm` |
 | Match (31180) | `match.live` |
+| Profil (31180) | `profile.stats` |
 | Zahlung (Rumor, 1180) | `payment.request` |
 | Handshake (21180) | Bereich `pair` oder `board` als Label; der Nachrichtentyp steht im verschlüsselten Inhalt |
 | Auszeichnung (NIP-58) | `badge.definition` (30009), `badge.award` (8) |

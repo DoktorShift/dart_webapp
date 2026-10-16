@@ -1,0 +1,200 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BlueLine profile record content",
+  "$defs": {
+    "profile.stats": {
+      "description": "Stats card a player shows in their public profile",
+      "kind": 31180,
+      "encryption": "none",
+      "type": "object",
+      "properties": {
+        "x01": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "games": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1000000,
+                  "description": "Games in these figures, practice included"
+                },
+                "versus": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1000000,
+                  "description": "Games against at least one other player"
+                },
+                "wins": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1000000,
+                  "description": "Games won against others"
+                },
+                "darts": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1000000000,
+                  "description": "Darts thrown"
+                },
+                "points": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 2000000000,
+                  "description": "Points scored"
+                },
+                "highestFinish": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 180,
+                      "description": "Highest checkout; null when no leg was won with a known checkout"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "bestLeg": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 100000,
+                      "description": "Fewest darts in a leg won"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "visits180": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 10000000,
+                      "description": "Visits of 180; null when no game has its throws"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": ["games", "versus", "wins", "darts", "points", "highestFinish", "bestLeg", "visits180"],
+              "additionalProperties": true
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cricket": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "games": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1000000,
+                  "description": "Games in these figures, practice included"
+                },
+                "versus": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1000000,
+                  "description": "Games against at least one other player"
+                },
+                "wins": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1000000,
+                  "description": "Games won against others"
+                },
+                "darts": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1000000000,
+                  "description": "Darts thrown"
+                },
+                "marks": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1000000000,
+                  "description": "Marks scored"
+                }
+              },
+              "required": ["games", "versus", "wins", "darts", "marks"],
+              "additionalProperties": true
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "clock": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "games": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1000000,
+                  "description": "Games in these figures, practice included"
+                },
+                "versus": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1000000,
+                  "description": "Games against at least one other player"
+                },
+                "wins": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1000000,
+                  "description": "Games won against others"
+                },
+                "darts": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1000000000,
+                  "description": "Darts thrown"
+                },
+                "hits": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1000000000,
+                  "description": "Targets hit"
+                }
+              },
+              "required": ["games", "versus", "wins", "darts", "hits"],
+              "additionalProperties": true
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 64,
+            "maxLength": 64,
+            "pattern": "^[0-9a-f]{64}$",
+            "description": "match.result record id"
+          },
+          "maxItems": 100,
+          "uniqueItems": true,
+          "description": "Public match results these figures include"
+        }
+      },
+      "required": ["x01", "cricket", "clock", "refs"],
+      "additionalProperties": true
+    }
+  }
+}

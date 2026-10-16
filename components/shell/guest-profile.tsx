@@ -8,6 +8,7 @@ import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
 import { Sheet } from "@/components/ui/sheet"
 import { FitText } from "@/components/fit-text"
+import { SlotItems } from "@/components/shell/slot-items"
 import { useNav } from "@/components/nav/nav-context"
 import { useT } from "@/components/i18n-provider"
 import { computeStandings, useMatchHistory } from "@/lib/leaderboard"
@@ -98,6 +99,8 @@ export function GuestProfile() {
       </section>
 
       <Group>
+        {/* Areas' rows that work without a profile too (registry "profile.rows"). */}
+        <SlotItems list="profile.rows" props={() => ({})} />
         <ListRow icon={Settings} iconTone="gray" title={t.settings.title} onClick={() => nav.push(SCREENS.settings)} />
         <ListRow icon={Info} iconTone="blue" title={t.nav.about} onClick={() => nav.push(SCREENS.about)} />
       </Group>

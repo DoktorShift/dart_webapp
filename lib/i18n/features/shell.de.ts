@@ -28,6 +28,8 @@ export const shellDe = {
   loadFailed: "Dieser Bereich konnte nicht geladen werden. Prüfe die Verbindung.",
   retry: "Erneut versuchen",
   loading: "Wird geladen",
+  // A profile's secret key pasted or scanned somewhere: never taken (lib/shell/links.ts).
+  secretKey: "Das ist der geheime Zugangscode eines Profils. Wer ihn hat, kann das Profil übernehmen. Gib ihn niemandem und füge ihn nirgends ein. Er wurde nicht übernommen.",
 
   clubs: {
     emptyTitle: "Noch kein Club",

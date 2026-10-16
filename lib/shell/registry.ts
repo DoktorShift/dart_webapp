@@ -21,6 +21,21 @@
 //                       saved with the started game as config.extras[id] (JSON only). Rematch and
 //                       "Play again" copy the config, extras included: keep settings there, not
 //                       references that only fit one game.
+//     "setup.players"   Right below setup's player list: ways to fill seats (a profile's QR code,
+//                       saved rounds). Gets the seats and can add one or replace them all; a seat
+//                       may carry the pubkey of the profile it was filled from.
+//     "profile.rows"    Rows in the Profile tab's list: signed in after Statistik and Spiele, as
+//                       a guest above Einstellungen. Auszeichnungen, Geräte, Sicherung,
+//                       Zahlungen. No props; each piece is one ListRow (components/ui/list-row.tsx)
+//                       that pushes its area's screen. Rendered for guests and signed-in players
+//                       alike: a row that needs a profile (Geräte, Sicherung, Auszeichnungen)
+//                       renders nothing while useSession() (lib/profile/session.ts) is null.
+//     "profile.card"    On a profile (own or someone else's), below its figures: badges, a club
+//                       hint. Gets { pubkey, own }. Keep it to one line.
+//     "profile.actions" On another player's public profile, below "Profil teilen": e.g.
+//                       "Gratulieren". Gets { pubkey, name } (the name as that profile shows it).
+//     "profile.advanced" In Profil › Erweitert, below the technical identity: diagnostics.
+//                        Gets { pubkey }.
 // - Game menu items: entries at the end of the running game's options menu (the "…" button), each
 //   { id, label, icon?, onSelect }. onSelect gets the running game; the menu closes first.
 //   Nothing else on the game screen can be changed from outside.
@@ -233,9 +248,30 @@ export interface SetupExtraProps {
   onChange: (value: unknown) => void
 }
 
+// A seat in game setup, as "setup.players" sees and fills it.
+export interface SetupSeat {
+  name: string
+  // The profile the seat was filled from (a scanned profile, a saved round); hex.
+  pubkey?: string
+}
+
+export interface SetupPlayersProps {
+  players: readonly SetupSeat[]
+  // False once all six seats are taken.
+  canAdd: boolean
+  // Fills the first empty seat, or adds one.
+  addPlayer: (seat: SetupSeat) => void
+  replacePlayers: (seats: readonly SetupSeat[]) => void
+}
+
 export interface SlotListProps {
   "result.actions": { match: FinishedMatch }
   "setup.extras": SetupExtraProps
+  "setup.players": SetupPlayersProps
+  "profile.rows": Record<string, never>
+  "profile.card": { pubkey: string; own: boolean }
+  "profile.actions": { pubkey: string; name: string }
+  "profile.advanced": { pubkey: string }
 }
 export type SlotListId = keyof SlotListProps
 export interface SlotItem<K extends SlotListId> {
@@ -246,6 +282,11 @@ export interface SlotItem<K extends SlotListId> {
 const slotLists: { [K in SlotListId]: Map<string, ComponentType<SlotListProps[K]>> } = {
   "result.actions": new Map(),
   "setup.extras": new Map(),
+  "setup.players": new Map(),
+  "profile.rows": new Map(),
+  "profile.card": new Map(),
+  "profile.actions": new Map(),
+  "profile.advanced": new Map(),
 }
 
 // Adds a piece to a slot list. The same id again replaces the piece in its place.

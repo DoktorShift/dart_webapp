@@ -17,7 +17,9 @@ class Fenced extends Component<{ children: ReactNode }, { failed: boolean }> {
 }
 
 // What areas registered for a slot list (lib/shell/registry.ts), in registration order, inside
-// `className`. Renders nothing, not even the wrapper, while nothing is registered.
+// a wrapper with `className`. Renders nothing, not even the wrapper, while nothing is registered.
+// Without className the pieces go straight into the parent, so rows in a Group get its
+// separators, and a piece that renders nothing leaves no trace.
 export function SlotItems<K extends SlotListId>({
   list,
   props,
@@ -31,15 +33,12 @@ export function SlotItems<K extends SlotListId>({
   useRegistryVersion()
   const items = getSlotItems(list)
   if (items.length === 0) return null
-  return (
-    <div className={className}>
-      {items.map(({ id, Component: Piece }) => (
-        <Fenced key={id}>
-          <Suspense fallback={null}>
-            <Piece {...props(id)} />
-          </Suspense>
-        </Fenced>
-      ))}
-    </div>
-  )
+  const pieces = items.map(({ id, Component: Piece }) => (
+    <Fenced key={id}>
+      <Suspense fallback={null}>
+        <Piece {...props(id)} />
+      </Suspense>
+    </Fenced>
+  ))
+  return className === undefined ? pieces : <div className={className}>{pieces}</div>
 }

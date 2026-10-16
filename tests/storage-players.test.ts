@@ -64,6 +64,24 @@ test("two seats never share an id, even when names differ only in spacing", () =
   assert.equal(created.length, 1)
 })
 
+test("a seat filled from a profile is that profile's player, never someone who only shares the name", () => {
+  const LENA = "1".repeat(64)
+  const linked = { ...newPlayerRecord("Lena", T0, BEN), pubkey: LENA }
+  // Known profile: its player, whatever the seat is called now.
+  const known = assignPlayers(["Lena S.", "Anna"], [anna(), linked], new Date(T0), [LENA])
+  assert.deepEqual(known.players.map((p) => p.id), [BEN, ANNA])
+  assert.equal(known.created.length, 0)
+  // New profile with the name of a local player: a new player, linked to the profile.
+  const ANNAS_PROFILE = "2".repeat(64)
+  const scanned = assignPlayers(["Anna"], [anna()], new Date(T0), [ANNAS_PROFILE])
+  assert.notEqual(scanned.players[0].id, ANNA)
+  assert.deepEqual(scanned.created.map((p) => [p.id, p.name, p.pubkey]), [[scanned.players[0].id, "Anna", ANNAS_PROFILE]])
+  // An emptied seat is nobody, profile or not; anything but a pubkey is ignored.
+  const emptied = assignPlayers(["Spieler 1", "Anna"], [anna(), linked], new Date(T0), [LENA, "npub1abc"])
+  assert.notEqual(emptied.players[0].id, BEN)
+  assert.equal(emptied.players[1].id, ANNA)
+})
+
 test("when several players share a name, the one who played last is meant", () => {
   const older = anna({ lastPlayedAt: "2026-09-02T10:00:00.000Z" })
   const newer = { ...newPlayerRecord("anna", T0, BEN), lastPlayedAt: "2026-09-20T10:00:00.000Z" }
