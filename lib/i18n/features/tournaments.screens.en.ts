@@ -259,7 +259,7 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
     preparingText: "The organizer is drawing. Your first match will appear here.",
     nextMatch: "Your next match",
     versus: (name) => `vs ${name}`,
-    onBoard: (board) => `Board ${board}`,
+    onBoard: (board) => board,
     called: "Called: go to the board.",
     playing: "In progress",
     waitingOpponent: "Your opponent isn't known yet.",

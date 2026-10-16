@@ -19,7 +19,9 @@ import { TOURNAMENTS_TEXTS } from "@/lib/i18n/features/tournaments.screens"
 import { boardName, formatDateTime, PRIMARY, QUIET, scoreText, useProblemText, useRoundLabel } from "@/components/tournaments/common"
 import { useGuestProfile } from "@/components/tournaments/guest-profile"
 import { useLiveStanding } from "@/components/tournaments/use-live-matches"
-import { useNames } from "@/components/tournaments/use-names"
+import { useOwnEvents } from "@/components/profile/use-profile"
+import { readMetadata } from "@/lib/profile/metadata"
+import { OWN } from "@/lib/profile/own-events"
 import { act, type Entry } from "@/components/tournaments/use-tournaments"
 import { nowSeconds } from "@/lib/nostr/time"
 import { useSession } from "@/lib/profile/session"
@@ -49,9 +51,9 @@ export function PhaseCard({ entry, names }: { entry: Entry; names: { nameOf: (id
   const now = nowSeconds()
   const me = read.me.participant
   const mine = me?.id ?? null
-  // The name the profile shows, given as the alias at registration so the list reads well even
-  // where profiles can't be looked up.
-  const ownName = useNames(session ? [session.pubkey] : [])(session?.pubkey ?? "").name
+  // The name the profile shows (its metadata, kept on this device), given as the alias at
+  // registration so everyone reads it even where profiles can't be looked up.
+  const ownName = readMetadata(useOwnEvents(session?.pubkey ?? null)?.get(OWN.metadata)).name ?? null
   const canWithdraw = me && me.status !== "withdrawn" && me.status !== "removed"
   const withdrawControls = canWithdraw ? (
     <>

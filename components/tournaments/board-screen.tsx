@@ -155,7 +155,8 @@ function CurrentMatch({ entry, record, boardKey, onTournament }: { entry: Entry;
     setFailed(false)
     try {
       const players: [string, string] = [m.slots[0].participant ?? "", m.slots[1].participant ?? ""]
-      const next = boardGame(state, m, read.names, record.board, modeName(t, state.settings.rules.modeId, state.settings.rules.modeId))
+      const shown = Object.fromEntries(players.map((id) => [id, names.nameOf(id)]))
+      const next = boardGame(state, m, shown, record.board, modeName(t, state.settings.rules.modeId, state.settings.rules.modeId))
       const game: BoardGame = { local: next.id, match: null, players, reported: null }
       const remembered = await rememberGame(record, m.id, game)
       try {

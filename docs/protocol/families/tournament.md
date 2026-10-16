@@ -61,6 +61,10 @@ Bei Club-Turnieren prüft das Protokoll die Clubrolle der übernehmenden Person 
 
 Vorgaben für `lib/tournaments`: Angebote gelten 24 Stunden; angeboten und angenommen wird nur auf einem Gerät, das gerade geladen hat, und beide Seiten sehen den übergebenen Kern (Phase, Auslosung); die Leitung eines Clubturniers wird nur Eigentümern, Admins und Turnierleitern des Clubs angeboten, eine übernehmende Person ohne diese Rolle zeigt „Erweitert“ als Hinweis. Plätze, Boards und Spiele werden nicht festgehalten: Dort kann der bisherige Veranstalter weiter zurückdatieren, etwa einen Gast oder ein Herausnehmen vor der Auslosung, das sie ungültig macht ([conflicts.md](../conflicts.md#nicht-festgehalten), bekannte Grenze zu PR-10).
 
+## Boards
+
+Ein Board-Gerät erhält seinen Zugang vom Veranstalter als Code `#tournament=TB1.<Turnier>.<Board>.<Geheimnis des Board-Schlüssels>.<Relays>` ([links.ts](../../../lib/protocol/links.ts)); der öffentliche Schlüssel steht im `tournament.board`-Datensatz, das Geheimnis nur im Code (ein Inhaber-Geheimnis wie der Match-Schlüssel eines privaten Spiels). Das Gerät gründet das aufgerufene Spiel als öffentliches Live-Spiel unter diesem Schlüssel mit `agreement.tournament = { id, slot }` ([match-live.md](match-live.md)); Leitung, Spieler und Zuschauer finden laufende Spiele über die Schlüssel der aktiven Boards (`lib/live/follow.ts` `watchFoundings`). Das Turnier selbst hat keinen Datensatz „Spiel läuft“; der Aufruf (`tournament.assign`) und die Gründung sind die Hinweise, und ein Board ohne Verbindung meldet sein Ergebnis später.
+
 ## Auslosung
 
 Nach `lib/tournaments/draw.ts` (Engine 1):

@@ -271,7 +271,7 @@ export const tournamentsScreensDe = {
     preparingText: "Die Turnierleitung lost aus. Dein erstes Spiel steht gleich hier.",
     nextMatch: "Dein nächstes Spiel",
     versus: (name: string) => `gegen ${name}`,
-    onBoard: (board: string) => `Board ${board}`,
+    onBoard: (board: string) => board,
     called: "Aufgerufen: Geh zum Board.",
     playing: "Läuft gerade",
     waitingOpponent: "Dein Gegner steht noch nicht fest.",

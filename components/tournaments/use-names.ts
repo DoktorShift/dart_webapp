@@ -33,10 +33,12 @@ async function lookup(pubkeys: string[]) {
     const cached = await cachedProfile(pubkey).catch(() => null)
     if (cached?.metadata) remember(pubkey, cached.metadata)
   }
-  // One profile at a time: a field of 128 would otherwise open 128 queries at once.
+  // One profile at a time: a field of 128 would otherwise open 128 queries at once. A profile
+  // the relays did not have yet (just created) is asked again the next time it is wanted.
   for (const pubkey of pubkeys) {
     const loaded = await loadPublicProfile(pubkey).catch(() => null)
     if (loaded?.profile.metadata) remember(pubkey, loaded.profile.metadata)
+    else asked.delete(pubkey)
   }
 }
 
