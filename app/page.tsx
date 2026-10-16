@@ -42,7 +42,7 @@ import {
 import type { GameType, MatchConfig, SavedMatch } from "@/lib/game/types"
 import { isAnswerLink, parseHash, type AppLink } from "@/lib/shell/links"
 import { TABS, depthOf, initialNavState, makeEntry, navReducer, type TabId } from "@/lib/shell/nav"
-import { canOpenLink, dispatchLink, getScreen, hasScreen, runStartTasks, type ShellNavigator } from "@/lib/shell/registry"
+import { canOpenLink, dispatchLink, getScreen, hasScreen, runStartTasks, type SetupPreset, type ShellNavigator } from "@/lib/shell/registry"
 
 // "tabs" is the app with its tab bar or sidebar; setup and game are full-screen flows on top.
 type Screen = "tabs" | "setup" | "game"
@@ -97,6 +97,8 @@ export default function DartScorer() {
   if (!opened.includes(nav.tab)) setOpened([...opened, nav.tab])
   const [direction, setDirection] = useState(1)
   const [setupType, setSetupType] = useState<GameType>("x01")
+  // Players and extras an area opened setup with (ShellNavigator.openSetup).
+  const [setupPreset, setSetupPreset] = useState<SetupPreset | undefined>(undefined)
   // Where setup and the game go back to: the tab they were opened from.
   const [returnTab, setReturnTab] = useState<TabId>("play")
   const [match, setMatch] = useState<SavedMatch | null>(null)
@@ -132,8 +134,9 @@ export default function DartScorer() {
   }, [])
 
   const openSetup = useCallback(
-    (type: GameType, from?: TabId) => {
+    (type: GameType, from?: TabId, preset?: SetupPreset) => {
       setSetupType(type)
+      setSetupPreset(preset)
       go("setup", from)
     },
     [go],
@@ -167,7 +170,7 @@ export default function DartScorer() {
       },
       pop: () => dispatchNav({ type: "pop" }),
       popToRoot: (tab) => dispatchNav({ type: "popToRoot", tab }),
-      openSetup: (type) => openSetup(type),
+      openSetup: (type, preset) => openSetup(type, undefined, preset),
       resumeMatch: (next) => {
         setEnded(null)
         setMatch({ ...next, status: "playing" })
@@ -395,7 +398,7 @@ export default function DartScorer() {
 
   let content: ReactNode = null
   if (screen === "setup") {
-    content = <SetupScreen type={setupType} backLabel={returnLabel} onBack={() => backToTabs(returnTab)} onStart={startGame} />
+    content = <SetupScreen type={setupType} preset={setupPreset} backLabel={setupPreset?.backLabel ?? returnLabel} onBack={() => backToTabs(returnTab)} onStart={startGame} />
   } else if (screen === "game" && match) {
     content = (
       <GameScreen

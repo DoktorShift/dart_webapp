@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils"
 // The back button: chevron and the previous screen's title, like UINavigationBar. When that title
 // doesn't fit next to this screen's title it says "Zurück", and where even that doesn't fit only
 // the chevron remains (VoiceOver still hears "Zurück zu …"). Nothing is cut off.
-function BackButton({ label, onClick }: { label: string; onClick: () => void }) {
+export function BackButton({ label, onClick }: { label: string; onClick: () => void }) {
   const t = useT()
   const cellRef = useRef<HTMLDivElement>(null)
   const fullRef = useRef<HTMLSpanElement>(null)

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react"
 import { Reorder, useDragControls } from "framer-motion"
-import { ChevronLeft, GripVertical, Minus, Plus, Shuffle, UserRoundCheck } from "lucide-react"
+import { GripVertical, Minus, Plus, Shuffle, UserRoundCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ChoiceRow, Group, SwitchRow } from "@/components/ui/group"
 import { Dartboard, GAME_HIGHLIGHTS } from "@/components/dartboard"
@@ -10,10 +10,11 @@ import { SlotItems } from "@/components/shell/slot-items"
 import { useT } from "@/components/i18n-provider"
 import { recentPlayerNames, useMatchHistory } from "@/lib/leaderboard"
 import { loadLastGame, loadRules } from "@/lib/game/storage"
-import { assignPlayers, listPlayers, MAX_SEAT_NAME, savePlayers, type PlayerRecord } from "@/lib/storage/players"
+import { assignPlayers, listPlayers, MAX_SEAT_NAME, savePlayers, seatName, type PlayerRecord } from "@/lib/storage/players"
 import { LEG_OPTIONS, SET_OPTIONS, START_SCORES, configFor, modeIdFor, type GameRules } from "@/lib/game/rules"
 import type { GameType, MatchConfig, MatchPlayer } from "@/lib/game/types"
-import type { SetupSeat } from "@/lib/shell/registry"
+import type { SetupPreset, SetupSeat } from "@/lib/shell/registry"
+import { BackButton } from "@/components/nav/nav-header"
 import { cn } from "@/lib/utils"
 
 const MAX_PLAYERS = 6
@@ -31,6 +32,8 @@ interface SetupPlayer {
 
 interface SetupScreenProps {
   type: GameType
+  // Players and extras the area that opened setup brought (a club game); else the last players.
+  preset?: SetupPreset
   // The title of the screen setup was opened from; "Play" when left out.
   backLabel?: string
   onBack: () => void
@@ -41,8 +44,10 @@ let keySeed = 0
 const newKey = () => `p${Date.now().toString(36)}${keySeed++}`
 
 // The seats of the last game, as it was started; its players' directory ids come along so each
-// can be seated as the directory knows them now.
-function initialPlayers(): SetupPlayer[] {
+// can be seated as the directory knows them now. An area may hand over the seats instead (a club
+// game: the chosen members, linked where they have a profile).
+function initialPlayers(preset?: SetupPreset): SetupPlayer[] {
+  if (preset?.players?.length) return preset.players.slice(0, MAX_PLAYERS).map(({ name, pubkey }) => ({ key: newKey(), name: seatName(name), ...(pubkey ? { pubkey } : {}) }))
   const last = (loadLastGame()?.players ?? []).slice(0, MAX_PLAYERS)
   if (last.length === 0) return [{ key: newKey(), name: "" }, { key: newKey(), name: "" }]
   return last.map((p) => ({ key: newKey(), name: p.name, from: p.id }))
@@ -132,9 +137,9 @@ function PlayerRow({
   )
 }
 
-export function SetupScreen({ type, backLabel, onBack, onStart }: SetupScreenProps) {
+export function SetupScreen({ type, preset, backLabel, onBack, onStart }: SetupScreenProps) {
   const t = useT()
-  const [players, setPlayers] = useState<SetupPlayer[]>(initialPlayers)
+  const [players, setPlayers] = useState<SetupPlayer[]>(() => initialPlayers(preset))
   // The rules this group played last time, for this kind of game.
   const [rules, setRules] = useState<GameRules>(() => loadRules(type))
   const change = (patch: Partial<GameRules>) => setRules((current) => ({ ...current, ...patch }))
@@ -156,7 +161,7 @@ export function SetupScreen({ type, backLabel, onBack, onStart }: SetupScreenPro
     )
   }, [directory])
   // Values areas add below the rules ("setup.extras" in lib/shell/registry.ts), by area id.
-  const [extras, setExtras] = useState<Record<string, unknown>>({})
+  const [extras, setExtras] = useState<Record<string, unknown>>(() => ({ ...preset?.extras }))
 
   const nameKeys = players.map((p) => p.name.trim().toLowerCase())
   const duplicates = new Set(nameKeys.filter((k, i) => k && nameKeys.indexOf(k) !== i))
@@ -225,16 +230,11 @@ export function SetupScreen({ type, backLabel, onBack, onStart }: SetupScreenPro
   return (
     <div className="flex min-h-full flex-col">
       <header className="sticky top-0 z-20 border-b border-border/60 bg-background/80 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
-        <div className="relative mx-auto flex h-11 max-w-2xl items-center px-2">
-          <button
-            type="button"
-            onClick={onBack}
-            className="flex min-h-11 items-center gap-0.5 rounded-lg pr-3 text-[1.0625rem] text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <ChevronLeft className="h-7 w-7" aria-hidden="true" />
-            {backLabel ?? t.nav.play}
-          </button>
-          <span className="pointer-events-none absolute inset-x-0 text-center text-[1.0625rem] font-semibold">{t.setup.title}</span>
+        {/* The same bar as the shell's screens: a long previous title (a club's name) gives way
+            to "Zurück" or the chevron instead of running into the title. */}
+        <div className="mx-auto grid h-11 max-w-2xl grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1 px-2">
+          <BackButton label={backLabel ?? t.nav.play} onClick={onBack} />
+          <span className="col-start-2 row-start-1 text-center text-[1.0625rem] font-semibold">{t.setup.title}</span>
         </div>
       </header>
 

@@ -2,6 +2,7 @@ import { test } from "node:test"
 import assert from "node:assert/strict"
 import { MESSAGES } from "../lib/i18n/index.ts"
 import { BADGES_TEXTS } from "../lib/i18n/features/badges.screens.ts"
+import { CLUBS_TEXTS } from "../lib/i18n/features/clubs.screens.ts"
 import { PROFILE_TEXTS } from "../lib/i18n/features/profile.screens.ts"
 import { SYNC_TEXTS } from "../lib/i18n/features/sync.screens.ts"
 import { INSTALL_PICTURES, INSTALL_PLATFORMS } from "../lib/install.ts"
@@ -38,4 +39,5 @@ test("no text is left empty", () => {
   for (const [locale, t] of Object.entries(PROFILE_TEXTS)) walk(t, `${locale}.profile.screens`)
   for (const [locale, t] of Object.entries(SYNC_TEXTS)) walk(t, `${locale}.sync.screens`)
   for (const [locale, t] of Object.entries(BADGES_TEXTS)) walk(t, `${locale}.badges.screens`)
+  for (const [locale, t] of Object.entries(CLUBS_TEXTS)) walk(t, `${locale}.clubs.screens`)
 })

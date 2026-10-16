@@ -2,14 +2,15 @@ import { test } from "node:test"
 import assert from "node:assert/strict"
 import { MESSAGES } from "../lib/i18n/index.ts"
 import { BADGES_TEXTS } from "../lib/i18n/features/badges.screens.ts"
+import { CLUBS_TEXTS } from "../lib/i18n/features/clubs.screens.ts"
 import { PROFILE_TEXTS } from "../lib/i18n/features/profile.screens.ts"
 import { SYNC_TEXTS } from "../lib/i18n/features/sync.screens.ts"
 
 // Normal views never use protocol words (decision 0002 §1 and §9, PLAN.md "Einfach sprechen");
 // technical details belong behind an explicit "Erweitert" / "Advanced" screen only. This checks
-// the shell's, the profile's, the sync's and the badges' texts in every language; profile.advanced
-// and badges.advanced are those screens, and the sync's `advanced` and `relays` texts appear
-// only there.
+// the shell's, the profile's, the sync's, the badges' and the clubs' texts in every language;
+// profile.advanced and badges.advanced are those screens, the sync's `advanced` and `relays` texts
+// appear only there, and the clubs have none (everything they say is plain).
 
 const PROTOCOL = /nostr|\bnip[- ]?\d*\b|relay|npub|nsec|pubkey|\bkeys?\b|schlüssel|bunker|nwc|lnurl|event/i
 
@@ -20,12 +21,13 @@ function texts(value: unknown, path: string, out: [string, string][]) {
   return out
 }
 
-test("shell, profile, sync and badges texts use no protocol words, except under Erweitert", () => {
+test("shell, profile, sync, badges and clubs texts use no protocol words, except under Erweitert", () => {
   for (const [locale, t] of Object.entries(MESSAGES)) {
     const { advanced, ...screens } = PROFILE_TEXTS[locale as keyof typeof PROFILE_TEXTS]
     const { advanced: badgesAdvanced, ...badges } = BADGES_TEXTS[locale as keyof typeof BADGES_TEXTS]
     assert.ok(advanced && badgesAdvanced, "the technical texts are kept apart")
     const { history } = SYNC_TEXTS[locale as keyof typeof SYNC_TEXTS]
+    const clubs = CLUBS_TEXTS[locale as keyof typeof CLUBS_TEXTS]
     const all = [
       ...texts(t.shell, `${locale}.shell`, []),
       ...texts(t.profile, `${locale}.profile`, []),
@@ -33,6 +35,8 @@ test("shell, profile, sync and badges texts use no protocol words, except under 
       ...texts(history, `${locale}.sync.screens.history`, []),
       ...texts(t.badges, `${locale}.badges`, []),
       ...texts(badges, `${locale}.badges.screens`, []),
+      ...texts(t.clubs, `${locale}.clubs`, []),
+      ...texts(clubs, `${locale}.clubs.screens`, []),
     ]
     for (const [path, text] of all) assert.doesNotMatch(text, PROTOCOL, `${path}: ${text}`)
   }

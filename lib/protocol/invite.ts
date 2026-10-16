@@ -5,7 +5,7 @@ import { bytesToHex, hexToBytes, utf8ToBytes } from "@noble/hashes/utils"
 import { name, pubkey, shortText } from "./common.ts"
 import { ProtocolError } from "./reasons.ts"
 import type { Infer } from "./schema.ts"
-import { httpsUrl, obj, oneOf, opt, SchemaError, time } from "./schema.ts"
+import { bool, httpsUrl, obj, oneOf, opt, SchemaError, time } from "./schema.ts"
 import type { SealedEnvelope } from "./seal.ts"
 import { openPreview } from "./seal.ts"
 import { HEX32, HEX64 } from "./tags.ts"
@@ -80,6 +80,7 @@ export const invitePreview = obj({
   hostName: opt(name()),
   kind: oneOf(INVITE_KINDS),
   expires: time(),
+  limited: opt(bool("The club has a member limit: a group link only asks, an owner or admin accepts")),
   next: opt(obj({ title: name(), starts: time(), place: opt(shortText(140)) })),
 })
 export type InvitePreview = Infer<typeof invitePreview>
