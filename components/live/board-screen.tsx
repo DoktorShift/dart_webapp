@@ -6,7 +6,7 @@ import { InlineStatus } from "@/components/common/inline-status"
 import { readPayload } from "@/components/live/link-payload"
 import { MatchView } from "@/components/live/match-view"
 import { useSeat } from "@/components/live/use-seat"
-import { Waiting } from "@/components/live/waiting"
+import { Waiting } from "@/components/common/waiting"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { LIVE_TEXTS } from "@/lib/i18n/features/live.screens"
 import {

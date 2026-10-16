@@ -1,13 +1,14 @@
 "use client"
 
 import { useEffect, useRef, useState, type ReactNode } from "react"
+import { CheckCode } from "@/components/common/check-code"
 import { QRCodeView } from "@/components/common/qr-code-view"
 import { InlineStatus } from "@/components/common/inline-status"
 import { ShareActions } from "@/components/common/share-actions"
 import { XSHORT, useMediaQuery } from "@/components/common/use-media-query"
 import { gameHandedOver } from "@/components/live/gate"
 import { sameNamed, shortKey, usePublicNames, type PublicName } from "@/components/live/use-public-names"
-import { Waiting } from "@/components/live/waiting"
+import { Waiting } from "@/components/common/waiting"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { LIVE_TEXTS } from "@/lib/i18n/features/live.screens"
 import {
@@ -365,7 +366,7 @@ export function HandoffSheet({ open, onClose, match, start, closeGame }: SheetPr
     // Side by side on a phone in landscape, so both buttons stay in view with the code.
     body = (
       <div className="grid gap-4 pb-1 xshort:grid-cols-2 xshort:items-center">
-        <CheckCode code={offer.checkCode} />
+        <CheckCode code={offer.checkCode} label={tx.takeover.checkCode} />
         <div className="grid gap-2">
           <Button onClick={() => control.current?.give()} className={primary}>
             {s.give}
@@ -394,17 +395,6 @@ export function HandoffSheet({ open, onClose, match, start, closeGame }: SheetPr
       <div className="min-h-0 overflow-y-auto overscroll-contain">{body}</div>
       {!locked && offer?.step !== "asked" && <Done onClose={onClose} />}
     </Sheet>
-  )
-}
-
-// The check code both devices show: four digits, a space, four digits, large enough to compare.
-export function CheckCode({ code }: { code: string }) {
-  const tx = useAreaT(LIVE_TEXTS)
-  return (
-    <p className="rounded-2xl border border-border bg-card px-4 py-5 text-center">
-      <span className="block text-[0.8125rem] text-muted-foreground">{tx.takeover.checkCode}</span>
-      <span className="mt-1 block font-display text-4xl font-semibold tabular-nums tracking-wider">{code}</span>
-    </p>
   )
 }
 
