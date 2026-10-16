@@ -3,7 +3,7 @@
 import type { ComponentType } from "react"
 import { lazyScreen } from "@/components/nav/lazy-screen"
 import { BADGE_SCREENS } from "@/components/badges/screens"
-import type { FinishedMatch, ScreenProps } from "@/lib/shell/registry"
+import type { ScreenProps, SlotListProps } from "@/lib/shell/registry"
 import { registerScreen, registerSlotItem } from "@/lib/shell/registry"
 import { registerExportSection } from "@/lib/storage/export-sections"
 
