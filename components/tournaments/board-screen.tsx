@@ -250,7 +250,9 @@ function CurrentMatch({ entry, record, boardKey, onTournament }: { entry: Entry;
                 {state.settings.approval === "organizer" && b.reportedText}
               </InlineStatus>
             ) : (
-              <InlineStatus className="mt-4">{tx.game[report]}</InlineStatus>
+              <InlineStatus tone={report === "refused" ? "error" : undefined} className="mt-4">
+                {tx.game[report]}
+              </InlineStatus>
             )
           ) : (
             <div className="mt-4 grid gap-2">

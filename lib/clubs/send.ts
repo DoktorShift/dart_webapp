@@ -6,7 +6,7 @@ import { encryptForLinkKey, sealRecord } from "../protocol/records.ts"
 import { contentKeyText, newContentKey, newSealNonce } from "../protocol/seal.ts"
 import type { InvitePreview } from "../protocol/invite.ts"
 import { createdAtAfter } from "../protocol/tags.ts"
-import { enqueue, pendingEvents } from "../sync/outbox.ts"
+import { enqueue, pendingEvents, refusedEvents } from "../sync/outbox.ts"
 import { clubRelays } from "./relays.ts"
 import { loadStoredClub, updateClub, type ClubChange, type StoredClub } from "./store.ts"
 
@@ -15,7 +15,7 @@ import { loadStoredClub, updateClub, type ClubChange, type StoredClub } from "./
 // copy first, then handed to the persistent outbox of lib/sync (decision 0002 §2) for the club's
 // relays. A change counts as made once it is signed and kept; the outbox sends it until relays
 // of two operators have it (rule "published"), across reloads and without anyone waiting, and
-// the club says how many of its events still wait (waitingEvents).
+// the club says how many of its events still wait or were refused (unsentEvents).
 //
 // Order: every record is written on top of the club as this device saw it (afterState), so a
 // change's events go out one after another, the first after the club's newest event still
@@ -112,8 +112,16 @@ export async function send(club: string | null, outgoing: readonly Outgoing[], {
   return keep(club ?? signed.events[0].id, signed)
 }
 
-// How many of the club's events relays of two operators don't have yet.
-export async function waitingEvents(club: string): Promise<number> {
+export interface Unsent {
+  // Events relays of two operators don't have yet, still sent.
+  waiting: number
+  // Events every relay refused for good, kept in the outbox for their week.
+  refused: number
+}
+
+export async function unsentEvents(club: string): Promise<Unsent> {
   const stored = await loadStoredClub(club)
-  return stored ? (await pendingEvents(ofClub(stored))).length : 0
+  if (!stored) return { waiting: 0, refused: 0 }
+  const [waiting, refused] = await Promise.all([pendingEvents(ofClub(stored)), refusedEvents(ofClub(stored))])
+  return { waiting: waiting.length, refused: refused.length }
 }

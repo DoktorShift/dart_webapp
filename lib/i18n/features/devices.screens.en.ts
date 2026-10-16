@@ -104,6 +104,7 @@ export const devicesScreensEn: Widen<typeof devicesScreensDe> = {
     removeConfirm: "Remove",
     failed: "That couldn't be saved. Try again.",
     offline: "No connection. The list can't be changed right now; try again in a moment.",
+    refused: "Your profile's servers refused the change. Check them under Profile › Advanced.",
     thisDeviceNote: "To sign this device out, use “Sign out” in Profile.",
     lostTitle: "Lost a device?",
     lostSteps: {

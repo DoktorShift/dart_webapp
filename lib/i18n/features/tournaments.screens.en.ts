@@ -492,6 +492,7 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
     reported: "Result reported to the tournament",
     reporting: "Reporting the result …",
     waiting: "Result waiting for a connection",
+    refused: "Result refused – the organizer enters it",
   },
 
   tv: {

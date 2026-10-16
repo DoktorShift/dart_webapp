@@ -137,6 +137,7 @@ export const clubsScreensEn: Widen<typeof clubsScreensDe> = {
     refresh: "Refresh",
     refreshing: "Loading",
     waiting: (n) => (n === 1 ? "1 change is still being sent" : `${n} changes are still being sent`),
+    refused: (n) => (n === 1 ? "The club's servers refused 1 change. Let the club's leaders know." : `The club's servers refused ${n} changes. Let the club's leaders know.`),
     noEncryption: "Your signer app can't do this in a closed club.",
     outdated: "This device hasn't loaded everything from the club yet. Refresh, then try again.",
   },

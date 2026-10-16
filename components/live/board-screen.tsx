@@ -189,7 +189,8 @@ function Verdict({ joined, followed }: { joined: JoinedMatch; followed: Followed
   const r = tx.result
   const session = useSession()
   const [sending, setSending] = useState(false)
-  const [failed, setFailed] = useState(false)
+  // Why the last verdict didn't reach a relay: no connection yet ("waiting") or refused for good.
+  const [failed, setFailed] = useState<"waiting" | "refused" | null>(null)
   const [asking, setAsking] = useState(false)
   const state = followed.state
   if (!state) return null
@@ -202,11 +203,12 @@ function Verdict({ joined, followed }: { joined: JoinedMatch; followed: Followed
   const corrected = !mine && state.stale.some((v) => v.seat === joined.seat)
   const send = async (verdict: "confirm" | "dispute") => {
     setSending(true)
-    setFailed(false)
+    setFailed(null)
     try {
-      setFailed(!(await giveVerdict(joined, state, verdict, joined.profile ? await getSigner() : null)))
+      const delivery = await giveVerdict(joined, state, verdict, joined.profile ? await getSigner() : null)
+      setFailed(delivery === "delivered" ? null : delivery)
     } catch {
-      setFailed(true)
+      setFailed("waiting")
     } finally {
       setSending(false)
     }
@@ -218,7 +220,7 @@ function Verdict({ joined, followed }: { joined: JoinedMatch; followed: Followed
       {mine?.verdict === "confirm" && <InlineStatus tone="success">{r.confirmed}</InlineStatus>}
       {mine?.verdict === "dispute" && <InlineStatus tone="error">{r.disputed}</InlineStatus>}
       {corrected && <InlineStatus>{r.corrected}</InlineStatus>}
-      {failed && <InlineStatus tone="error">{r.failed}</InlineStatus>}
+      {failed && <InlineStatus tone="error">{failed === "refused" ? r.refused : r.failed}</InlineStatus>}
       {mine?.verdict !== "confirm" && (
         <Button onClick={() => void send("confirm")} disabled={sending} className="h-14 w-full rounded-2xl text-[1.0625rem] font-semibold">
           {sending ? r.sending : r.confirm}

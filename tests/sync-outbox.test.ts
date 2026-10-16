@@ -6,7 +6,7 @@ import { relayClient } from "../lib/nostr/client.ts"
 import { loadCore, type Core } from "../lib/nostr/core.ts"
 import type { NostrEvent } from "../lib/nostr/types.ts"
 import { closeDatabase } from "../lib/storage/db.ts"
-import { backoffMs, deliverNow, deliveryStatus, enqueue, flushDue, outboxStatus, pendingEvents, resumeOutbox, withdraw } from "../lib/sync/outbox.ts"
+import { backoffMs, deliverNow, deliveryStatus, enqueue, flushDue, outboxStatus, pendingEvents, refusedEvents, resumeOutbox, sendWaitingNow, withdraw } from "../lib/sync/outbox.ts"
 
 // The persistent outbox (lib/sync/outbox.ts) against in-memory relays: delivery rules, which
 // answers are tried again, backoff, coalescing, duplicates, order (`after`), what a handoff
@@ -103,14 +103,38 @@ test("rate-limited and mute are tried again, invalid and blocked are final", asy
   assert.ok(stored(relays[0], e) && stored(relays[1], e) && !stored(relays[2], e))
 })
 
-test("every relay refusing for good ends it as refused", async () => {
-  const e = event()
-  relays[0].options.onEvent = () => [false, "blocked: not on the list"]
-  relays[1].options.onEvent = () => [false, "invalid: bad"]
-  await enqueue([{ event: e, relays: URLS.slice(0, 2) }])
-  const [status] = await deliverNow([e.id])
-  assert.equal(status.state, "refused")
-  assert.equal(await deliveryStatus(e.id), null)
+test("every relay refusing for good ends it as refused, kept as such for its week", async () => {
+  const refused = event()
+  const ok = event()
+  relays[0].options.onEvent = (e) => (e.id === refused.id ? [false, "blocked: not on the list"] : [true, ""])
+  relays[1].options.onEvent = (e) => (e.id === refused.id ? [false, "invalid: bad"] : [true, ""])
+  await enqueue([{ event: refused, relays: URLS.slice(0, 2) }, { event: ok, relays: URLS.slice(0, 2) }], {}, () => T0)
+  const states = new Map((await deliverNow([refused.id, ok.id], () => T0)).map((s) => [s.id, s.state]))
+  assert.deepEqual([states.get(refused.id), states.get(ok.id)], ["refused", "delivered"])
+  // A refusal is not a delivery: it stays, sent no more, while a delivered one is gone.
+  const kept = await deliveryStatus(refused.id)
+  assert.deepEqual([kept?.state, kept?.retryAt], ["refused", null])
+  assert.equal(await deliveryStatus(ok.id), null)
+  assert.deepEqual(await pendingEvents(() => true), [], "nothing waits")
+  assert.deepEqual(
+    (await refusedEvents(() => true)).map((e) => e.id),
+    [refused.id],
+  )
+  // Taken by one operator and refused by the other: as delivered as it gets, and done.
+  const partial = event()
+  relays[1].options.onEvent = (e) => (e.id === refused.id || e.id === partial.id ? [false, "invalid: bad"] : [true, ""])
+  await enqueue([{ event: partial, relays: URLS.slice(0, 2) }], {}, () => T0)
+  const [taken] = await deliverNow([partial.id], () => T0)
+  assert.deepEqual([taken.state, taken.operators], ["delivered", 1])
+  assert.equal(await deliveryStatus(partial.id), null)
+  // An event queued after it is not held up.
+  const next = event()
+  await enqueue([{ event: next, relays: URLS.slice(0, 2), after: [refused.id] }], {}, () => T0)
+  await flushDue(() => T0)
+  assert.equal((await deliveryStatus(next.id)) ?? "gone", "gone")
+
+  await sendWaitingNow(() => T0 + WEEK_MS + 1)
+  assert.equal(await deliveryStatus(refused.id), null, "given up a week after the first attempt")
 })
 
 test("backoff doubles from 5 s up to 10 min, with jitter in the upper half", () => {
@@ -275,6 +299,16 @@ test("an entry one round is sending is left alone by another", async () => {
   await round
   const after = await deliveryStatus(e.id)
   assert.deepEqual([after?.state, after?.attempts], ["delivered", 1])
+})
+
+test("an event never tried is never given up: the week counts from the first attempt", async () => {
+  const e = event()
+  // Queued while offline, or right before the app was closed: no attempt yet.
+  await enqueue([{ event: e, relays: URLS.slice(0, 3) }], {}, () => T0)
+  // Eight days later the app starts again, every relay reachable.
+  await sendWaitingNow(() => T0 + WEEK_MS + 24 * 60 * 60_000)
+  assert.equal(relays.slice(0, 3).filter((r) => stored(r, e)).length, 3)
+  assert.equal(await deliveryStatus(e.id), null, "delivered everywhere, done")
 })
 
 test("an entry no relay accepts for good is given up after a week", async () => {

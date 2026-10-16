@@ -27,5 +27,5 @@ export function TournamentResultRow({ match, placement }: { match: FinishedMatch
   const extra = tournamentGame(match)
   const report = useReport(extra?.id ?? null, extra?.slot ?? null)
   if (!extra) return null
-  return <ResultRow icon={Trophy} label={tx.game[report]} tone={report === "reported" ? "success" : report === "waiting" ? "warning" : "neutral"} placement={placement} />
+  return <ResultRow icon={Trophy} label={tx.game[report]} tone={report === "reported" ? "success" : report === "reporting" ? "neutral" : "warning"} placement={placement} />
 }

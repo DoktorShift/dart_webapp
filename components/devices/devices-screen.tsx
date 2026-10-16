@@ -178,7 +178,8 @@ function EditSheet({ pubkey, device, isThis, onClose, onChanged }: { pubkey: str
       onChanged()
       onClose()
     } catch (error) {
-      setFailed(error instanceof list.DeviceListError && error.problem === "offline" ? l.offline : l.failed)
+      const problem = error instanceof list.DeviceListError ? error.problem : null
+      setFailed(problem === "offline" ? l.offline : problem === "refused" ? l.refused : l.failed)
       setBusy(false)
     }
   }

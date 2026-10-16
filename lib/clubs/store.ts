@@ -36,7 +36,7 @@ export interface StoredClub extends Keyed {
   // match it became, so a result shown again (a reload) is never recorded twice.
   recorded: Record<string, string>
   // When relays last answered a fetch of this club (ms); null if never. What this device still
-  // has to send is the outbox's to say (send.ts waitingEvents).
+  // has to send is the outbox's to say (send.ts unsentEvents).
   loadedAt: number | null
 }
 

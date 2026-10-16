@@ -1,4 +1,5 @@
 import type { PublishResult } from "../nostr/client.ts"
+import { isPublished } from "../nostr/relays.ts"
 import type { EventTemplate, NostrEvent } from "../nostr/types.ts"
 import { ownEvents, ownRelaySettings, rememberOwn } from "../profile/own-events.ts"
 import { publishTargets } from "../profile/relay-list.ts"
@@ -34,7 +35,7 @@ export async function publish(events: readonly NostrEvent[]): Promise<PublishRep
   const sent = new Map((await deliverNow(events.map((e) => e.id))).map((s) => [s.id, s]))
   return deliveries.map(({ event, relays }) => {
     const status = sent.get(event.id)
-    return { event, relays, results: status?.results ?? [], published: status?.state === "delivered" }
+    return { event, relays, results: status?.results ?? [], published: !!status && isPublished(status.confirmed) }
   })
 }
 

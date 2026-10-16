@@ -507,6 +507,7 @@ export const tournamentsScreensDe = {
     reported: "Ergebnis ans Turnier gemeldet",
     reporting: "Ergebnis wird gemeldet …",
     waiting: "Ergebnis wartet auf Verbindung",
+    refused: "Ergebnis abgelehnt – die Turnierleitung trägt es ein",
   },
 
   // The TV view: large type, nothing to touch.

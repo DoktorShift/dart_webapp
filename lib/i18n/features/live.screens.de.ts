@@ -140,6 +140,7 @@ export const liveScreensDe = {
     withdrawn: "Das Ergebnis wurde zurückgenommen, das Spiel geht weiter.",
     sending: "Wird gesendet",
     failed: "Deine Antwort ist nicht angekommen. Prüfe die Verbindung und versuche es noch einmal.",
+    refused: "Die Server haben deine Antwort abgelehnt. Klärt das Ergebnis direkt am Board.",
   },
 
   takeover: {

@@ -83,10 +83,10 @@ if (featureOn("clubs")) {
   });
 
   // "Diagnose kopieren" (Profil › Erweitert): how many records each club has here, how many of
-  // them are still on their way and when relays last answered. Ids are cut short; nothing of the
+  // them are still on their way or were refused, and when relays last answered. Ids are cut short; nothing of the
   // content.
   addDiagnostics(async () => {
-    const [{ storedClubs }, { waitingEvents }] = await Promise.all([
+    const [{ storedClubs }, { unsentEvents }] = await Promise.all([
       import("@/lib/clubs/store"),
       import("@/lib/clubs/send"),
     ]);
@@ -96,8 +96,10 @@ if (featureOn("clubs")) {
       title: "Clubs",
       lines: await Promise.all(
         clubs.map(
-          async (c) =>
-            `${c.club.slice(0, 8)}: ${c.events.length} records, ${await waitingEvents(c.club)} waiting, loaded ${c.loadedAt ? new Date(c.loadedAt).toISOString() : "never"}`,
+          async (c) => {
+            const unsent = await unsentEvents(c.club);
+            return `${c.club.slice(0, 8)}: ${c.events.length} records, ${unsent.waiting} waiting, ${unsent.refused} refused, loaded ${c.loadedAt ? new Date(c.loadedAt).toISOString() : "never"}`;
+          },
         ),
       ),
     };

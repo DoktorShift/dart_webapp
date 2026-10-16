@@ -1,7 +1,7 @@
 import { beforeEach, test } from "node:test"
 import assert from "node:assert/strict"
 import { resetStorage } from "./storage-helpers.ts"
-import { keep, waitingEvents } from "../lib/clubs/send.ts"
+import { keep, unsentEvents } from "../lib/clubs/send.ts"
 import { loadStoredClub, updateClub, type StoredClub } from "../lib/clubs/store.ts"
 import type { NostrEvent } from "../lib/nostr/types.ts"
 import { dbWrite } from "../lib/storage/db.ts"
@@ -24,7 +24,7 @@ test("a change is kept, then queued for the club's relays, each event after the 
   const stored = await loadStoredClub(CLUB)
   assert.deepEqual(stored?.events.map((e) => e.id), [event("1").id, event("2").id, event("3").id])
   assert.equal(stored?.keys[event("1").id], "k".repeat(64))
-  assert.equal(await waitingEvents(CLUB), 3)
+  assert.deepEqual(await unsentEvents(CLUB), { waiting: 3, refused: 0 })
 
   const queued = await outboxStatus()
   assert.deepEqual(queued.map((s) => s.id), [event("1").id, event("2").id, event("3").id])

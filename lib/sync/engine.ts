@@ -406,8 +406,9 @@ async function plannedWrites(sync: Sync): Promise<Write[]> {
   const latest = (id: string) => Math.max(copies[id]?.createdAt ?? 0, remote.get(id)?.createdAt ?? 0)
   // Above every version seen: this device's, the relays' (a deleted players record included).
   const nextRev = (id: string) => Math.max(copies[id]?.rev ?? 0, remote.get(id)?.rev ?? 0, id === PLAYERS_RECORD ? (sync.playersVersion?.record.rev ?? 0) : 0) + 1
-  // A version no relay that answered holds, and the outbox doesn't either, is lost: written anew.
-  const waiting = sync.full ? new Set((await outboxStatus()).map((s) => s.id)) : new Set<string>()
+  // A version no relay that answered holds, and the outbox doesn't send either (not there, or
+  // refused for good), is lost: written anew.
+  const waiting = sync.full ? new Set((await outboxStatus()).flatMap((s) => (s.state === "refused" ? [] : [s.id]))) : new Set<string>()
   const lost = (copy: Copy) => sync.full && sync.conclusive && !copy.ids.some((id) => sync.events.has(id) || waiting.has(id))
   const writes: Write[] = []
   for (const id of new Set([...local.keys(), ...Object.keys(copies)])) {

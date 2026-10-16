@@ -65,8 +65,9 @@ export interface DeviceList {
   arriving: Pick<DeviceEntry, "id" | "name">[]
 }
 
-// "offline": no relay answered, so the list can't be read before it is changed.
-export type DeviceListProblem = "no-key" | "offline" | "clock" | "signer"
+// "offline": no relay answered, so the list can't be read before it is changed. "refused": every
+// relay refused the new version for good.
+export type DeviceListProblem = "no-key" | "offline" | "clock" | "signer" | "refused"
 
 export class DeviceListError extends Error {
   problem: DeviceListProblem
@@ -164,9 +165,10 @@ async function change(pubkey: string, edit: (list: Entries & { thisDevice: strin
     throw new DeviceListError("signer", error instanceof Error ? error.message : String(error))
   }
   const targets = await targetsOf(pubkey)
-  await kvSet(KEY, { pubkey, rev, device: here.device, entries, backup, createdAt: created_at, listed } satisfies StoredList)
   await enqueue(events.map((event) => ({ event, relays: targets })), { coalesce: true })
-  await deliverNow(events.map((event) => event.id))
+  const sent = await deliverNow(events.map((event) => event.id))
+  if (sent.some((status) => status.state === "refused")) throw new DeviceListError("refused", "every relay refused the list")
+  await kvSet(KEY, { pubkey, rev, device: here.device, entries, backup, createdAt: created_at, listed } satisfies StoredList)
 }
 
 // Puts this device into the list, once: after it got the profile, or when the first device

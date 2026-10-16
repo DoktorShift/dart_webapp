@@ -204,8 +204,8 @@ test("players join from their phones without any key leaving them; their verdict
   assert.equal(result.winner, 0)
   assert.deepEqual(result.legs, [1, 0])
 
-  assert.ok(await join.giveVerdict(jonas.seated, phone.get()!.state!, "confirm", profile))
-  assert.ok(await join.giveVerdict(mia.seated, phone.get()!.state!, "dispute", null))
+  assert.equal(await join.giveVerdict(jonas.seated, phone.get()!.state!, "confirm", profile), "delivered")
+  assert.equal(await join.giveVerdict(mia.seated, phone.get()!.state!, "dispute", null), "delivered")
   await until("both verdicts on the board", () => {
     const seats = live.boardView(local)?.seats
     return seats?.[0].verdict === "dispute" && seats[1].verdict === "confirm"
@@ -251,7 +251,7 @@ test("players join from their phones without any key leaving them; their verdict
   assert.ok(!(await archive.loadArchive()).some((m) => m.id === jonas.seated.match))
 
   // Confirmed again: the corrected game is the one kept.
-  assert.ok(await join.giveVerdict(joined, phone.get()!.state!, "confirm", profile))
+  assert.equal(await join.giveVerdict(joined, phone.get()!.state!, "confirm", profile), "delivered")
   const state = await until("the renewed verdict", () => phone.get()?.state?.confirmations[1]?.verdict === "confirm" && phone.get()!.state)
   joined = await join.keepConfirmed(joined, state)
   const kept = (await archive.loadArchive()).find((m) => m.id === jonas.seated.match)

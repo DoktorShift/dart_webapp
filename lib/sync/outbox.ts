@@ -22,15 +22,20 @@ import { dbGetAll, dbWrite, onStorageChange, type Keyed, type WriteOp } from "..
 //   no connection) is tried again with capped exponential backoff and jitter. "mute:" is a relay's
 //   current policy towards a key, not a verdict on the event, so it is tried again like
 //   "rate-limited:"; a refusal that never lifts ends with the week below.
-// - Order: an entry goes out once each event in its `after` has a copy on some relay, or is no
-//   longer here (done, given up, never queued). One copy is the bar, the same as rule "any": a
-//   reader merges what every relay has, and the earlier event is on its way to the rest.
+// - Order: an entry goes out once each event in its `after` has a copy on some relay, was refused
+//   for good, or is no longer here (done, given up, never queued). One copy is the bar, the same
+//   as rule "any": a reader merges what every relay has, and the earlier event is on its way to
+//   the rest.
 // - coalesce: of replaceable and addressable events only the newest per coordinate stays (a newer
 //   live score replaces the waiting one); an older one handed over later is dropped.
 // - Copies still missing on some relay once the rule is met are sent again on every start of the
 //   app, for a week (decision 0002 §5: "Fehlende Kopien werden beim Öffnen der App erneut gesendet").
-//   After a week an entry is given up, met or not: a record a relay keeps refusing is written anew
-//   by the next full sync, not chased forever.
+//   The week counts from the first attempt, so an event queued offline or before the app was
+//   closed for longer waits as long as it takes. After that week an entry is given up, met or
+//   not: a record a relay keeps refusing is written anew by the next full sync, not chased
+//   forever. An entry every relay refused for good stays until then as "refused" (sent no more),
+//   so callers can tell a refusal from a delivery; one every relay answered for good that some
+//   relay took is done and gone at once.
 // - The lock (Web Locks, one per browser) covers the queue's state only, never the network: a
 //   round picks its entries under it and leases them, sends without it, and merges the answers
 //   under it again. Other tabs' rounds pass leased entries over; enqueue() only ever waits for
@@ -72,14 +77,20 @@ interface Entry extends Keyed {
   answers: Record<string, RelayAnswer>
   attempts: number
   queuedAt: number
-  // When to try the relays without a final answer again (ms); null once the rule is met.
+  // When the first round got answers (ms); the week it is kept counts from here. Missing until
+  // then, and in entries stored before it was recorded: not tried yet.
+  firstTriedAt?: number
+  // When to try the relays without a final answer again (ms); null once the rule is met or every
+  // relay refused it for good.
   retryAt: number | null
   // Until when a round is sending it (ms): other rounds pass it over meanwhile.
   sendingUntil: number | null
 }
 
 // "waiting": the rule isn't met yet, it is tried again. "delivered": the rule is met (copies on
-// further relays may still follow). "refused": every relay answered for good without meeting it.
+// further relays may still follow), or every relay answered for good and some took it, which is
+// as far as it gets (a profile with relays of one operator). "refused": every relay answered for
+// good and none took it.
 export type DeliveryState = "waiting" | "delivered" | "refused"
 
 export interface DeliveryStatus {
@@ -123,11 +134,12 @@ function ruleMet(entry: Entry) {
   return entry.rule === "any" ? confirmed.length > 0 : isPublished(confirmed)
 }
 
-// Its turn: every event it goes out after has a copy somewhere, or is no longer here.
+// Its turn: every event it goes out after has a copy somewhere, was refused for good, or is no
+// longer here.
 const ready = (entry: Entry, entries: Map<string, Entry>) =>
   entry.after.every((id) => {
     const before = entries.get(id)
-    return !before || confirmedOf(before).length > 0
+    return !before || confirmedOf(before).length > 0 || openRelays(before).length === 0
   })
 
 // Oldest first, and an entry after the ones it goes out after.
@@ -155,13 +167,19 @@ export function backoffMs(attempts: number, random = Math.random()): number {
   return Math.round(full / 2 + (full / 2) * random)
 }
 
+function stateOf(entry: Entry): DeliveryState {
+  if (ruleMet(entry)) return "delivered"
+  if (openRelays(entry).length > 0) return "waiting"
+  return confirmedOf(entry).length > 0 ? "delivered" : "refused"
+}
+
 function statusOf(entry: Entry): DeliveryStatus {
   const confirmed = confirmedOf(entry)
   return {
     id: entry.id,
     kind: entry.event.kind,
     rule: entry.rule,
-    state: ruleMet(entry) ? "delivered" : openRelays(entry).length === 0 ? "refused" : "waiting",
+    state: stateOf(entry),
     relays: entry.relays,
     results: entry.relays.flatMap((url) => {
       const answer = entry.answers[url]
@@ -174,8 +192,10 @@ function statusOf(entry: Entry): DeliveryStatus {
   }
 }
 
-// Gone from the outbox: every relay answered for good, or it is a week old.
-const finished = (entry: Entry, now: number) => openRelays(entry).length === 0 || now - entry.queuedAt > HEAL_FOR_MS
+// Gone from the outbox: every relay answered for good and some took it, or a week went by since
+// the first attempt. A refusal stays until then.
+const finished = (entry: Entry, now: number) =>
+  (openRelays(entry).length === 0 && stateOf(entry) === "delivered") || (entry.firstTriedAt !== undefined && now - entry.firstTriedAt > HEAL_FOR_MS)
 const saveEntry = (entry: Entry, now: number): WriteOp => (finished(entry, now) ? { store: "outbox", delete: entry.id } : putEntry(entry))
 
 // ---- One sender per browser -------------------------------------------------------------------
@@ -268,13 +288,14 @@ async function sendRound(choose: (open: Entry[], at: number) => Entry[], wait: b
 }
 
 // The entry as stored now (relays may have been added meanwhile) with a round's answers. Due
-// again after a backoff, at once for relays not tried yet, or never once the rule is met.
+// again after a backoff, at once for relays not tried yet, or never once the rule is met or every
+// relay refused it for good.
 function withAnswers(entry: Entry, results: readonly PublishResult[], at: number): Entry {
   const answers = { ...entry.answers }
   for (const r of results) answers[r.url] = { ok: r.ok, code: r.code, reason: r.reason, at }
-  const tried: Entry = { ...entry, answers, attempts: entry.attempts + 1, sendingUntil: null }
+  const tried: Entry = { ...entry, answers, attempts: entry.attempts + 1, firstTriedAt: entry.firstTriedAt ?? at, sendingUntil: null }
   const untried = tried.relays.some((url) => !answers[url])
-  return { ...tried, retryAt: untried ? at : ruleMet(tried) ? null : at + backoffMs(tried.attempts) }
+  return { ...tried, retryAt: untried ? at : ruleMet(tried) || openRelays(tried).length === 0 ? null : at + backoffMs(tried.attempts) }
 }
 
 // Sends the given entries now, due or not, and returns their state. Entries not in the outbox
@@ -299,7 +320,7 @@ export async function flushDue(now: Clock = Date.now): Promise<void> {
 }
 
 // Makes entries due now and sends them: every waiting one, or also the delivered ones still
-// missing copies (a start of the app). Entries older than a week are given up instead.
+// missing copies (a start of the app). Entries tried for more than a week are given up instead.
 async function dueNow(withMissingCopies: boolean, now: Clock) {
   await withLock(true, async () => {
     const at = now()
@@ -330,10 +351,15 @@ export async function outboxStatus(): Promise<DeliveryStatus[]> {
   return inOrder(await readEntries()).map(statusOf)
 }
 
-// The events whose rule isn't met yet among those `select` picks, in sending order: what a
-// handoff carries to the device that sends them from now on.
+// The events among those `select` picks that are still waiting (rule not met, some relay still
+// tried), in sending order: what a handoff carries to the device that sends them from now on.
 export async function pendingEvents(select: (event: NostrEvent) => boolean): Promise<NostrEvent[]> {
-  return inOrder((await readEntries()).filter((e) => select(e.event) && !ruleMet(e))).map((e) => e.event)
+  return inOrder((await readEntries()).filter((e) => select(e.event) && stateOf(e) === "waiting")).map((e) => e.event)
+}
+
+// The events among those `select` picks that every relay refused for good (kept for their week).
+export async function refusedEvents(select: (event: NostrEvent) => boolean): Promise<NostrEvent[]> {
+  return inOrder((await readEntries()).filter((e) => select(e.event) && stateOf(e) === "refused")).map((e) => e.event)
 }
 
 // Takes the selected events out, sent or not: another device sends them from now on.
