@@ -145,8 +145,9 @@ export function InvoiceView({ entry, info, onNew, onDone }: { entry: PaymentEntr
   return (
     <>
       {/* The status stays above the code, in view without scrolling; on a phone in landscape the
-          code (at least 160 px, enough to scan) sits beside the amount and the status. */}
-      <div className="flex flex-col items-center xshort:grid xshort:grid-cols-[10rem_minmax(0,1fr)] xshort:items-start xshort:gap-x-4">
+          code sits beside the amount and the status, its column wide enough for 160 px of code
+          inside the card's padding (enough to scan). */}
+      <div className="flex flex-col items-center xshort:grid xshort:grid-cols-[11.5rem_minmax(0,1fr)] xshort:items-start xshort:gap-x-4">
         <div className="flex flex-col items-center text-center xshort:col-start-2 xshort:items-start xshort:text-left">
           <p className="font-display text-4xl font-semibold tabular-nums tracking-tight">{amount}</p>
           <StatusLabel tone="progress" className="mt-1 text-[0.9375rem] font-medium">

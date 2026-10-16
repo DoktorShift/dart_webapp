@@ -17,7 +17,7 @@ export default function PaymentsAdvancedScreen() {
 
   return (
     <Group footer={a.footer}>
-      <ListRow title={a.protocol} value={a.protocolValue} />
+      <ListRow title={a.protocol} subtitle={a.protocolValue} />
       <ListRow title={a.encryption} value={wallet.encryption === "nip44" ? "NIP‑44" : "NIP‑04"} />
       <ListRow title={a.relays} subtitle={<span className="select-text font-mono">{list(wallet.relays)}</span>} />
       <ListRow title={a.methods} subtitle={<span className="select-text font-mono">{list(wallet.methods)}</span>} />

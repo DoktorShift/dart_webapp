@@ -17,6 +17,7 @@ import { ListRow } from "@/components/ui/list-row"
 import { Sheet, SheetBody } from "@/components/ui/sheet"
 import { FitText } from "@/components/fit-text"
 import { useAreaT, useT } from "@/components/i18n-provider"
+import { useMediaQuery } from "@/hooks/use-media-query"
 import { AmountPicker } from "@/components/payments/amount-picker"
 import { CongratulateFlow } from "@/components/payments/congratulate"
 import { RequestOriginContext } from "@/components/payments/connect"
@@ -46,13 +47,15 @@ import { cn } from "@/lib/utils"
 // The row itself: the signet, how it stands (a symbol with words, never colour alone) and one
 // line of text, which shrinks a little to fit and wraps to a second line when it still doesn't.
 // min-w-0 keeps the row inside its grid column while the text is measured at full size;
-// otherwise the column would stretch to the text and the measurement would be wrong.
+// otherwise the column would stretch to the text and the measurement would be wrong. On a phone
+// in landscape the row sits in the result's narrow left column, so it keeps its spacing tight
+// there and its few words stay on one line.
 function PaymentRow({ label, tone, onClick }: { label: string; tone?: Tone; onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex min-h-12 w-full min-w-0 items-center gap-3 rounded-2xl border border-border bg-card px-4 py-2 text-left text-[1.0625rem] transition-colors active:bg-secondary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring short:min-h-11"
+      className="flex min-h-12 w-full min-w-0 items-center gap-3 rounded-2xl border border-border bg-card px-4 py-2 text-left text-[1.0625rem] transition-colors active:bg-secondary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring short:min-h-11 xshort:gap-2 xshort:px-3"
     >
       <PaymentSignet />
       <span className={cn("flex min-w-0 flex-1 items-center gap-1.5 leading-snug", tone && TONE_COLORS[tone])}>
@@ -75,8 +78,12 @@ function useLinked() {
   }, [players])
 }
 
+// Where the result's row is narrow it says the least, so its words stay on one line: on a phone in
+// landscape (the result's left column) and on small phones (iPhone SE, 320 pt wide).
+const useBriefRow = () => useMediaQuery("(max-height: 500px), (max-width: 359px)")
+
 // What the stake's row says: how it stands, or what this device can do about it. `brief` where
-// the row is narrow (a phone in landscape).
+// the row is narrow.
 function stakeLabel(tx: PaymentTexts, format: Format, parties: StakeParties, side: "payer" | "payee" | null, settled: PaymentEntry | undefined, brief: boolean) {
   const s = brief ? tx.stake.brief : tx.stake
   const amount = format.sats(parties.sats)
@@ -97,6 +104,7 @@ function StakeAction({ match, parties, entry }: { match: FinishedMatch; parties:
   const session = useSession()
   const linked = useLinked()
   const landscape = useLandscapePhone()
+  const brief = useBriefRow()
   const [open, setOpen] = useState(false)
   const [mode, setMode] = useState<"pay" | "receive" | null>(null)
   const [confirmSettled, setConfirmSettled] = useState(false)
@@ -126,7 +134,7 @@ function StakeAction({ match, parties, entry }: { match: FinishedMatch; parties:
 
   return (
     <RequestOriginContext.Provider value={origin}>
-      <PaymentRow label={stakeLabel(tx, format, parties, side, settled, landscape)} tone={settled && entryStatus(tx, settled).tone} onClick={() => setOpen(true)} />
+      <PaymentRow label={stakeLabel(tx, format, parties, side, settled, brief)} tone={settled && entryStatus(tx, settled).tone} onClick={() => setOpen(true)} />
       <Sheet open={open} onOpenChange={(next) => (next ? setOpen(true) : close())} title={t.payments.stake.title} description={landscape ? undefined : s.agreed(parties.payer.name, amount, parties.payee.name)}>
         <SheetBody>
           {open && shown === "pay" && <PayFlow action={action} once counterpart={payee} amountSats={parties.sats} onDone={close} />}
@@ -184,7 +192,7 @@ function FreeAction({ match }: { match: FinishedMatch }) {
   const f = tx.free
   const session = useSession()
   const linked = useLinked()
-  const landscape = useLandscapePhone()
+  const brief = useBriefRow()
   const [open, setOpen] = useState(false)
   const [choice, setChoice] = useState<FreeChoice | null>(null)
   const [amount, setAmount] = useState<number | null>(null)
@@ -209,7 +217,7 @@ function FreeAction({ match }: { match: FinishedMatch }) {
 
   return (
     <RequestOriginContext.Provider value={origin}>
-      <PaymentRow label={landscape ? f.briefButton : f.button} onClick={() => setOpen(true)} />
+      <PaymentRow label={brief ? f.briefButton : f.button} onClick={() => setOpen(true)} />
       <Sheet open={open} onOpenChange={(next) => (next ? setOpen(true) : close())} title={choice?.kind === "congratulate" ? tx.congratulate.title(choice.player.name) : f.title}>
         <SheetBody>
           {open && !choice && (

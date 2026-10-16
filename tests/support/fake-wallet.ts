@@ -186,9 +186,11 @@ export async function startFakeWallet(options: FakeWalletOptions): Promise<FakeW
       }
       wallet.requests.push(method)
       if (!answer) return
-      // A wallet that can't read NIP-44 answers in NIP-04, as NIP-47 asks.
+      // A wallet that can't read NIP-44 answers in NIP-04, as NIP-47 asks. The answer is
+      // ephemeral: a client gone meanwhile leaves no one to hear it (the relay says "mute"),
+      // which is no concern of the wallet.
       const replyScheme = scheme === "nip44" && !nip44Capable ? "nip04" : scheme
-      await relay.publish(sign(NWC_RESPONSE, seal(replyScheme, JSON.stringify({ result_type: method, ...answer })), [["p", clientPubkey], ["e", request.id]]))
+      await relay.publish(sign(NWC_RESPONSE, seal(replyScheme, JSON.stringify({ result_type: method, ...answer })), [["p", clientPubkey], ["e", request.id]])).catch(() => undefined)
     },
   })
 

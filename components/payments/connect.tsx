@@ -17,6 +17,7 @@ import { scanKind } from "@/lib/payments/invoices"
 import { checkWallet, connectNewWallet, keepWallet, type CheckedWallet, type WalletInfo } from "@/lib/payments/wallet"
 import { forgetReturnedConnection, walletAppLink, watchReturns, type RequestOrigin } from "@/lib/payments/wallet-return"
 import type { ScreenProps } from "@/lib/shell/registry"
+import { cn } from "@/lib/utils"
 
 // "Wallet verbinden" (PLAN.md: "Wallet verbinden" → QR scannen oder Verbindung einfügen →
 // Rechte prüfen → "Verbunden"). The scanner takes only a wallet connection and names an invoice
@@ -88,7 +89,9 @@ export function ConnectPanel({ onConnected, onCancel, titled = false }: { onConn
           <h3 className="text-[1.0625rem] font-semibold leading-snug">{t.payments.connectTitle}</h3>
         </div>
       )}
-      <p className="text-[1.0625rem] leading-snug text-muted-foreground">{c.intro}</p>
+      {/* Inside a sheet on a phone in landscape the scanner comes first: the intro would push it
+          out of view. */}
+      <p className={cn("text-[1.0625rem] leading-snug text-muted-foreground", titled && "xshort:hidden")}>{c.intro}</p>
       <QRScanner className="mt-5" onResult={onResult} manualLabel={c.manualLabel} manualPlaceholder={c.manualPlaceholder} />
       {connecting && <InlineStatus className="mt-3">{c.connecting}</InlineStatus>}
       {withApps && (

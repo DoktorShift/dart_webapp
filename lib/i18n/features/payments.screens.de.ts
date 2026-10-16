@@ -306,7 +306,7 @@ export const paymentsScreensDe = {
   // "Erweitert": the technical details, for those who want them.
   advanced: {
     protocol: "Verfahren",
-    // A non-breaking hyphen: the value stays on one line on narrow screens.
+    // A non-breaking hyphen: "NIP‑47" is never split across lines.
     protocolValue: "Nostr Wallet Connect (NIP‑47)",
     encryption: "Verschlüsselung",
     relays: "Relays der Wallet",
