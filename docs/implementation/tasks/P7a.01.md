@@ -31,7 +31,7 @@ Persönliche Meilensteine entstehen aus dem Archiv dieses Geräts nach einem ver
 
 Integrationspunkte für die späteren Spuren (keine Attrappen):
 
-- `registerIssuerCheck("club" | "tournament", { mayIssue, evidenceValid })` in `lib/badges/awards.ts`: die Clubs- und Turnierspur beantwortet aus ihrem Zustand (`mayIssueClubBadge`, `mayIssueTournamentBadge`), wer vergeben darf und ob ein Nachweis noch gilt.
+- `registerIssuerCheck("club" | "tournament", { mayIssue, evidenceValid })` in `lib/badges/issuers.ts` (seit dem 16. Oktober 2026 ein eigenes kleines Modul, damit die Registrierung beim Start nichts vom Prüfcode lädt; `mayIssue` bekommt die Zeit der Vergabe): die Clubs- und Turnierspur beantwortet aus ihrem Zustand (`mayIssueClubBadge`, `mayIssueTournamentBadge`), wer vergeben darf und ob ein Nachweis noch gilt.
 - `issueAwards(issuer, occasion, texts)` mit `BadgeOccasion` (Plätze, Abschlussdatensatz, Finale, `minGames`) und `organizerBadgeTexts` aus `lib/i18n/features/badges.screens.*` (`tx.organizer[badge](name)`).
 - `push(BADGE_SCREENS.badge, { id, name })` öffnet eine Auszeichnung von überall (`components/badges/screens.ts`).
 

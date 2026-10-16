@@ -11,6 +11,7 @@ import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
 import { Confirm, taskLabel, useChange } from "@/components/clubs/common"
 import { DecideSheet, EditSheet, InvitesSheet, type Decision } from "@/components/clubs/manage-sheets"
 import { RequestList } from "@/components/clubs/request-list"
+import { AwardsRow, useMissingAwards } from "@/components/clubs/season-awards"
 import { CLUB_SCREENS } from "@/components/clubs/screens"
 import { clubAuthor, useClub } from "@/components/clubs/use-clubs"
 import { useNames } from "@/components/clubs/use-names"
@@ -26,7 +27,8 @@ import { saveFile } from "@/lib/save-file"
 import type { ScreenProps } from "@/lib/shell/registry"
 
 // "Club verwalten" (PLAN.md): open tasks first (requests, results the rules can't settle,
-// access for new members, a hand-over under way or lapsed), then members, invitations, the
+// access for new members, a hand-over under way or lapsed, badges of an ended season not given
+// yet), then members, invitations, the
 // season, the club's details, the export, and for the owner the archive. Nothing here is
 // needed to play.
 export default function ManageScreen({ params }: ScreenProps) {
@@ -37,6 +39,7 @@ export default function ManageScreen({ params }: ScreenProps) {
   const { view, refresh } = useClub(params.club ?? null)
   const state = view?.state
   const names = useNames(state?.offer ? [state.offer.to] : [])
+  const awards = useMissingAwards(view)
   const [deciding, setDeciding] = useState<Decision | null>(null)
   const [editing, setEditing] = useState(false)
   const [invites, setInvites] = useState(false)
@@ -56,7 +59,7 @@ export default function ManageScreen({ params }: ScreenProps) {
   const offer = openOffer(state, now)
   // An offer nobody accepted in time: the owner may make a new one.
   const lapsed = owner && state.offer && !offer ? state.offer : null
-  const nothing = requests === 0 && tasks.length === 0 && !offer && !lapsed
+  const nothing = requests === 0 && tasks.length === 0 && !offer && !lapsed && awards.length === 0
   const name = params.name ?? state.info.name
 
   const run = async (action: (author: Author) => Promise<unknown>) => {
@@ -85,7 +88,7 @@ export default function ManageScreen({ params }: ScreenProps) {
       ) : (
         <>
           {manager && <RequestList state={state} />}
-          {(tasks.length > 0 || offer || lapsed) && (
+          {(tasks.length > 0 || offer || lapsed || awards.length > 0) && (
             <Group title={tx.manage.tasks}>
               {tasks.map((task) =>
                 task.kind === "decide" ? (
@@ -96,6 +99,9 @@ export default function ManageScreen({ params }: ScreenProps) {
               )}
               {offer && owner && <ListRow title={tx.members.offerPending(names(offer.to).name ?? tx.unnamed)} value={tx.members.cancelOffer} onClick={() => setWithdrawing(true)} />}
               {lapsed && <ListRow title={tx.members.offerExpired(names(lapsed.to).name ?? tx.unnamed)} value={tx.members.offerAgain} onClick={() => setOffering(true)} />}
+              {awards.map((occasion) => (
+                <AwardsRow key={occasion.occasionId} occasion={occasion} onDone={setProblem} />
+              ))}
             </Group>
           )}
         </>

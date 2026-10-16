@@ -10,7 +10,7 @@ import type { MatchStateP } from "../protocol/match-state.ts"
 import { reduceMatch } from "../protocol/match-state.ts"
 import { buildRecord, parseRecord } from "../protocol/records.ts"
 import { encodeThrows } from "../protocol/throws.ts"
-import { afterState, keep, recordTime, resend, send, sign, type Author, type Sent } from "./send.ts"
+import { afterState, keep, recordTime, send, sign, type Author, type Sent } from "./send.ts"
 
 // Club games (docs/protocol/families/club.md, "Clubspiele"). A game started from the club is
 // played on one device like any game; when it is finished, the host's profile records it as a
@@ -85,17 +85,18 @@ export async function recordGame(state: ClubState, game: FinishedGame, seats: Ag
   const named = buildRecord("club.game", { match, ...(key ? { key: bytesToHex(key.secretKey) } : {}) }, { created_at: now, root: state.id })
   const rest = await sign([{ template: result, link }, { template: named, ...(closed ? { seal: { readers: Object.keys(state.members) } } : {}) }], author.signer)
   const events = [...session.events, ...rest.events]
-  await keep(state.id, { events, keys: { ...session.keys, ...rest.keys } }, { recorded: { [game.id]: match } })
-  return { match, events, published: await resend(state.id, events) }
+  return { match, ...(await keep(state.id, { events, keys: { ...session.keys, ...rest.keys } }, { recorded: { [game.id]: match } })) }
 }
 
-// Whether a game with these players and exactly these throws was recorded for the club by
-// this profile already: the second guard against a double entry, next to the club's memory of
-// local ids (a game recorded on another device of the same profile, or a copy without it).
-export function alreadyRecorded(games: readonly ClubGame[], by: string, seats: Agreement["seats"], throws: readonly Throw[]): boolean {
+// The game with these players and exactly these throws this profile recorded for the club
+// already, if any: the second guard against a double entry, next to the club's memory of local
+// ids (a game recorded on another device of the same profile, or a copy without it).
+export function recordedGame(games: readonly ClubGame[], by: string, seats: Agreement["seats"], throws: readonly Throw[]): ClubGame | null {
   const encoded = encodeThrows(throws)
-  return games.some(
-    (g) => g.result?.by === by && g.result.throws === encoded && g.agreement.seats.length === seats.length && g.agreement.seats.every((s, i) => s.alias === seats[i].alias && s.pubkey === seats[i].pubkey),
+  return (
+    games.find(
+      (g) => g.result?.by === by && g.result.throws === encoded && g.agreement.seats.length === seats.length && g.agreement.seats.every((s, i) => s.alias === seats[i].alias && s.pubkey === seats[i].pubkey),
+    ) ?? null
   )
 }
 
@@ -123,6 +124,9 @@ export interface ClubGame {
     finishedAt?: number
     replaces?: string
   } | null
+  // When the result was last corrected or voided (the newest entry of its chain replaces an
+  // earlier one); null while the first result stands. Badges of an ended season rest on it.
+  revisedAt: number | null
   confirmations: MatchStateP["confirmations"]
 }
 
@@ -135,6 +139,7 @@ export function readGames(state: ClubState, events: readonly NostrEvent[], plain
     const reduced = reduceMatch(records, named.match, { now, open: (e) => plaintexts.get(e.id) ?? null })
     if (!reduced.state || reduced.state.agreement.club !== state.id) continue
     const s = reduced.state
+    const last = s.results.at(-1)
     games.push({
       match: named.match,
       by: named.by,
@@ -143,6 +148,7 @@ export function readGames(state: ClubState, events: readonly NostrEvent[], plain
       agreement: s.agreement,
       authority: s.authority,
       result: s.result ? { event: s.result.event, by: s.result.by, at: s.result.at, winner: s.result.winner, legs: s.result.legs, ...resultDetails(records, s.result.event, plaintexts), ...(s.result.replaces ? { replaces: s.result.replaces } : {}) } : null,
+      revisedAt: last?.replaces ? last.at : null,
       confirmations: s.confirmations,
     })
   }

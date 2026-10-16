@@ -30,19 +30,17 @@ export interface StoredClub extends Keyed {
   invite?: OpenedInvite
   // Relays the invite link named, read along with the usual ones.
   relays: string[]
-  // Own events relays of two operators have not confirmed yet (decision 0002 §5): marked the
-  // moment they are kept here, cleared only by a confirmed publish (send.ts), never by a fetch.
-  unsent: string[]
   // Games played on this device that were recorded for the club: the local match id and the
   // match it became, so a result shown again (a reload) is never recorded twice.
   recorded: Record<string, string>
-  // When relays last answered for this club (ms), a fetch or a confirmed publish; null if never.
+  // When relays last answered a fetch of this club (ms); null if never. What this device still
+  // has to send is the outbox's to say (send.ts waitingEvents).
   loadedAt: number | null
 }
 
 const clubObjectId = (club: string) => `${CLUB_OBJECT_PREFIX}${club}`
 
-const empty = (club: string): StoredClub => ({ id: clubObjectId(club), club, events: [], keys: {}, tokens: {}, relays: [], unsent: [], recorded: {}, loadedAt: null })
+const empty = (club: string): StoredClub => ({ id: clubObjectId(club), club, events: [], keys: {}, tokens: {}, relays: [], recorded: {}, loadedAt: null })
 
 export async function loadStoredClub(club: string): Promise<StoredClub | null> {
   const stored = await dbGet<StoredClub>("objects", clubObjectId(club))
@@ -62,10 +60,6 @@ export interface ClubChange {
   token?: { invite: string; token: string }
   invite?: OpenedInvite | null
   relays?: readonly string[]
-  // Own events kept here just now: not confirmed by relays yet.
-  unsent?: readonly string[]
-  // Own events relays of two operators confirmed.
-  sent?: readonly string[]
   recorded?: Readonly<Record<string, string>>
   // Relays answered.
   loadedAt?: number
@@ -90,7 +84,6 @@ export function updateClub(club: string, change: ClubChange): Promise<StoredClub
 function merge(stored: StoredClub, change: ClubChange): StoredClub {
   const byId = new Map(stored.events.map((e) => [e.id, e]))
   for (const event of change.events ?? []) if (!byId.has(event.id)) byId.set(event.id, event)
-  const sent = new Set(change.sent ?? [])
   return {
     ...stored,
     events: [...byId.values()],
@@ -98,7 +91,6 @@ function merge(stored: StoredClub, change: ClubChange): StoredClub {
     tokens: change.token ? { ...stored.tokens, [change.token.invite]: change.token.token } : stored.tokens,
     invite: change.invite === null ? undefined : (change.invite ?? stored.invite),
     relays: change.relays ? [...new Set([...stored.relays, ...change.relays])] : stored.relays,
-    unsent: [...new Set([...stored.unsent, ...(change.unsent ?? [])])].filter((id) => !sent.has(id)),
     recorded: { ...stored.recorded, ...change.recorded },
     loadedAt: change.loadedAt ?? stored.loadedAt,
   }

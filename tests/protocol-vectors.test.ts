@@ -155,7 +155,7 @@ test("club vectors", async () => {
     if (want.seasons)
       for (const [id, season] of Object.entries(want.seasons as Record<string, { versions: number; ended: boolean }>)) {
         assert.equal(s.seasons[id].versions.length, season.versions, `${c.name}: season versions`)
-        assert.equal(s.seasons[id].ended, season.ended, `${c.name}: season ended`)
+        assert.equal(s.seasons[id].ended !== null, season.ended, `${c.name}: season ended`)
       }
     if (want.results)
       for (const [season, matches] of Object.entries(want.results as Record<string, Record<string, boolean>>))

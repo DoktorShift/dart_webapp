@@ -42,6 +42,7 @@ export const clubsScreensEn: Widen<typeof clubsScreensDe> = {
     disputed: (game) => `Disputed result: ${game}`,
     decide: (game) => `Decide result: ${game}`,
     answer: (when) => `Are you coming on ${when}?`,
+    awards: (season) => `Give badges: ${season}`,
   },
 
   create: {
@@ -143,8 +144,7 @@ export const clubsScreensEn: Widen<typeof clubsScreensDe> = {
     offline: "No connection",
     refresh: "Refresh",
     refreshing: "Loading",
-    unsent: (n) => (n === 1 ? "1 change hasn't been sent yet." : `${n} changes haven't been sent yet.`),
-    resend: "Send again",
+    waiting: (n) => (n === 1 ? "1 change is still being sent" : `${n} changes are still being sent`),
     noEncryption: "Your signer app can't do this in a closed club.",
     outdated: "This device hasn't loaded everything from the club yet. Refresh, then try again.",
   },
@@ -176,6 +176,14 @@ export const clubsScreensEn: Widen<typeof clubsScreensDe> = {
     offerExpired: (name) => `Offer to ${name} has expired.`,
     offerAgain: "Offer again",
     cancelOffer: "Withdraw offer",
+    recognize: "Give a badge",
+    recognitionName: "Name of the badge",
+    recognitionNamePlaceholder: "Helper of the night",
+    recognitionWhy: "What for?",
+    recognitionWhyPlaceholder: "Set up the boards.",
+    recognitionGive: "Give",
+    recognitionGiving: "Giving",
+    recognitionGiven: (name) => `${name} has the badge now.`,
   },
 
   invites: {
@@ -361,6 +369,9 @@ export const clubsScreensEn: Widen<typeof clubsScreensDe> = {
     endConfirm: "End",
     ended: "Ended",
     current: "Current season",
+    giving: "Giving",
+    awardsLapsed: "The badges couldn't be given yet: no connection.",
+    awardsLater: "You can also do this later under “Manage club”.",
   },
 
   game: {
@@ -376,8 +387,8 @@ export const clubsScreensEn: Widen<typeof clubsScreensDe> = {
     full: "Six players at most.",
     record: (club) => `Record for ${club}`,
     recording: "Recording",
-    recorded: (club) => `Recorded for ${club}.`,
-    recordFailed: "The game couldn't be recorded.",
+    recorded: (club) => `Recorded for ${club}`,
+    recordRetry: "Not recorded · Try again",
     verdict: "Is this result right?",
     confirm: "Right",
     dispute: "Not right",
