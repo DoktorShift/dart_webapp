@@ -13,7 +13,7 @@ import type { Throw } from "../../lib/game/types.ts"
 import { clubTasks } from "../../lib/clubs/club.ts"
 import { answerDate, cancelDate, repeatDates, saveDates } from "../../lib/clubs/dates.ts"
 import { KIND_CALENDAR_TIME } from "../../lib/protocol/kinds.ts"
-import { answerGame, correctGame, gameSeats, recordGame, recordedGame, type FinishedGame } from "../../lib/clubs/games.ts"
+import { answerGame, confirmedCopies, correctGame, gameSeats, recordGame, recordedGame, type FinishedGame } from "../../lib/clubs/games.ts"
 import { acceptInvitation, invitationState, openInvitation } from "../../lib/clubs/invitation.ts"
 import { clubLink, readClubPayload } from "../../lib/clubs/links.ts"
 import { acceptOwnership, acceptRequest, createInvite, foundClub, isConfirmedMember, offerOwnership, openOffer, removeMember, setRole, updateInfo } from "../../lib/clubs/membership.ts"
@@ -21,9 +21,14 @@ import { createSeason, decideResult, DEFAULT_RULES } from "../../lib/clubs/seaso
 import { loadStoredClub } from "../../lib/clubs/store.ts"
 import { refreshClub, type Reader } from "../../lib/clubs/sync.ts"
 import { seasonTable } from "../../lib/clubs/table.ts"
+import { keepCopies } from "../../lib/live/copy.ts"
+import { addProfilePlayer } from "../../lib/profile/claim.ts"
 import { getSigner, importLocalKey, signOut } from "../../lib/profile/session.ts"
 import { parseEnvelope, wrapsFor } from "../../lib/protocol/seal.ts"
 import { readLabels } from "../../lib/protocol/tags.ts"
+import { loadArchive } from "../../lib/storage/archive.ts"
+import { listPlayers } from "../../lib/storage/players.ts"
+import { profileRecords } from "../../lib/sync/history.ts"
 import { pendingEvents, resumeOutbox } from "../../lib/sync/outbox.ts"
 
 let core: Core
@@ -345,6 +350,14 @@ test("a season table follows the games: a confirmed result counts, a correction 
   view = await refreshClub(club, author)
   table = seasonTable(Object.values(view.state!.seasons)[0], view.games)
   assert.deepEqual(table.ranked.map((r) => [r.pubkey, r.points]), [[owner.pubkey, 2], [ben.pubkey, 0]])
+  // The confirmed game is now one of Ben's own games on his phone, once however often the club is
+  // read, and his private history carries it (lib/live/copy.ts).
+  await addProfilePlayer(ben.pubkey, "Ben")
+  await keepCopies(ben.pubkey, confirmedCopies(view.games, ben.pubkey))
+  await keepCopies(ben.pubkey, confirmedCopies(view.games, ben.pubkey))
+  const own = await loadArchive()
+  assert.deepEqual(own.map((m) => [m.id, m.players[1].pubkey]), [[recorded.match, ben.pubkey]])
+  assert.ok(profileRecords(ben.pubkey, own, await listPlayers()).has(`match:${recorded.match}`))
 
   // The host corrects the result: Ben won. The old confirmation lapses until Ben confirms again.
   author = await device(owner)
@@ -371,8 +384,11 @@ test("a season table follows the games: a confirmed result counts, a correction 
   view = await refreshClub(club, author)
   table = seasonTable(Object.values(view.state!.seasons)[0], view.games, view.state!.results[Object.values(view.state!.seasons)[0].id])
   assert.deepEqual(table.open.map((o) => o.why), ["confirmations"], "Ben's old confirmation no longer counts")
+  assert.deepEqual(confirmedCopies(view.games, ben.pubkey).map((c) => c.record), [null], "nor is the corrected game his own before he confirms it")
   await answerGame(view.state!, view.games.find((g) => g.match === recorded.match)!, "confirm", author)
   view = await refreshClub(club, author)
+  await keepCopies(ben.pubkey, confirmedCopies(view.games, ben.pubkey))
+  assert.deepEqual((await loadArchive()).map((m) => m.id), [recorded.match])
   table = seasonTable(Object.values(view.state!.seasons)[0], view.games, view.state!.results[Object.values(view.state!.seasons)[0].id])
   // Two points each; head to head Ben beat Olaf.
   assert.deepEqual(table.ranked.map((r) => [r.pubkey, r.points, r.rank]), [[ben.pubkey, 2, 1], [owner.pubkey, 2, 2]])

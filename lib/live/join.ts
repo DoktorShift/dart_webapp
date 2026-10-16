@@ -3,15 +3,11 @@ import { nowSeconds, syncClock } from "../nostr/time.ts"
 import type { Signer } from "../nostr/types.ts"
 import type { BoardLink, BoardMessage } from "../protocol/board.ts"
 import { claimTemplate } from "../protocol/board.ts"
-import { assembleChunks } from "../protocol/chunks.ts"
-import type { Agreement } from "../protocol/match.ts"
-import type { MatchResultEntry, MatchStateP } from "../protocol/match-state.ts"
+import type { MatchStateP } from "../protocol/match-state.ts"
 import { buildRecord } from "../protocol/records.ts"
 import { createdAtAfter, type SignedEvent } from "../protocol/tags.ts"
-import { archiveFinished, unarchive } from "../storage/archive.ts"
-import { listPlayers } from "../storage/players.ts"
 import { deliverNow, enqueue } from "../sync/outbox.ts"
-import { resultGame } from "./content.ts"
+import { keepCopy, resultPlayed } from "./copy.ts"
 import type { MatchSource } from "./follow.ts"
 import { fromHex, keyOf, newKey, sealToMatch, toHex, type MatchKey } from "./keys.ts"
 import { BOARD_FLOW } from "./seating.ts"
@@ -287,38 +283,13 @@ export async function giveVerdict(joined: JoinedMatch, state: MatchStateP, verdi
   return status?.state === "delivered"
 }
 
-// The player's own games follow the result they confirmed: in it once confirmed, out again
-// when that result is corrected or withdrawn, until they confirm the new one.
+// The player's own games follow the result they confirmed (copy.ts): in them once confirmed, out
+// again when that result is corrected or withdrawn, until they confirm the new one.
 export async function keepConfirmed(joined: JoinedMatch, state: MatchStateP): Promise<JoinedMatch> {
-  const result = state.result
-  const wanted = result && ownVerdict(joined, state)?.verdict === "confirm" ? result.event : null
-  if (wanted === joined.archived) return joined
-  if (joined.archived) await unarchive(joined.match)
-  if (wanted && result) {
-    const throws = resultThrows(state, result)
-    if (throws !== null) await archiveFinished(resultGame(state.agreement, { throws, finishedAt: result.finishedAt }, { id: joined.match, own: await ownSeat(joined, state.agreement) }), undefined, new Date(result.finishedAt * 1000))
-  }
-  const next = { ...joined, archived: wanted }
-  const record = await loadJoined(joined.match).catch(() => null)
-  if (record) await saveJoined({ ...record, archived: wanted } satisfies Omit<JoinedRecord, "id">).catch(() => {})
-  return next
-}
-
-// The result's throws, from the result itself or its pieces; null while pieces are missing.
-function resultThrows(state: MatchStateP, result: MatchResultEntry): string | null {
-  if (result.throws !== undefined) return result.throws
-  if (!result.log) return null
-  try {
-    return assembleChunks(state.logs[result.log.head] ?? [], { head: result.log.head, total: result.log.total, bytes: result.log.bytes })
-  } catch {
-    return null
-  }
-}
-
-// This phone's player in their seat: the directory's player linked to the profile, else the
-// seat's name.
-async function ownSeat(joined: JoinedMatch, agreement: Agreement) {
-  const alias = agreement.seats[joined.seat]?.alias ?? `${joined.seat + 1}`
-  const linked = joined.profile ? (await listPlayers().catch(() => [])).find((p) => p.pubkey === joined.profile) : undefined
-  return { seat: joined.seat, id: linked?.id ?? `seat${joined.seat}`, name: linked?.name ?? alias }
+  const record = state.result && ownVerdict(joined, state)?.verdict === "confirm" ? state.result.event : null
+  const archived = await keepCopy(joined.archived, { match: joined.match, record, played: () => resultPlayed(state, joined.seat, joined.profile) })
+  if (archived === joined.archived) return joined
+  const stored = await loadJoined(joined.match).catch(() => null)
+  if (stored) await saveJoined({ ...stored, archived } satisfies Omit<JoinedRecord, "id">).catch(() => {})
+  return { ...joined, archived }
 }

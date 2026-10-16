@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react"
 import type { ClubView } from "@/lib/clubs/club"
+import { confirmedCopies } from "@/lib/clubs/games"
 import type { Author } from "@/lib/clubs/send"
 import { storedClubs } from "@/lib/clubs/store"
 import { discoverClubs, refreshClub, viewClub, type Reader } from "@/lib/clubs/sync"
 import { profileStore } from "@/components/profile/follow-profile"
+import { keepCopies } from "@/lib/live/copy"
 import { getSigner, loadSession } from "@/lib/profile/session"
 import { onStorageChange } from "@/lib/storage/db"
 
@@ -43,7 +45,8 @@ export async function clubReader(): Promise<Reader> {
   return { pubkey: session.pubkey, signer: await getSigner().catch(() => null), automatic: session.kind === "local" }
 }
 
-// Reads every club's local copy again (a write happened, or the session changed).
+// Reads every club's local copy again (a write happened, or the session changed), and keeps the
+// profile's own copies of the club games it confirmed (lib/live/copy.ts) in step with them.
 async function readLocal() {
   const run = ++reading
   const r = await clubReader()
@@ -53,6 +56,7 @@ async function readLocal() {
   views.clear()
   for (const view of read) if (view) views.set(view.id, view)
   emit({ loaded: true })
+  if (r.pubkey) for (const view of read) if (view) void keepCopies(r.pubkey, confirmedCopies(view.games, r.pubkey)).catch(() => {})
 }
 
 // Refreshes one club and tells whether a relay answered: the club's copy says when relays last

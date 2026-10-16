@@ -173,6 +173,22 @@ export function awaitsVerdict(game: ClubGame, pubkey: string): boolean {
   return seat >= 0 && game.result !== null && game.result.by !== pubkey && game.confirmations[seat] === undefined
 }
 
+// What the copy of each game `pubkey` played with their profile should rest on, for their own
+// games (lib/live/copy.ts keepCopies): the result they confirmed, with its throws; nothing while
+// they have not, or once it is corrected or voided. Games not read yet are not named.
+export function confirmedCopies(games: readonly ClubGame[], pubkey: string) {
+  return games.flatMap((game) => {
+    const seat = seatOf(game, pubkey)
+    if (seat < 0) return []
+    const given = game.confirmations[seat]
+    const result = given?.pubkey === pubkey && given.verdict === "confirm" ? game.result : null
+    const throws = result?.throws
+    const confirmed = result && throws !== undefined ? { ...result, throws } : null
+    const played = () => confirmed && { agreement: game.agreement, throws: confirmed.throws, finishedAt: confirmed.finishedAt ?? confirmed.at, seat, profile: pubkey }
+    return [{ match: game.match, record: confirmed?.event ?? null, played }]
+  })
+}
+
 // ---- Answering and correcting ----------------------------------------------------------------
 
 // The public key of a private game's match key: what its records are encrypted to.

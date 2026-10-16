@@ -12,7 +12,7 @@ import { nextAdmission, readTournament, type LiveInput, type TournamentRead } fr
 import { admitNext } from "@/lib/tournaments/admission"
 import { send, waitingRecords, type Author } from "@/lib/tournaments/send"
 import { listBoardDevices, listDrafts, loadStoredTournament, storedTournaments, updateTournament, type BoardDeviceRecord, type StoredTournament } from "@/lib/tournaments/store"
-import { discoverTournaments, refreshTournament, watchTournament } from "@/lib/tournaments/sync"
+import { discoverTournaments, keepPlayed, refreshTournament, watchTournament } from "@/lib/tournaments/sync"
 
 // The tournaments this device knows, as the signed-in profile (or a guest) reads them: one
 // store for every tournament screen. The local copies show at once; relays bring what is new
@@ -56,6 +56,11 @@ const read = (stored: StoredTournament, pubkey: string | null): Entry => ({
   waiting: waiting.get(stored.tournament) ?? 0,
 })
 
+// The profile's own copies of the board matches it played follow the tournament as read now.
+function keepOwn({ stored, read: r }: Entry, pubkey: string | null) {
+  if (pubkey) void keepPlayed(r, stored.events, pubkey).catch(() => {})
+}
+
 // Reads every local copy again (a write happened, or the session changed).
 async function readLocal() {
   const run = ++reading
@@ -72,6 +77,7 @@ async function readLocal() {
   for (const s of stored) entries.set(s.tournament, read(s, pubkey))
   drafts = found
   boards = devices
+  for (const entry of entries.values()) keepOwn(entry, pubkey)
   emit({ loaded: true })
 }
 
@@ -125,8 +131,10 @@ export function useTournaments(): TournamentsSnapshot & { refresh: () => Promise
 async function reread(tournament: string): Promise<Entry | null> {
   const stored = await loadStoredTournament(tournament).catch(() => null)
   if (!stored) return null
-  const entry = read(stored, (await loadSession())?.pubkey ?? null)
+  const pubkey = (await loadSession())?.pubkey ?? null
+  const entry = read(stored, pubkey)
   entries.set(tournament, entry)
+  keepOwn(entry, pubkey)
   emit()
   return entry
 }

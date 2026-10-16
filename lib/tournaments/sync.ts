@@ -1,9 +1,12 @@
+import { keepCopies, resultPlayed } from "../live/copy.ts"
+import { readMatch } from "../live/follow.ts"
 import { query, subscribe, type Closer } from "../nostr/client.ts"
 import type { Filter, NostrEvent } from "../nostr/types.ts"
 import { KIND_RECORD } from "../protocol/kinds.ts"
 import { tagValue } from "../protocol/tags.ts"
+import { playedMatches, type TournamentRead } from "./read.ts"
 import { tournamentRelays } from "./send.ts"
-import { loadStoredTournament, storedTournaments, updateTournament, type StoredTournament } from "./store.ts"
+import { loadBoardDevice, loadStoredTournament, storedTournaments, updateTournament, type StoredTournament } from "./store.ts"
 
 // What relays hold about tournaments, and bringing the local copies up to date. "No relay
 // answered" is unknown, never empty: callers keep showing what this device has, with the time
@@ -90,4 +93,24 @@ export async function discoverTournaments(pubkey: string): Promise<boolean> {
   const known = new Set((await storedTournaments()).map((t) => t.tournament))
   for (const tournament of found) if (!known.has(tournament)) await updateTournament(tournament, {})
   return result.answered.length > 0
+}
+
+// Keeps `pubkey`'s own copies of the board matches they played (lib/live/copy.ts) in step with the
+// tournament as read, each made from the live match the board scored it in. A match this device
+// scored as the board is among its games already.
+export async function keepPlayed(reading: TournamentRead, events: readonly NostrEvent[], pubkey: string): Promise<void> {
+  const board = await loadBoardDevice(reading.id)
+  const scored = new Set(Object.values(board?.games ?? {}).map((g) => g.match))
+  const played = playedMatches(reading, events).filter((p) => !scored.has(p.match))
+  if (played.length === 0) return
+  const relays = tournamentRelays(reading.relays)
+  const wanted = played.map(({ match, slot, seat, record }) => ({
+    match,
+    record,
+    played: async () => {
+      const state = await readMatch({ match, relays, key: null })
+      return state?.agreement.tournament?.id === reading.id && state.agreement.tournament.slot === slot ? resultPlayed(state, seat, pubkey) : null
+    },
+  }))
+  await keepCopies(pubkey, wanted)
 }

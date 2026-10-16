@@ -7,7 +7,9 @@
 import { after, before, test } from "node:test"
 import assert from "node:assert/strict"
 import { bytesToHex } from "@noble/hashes/utils.js"
-import "../storage-helpers.ts"
+import type { IDBFactory } from "fake-indexeddb"
+import { localStore } from "../storage-helpers.ts"
+import { newDevice, switchTo } from "../support/devices.ts"
 import { startRelay, type NakRelay } from "../support/nak.ts"
 import { config, dart, play } from "../helpers.ts"
 import type { SavedMatch } from "../../lib/game/types.ts"
@@ -191,6 +193,7 @@ test("organizer, players, guest, draw, two boards, a live result, approval and a
   // Player 0 (seat 0) wins 301 in one leg: 180, 121 checkout (T20, T11, D14).
   const c = { ...game.config, players: game.config.players }
   const won: SavedMatch = { ...game, throws: play(c, [dart(20, 3), dart(20, 3), dart(20, 3), dart(1), dart(1), dart(1), dart(20, 3), dart(11, 3), dart(14, 2)]) }
+  live.updateBoard(won)
   const result = device.resultOf(won, players01)
   assert.ok(result)
   assert.equal(result.winner, players01[0])
@@ -219,6 +222,29 @@ test("organizer, players, guest, draw, two boards, a live result, approval and a
   assert.equal(r.view?.match(onA.id)?.state, "finished")
   assert.equal(r.view?.match(onA.id)?.winner, players01[0])
 
+  // On the phone of a player of it, the approved match is now one of their own games, made from
+  // the live match the board scored it in (keepPlayed), once however often the tournament is read.
+  const player = players.find((p) => players01.includes(p.pubkey)) as (typeof players)[number]
+  await until("the live match's result", async () => {
+    await outbox.flushDue()
+    return (await follow.readMatch({ match: liveMatch.match, relays: [relay.url], key: null }))?.result
+  })
+  const boardDevice = { idb: globalThis.indexedDB as unknown as IDBFactory, local: localStore }
+  const phone = newDevice()
+  const ownGames = async () => {
+    await switchTo(phone)
+    try {
+      const fetched = await sync.fetchTournament(id, [])
+      const reading = read.readTournament({ id: `tournament:${id}`, tournament: id, events: fetched.events, relays: [], loadedAt: Date.now(), seeds: {}, boardKeys: {}, openedAt: null }, { pubkey: player.pubkey })
+      await sync.keepPlayed(reading, fetched.events, player.pubkey)
+      return (await archive.loadArchive()).map((m) => [m.id, m.throws?.length])
+    } finally {
+      await switchTo(boardDevice)
+    }
+  }
+  assert.deepEqual(await ownGames(), [[liveMatch.match, won.throws.length]])
+  assert.deepEqual(await ownGames(), [[liveMatch.match, won.throws.length]])
+
   // The other semi-final and the final by the organizer; then a correction of the first
   // semi-final marks the final as affected.
   const onB = r.view?.matches.find((m) => m.board === boardBId) as NonNullable<typeof onA>
@@ -232,6 +258,7 @@ test("organizer, players, guest, draw, two boards, a live result, approval and a
   await sent(id, [records.correctTemplate(r.state as NonNullable<typeof r.state>, onA.id, players01[1], [0, 1], "Falsch gemeldet")], organizer)
   r = await fromRelay(id, players01[1])
   assert.equal(r.view?.match(final.id)?.affected, true)
+  assert.deepEqual(await ownGames(), [], "the corrected match is no longer the player's own game")
   assert.equal(r.view?.champion, null)
   // The corrected winner now stands in the final, which waits for the organizer's decision.
   assert.equal(engine.nextMatch(r.view as NonNullable<typeof r.view>, players01[1])?.state, "waiting")

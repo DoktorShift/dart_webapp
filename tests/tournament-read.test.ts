@@ -13,7 +13,7 @@ import { dbGetAll } from "../lib/storage/db.ts"
 import { createDrawSeed, commitSeed, previewChange, recordResult } from "../lib/tournaments/engine.ts"
 import { exportFileName, tournamentCsv, tournamentJson } from "../lib/tournaments/export.ts"
 import { badgeOccasion } from "../lib/tournaments/occasion.ts"
-import { awaitingApproval, bracketOf, dependentSlots, drawField, freePlaces, nextAdmission, notCheckedIn, readTournament, registrationOpen } from "../lib/tournaments/read.ts"
+import { awaitingApproval, bracketOf, dependentSlots, drawField, freePlaces, nextAdmission, notCheckedIn, playedMatches, readTournament, registrationOpen } from "../lib/tournaments/read.ts"
 import {
   admitTemplate,
   approveTemplate,
@@ -267,6 +267,43 @@ test("'Neu spielen lassen' starts a match over: it is called, played and decided
   assert.equal(r.view?.complete, true)
   assert.equal(r.view?.champion, replayed.slots[1].participant)
   assert.deepEqual(r.skipped, [])
+})
+
+test("a board match a player played counts for their own games once approved, and no longer once corrected or played again", () => {
+  const { id, events, field } = running(4)
+  const semi = readyMatches(events, id)[0]
+  const [a, b] = semi.slots.map((x) => x.participant as string)
+  const spectator = field.find((p) => p.pubkey !== a && p.pubkey !== b)!.pubkey
+  const boardId = "b".repeat(32)
+  const match = "c".repeat(64)
+  events.push(sign(organizer, boardTemplate(state(events, id), boardId, "Board 1", boardKey.pubkey)))
+  events.push(sign(organizer, assignTemplate(state(events, id), semi.id, boardId)))
+  events.push(sign(boardKey, resultTemplate(state(events, id), semi.id, { winner: a, score: [3, 1], match })))
+  const played = (pubkey: string) => playedMatches(read(events, id, pubkey), events)
+
+  // Reported, not approved yet: nothing to keep.
+  assert.deepEqual(played(b), [{ match, slot: semi.id, seat: 1, record: null }])
+  const s = state(events, id)
+  const approval = sign(organizer, approveTemplate(s, semi.id, s.slots[semi.id].submissions[0].event))
+  events.push(approval)
+  assert.deepEqual(played(a), [{ match, slot: semi.id, seat: 0, record: approval.id }])
+  assert.deepEqual(played(b), [{ match, slot: semi.id, seat: 1, record: approval.id }])
+  assert.equal(played(spectator)[0].record, null, "only the two players keep it")
+
+  // A correction takes it out; "Neu spielen" too, and the board's new match is the one kept.
+  events.push(sign(organizer, correctTemplate(state(events, id), semi.id, b, [1, 3], "Falsch eingetragen")))
+  assert.equal(played(b)[0].record, null)
+  events.push(sign(organizer, correctTemplate(state(events, id), semi.id, null, [0, 0], "Neu spielen")))
+  events.push(sign(organizer, assignTemplate(state(events, id), semi.id, boardId)))
+  const again = "d".repeat(64)
+  events.push(sign(boardKey, resultTemplate(state(events, id), semi.id, { winner: b, score: [1, 3], match: again })))
+  const t = state(events, id)
+  const second = sign(organizer, approveTemplate(t, semi.id, t.slots[semi.id].submissions[0].event))
+  events.push(second)
+  assert.deepEqual(played(b), [
+    { match, slot: semi.id, seat: 1, record: null },
+    { match: again, slot: semi.id, seat: 1, record: second.id },
+  ])
 })
 
 test("a correction to a walkover changes the winner in the bracket too", () => {
