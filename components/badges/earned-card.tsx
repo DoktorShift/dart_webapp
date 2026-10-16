@@ -1,24 +1,23 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { motion, useReducedMotion } from "framer-motion"
-import { Award, X } from "lucide-react"
+import { Award } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet } from "@/components/ui/sheet"
 import { InlineStatus } from "@/components/common/inline-status"
-import { FitText } from "@/components/fit-text"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { BadgeIcon } from "@/components/badges/badge-icon"
 import { milestoneTexts, problemText } from "@/components/badges/texts"
 import { notShownFrom, useOwnBadges } from "@/components/badges/use-badges"
 import { useOwnProfile } from "@/components/profile/use-profile"
+import { ResultRow } from "@/components/shell/result-row"
+import { useDismissedFor } from "@/components/shell/use-dismissed-for"
 import { showMilestones } from "@/lib/badges/actions"
 import { evaluateMilestones, reachedIn, type MilestoneStatus } from "@/lib/badges/milestones"
 import { BADGES_TEXTS } from "@/lib/i18n/features/badges.screens"
 import { useMatchHistory } from "@/lib/leaderboard"
 import { lookupOwnEvents } from "@/lib/profile/own-events"
-import type { FinishedMatch } from "@/lib/shell/registry"
-import { kvGet, kvSet } from "@/lib/storage/db"
+import type { SlotListProps } from "@/lib/shell/registry"
 import { isUnnamed } from "@/lib/storage/players"
 import { playerKey } from "@/lib/storage/stats"
 
@@ -27,14 +26,11 @@ import { playerKey } from "@/lib/storage/stats"
 // (PLAN.md "Auszeichnungen": a small card that can be put away, never interrupting the game).
 // A tap shows the badges; a signed-in player can show their own in their profile from there.
 // Nothing is published on its own, and a guest's milestones stay "Auf diesem Gerät erreicht".
-//
-// The row keeps to what the result asks of its pieces: 48 pt at most; 44 pt without the icon on
-// short screens (`short`); in a phone's landscape (`xshort`) one short line that shrinks to fit,
-// without background, icon or dismiss button, so it can stand in the result's top bar.
+// The row is the result's shared ResultRow in the warning tone (something worth a look), which
+// carries the sizes and placements the result asks of its pieces.
 
 // Games whose card was put away; device-wide, not part of any profile.
 const DISMISSED_KEY = "badges.dismissed"
-const REMEMBERED = 50
 
 interface Reached {
   seat: number
@@ -44,14 +40,13 @@ interface Reached {
   statuses: MilestoneStatus[]
 }
 
-export default function EarnedCard({ match }: { match: FinishedMatch }) {
+export default function EarnedCard({ match, placement }: SlotListProps["result.actions"]) {
   const tx = useAreaT(BADGES_TEXTS)
   const e = tx.earned
-  const reduceMotion = useReducedMotion()
   const { all, aliases } = useMatchHistory()
   const own = useOwnProfile()
   const badges = useOwnBadges(own?.session.pubkey ?? null)
-  const [dismissed, setDismissed] = useState<boolean | null>(null)
+  const { dismissed, dismiss } = useDismissedFor(DISMISSED_KEY, match.id)
   const [open, setOpen] = useState(false)
 
   // Every named seat with what the game made its player reach; the profile's seat counts the
@@ -77,24 +72,7 @@ export default function EarnedCard({ match }: { match: FinishedMatch }) {
     return badges.awards ? notShownFrom(badges, own.session.pubkey, mine.statuses, match.id) : null
   }, [reached, own, badges, match.id])
 
-  useEffect(() => {
-    let alive = true
-    kvGet<string[]>(DISMISSED_KEY).then(
-      (ids) => alive && setDismissed(!!ids?.includes(match.id)),
-      () => alive && setDismissed(false),
-    )
-    return () => {
-      alive = false
-    }
-  }, [match.id])
-
   if (dismissed !== false || reached.length === 0) return null
-
-  const dismiss = async () => {
-    setDismissed(true)
-    const ids = (await kvGet<string[]>(DISMISSED_KEY).catch(() => undefined)) ?? []
-    await kvSet(DISMISSED_KEY, [...ids.filter((id) => id !== match.id), match.id].slice(-REMEMBERED)).catch(() => {})
-  }
 
   const count = reached.reduce((n, r) => n + r.statuses.length, 0)
   const first = reached[0]
@@ -103,32 +81,7 @@ export default function EarnedCard({ match }: { match: FinishedMatch }) {
 
   return (
     <>
-      {/* One row, as the result screen asks of its pieces; it eases in unless motion is reduced. */}
-      <motion.div
-        initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, ease: [0.2, 0.8, 0.3, 1] }}
-        className="flex min-h-12 items-stretch overflow-hidden rounded-2xl bg-amber-500/10 ring-1 ring-inset ring-amber-500/30 short:min-h-11 xshort:rounded-xl xshort:bg-transparent xshort:ring-0"
-      >
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="flex min-w-0 flex-1 items-center gap-3 py-1 pl-4 pr-2 text-left text-[1.0625rem] font-medium transition-colors focus-visible:bg-amber-500/15 focus-visible:outline-none active:bg-amber-500/20 xshort:px-2 xshort:text-[0.9375rem] xshort:text-primary xshort:active:bg-secondary/70"
-        >
-          <Award className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400 short:hidden" aria-hidden="true" />
-          <FitText minScale={0.6} className="min-w-0 flex-1 leading-snug">
-            {label}
-          </FitText>
-        </button>
-        <button
-          type="button"
-          onClick={() => void dismiss()}
-          aria-label={e.dismiss}
-          className="flex min-w-11 shrink-0 items-center justify-center border-l border-amber-500/30 px-3 text-muted-foreground transition-colors focus-visible:bg-amber-500/15 focus-visible:outline-none active:bg-amber-500/20 xshort:hidden"
-        >
-          <X className="h-5 w-5" aria-hidden="true" />
-        </button>
-      </motion.div>
+      <ResultRow icon={Award} label={label} tone="warning" placement={placement} onClick={() => setOpen(true)} trailing={{ kind: "dismiss", label: e.dismiss, onClick: () => void dismiss() }} />
       <EarnedSheet open={open} onOpenChange={setOpen} reached={reached} pubkey={own?.session.pubkey ?? null} missing={missing} />
     </>
   )
