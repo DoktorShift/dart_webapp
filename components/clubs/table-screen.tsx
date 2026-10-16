@@ -15,7 +15,7 @@ import { DecideSheet, type Decision } from "@/components/clubs/manage-sheets"
 import { ScoringText } from "@/components/clubs/scoring"
 import { CLUB_SCREENS } from "@/components/clubs/screens"
 import { useClub } from "@/components/clubs/use-clubs"
-import { sameNames, useProfileNames } from "@/components/profile/use-profile-names"
+import { useProfileNames } from "@/components/profile/use-profile-names"
 import { shortKey } from "@/lib/nostr/pointers"
 import { VerdictSheet } from "@/components/clubs/verdict-sheet"
 import { isLeader, isManager } from "@/lib/clubs/club"
@@ -24,6 +24,7 @@ import { currentSeason, seasonTable, type Standing } from "@/lib/clubs/table"
 import { formatNumber, formatDate, formatDateTime } from "@/lib/i18n"
 import { nowSeconds } from "@/lib/nostr/time"
 import type { ScreenProps } from "@/lib/shell/registry"
+import { sameNames } from "@/lib/storage/players"
 import { cn } from "@/lib/utils"
 
 // How many of the club's games the list below the table shows.
@@ -87,7 +88,7 @@ export default function TableScreen({ params }: ScreenProps) {
     )
   }
   const nameOf = (row: Standing) => names(row.pubkey).name ?? row.alias
-  const dup = sameNames(rows.map((r) => ({ pubkey: r.pubkey, name: names(r.pubkey).name ?? r.alias ?? tx.unnamed })))
+  const dup = sameNames(rows.map((r) => ({ id: r.pubkey, name: names(r.pubkey).name ?? r.alias ?? tx.unnamed })))
   const me = view.me.pubkey
   const latest = season.versions[season.versions.length - 1]
   const cell = "px-3 py-2.5 align-top"

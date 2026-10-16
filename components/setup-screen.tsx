@@ -87,7 +87,7 @@ function PlayerRow({
         type="button"
         aria-label={t.setup.move(label)}
         onPointerDown={(e: PointerEvent) => controls.start(e)}
-        className="flex h-11 w-9 shrink-0 cursor-grab touch-none items-center justify-center text-muted-foreground active:cursor-grabbing"
+        className="-mx-1 flex h-11 w-11 shrink-0 cursor-grab touch-none items-center justify-center text-muted-foreground active:cursor-grabbing"
       >
         <GripVertical className="h-5 w-5" />
       </button>

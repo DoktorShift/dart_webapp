@@ -130,6 +130,14 @@ export function resolvePlayers(players: MatchPlayer[], directory: PlayerRecord[]
   return { resolved, records }
 }
 
+// The ids among `people` (players, profiles, places) that share their shown name with another id,
+// as nameKey compares names: lists give them a short hint (the start of a profile's key).
+export function sameNames(people: readonly { id: string; name: string }[]): ReadonlySet<string> {
+  const byName = new Map<string, Set<string>>()
+  for (const { id, name } of people) byName.set(nameKey(name), (byName.get(nameKey(name)) ?? new Set()).add(id))
+  return new Set([...byName.values()].filter((ids) => ids.size > 1).flatMap((ids) => [...ids]))
+}
+
 // Imported 1.0.0 name groups assigned to a player: name key -> player id.
 export function importedAliases(players: PlayerRecord[]) {
   const aliases = new Map<string, string>()

@@ -1,5 +1,6 @@
 "use client"
 
+import { useLayoutEffect, useRef, useState } from "react"
 import { FitText } from "@/components/fit-text"
 import { useT } from "@/components/i18n-provider"
 import {
@@ -96,6 +97,29 @@ export function rowValues(state: MatchState, row: StatRow, t: Messages) {
   }))
 }
 
+// A table that scrolls inside its card shows a fade at the card's bottom while rows lie below
+// what it shows, so a row cut by the edge reads as more, not as the end.
+function useMoreBelow() {
+  const ref = useRef<HTMLDivElement>(null)
+  const [more, setMore] = useState(false)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const check = () => setMore(el.scrollHeight - el.scrollTop - el.clientHeight > 1)
+    check()
+    const observer = new ResizeObserver(check)
+    observer.observe(el)
+    for (const child of el.children) observer.observe(child)
+    el.addEventListener("scroll", check, { passive: true })
+    return () => {
+      observer.disconnect()
+      el.removeEventListener("scroll", check)
+    }
+  }, [])
+  const fade = more && <div aria-hidden="true" className="pointer-events-none sticky bottom-0 left-0 -mt-6 h-6 bg-gradient-to-t from-card to-transparent" />
+  return { ref, fade }
+}
+
 // Stats with a column per player. Labels get the room they need, every player a column wide
 // enough for "100 %" (in em, so the widths follow the font size). When that's wider than the
 // screen, or the rows are taller, the table scrolls inside its card with names and labels
@@ -111,9 +135,10 @@ export function StatsTable({ state, rows, large = false, className }: { state: M
   const pinned = "sticky bg-card"
   const rowPadding = large ? "py-[clamp(0.125rem,0.9dvh,0.6rem)]" : "py-[clamp(0.2rem,0.9dvh,0.7rem)]"
   const bigValue = many ? "font-display text-[clamp(1.125rem,3dvh,1.75rem)] leading-none" : "font-display text-[clamp(1.25rem,3.8dvh,2.25rem)] leading-none"
+  const { ref, fade } = useMoreBelow()
 
   return (
-    <div className={cn("min-h-0 overflow-auto overscroll-contain rounded-2xl border border-border bg-card", className)}>
+    <div ref={ref} className={cn("min-h-0 overflow-auto overscroll-contain rounded-2xl border border-border bg-card", className)}>
       <table
         className={cn("w-full table-fixed", many ? "text-[0.8125rem]" : "text-[0.9375rem] tablet:text-[1.0625rem]")}
         style={{ minWidth: `${labelWidth + players.length * columnWidth}em` }}
@@ -158,6 +183,7 @@ export function StatsTable({ state, rows, large = false, className }: { state: M
           ))}
         </tbody>
       </table>
+      {fade}
     </div>
   )
 }
@@ -169,10 +195,11 @@ export function PlayerStatsTable({ state, rows, className }: { state: MatchState
   const columns = rows.filter((row) => row.short)
   const values = columns.map((row) => rowValues(state, row, t))
   const head = "sticky top-0 bg-card py-2 font-normal shadow-[0_1px_0_hsl(var(--border))]"
+  const { ref, fade } = useMoreBelow()
 
   // Number columns are as wide as their numbers; names get the rest and shrink or wrap inside it.
   return (
-    <div className={cn("min-h-0 overflow-auto overscroll-contain rounded-2xl border border-border bg-card", className)}>
+    <div ref={ref} className={cn("min-h-0 overflow-auto overscroll-contain rounded-2xl border border-border bg-card", className)}>
       <table className="w-full text-[0.9375rem] tablet:text-[1.0625rem]">
         <thead>
           <tr className="text-[0.8125rem] text-muted-foreground tablet:text-[0.9375rem]">
@@ -207,6 +234,7 @@ export function PlayerStatsTable({ state, rows, className }: { state: MatchState
           ))}
         </tbody>
       </table>
+      {fade}
     </div>
   )
 }

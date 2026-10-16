@@ -1,12 +1,16 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { useAreaT } from "@/components/i18n-provider"
+import { problemText } from "@/components/badges/texts"
 import type { OwnProfile } from "@/components/profile/use-profile"
+import type { Outcome } from "@/lib/badges/actions"
 import { splitReceived, validAwards, type ValidAward } from "@/lib/badges/awards"
 import { evaluateMilestones, type MilestoneStatus } from "@/lib/badges/milestones"
 import { currentSelection, EMPTY_SELECTION, type Selection } from "@/lib/badges/selection"
 import { awardRestsOn, readEvidence, selfAwardHolds, type Evidence } from "@/lib/badges/self-award"
 import { inListOrder, lookupBadges, storedBadgeEvents } from "@/lib/badges/store"
+import { BADGES_TEXTS } from "@/lib/i18n/features/badges.screens"
 import { useMatchHistory } from "@/lib/leaderboard"
 import type { NostrEvent } from "@/lib/nostr/types"
 import { onStorageChange } from "@/lib/storage/db"
@@ -97,4 +101,23 @@ export function useMilestones(key: string | null, aliases?: Map<string, string>,
   const { all, loaded } = useMatchHistory()
   const statuses = useMemo(() => (key ? evaluateMilestones(all, key, { aliases, sameAs }) : []), [all, key, aliases, sameAs])
   return { statuses, loaded }
+}
+
+// Runs one change of the profile's badges and says what went wrong, in place.
+export function useChange() {
+  const tx = useAreaT(BADGES_TEXTS)
+  const [busy, setBusy] = useState(false)
+  const [problem, setProblem] = useState<string | null>(null)
+  const run = async (change: () => Promise<Outcome>) => {
+    setBusy(true)
+    setProblem(null)
+    try {
+      if ((await change()) === "offline") setProblem(problemText(tx, "offline"))
+    } catch (error) {
+      setProblem(problemText(tx, error))
+    } finally {
+      setBusy(false)
+    }
+  }
+  return { busy, problem, run }
 }

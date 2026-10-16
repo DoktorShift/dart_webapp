@@ -48,6 +48,7 @@ Dateien unter `lib/`, die in Node getestet werden, verwenden relative Importe mi
 - `lib/badges` nutzt `lib/game`, `lib/profile` (Sitzung, eigene Events, Relay-Liste, öffentliches Profil, `storage-keys.ts`) und `lib/sync/publish.ts`; `lib/payments` nutzt `lib/game` (Typen) und `lib/profile` (Sitzung, Metadaten, öffentliches Profil, `vault.ts` für die Wallet-Verbindung).
 - `lib/shell` (Navigation, Links, Registry) nutzt `lib/game` und `lib/i18n` nur als Typen.
 - Die NIP-52-Kinds der Club-Termine stehen im Katalog `lib/protocol/kinds.ts`; die Speichernamen des Profils nur in `lib/profile/storage-keys.ts`.
+- `lib/tournaments/sync.ts` nutzt `lib/live/follow.ts` (`readMatch`) und `lib/live/copy.ts` (Nachtrag zu den P8-Befunden): Die persönliche Kopie eines freigegebenen Board-Spiels entsteht aus dem Live-Spiel, in dem das Board es gezählt hat, mit demselben Helfer wie die bestätigte Live- und Clubpartie.
 
 **Nachtrag 16. Oktober 2026 (Freigabeprüfung):**
 - `lib/clubs/store.ts` nutzt `getSession` aus `lib/profile/session.ts`: Die lokale Kopie eines Clubs wird nur für das Profil geschrieben, das gerade angemeldet ist, damit eine langsame Relay- oder Signer-Antwort nach einem Abmelden oder Profilwechsel nichts zurückbringt.

@@ -355,6 +355,7 @@ export const en: Messages = {
 
   leaderboard: {
     title: "Leaderboard",
+    profileId: (short) => `ID ${short}`,
     subtitle: "Ranked by wins, then win rate. Saved on this device.",
     filter: "Game type",
     filters: { all: "All", x01: "X01", cricket: "Cricket", clock: "Clock" },

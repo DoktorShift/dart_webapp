@@ -73,7 +73,8 @@ export const lowerIsBetter = (measure: Measure) => measure === "clockDarts"
 export const milestoneById = (id: string): Milestone | undefined => MILESTONES.find((m) => m.id === id)
 
 // Badges an organizer awards from their own device when a tournament or a club season ends
-// (lib/badges/organizer.ts has who gets which), and the recognition anyone can give by name.
+// (lib/badges/organizer.ts has who gets which), highest first per occasion, and the recognition
+// anyone can give by name.
 export const ORGANIZER_BADGES = {
   "tournament-winner": { scope: "tournament", version: 1 },
   "tournament-finalist": { scope: "tournament", version: 1 },

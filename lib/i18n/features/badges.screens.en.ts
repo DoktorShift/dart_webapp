@@ -53,6 +53,11 @@ export const badgesScreensEn: Widen<typeof badgesScreensDe> = {
     already: "Already in your profile.",
   },
 
+  occasion: {
+    given: (badge: string) => `Your badge “${badge}” is under Profile\u00a0›\u00a0Badges.`,
+    shown: (badge: string) => `Your badge “${badge}” is on your profile card.`,
+  },
+
   list: {
     row: "Badges",
     rowNew: (n: number) => (n === 1 ? "1 new" : `${n} new`),

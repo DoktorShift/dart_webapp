@@ -430,31 +430,27 @@ await step("Finale, Turnier beenden mit Auszeichnungen", async (expect) => {
 // ---- 11. The badge on the profile card -----------------------------------------------------------
 await step("Auszeichnung erscheint auf Bens Profilkarte", async (expect) => {
   const { page } = ben
+  // The finished tournament, opened again later (the app loaded anew): it says where Ben's badge is
+  // and puts it on his card with one tap.
+  await page.goto(BASE)
+  await page.goto(local(tournamentLink))
+  const show = await button(page, "Im Profil zeigen", 30_000)
+  const said = await text(page)
+  await shot(ben, "31-tournament-badge")
+  expect("the tournament page says where Ben's badge is", /Deine Auszeichnung „(Dabei|Turniersieg|Finalist)“ liegt unter Profil › Auszeichnungen/.test(said), said.match(/Deine Auszeichnung[^.]*\./)?.[0] ?? "")
+  expect.note("the promise sentence is gone once the badge is given", !/sobald die Leitung sie vergibt/.test(said))
+  await show.click()
+  await seen(page, /steht auf deiner Profilkarte/, { timeout: 20_000 })
+  taps.badgeToCard = "Turnier → Im Profil zeigen (1 tap)"
   await page.goto(BASE)
   await tab(page, "Profil")
   await page.waitForTimeout(2500)
-  let chip = profilePanel(page).getByRole("button", { name: /^(Dabei|Turniersieg|Finalist)/ })
-  expect.note("a badge the organizer gave reaches the profile card by itself ('erscheint in deinem Profil')", (await chip.count()) > 0)
-  const card = await panelText(page)
-  expect.note("after three games tonight Ben's profile counts games", !card.includes("Noch keine X01-Spiele"), card.slice(0, 100))
-  if ((await chip.count()) === 0) {
-    // Received awards wait in the badges list until shown.
-    await profilePanel(page).getByRole("button", { name: /^Auszeichnungen/ }).click()
-    const entry = await button(page, /^(Dabei|Turniersieg|Finalist)/, 30_000)
-    await shot(ben, "31-badges-list")
-    await entry.click()
-    await tap(page, "Im Profil zeigen")
-    await button(page, "Aus dem Profil nehmen", 20_000)
-    taps.badgeToCard = "Profil → Auszeichnungen → badge → Im Profil zeigen (3 taps)"
-    await tap(page, /Zurück/)
-    await page.waitForTimeout(500)
-    await tap(page, /Zurück/)
-    await page.waitForTimeout(1500)
-    chip = profilePanel(page).getByRole("button", { name: /^(Dabei|Turniersieg|Finalist)/ })
-  } else taps.badgeToCard = "none: on the card by itself"
+  const chip = profilePanel(page).getByRole("button", { name: /^(Dabei|Turniersieg|Finalist)/ })
   await chip.first().waitFor({ timeout: 20_000 })
   await shot(ben, "32-profile-card-badge")
   expect("the profile card shows the tournament badge", (await chip.count()) >= 1, (await chip.allTextContents()).join(", "))
+  const card = await panelText(page)
+  expect.note("after three games tonight Ben's profile counts games", !card.includes("Noch keine X01-Spiele"), card.slice(0, 100))
 })
 
 // ---- 12. A stake, paid once ---------------------------------------------------------------------

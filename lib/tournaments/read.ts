@@ -320,6 +320,33 @@ export function readTournament(stored: StoredTournament, opts: ReadOptions): Tou
 
 // ---- Questions screens ask of the state ----------------------------------------------------
 
+// The board matches the reader played, for their own games (lib/live/copy.ts keepCopies): each
+// live match a board reported a result from, with the decision a copy of it rests on (the
+// approval, or the board's result where boards approve; none once the result is corrected or the
+// match is played again) and the reader's seat in it.
+export function playedMatches(read: TournamentRead, events: readonly NostrEvent[]): { match: string; slot: string; seat: number; record: string | null }[] {
+  const { state, view, me } = read
+  const mine = me.participant?.id
+  if (!state || !view || !mine) return []
+  const byId = new Map(events.map((e) => [e.id, e]))
+  const recordOf = (id: string) => {
+    const parsed = parseRecord(byId.get(id))
+    return parsed.status === "ok" ? parsed.record : null
+  }
+  const played = new Map<string, { match: string; slot: string; seat: number; record: string | null }>()
+  for (const entry of state.log.applied) {
+    const result = entry.type === "tournament.result" ? recordOf(entry.id) : null
+    if (result?.type !== "tournament.result" || !result.content.match) continue
+    const { slot, match } = result.content
+    const seat = view.match(slot)?.slots.findIndex((s) => s.participant === mine) ?? -1
+    const approved = state.slots[slot]?.approved
+    const decision = approved && !approved.corrected ? recordOf(approved.event) : null
+    const counts = seat >= 0 && !!approved && (decision?.id === entry.id || (decision?.type === "tournament.approve" && decision.content.submission === entry.id))
+    if (counts || !played.get(match)?.record) played.set(match, { match, slot, seat, record: counts && approved ? approved.event : null })
+  }
+  return [...played.values()]
+}
+
 export const admitted = (state: TournamentState) => Object.values(state.participants).filter((p) => p.status === "registered")
 export const freePlaces = (state: TournamentState) => Math.max(0, state.settings.capacity - admitted(state).length)
 export const requests = (state: TournamentState) => Object.values(state.participants).filter((p) => p.status === "pending")

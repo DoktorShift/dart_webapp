@@ -13,11 +13,12 @@ import { InviteSheet } from "@/components/clubs/invite-sheet"
 import { MemberSheet } from "@/components/clubs/member-sheet"
 import { RequestList } from "@/components/clubs/request-list"
 import { useClub } from "@/components/clubs/use-clubs"
-import { sameNames, useProfileNames } from "@/components/profile/use-profile-names"
+import { useProfileNames } from "@/components/profile/use-profile-names"
 import { shortKey } from "@/lib/nostr/pointers"
 import { isLeader, isManager } from "@/lib/clubs/club"
 import type { ClubRole } from "@/lib/protocol/club"
 import { SCREENS, type ScreenProps } from "@/lib/shell/registry"
+import { sameNames } from "@/lib/storage/players"
 
 const ORDER: Record<ClubRole, number> = { owner: 0, admin: 1, director: 2, member: 3 }
 
@@ -40,7 +41,7 @@ export default function MembersScreen({ params }: ScreenProps) {
   // Every leader opens a member's sheet (a recognition); managers also find roles and more there.
   const leader = isLeader(view.me.role)
   const nameOf = (pubkey: string) => names(pubkey).name ?? tx.unnamed
-  const dup = sameNames(members.map((m) => ({ pubkey: m.pubkey, name: nameOf(m.pubkey) })))
+  const dup = sameNames(members.map((m) => ({ id: m.pubkey, name: nameOf(m.pubkey) })))
   const sorted = [...members].sort((a, b) => ORDER[a.role] - ORDER[b.role] || nameOf(a.pubkey).localeCompare(nameOf(b.pubkey)))
 
   return (
