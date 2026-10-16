@@ -365,7 +365,9 @@ export async function connectExternal<K extends keyof ExternalParams>(kind: K, p
 // Ends the session on this device: the signer app hears that the connection ends, every key and
 // connection of the profile is deleted, and the other areas drop theirs. With keepLocalData
 // false, everything else on this device goes too (games, players, settings), for a shared device.
-export async function signOut({ keepLocalData }: { keepLocalData: boolean }) {
+// Resolves false when that couldn't delete everything (lib/storage/data.ts wipeAllData); the
+// session has ended either way.
+export async function signOut({ keepLocalData }: { keepLocalData: boolean }): Promise<boolean> {
   const stored = await readStored()
   await endSession()
   await logoutRemote(stored)
@@ -373,10 +375,9 @@ export async function signOut({ keepLocalData }: { keepLocalData: boolean }) {
   reading = Promise.resolve(null)
   setCurrent(null)
   await closeSigner()
-  if (!keepLocalData) {
-    const { wipeAllData } = await import("../storage/data.ts")
-    await wipeAllData()
-  }
+  if (keepLocalData) return true
+  const { wipeAllData } = await import("../storage/data.ts")
+  return wipeAllData()
 }
 
 // Tells a signer app that the connection is over. It may not answer; the session ends either way.

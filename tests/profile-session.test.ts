@@ -108,6 +108,24 @@ test("signing out without keeping local data deletes everything on the device", 
   assert.deepEqual(await dbKeys("kv"), [])
 })
 
+test("signing out says when deleting everything couldn't delete everything; the session ends either way", async () => {
+  await startLocalProfile()
+  await dbPut("matches", { id: "m1" })
+  const transaction = IDBDatabase.prototype.transaction
+  IDBDatabase.prototype.transaction = function (this: IDBDatabase, names: string | string[], mode?: IDBTransactionMode, ...rest: [IDBTransactionOptions?]) {
+    if (mode === "readwrite" && [names].flat().includes("matches")) throw new DOMException("the disk is full", "QuotaExceededError")
+    return transaction.call(this, names, mode, ...rest)
+  }
+  try {
+    assert.equal(await signOut({ keepLocalData: false }), false)
+  } finally {
+    IDBDatabase.prototype.transaction = transaction
+  }
+  assert.equal(getSession(), null)
+  assert.deepEqual(await dbKeys("matches"), ["m1"])
+  assert.equal(await signOut({ keepLocalData: false }), true)
+})
+
 test("another profile signing in clears the previous one's data, but not the device's", async () => {
   const first = await startLocalProfile()
   await kvSet("profile.settings", { card: true })

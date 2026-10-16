@@ -15,7 +15,6 @@ import { GameRow } from "@/components/profile/game-row"
 import { Figures, ProfileCard, x01Figures } from "@/components/profile/profile-card"
 import { PROFILE_SCREENS } from "@/components/profile/screens"
 import { ShareSheet } from "@/components/profile/share-sheet"
-import { SignOutDialog } from "@/components/profile/sign-out-dialog"
 import { useStatsCardFollowsGames } from "@/components/profile/use-stats-card"
 import { useOwnProfile, useProfileGames, type OwnProfile } from "@/components/profile/use-profile"
 import { ownRelaySettings } from "@/lib/profile/own-events"
@@ -23,18 +22,19 @@ import { SCREENS } from "@/lib/shell/registry"
 import { summarizePlayer } from "@/lib/storage/stats"
 
 // The signed-in Profile tab (./profile-root.tsx), shown once this device's data is read: name
-// and figures come from here, so it waits for them rather than show "no name" first.
-export default function SignedInProfile() {
+// and figures come from here, so it waits for them rather than show "no name" first. "Abmelden"
+// opens the root's dialog, which outlasts this view.
+export default function SignedInProfile({ onSignOut }: { onSignOut: () => void }) {
   const own = useOwnProfile()
   if (!own?.events || !own.history.loaded) return null
-  return <OwnProfileView own={own} />
+  return <OwnProfileView own={own} onSignOut={onSignOut} />
 }
 
 // A sports card first (picture, name, three X01 figures with their period, the areas' line for
 // badges), "Profil teilen" as the one prominent action, the last three games, then everything
 // else on rows: statistics and games, the areas' own rows (devices, backup, payments, badges),
 // the public preview, settings, technical details, sign out.
-function OwnProfileView({ own }: { own: OwnProfile }) {
+function OwnProfileView({ own, onSignOut }: { own: OwnProfile; onSignOut: () => void }) {
   const t = useT()
   const tx = useAreaT(PROFILE_TEXTS)
   const h = tx.home
@@ -45,7 +45,6 @@ function OwnProfileView({ own }: { own: OwnProfile }) {
   const [shareOpen, setShareOpen] = useState(false)
   // Each opening starts from the profile as it is now.
   const [edit, setEdit] = useState({ open: false, round: 0 })
-  const [signingOut, setSigningOut] = useState(false)
   useStatsCardFollowsGames(own)
   // Until this device has looked for the profile's games from its other devices, "no games" is
   // not known yet (components/sync/history-state.tsx).
@@ -105,12 +104,11 @@ function OwnProfileView({ own }: { own: OwnProfile }) {
       </Group>
 
       <Group>
-        <ListRow title={h.signOut} destructive onClick={() => setSigningOut(true)} />
+        <ListRow title={h.signOut} destructive onClick={onSignOut} />
       </Group>
 
       <ShareSheet open={shareOpen} onOpenChange={setShareOpen} pubkey={session.pubkey} name={name} writeRelays={own.events ? ownRelaySettings(own.events).write : []} />
       <EditSheet key={edit.round} own={own} open={edit.open} onOpenChange={(open) => setEdit((e) => ({ ...e, open }))} />
-      <SignOutDialog open={signingOut} onOpenChange={setSigningOut} kind={session.kind} />
     </>
   )
 }
