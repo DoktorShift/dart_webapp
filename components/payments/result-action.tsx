@@ -34,7 +34,7 @@ import { useJournal, useReturnedConnection, useWallet } from "@/lib/payments/hoo
 import { actions, isDone, isOpen, noteSettled, type PaymentEntry } from "@/lib/payments/journal"
 import { deviceSide, AMOUNT_PRESETS, resultOffer, type StakeParties } from "@/lib/payments/stake"
 import type { RequestOrigin } from "@/lib/payments/wallet-return"
-import type { FinishedMatch } from "@/lib/shell/registry"
+import type { FinishedMatch, SlotListProps } from "@/lib/shell/registry"
 import { usePlayers } from "@/lib/storage/hooks"
 import { cn } from "@/lib/utils"
 
@@ -253,7 +253,7 @@ function FreeAction({ match }: { match: FinishedMatch }) {
   )
 }
 
-export default function ResultPayment({ match }: { match: FinishedMatch }) {
+export default function ResultPayment({ match }: SlotListProps["result.actions"]) {
   const wallet = useWallet()
   const journal = useJournal()
   if (journal === undefined || wallet === undefined) return null
