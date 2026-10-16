@@ -16,7 +16,7 @@ import { legsWonInGame, perfectLegDarts, playsSets, type MatchState } from "@/li
 import { legName } from "@/lib/game/words"
 import { modeName, type Messages } from "@/lib/i18n"
 import type { SavedMatch } from "@/lib/game/types"
-import type { FinishedMatch } from "@/lib/shell/registry"
+import { resultPrimaryFor, type FinishedMatch } from "@/lib/shell/registry"
 import type { ResultImage } from "@/lib/result-image"
 import { SITE } from "@/lib/site"
 import { cn } from "@/lib/utils"
@@ -97,15 +97,21 @@ function useShownPieces(sheetOpen: boolean) {
   return { ref, shown }
 }
 
+// The game the pieces are for, and which of them show (a result primary's `pieces`).
+interface PiecesProps {
+  match: FinishedMatch
+  only?: readonly string[]
+}
+
 // "Mehr zum Ergebnis": every piece as its row, where the screen has room for fewer. The pieces
 // live in this sheet while it is open, so it stays under whatever one of them opens (its own
 // sheet) until Fertig: closing it would take the piece, and with it that sheet, away.
-function MoreSheet({ match, open, onOpenChange }: { match: FinishedMatch; open: boolean; onOpenChange: (open: boolean) => void }) {
+function MoreSheet({ match, only, open, onOpenChange }: PiecesProps & { open: boolean; onOpenChange: (open: boolean) => void }) {
   const t = useT()
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title={t.result.more}>
       <div className="min-h-0 overflow-y-auto overscroll-contain">
-        <SlotItems list="result.actions" props={() => ({ match, placement: "row" })} className="grid gap-2" />
+        <SlotItems list="result.actions" props={() => ({ match, placement: "row" })} only={only} className="grid gap-2" />
       </div>
       <Button variant="ghost" onClick={() => onOpenChange(false)} className="mt-2 h-12 w-full shrink-0 rounded-2xl text-[1.0625rem]">
         {t.common.done}
@@ -117,21 +123,21 @@ function MoreSheet({ match, open, onOpenChange }: { match: FinishedMatch; open: 
 // The pieces on a phone in landscape, where the hero and the buttons alone fill the screen: in
 // the free middle of the top bar. One piece sits there as a bar button; two or more become one
 // button with their count that opens the sheet.
-function BarPieces({ match }: { match: FinishedMatch }) {
+function BarPieces({ match, only }: PiecesProps) {
   const t = useT()
   const [open, setOpen] = useState(false)
   const { ref, shown } = useShownPieces(open)
   const several = shown > 1
   return (
     <div className="flex min-w-0 flex-1 items-center justify-center">
-      {!open && <SlotItems ref={ref} list="result.actions" props={() => ({ match, placement: "bar" })} className={cn("flex min-w-0 max-w-full items-center justify-center", several && "hidden")} />}
+      {!open && <SlotItems ref={ref} list="result.actions" props={() => ({ match, placement: "bar" })} only={only} className={cn("flex min-w-0 max-w-full items-center justify-center", several && "hidden")} />}
       {several && (
         <Button variant="ghost" onClick={() => setOpen(true)} aria-label={t.result.moreLabel(shown)} className="h-11 gap-1.5 rounded-xl px-3 text-[1.0625rem] font-semibold tabular-nums text-primary">
           <CircleEllipsis className="h-5 w-5" aria-hidden="true" />
           {shown}
         </Button>
       )}
-      <MoreSheet match={match} open={open} onOpenChange={setOpen} />
+      <MoreSheet match={match} only={only} open={open} onOpenChange={setOpen} />
     </div>
   )
 }
@@ -139,19 +145,19 @@ function BarPieces({ match }: { match: FinishedMatch }) {
 // The pieces on a short phone in portrait (the iPhone SE), where the key numbers can spare one
 // row: the first piece shows as its row, and with more a count ("+1") at the row's end opens
 // the sheet with all of them. The other pieces stay mounted, hidden, so they are counted.
-function ShortPieces({ match }: { match: FinishedMatch }) {
+function ShortPieces({ match, only }: PiecesProps) {
   const t = useT()
   const [open, setOpen] = useState(false)
   const { ref, shown } = useShownPieces(open)
   return (
     <div className={cn("mb-1 flex items-stretch gap-2", shown === 0 && "hidden")}>
-      {!open && <SlotItems ref={ref} list="result.actions" props={() => ({ match, placement: "row" })} className="grid min-w-0 flex-1 gap-1 [&>*:not(:first-child)]:hidden" />}
+      {!open && <SlotItems ref={ref} list="result.actions" props={() => ({ match, placement: "row" })} only={only} className="grid min-w-0 flex-1 gap-1 [&>*:not(:first-child)]:hidden" />}
       {shown > 1 && (
         <Button variant="secondary" onClick={() => setOpen(true)} aria-label={t.result.moreLabel(shown)} className="h-11 min-w-11 shrink-0 rounded-2xl px-3 text-[1.0625rem] font-semibold tabular-nums text-primary">
           +{shown - 1}
         </Button>
       )}
-      <MoreSheet match={match} open={open} onOpenChange={setOpen} />
+      <MoreSheet match={match} only={only} open={open} onOpenChange={setOpen} />
     </div>
   )
 }
@@ -180,6 +186,10 @@ export function MatchResult({ state, match, onRematch, onNewGame, onHome, onLead
     }),
     [match, state.winner],
   )
+
+  // A game an area owns (a tournament game on its board) leads back where it came from instead.
+  const primary = useMemo(() => resultPrimaryFor(finished), [finished])
+  const PrimaryIcon = primary?.icon
 
   const picture = useMemo<ResultImage>(
     () => ({
@@ -221,18 +231,28 @@ export function MatchResult({ state, match, onRematch, onNewGame, onHome, onLead
   // Areas' pieces are rendered once, next to the buttons on screen, not in both copies of them.
   // An empty list costs no room: a guest's result looks exactly as before. A row each where the
   // screen is tall enough; one row and a count where it is short; the top bar in landscape.
-  const pieces = short ? <ShortPieces match={finished} /> : <SlotItems list="result.actions" props={() => ({ match: finished, placement: "row" })} className="mb-2 grid gap-2 empty:hidden" />
+  const only = primary?.pieces
+  const pieces = short ? <ShortPieces match={finished} only={only} /> : <SlotItems list="result.actions" props={() => ({ match: finished, placement: "row" })} only={only} className="mb-2 grid gap-2 empty:hidden" />
   const actions = (withPieces: boolean) => (
     <div>
       {withPieces && !xshort && pieces}
-      <Button onClick={onRematch} className="h-14 w-full gap-2 rounded-2xl text-[1.0625rem] font-semibold xshort:h-12">
-        <RotateCcw className="h-5 w-5" aria-hidden="true" />
-        {t.result.rematch}
-      </Button>
-      <Button variant="secondary" onClick={onNewGame} className="mt-2 h-12 w-full gap-2 rounded-2xl text-[1.0625rem] xshort:h-11">
-        <Users className="h-5 w-5" aria-hidden="true" />
-        {t.result.newGame}
-      </Button>
+      {primary ? (
+        <Button onClick={onHome} className="h-14 w-full gap-2 rounded-2xl text-[1.0625rem] font-semibold xshort:h-12">
+          {PrimaryIcon && <PrimaryIcon className="h-5 w-5" aria-hidden />}
+          {primary.label(t)}
+        </Button>
+      ) : (
+        <>
+          <Button onClick={onRematch} className="h-14 w-full gap-2 rounded-2xl text-[1.0625rem] font-semibold xshort:h-12">
+            <RotateCcw className="h-5 w-5" aria-hidden="true" />
+            {t.result.rematch}
+          </Button>
+          <Button variant="secondary" onClick={onNewGame} className="mt-2 h-12 w-full gap-2 rounded-2xl text-[1.0625rem] xshort:h-11">
+            <Users className="h-5 w-5" aria-hidden="true" />
+            {t.result.newGame}
+          </Button>
+        </>
+      )}
       <div className="mt-1 grid grid-cols-4 gap-1">
         <SmallAction icon={Share} label={t.result.share} onClick={share} />
         <SmallAction icon={ChartColumn} label={t.result.allStats} onClick={() => setStatsOpen(true)} />
@@ -252,7 +272,7 @@ export function MatchResult({ state, match, onRematch, onNewGame, onHome, onLead
             <Undo2 className="h-5 w-5" aria-hidden="true" />
             {t.result.undoDart}
           </Button>
-          {xshort && <BarPieces match={finished} />}
+          {xshort && <BarPieces match={finished} only={only} />}
           <Button variant="ghost" onClick={onHome} className="-mr-3 h-11 px-3 text-[1.0625rem] font-semibold text-primary">
             {t.common.done}
           </Button>

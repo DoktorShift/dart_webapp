@@ -2,6 +2,8 @@ import type { NostrEvent } from "../nostr/types.ts"
 import { CLUB_OBJECT_PREFIX } from "../profile/session.ts"
 import type { InvitePreview } from "../protocol/invite.ts"
 import { dbGet, dbKeys, dbWrite, type Keyed } from "../storage/db.ts"
+import { updateStored } from "../storage/lock.ts"
+import { addToCopy } from "../storage/record-copy.ts"
 
 // The clubs as this profile knows them: one object per club in the "objects" store
 // ("club:<club id>"), deleted with the profile (lib/profile/session.ts). The local copy comes
@@ -65,32 +67,16 @@ export interface ClubChange {
   loadedAt?: number
 }
 
-// Changes of one club, one after another within this tab, so two quick writes never lose each
-// other. Another tab writing at the same moment can only drop events, which the next load
-// brings back from relays: events are only ever added.
-const queues = new Map<string, Promise<unknown>>()
-
-export function updateClub(club: string, change: ClubChange): Promise<StoredClub> {
-  const run = (queues.get(club) ?? Promise.resolve()).catch(() => {}).then(async () => {
-    const stored = (await loadStoredClub(club)) ?? empty(club)
-    const next = merge(stored, change)
-    await dbWrite([{ store: "objects", put: next }])
-    return next
-  })
-  queues.set(club, run)
-  return run
-}
+// Changes of one club, one after another in every tab: the copy also holds what no relay can
+// bring back (the tokens of invite links made here, opened content keys).
+export const updateClub = (club: string, change: ClubChange) => updateStored<StoredClub>("objects", clubObjectId(club), (stored) => merge({ ...empty(club), ...stored }, change))
 
 function merge(stored: StoredClub, change: ClubChange): StoredClub {
-  const byId = new Map(stored.events.map((e) => [e.id, e]))
-  for (const event of change.events ?? []) if (!byId.has(event.id)) byId.set(event.id, event)
   return {
-    ...stored,
-    events: [...byId.values()],
+    ...addToCopy(stored, change),
     keys: { ...stored.keys, ...change.keys },
     tokens: change.token ? { ...stored.tokens, [change.token.invite]: change.token.token } : stored.tokens,
     invite: change.invite === null ? undefined : (change.invite ?? stored.invite),
-    relays: change.relays ? [...new Set([...stored.relays, ...change.relays])] : stored.relays,
     recorded: { ...stored.recorded, ...change.recorded },
     loadedAt: change.loadedAt ?? stored.loadedAt,
   }

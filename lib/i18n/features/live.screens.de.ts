@@ -45,6 +45,7 @@ export const liveScreensDe = {
     expired: "Der Code ist abgelaufen. Das Spiel bleibt hier.",
     silent: "Das andere Gerät hat die Übergabe nicht bestätigt. Das Spiel bleibt hier.",
     tooLong: "Dieses Spiel ist zu lang für eine Übergabe. Es bleibt hier.",
+    onBoard: "Ein Turnierspiel bleibt auf dem Board, an das es aufgerufen wurde.",
     again: "Neuen Code zeigen",
   },
 

@@ -12,8 +12,9 @@ const VAULT_KEY_ID = "profile.vault-key"
 // "match-keys": the keys of one live match (lib/live), which belong to the match, not the profile.
 // "wallet-connection": the NWC connection of a wallet (lib/payments). "data-key": the key of the
 // profile's private records (lib/sync). "pairing": the one-time keys of a pairing in progress
-// (lib/devices).
-export type SecretPurpose = "local-key" | "connection-key" | "match-keys" | "wallet-connection" | "data-key" | "pairing"
+// (lib/devices). "board-key": the key of a board device in a tournament (lib/tournaments), which
+// belongs to the tournament's board, not the profile.
+export type SecretPurpose = "local-key" | "connection-key" | "match-keys" | "wallet-connection" | "data-key" | "pairing" | "board-key"
 
 export interface SealedSecret {
   iv: Uint8Array<ArrayBuffer>

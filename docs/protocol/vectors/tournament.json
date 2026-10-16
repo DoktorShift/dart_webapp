@@ -1634,6 +1634,413 @@
       }
     },
     {
+      "name": "correction-replays-match",
+      "description": "A correction without a winner has the match played again: the slot starts over (no result, no submissions, no board), so it is called, played and decided anew, and an old submission can no longer be approved. A correction can also turn a result into a walkover. Matches built on a corrected result are marked.",
+      "now": 1760100000,
+      "root": "b3fdf65ea33e23579c76d5f4b96c575c2497b4cbd824a2db680b3417e143832a",
+      "dependents": {
+        "R1-1": ["R2-1"],
+        "R1-2": ["R2-1"]
+      },
+      "events": [
+        {
+          "id": "b3fdf65ea33e23579c76d5f4b96c575c2497b4cbd824a2db680b3417e143832a",
+          "pubkey": "b3f4e9a11c2f790c41ec159f9bed16000a7c52340c680892a7e71281ed69e969",
+          "created_at": 1760000000,
+          "kind": 1180,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "tournament.found", "blueline"],
+            ["v", "1"],
+            ["alt", "BlueLine Darts tournament.found"]
+          ],
+          "content": "{\"name\":\"Herbstcup\",\"engine\":1,\"format\":\"single\",\"rules\":{\"type\":\"x01\",\"modeId\":\"501\",\"startScore\":501,\"doubleIn\":false,\"doubleOut\":true,\"cutThroat\":false,\"bullFinish\":false,\"legsToWin\":2,\"setsToWin\":1,\"startRule\":\"alternate\"},\"capacity\":4,\"admission\":\"manual\",\"waitlist\":true,\"checkIn\":false,\"approval\":\"organizer\",\"starts\":1760007200,\"timezone\":\"Europe/Berlin\",\"seedCommit\":\"0bff53c2d0cc69713ed72b5e1edcd5905eb7e9ec0438dfde0ee0468feac1c1da\"}",
+          "sig": "c87b798001bc869948819f63f84df878d28435cd622fe59c99c4d135f68242d320e1c93379e492cf8c4504f2ffd243ec6dd0a0a1a0e91d27453a175de15760fd"
+        },
+        {
+          "id": "b6cfb8a06e3de5024808aab4d1f7ae8b6993c71722b59bc6f243fb32d0c57672",
+          "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
+          "created_at": 1760000010,
+          "kind": 1180,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "tournament.register", "blueline"],
+            ["v", "1"],
+            ["e", "b3fdf65ea33e23579c76d5f4b96c575c2497b4cbd824a2db680b3417e143832a"],
+            ["alt", "BlueLine Darts tournament.register"]
+          ],
+          "content": "{}",
+          "sig": "5a9e3c53e837a7a7e0147374f05d433cb81bb247fb059e7526e2aab246de4fc1c23a082d633971e1c5a152435cbe33729ab09015d8a2ce0ae72cea066cbbec4b"
+        },
+        {
+          "id": "1b32722ef9aed96749af031bd2438a703bb0a8eb2ecb956bebb0f25664870a67",
+          "pubkey": "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6",
+          "created_at": 1760000010,
+          "kind": 1180,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "tournament.register", "blueline"],
+            ["v", "1"],
+            ["e", "b3fdf65ea33e23579c76d5f4b96c575c2497b4cbd824a2db680b3417e143832a"],
+            ["alt", "BlueLine Darts tournament.register"]
+          ],
+          "content": "{}",
+          "sig": "52057e26a279359d8b712a9b59da3e1d5f3636304fa2eb335f2e436f5e9d96b6cd636d14ccf3f950cdd5f810698c27ba4b65ee2a1aa0f154fd8b3abc7cd39c19"
+        },
+        {
+          "id": "4063b7eaaf15c003a4a7e51adde63bb9e7938bbe844efa0a97653cf526e1f427",
+          "pubkey": "10750f8405057c84b492b4a2bf23f21a60a684e054105f5aa81d6fe8fc4d125d",
+          "created_at": 1760000010,
+          "kind": 1180,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "tournament.register", "blueline"],
+            ["v", "1"],
+            ["e", "b3fdf65ea33e23579c76d5f4b96c575c2497b4cbd824a2db680b3417e143832a"],
+            ["alt", "BlueLine Darts tournament.register"]
+          ],
+          "content": "{}",
+          "sig": "24b6c8d78f06cae3d0b2a15fd6f215770cec35f1fc433139343557859d84cf16accd41ad51e66bb01d0dbdd11c7597f892c15c143fa5320bffc1d5c97e6de53c"
+        },
+        {
+          "id": "6be04c07171995d0feb552e9b07baaf09a58b961264fba92809865c375534cc9",
+          "pubkey": "1627887431fe8f70418ea87a872b3255e05bc13c21d361c2358950feb0717bbb",
+          "created_at": 1760000010,
+          "kind": 1180,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "tournament.register", "blueline"],
+            ["v", "1"],
+            ["e", "b3fdf65ea33e23579c76d5f4b96c575c2497b4cbd824a2db680b3417e143832a"],
+            ["alt", "BlueLine Darts tournament.register"]
+          ],
+          "content": "{}",
+          "sig": "e452ab72ca11662752401653d2254ec5d2e6c794beb192501c7d719610d2ee53fc845e8788cb6dedfac18bd3b05ecce317da4df128cb5c919f2a301990c35486"
+        },
+        {
+          "id": "c54fb272f4bcba07647319c5fa855537352d57ab7a6bc3eb3e0e07455f41d803",
+          "pubkey": "b3f4e9a11c2f790c41ec159f9bed16000a7c52340c680892a7e71281ed69e969",
+          "created_at": 1760000011,
+          "kind": 1180,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "tournament.admit", "blueline"],
+            ["v", "1"],
+            ["e", "b3fdf65ea33e23579c76d5f4b96c575c2497b4cbd824a2db680b3417e143832a"],
+            ["alt", "BlueLine Darts tournament.admit"]
+          ],
+          "content": "{\"participant\":\"b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0\",\"prev\":\"b6cfb8a06e3de5024808aab4d1f7ae8b6993c71722b59bc6f243fb32d0c57672\"}",
+          "sig": "4f3c4ec8cca88de96cb76b07133804dc9fe34cb7116286d0e06a145258bdead7f3c7a88526717d06603a5f7e0d37eef52fadc8f2cb8047398f530c050376348c"
+        },
+        {
+          "id": "18b269a272dfe170a028a3a8b290b89f98f2015f2284bd79e40e967e413a67e9",
+          "pubkey": "b3f4e9a11c2f790c41ec159f9bed16000a7c52340c680892a7e71281ed69e969",
+          "created_at": 1760000012,
+          "kind": 1180,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "tournament.admit", "blueline"],
+            ["v", "1"],
+            ["e", "b3fdf65ea33e23579c76d5f4b96c575c2497b4cbd824a2db680b3417e143832a"],
+            ["alt", "BlueLine Darts tournament.admit"]
+          ],
+          "content": "{\"participant\":\"a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6\",\"prev\":\"1b32722ef9aed96749af031bd2438a703bb0a8eb2ecb956bebb0f25664870a67\"}",
+          "sig": "be18129c6ec6e3e503e7987dcd97f3032103d36d955d0c8c596945414500f16e9a16fa4bd8eebc7038c0ea79bc08a31c40d663e1a2ee1d792897a91aac73fe50"
+        },
+        {
+          "id": "9fbe6a8fbce085584e0df0de63cc9abb3c9b7e5265179d95f3f7afc22ddadbed",
+          "pubkey": "b3f4e9a11c2f790c41ec159f9bed16000a7c52340c680892a7e71281ed69e969",
+          "created_at": 1760000013,
+          "kind": 1180,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "tournament.admit", "blueline"],
+            ["v", "1"],
+            ["e", "b3fdf65ea33e23579c76d5f4b96c575c2497b4cbd824a2db680b3417e143832a"],
+            ["alt", "BlueLine Darts tournament.admit"]
+          ],
+          "content": "{\"participant\":\"10750f8405057c84b492b4a2bf23f21a60a684e054105f5aa81d6fe8fc4d125d\",\"prev\":\"4063b7eaaf15c003a4a7e51adde63bb9e7938bbe844efa0a97653cf526e1f427\"}",
+          "sig": "57810ed4d0cf7a73081b9a537b7f642e3255de874a482eed5b7c446273ffb5f37194db49beb23745c94350b2f454ef57c911889462c9fb3f9a9859bb9cca0d4b"
+        },
+        {
+          "id": "38b47613b3af55dc067d498b975834308a43c9d849a421eb932fb38448334fa7",
+          "pubkey": "b3f4e9a11c2f790c41ec159f9bed16000a7c52340c680892a7e71281ed69e969",
+          "created_at": 1760000014,
+          "kind": 1180,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "tournament.admit", "blueline"],
+            ["v", "1"],
+            ["e", "b3fdf65ea33e23579c76d5f4b96c575c2497b4cbd824a2db680b3417e143832a"],
+            ["alt", "BlueLine Darts tournament.admit"]
+          ],
+          "content": "{\"participant\":\"1627887431fe8f70418ea87a872b3255e05bc13c21d361c2358950feb0717bbb\",\"prev\":\"6be04c07171995d0feb552e9b07baaf09a58b961264fba92809865c375534cc9\"}",
+          "sig": "82663361b777be6493a89bf16fb4a7ec960ec5dc644e765233ef21a5bd28ca9bb0b5a4d65b408d3d738aa1c6ea7e6ae25d7257df768a435f0ef3bd843597dbb7"
+        },
+        {
+          "id": "eef8545128a38a58bbf289b87a6b6f5c4ac290e976d40fb76f297d7589bf7239",
+          "pubkey": "b3f4e9a11c2f790c41ec159f9bed16000a7c52340c680892a7e71281ed69e969",
+          "created_at": 1760000020,
+          "kind": 1180,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "tournament.draw", "blueline"],
+            ["v", "1"],
+            ["e", "b3fdf65ea33e23579c76d5f4b96c575c2497b4cbd824a2db680b3417e143832a"],
+            ["alt", "BlueLine Darts tournament.draw"]
+          ],
+          "content": "{\"seed\":\"4dcab65153a15f8d578ad8db966a05d0\",\"seeded\":[],\"order\":[\"a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6\",\"1627887431fe8f70418ea87a872b3255e05bc13c21d361c2358950feb0717bbb\",\"10750f8405057c84b492b4a2bf23f21a60a684e054105f5aa81d6fe8fc4d125d\",\"b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0\"],\"prev\":\"b3fdf65ea33e23579c76d5f4b96c575c2497b4cbd824a2db680b3417e143832a\"}",
+          "sig": "19edb975cbaae589ce148c25d727130997454c4bb1ec3064a757561686d9e1f56226643ea63cfd341ec12a00980fb6ab8d29606e764099f9787d755efdfd6146"
+        },
+        {
+          "id": "616a26724be7d84b7fc65300289a27a72b96386c7ddb2805e952967b9decb157",
+          "pubkey": "b3f4e9a11c2f790c41ec159f9bed16000a7c52340c680892a7e71281ed69e969",
+          "created_at": 1760000030,
+          "kind": 1180,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "tournament.board", "blueline"],
+            ["v", "1"],
+            ["e", "b3fdf65ea33e23579c76d5f4b96c575c2497b4cbd824a2db680b3417e143832a"],
+            ["alt", "BlueLine Darts tournament.board"]
+          ],
+          "content": "{\"board\":\"bc33795bedadc152c80f1eae5f613f2c\",\"name\":\"Board 1\",\"key\":\"997e2d6c8d07fd802641a6bfc55e8175c8f2eb258c85fbf6864796bf419612de\",\"prev\":\"b3fdf65ea33e23579c76d5f4b96c575c2497b4cbd824a2db680b3417e143832a\"}",
+          "sig": "b4effbfc34e3ded350cbdc8511d5f23c3387b7608ff207ce9191091525118fe7088f99d53b4ef61fa0f20a42600890712e26ebc8db9197d8585e2ec57fa05751"
+        },
+        {
+          "id": "514578df4bfbe98b7d763cf065e2627231951a4624b7552a20e670bac481f4a5",
+          "pubkey": "b3f4e9a11c2f790c41ec159f9bed16000a7c52340c680892a7e71281ed69e969",
+          "created_at": 1760000031,
+          "kind": 1180,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "tournament.phase", "blueline"],
+            ["v", "1"],
+            ["e", "b3fdf65ea33e23579c76d5f4b96c575c2497b4cbd824a2db680b3417e143832a"],
+            ["alt", "BlueLine Darts tournament.phase"]
+          ],
+          "content": "{\"phase\":\"running\",\"prev\":\"eef8545128a38a58bbf289b87a6b6f5c4ac290e976d40fb76f297d7589bf7239\"}",
+          "sig": "d2c6ecd1b42e3e79a28117129e66d0cb475a473beed8c1bf2f771a59c2d14db0781fcae819e6b78c708f039c68cfbcd9a10d37bd5f85c0aa1f60046b944ecdcf"
+        },
+        {
+          "id": "0c8b32986657fa5e0f96bab7c3789902f8cb379c6f73656a7b36d6fc4606b91a",
+          "pubkey": "b3f4e9a11c2f790c41ec159f9bed16000a7c52340c680892a7e71281ed69e969",
+          "created_at": 1760000040,
+          "kind": 1180,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "tournament.result", "blueline"],
+            ["v", "1"],
+            ["e", "b3fdf65ea33e23579c76d5f4b96c575c2497b4cbd824a2db680b3417e143832a"],
+            ["alt", "BlueLine Darts tournament.result"]
+          ],
+          "content": "{\"slot\":\"R1-1\",\"winner\":\"b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0\",\"score\":[2,1]}",
+          "sig": "8872231a1ab7a4fea99c891911ee6e42b745da9edeed6cc1495f4fcc2f23bc079abddb02ccef7617d8939abd88e692858c81c7207ab908f8a6de596463058f16"
+        },
+        {
+          "id": "3f1f82a5349bd59f2c036a6277adf714dab6a274576bfd227ee09324e3ce1f61",
+          "pubkey": "b3f4e9a11c2f790c41ec159f9bed16000a7c52340c680892a7e71281ed69e969",
+          "created_at": 1760000041,
+          "kind": 1180,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "tournament.result", "blueline"],
+            ["v", "1"],
+            ["e", "b3fdf65ea33e23579c76d5f4b96c575c2497b4cbd824a2db680b3417e143832a"],
+            ["alt", "BlueLine Darts tournament.result"]
+          ],
+          "content": "{\"slot\":\"R1-2\",\"winner\":\"10750f8405057c84b492b4a2bf23f21a60a684e054105f5aa81d6fe8fc4d125d\",\"score\":[2,0]}",
+          "sig": "09150b803be4dafd622b783d91476bd04bf973ac68fe2b6d459541b4b387aaa045305155d2b52f82515e067ac445cc05cae9dd3d513cff7b4f581fa0a7bc549f"
+        },
+        {
+          "id": "086d01d7daaddee313a0acbc932cad1d14dd6826e0b46cd447262d7c01d5f8fd",
+          "pubkey": "b3f4e9a11c2f790c41ec159f9bed16000a7c52340c680892a7e71281ed69e969",
+          "created_at": 1760000042,
+          "kind": 1180,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "tournament.assign", "blueline"],
+            ["v", "1"],
+            ["e", "b3fdf65ea33e23579c76d5f4b96c575c2497b4cbd824a2db680b3417e143832a"],
+            ["alt", "BlueLine Darts tournament.assign"]
+          ],
+          "content": "{\"slot\":\"R2-1\",\"board\":\"bc33795bedadc152c80f1eae5f613f2c\",\"prev\":\"b3fdf65ea33e23579c76d5f4b96c575c2497b4cbd824a2db680b3417e143832a\"}",
+          "sig": "a484b4a0787aa08092fc288367f4eda522c170500dfe0a88d4f026317eb13d09c453df7631cf10911608d2afcbbd3029a09e4272af210b156bb6fcec14051d10"
+        },
+        {
+          "id": "419aa60229baef24a1eb4270cad15b439a21f9a888215ea3869117898f1d9c9d",
+          "pubkey": "997e2d6c8d07fd802641a6bfc55e8175c8f2eb258c85fbf6864796bf419612de",
+          "created_at": 1760000043,
+          "kind": 1180,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "tournament.result", "blueline"],
+            ["v", "1"],
+            ["e", "b3fdf65ea33e23579c76d5f4b96c575c2497b4cbd824a2db680b3417e143832a"],
+            ["alt", "BlueLine Darts tournament.result"]
+          ],
+          "content": "{\"slot\":\"R2-1\",\"winner\":\"b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0\",\"score\":[2,0]}",
+          "sig": "26a98c9616f6e53415d6d9706d64649c11b3ee2e364f8580eb1cb800aa399027dcfd2bc61fdac8843839e932e4a5fcf73bffd33a41cec96059048a0e2a972fe9"
+        },
+        {
+          "id": "f4085fb7fdff274ad7fd637b2e49076efd11ad3ddfcde0dcde5af3d5961cf960",
+          "pubkey": "b3f4e9a11c2f790c41ec159f9bed16000a7c52340c680892a7e71281ed69e969",
+          "created_at": 1760000044,
+          "kind": 1180,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "tournament.approve", "blueline"],
+            ["v", "1"],
+            ["e", "b3fdf65ea33e23579c76d5f4b96c575c2497b4cbd824a2db680b3417e143832a"],
+            ["alt", "BlueLine Darts tournament.approve"]
+          ],
+          "content": "{\"slot\":\"R2-1\",\"submission\":\"419aa60229baef24a1eb4270cad15b439a21f9a888215ea3869117898f1d9c9d\",\"prev\":\"086d01d7daaddee313a0acbc932cad1d14dd6826e0b46cd447262d7c01d5f8fd\"}",
+          "sig": "3bc7652a8841afaf6be6f36fdcdc10a93e8219c5d46ac583f88edc0a95b96085445266e2f7da863aa458fab16e5ef3347d952ac2065754ba8529a30fccfe858b"
+        },
+        {
+          "id": "d61f78c7e6fe89f9b522ea7662f0562e6c07dc6bc4cb8197a5fdc580669234b7",
+          "pubkey": "b3f4e9a11c2f790c41ec159f9bed16000a7c52340c680892a7e71281ed69e969",
+          "created_at": 1760000050,
+          "kind": 1180,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "tournament.correct", "blueline"],
+            ["v", "1"],
+            ["e", "b3fdf65ea33e23579c76d5f4b96c575c2497b4cbd824a2db680b3417e143832a"],
+            ["alt", "BlueLine Darts tournament.correct"]
+          ],
+          "content": "{\"slot\":\"R1-2\",\"winner\":\"1627887431fe8f70418ea87a872b3255e05bc13c21d361c2358950feb0717bbb\",\"score\":[0,0],\"walkover\":\"retired\",\"reason\":\"Aufgegeben, falsch eingetragen\",\"prev\":\"3f1f82a5349bd59f2c036a6277adf714dab6a274576bfd227ee09324e3ce1f61\"}",
+          "sig": "eb58c7dbb091cc1edb4818f987fc38864b638a8a482d6c5a9540a823b2b5bdd5eebbd8185a7cc52401ed0623153b43b3a6c85b94b2ccaf13803758f048ce5518"
+        },
+        {
+          "id": "ba4b46579f6db3a21a13b72f09b23c69e1358c9acbb5443f5e3e4dc4a9161d05",
+          "pubkey": "b3f4e9a11c2f790c41ec159f9bed16000a7c52340c680892a7e71281ed69e969",
+          "created_at": 1760000060,
+          "kind": 1180,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "tournament.correct", "blueline"],
+            ["v", "1"],
+            ["e", "b3fdf65ea33e23579c76d5f4b96c575c2497b4cbd824a2db680b3417e143832a"],
+            ["alt", "BlueLine Darts tournament.correct"]
+          ],
+          "content": "{\"slot\":\"R2-1\",\"winner\":null,\"score\":[0,0],\"reason\":\"Neu spielen\",\"prev\":\"f4085fb7fdff274ad7fd637b2e49076efd11ad3ddfcde0dcde5af3d5961cf960\"}",
+          "sig": "5b62a308ff99ca7027af8e1b59699474e0f6795afd36fa1d73c1434c4813add3299593c43ce347ebf49245f07b36029c3ff3d1076ecdb4e795da26f429ebfad4"
+        },
+        {
+          "id": "eea71c768e5de855fb8eae3f61639936c7e9b3112759daf2ea115b029e7807fb",
+          "pubkey": "b3f4e9a11c2f790c41ec159f9bed16000a7c52340c680892a7e71281ed69e969",
+          "created_at": 1760000061,
+          "kind": 1180,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "tournament.approve", "blueline"],
+            ["v", "1"],
+            ["e", "b3fdf65ea33e23579c76d5f4b96c575c2497b4cbd824a2db680b3417e143832a"],
+            ["alt", "BlueLine Darts tournament.approve"]
+          ],
+          "content": "{\"slot\":\"R2-1\",\"submission\":\"419aa60229baef24a1eb4270cad15b439a21f9a888215ea3869117898f1d9c9d\",\"prev\":\"ba4b46579f6db3a21a13b72f09b23c69e1358c9acbb5443f5e3e4dc4a9161d05\"}",
+          "sig": "1e1168dd531aca8be555a95a02c4243b58034d2cd4292cfe778fe6244cb02702e391609bb706a0d35ffd70912073e0138e78c19e63afbe9ad6b22151f4470978"
+        },
+        {
+          "id": "8bb2f38e755f2803eeb813fca7b1adf90f9a07400cbbc40a4ca76283647e0eb9",
+          "pubkey": "b3f4e9a11c2f790c41ec159f9bed16000a7c52340c680892a7e71281ed69e969",
+          "created_at": 1760000070,
+          "kind": 1180,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "tournament.assign", "blueline"],
+            ["v", "1"],
+            ["e", "b3fdf65ea33e23579c76d5f4b96c575c2497b4cbd824a2db680b3417e143832a"],
+            ["alt", "BlueLine Darts tournament.assign"]
+          ],
+          "content": "{\"slot\":\"R2-1\",\"board\":\"bc33795bedadc152c80f1eae5f613f2c\",\"prev\":\"ba4b46579f6db3a21a13b72f09b23c69e1358c9acbb5443f5e3e4dc4a9161d05\"}",
+          "sig": "f0817942959f4077943d57bb60d7351924f3d69096df0b25ef0a22caa39a7f31f01e5e0b543d960414e735c1d8c8f4066123056995dbe723fce93a0f2237db0b"
+        },
+        {
+          "id": "725af00bc3c1f45d4ec6708e6d11c300a5408fb29645e1f926c8199bed1cf16e",
+          "pubkey": "997e2d6c8d07fd802641a6bfc55e8175c8f2eb258c85fbf6864796bf419612de",
+          "created_at": 1760000071,
+          "kind": 1180,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "tournament.result", "blueline"],
+            ["v", "1"],
+            ["e", "b3fdf65ea33e23579c76d5f4b96c575c2497b4cbd824a2db680b3417e143832a"],
+            ["alt", "BlueLine Darts tournament.result"]
+          ],
+          "content": "{\"slot\":\"R2-1\",\"winner\":\"1627887431fe8f70418ea87a872b3255e05bc13c21d361c2358950feb0717bbb\",\"score\":[0,2]}",
+          "sig": "ae3dce186ba7e6423d9daa32fdfc6a65a56b42514a78df3580f8e885b29fe391e4231aa435e1b3d7bf0a82de1025e68cb65f56c09fc558e7daa39ae922def05e"
+        },
+        {
+          "id": "75acd62a630e88d708c19d51047c1b0f5578f1adfb02b3b63e112cdf38e24cad",
+          "pubkey": "b3f4e9a11c2f790c41ec159f9bed16000a7c52340c680892a7e71281ed69e969",
+          "created_at": 1760000072,
+          "kind": 1180,
+          "tags": [
+            ["L", "blueline"],
+            ["l", "tournament.approve", "blueline"],
+            ["v", "1"],
+            ["e", "b3fdf65ea33e23579c76d5f4b96c575c2497b4cbd824a2db680b3417e143832a"],
+            ["alt", "BlueLine Darts tournament.approve"]
+          ],
+          "content": "{\"slot\":\"R2-1\",\"submission\":\"725af00bc3c1f45d4ec6708e6d11c300a5408fb29645e1f926c8199bed1cf16e\",\"prev\":\"8bb2f38e755f2803eeb813fca7b1adf90f9a07400cbbc40a4ca76283647e0eb9\"}",
+          "sig": "a1c2b2b133c9864411d3a6eb878fff428bd86a6e94c757dc7c713bbd5ef89a11025648b4393fc73f23dfccb380adec18fce182c2a313475347dfc4055353dff3"
+        }
+      ],
+      "plaintexts": {},
+      "labels": {
+        "found": "b3fdf65ea33e23579c76d5f4b96c575c2497b4cbd824a2db680b3417e143832a",
+        "p1": "b6cfb8a06e3de5024808aab4d1f7ae8b6993c71722b59bc6f243fb32d0c57672",
+        "p2": "1b32722ef9aed96749af031bd2438a703bb0a8eb2ecb956bebb0f25664870a67",
+        "p3": "4063b7eaaf15c003a4a7e51adde63bb9e7938bbe844efa0a97653cf526e1f427",
+        "p4": "6be04c07171995d0feb552e9b07baaf09a58b961264fba92809865c375534cc9",
+        "admit-p1": "c54fb272f4bcba07647319c5fa855537352d57ab7a6bc3eb3e0e07455f41d803",
+        "admit-p2": "18b269a272dfe170a028a3a8b290b89f98f2015f2284bd79e40e967e413a67e9",
+        "admit-p3": "9fbe6a8fbce085584e0df0de63cc9abb3c9b7e5265179d95f3f7afc22ddadbed",
+        "admit-p4": "38b47613b3af55dc067d498b975834308a43c9d849a421eb932fb38448334fa7",
+        "draw": "eef8545128a38a58bbf289b87a6b6f5c4ac290e976d40fb76f297d7589bf7239",
+        "board-1": "616a26724be7d84b7fc65300289a27a72b96386c7ddb2805e952967b9decb157",
+        "start": "514578df4bfbe98b7d763cf065e2627231951a4624b7552a20e670bac481f4a5",
+        "semi-1": "0c8b32986657fa5e0f96bab7c3789902f8cb379c6f73656a7b36d6fc4606b91a",
+        "semi-2": "3f1f82a5349bd59f2c036a6277adf714dab6a274576bfd227ee09324e3ce1f61",
+        "call-final": "086d01d7daaddee313a0acbc932cad1d14dd6826e0b46cd447262d7c01d5f8fd",
+        "final": "419aa60229baef24a1eb4270cad15b439a21f9a888215ea3869117898f1d9c9d",
+        "approve-final": "f4085fb7fdff274ad7fd637b2e49076efd11ad3ddfcde0dcde5af3d5961cf960",
+        "to-walkover": "d61f78c7e6fe89f9b522ea7662f0562e6c07dc6bc4cb8197a5fdc580669234b7",
+        "replay": "ba4b46579f6db3a21a13b72f09b23c69e1358c9acbb5443f5e3e4dc4a9161d05",
+        "old-approval": "eea71c768e5de855fb8eae3f61639936c7e9b3112759daf2ea115b029e7807fb",
+        "call-again": "8bb2f38e755f2803eeb813fca7b1adf90f9a07400cbbc40a4ca76283647e0eb9",
+        "final-again": "725af00bc3c1f45d4ec6708e6d11c300a5408fb29645e1f926c8199bed1cf16e",
+        "approve-again": "75acd62a630e88d708c19d51047c1b0f5578f1adfb02b3b63e112cdf38e24cad"
+      },
+      "expect": {
+        "applied": ["b3fdf65ea33e23579c76d5f4b96c575c2497b4cbd824a2db680b3417e143832a", "1b32722ef9aed96749af031bd2438a703bb0a8eb2ecb956bebb0f25664870a67", "4063b7eaaf15c003a4a7e51adde63bb9e7938bbe844efa0a97653cf526e1f427", "6be04c07171995d0feb552e9b07baaf09a58b961264fba92809865c375534cc9", "b6cfb8a06e3de5024808aab4d1f7ae8b6993c71722b59bc6f243fb32d0c57672", "c54fb272f4bcba07647319c5fa855537352d57ab7a6bc3eb3e0e07455f41d803", "18b269a272dfe170a028a3a8b290b89f98f2015f2284bd79e40e967e413a67e9", "9fbe6a8fbce085584e0df0de63cc9abb3c9b7e5265179d95f3f7afc22ddadbed", "38b47613b3af55dc067d498b975834308a43c9d849a421eb932fb38448334fa7", "eef8545128a38a58bbf289b87a6b6f5c4ac290e976d40fb76f297d7589bf7239", "616a26724be7d84b7fc65300289a27a72b96386c7ddb2805e952967b9decb157", "514578df4bfbe98b7d763cf065e2627231951a4624b7552a20e670bac481f4a5", "0c8b32986657fa5e0f96bab7c3789902f8cb379c6f73656a7b36d6fc4606b91a", "3f1f82a5349bd59f2c036a6277adf714dab6a274576bfd227ee09324e3ce1f61", "086d01d7daaddee313a0acbc932cad1d14dd6826e0b46cd447262d7c01d5f8fd", "419aa60229baef24a1eb4270cad15b439a21f9a888215ea3869117898f1d9c9d", "f4085fb7fdff274ad7fd637b2e49076efd11ad3ddfcde0dcde5af3d5961cf960", "d61f78c7e6fe89f9b522ea7662f0562e6c07dc6bc4cb8197a5fdc580669234b7", "ba4b46579f6db3a21a13b72f09b23c69e1358c9acbb5443f5e3e4dc4a9161d05", "8bb2f38e755f2803eeb813fca7b1adf90f9a07400cbbc40a4ca76283647e0eb9", "725af00bc3c1f45d4ec6708e6d11c300a5408fb29645e1f926c8199bed1cf16e", "75acd62a630e88d708c19d51047c1b0f5578f1adfb02b3b63e112cdf38e24cad"],
+        "rejected": [
+          {
+            "id": "eea71c768e5de855fb8eae3f61639936c7e9b3112759daf2ea115b029e7807fb",
+            "label": "old-approval",
+            "reason": "result_unknown"
+          }
+        ],
+        "state": {
+          "phase": "running",
+          "slots": {
+            "R1-2": {
+              "winner": "1627887431fe8f70418ea87a872b3255e05bc13c21d361c2358950feb0717bbb",
+              "walkover": "retired",
+              "corrected": true
+            },
+            "R2-1": {
+              "winner": "1627887431fe8f70418ea87a872b3255e05bc13c21d361c2358950feb0717bbb",
+              "corrected": false,
+              "affected": false
+            }
+          }
+        }
+      }
+    },
+    {
       "name": "organizer-handover",
       "description": "The organization changes only by offer and acceptance. Afterwards the former organizer's decisions are refused.",
       "now": 1760100000,

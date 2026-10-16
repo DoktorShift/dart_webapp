@@ -39,6 +39,11 @@ import { dropBoard, listBoards, loadBoard, openKeys, saveBoard, sealKeys, type B
 //
 // The keys never leave the device except in a handoff package, and then only to the device the
 // person here confirmed (lib/live/handoff.ts).
+//
+// A tournament's match (goLive with `tournament`) differs in two ways, both decided at the
+// founding and kept in the record: the authority is the board key the organizer authorized
+// (lib/tournaments), so the tournament finds the match by that key (follow.ts watchFoundings),
+// and the match is public, so nothing is sealed and the watch link carries no key.
 
 export interface BoardView {
   // The watch link's payload (W1…).
@@ -86,11 +91,17 @@ const boards = new Map<string, Board>()
 // Boards being opened or founded, so two calls at once make one.
 const opening = new Map<string, Promise<Board>>()
 
+export interface GoLiveOptions {
+  // The tournament this game decides a slot of, and the secret of the board key authorized for
+  // it: the founding is signed with that key and the match is public.
+  tournament?: { id: string; slot: string; authority: Uint8Array; relays?: readonly string[] }
+}
+
 // Makes the game live (or returns it as it is live already) and starts following it.
-export async function goLive(match: SavedMatch): Promise<BoardView> {
+export async function goLive(match: SavedMatch, options: GoLiveOptions = {}): Promise<BoardView> {
   let pending = opening.get(match.id)
   if (!pending) {
-    pending = (async () => boards.get(match.id) ?? (await openBoard(match)) ?? (await foundBoard(match)))()
+    pending = (async () => boards.get(match.id) ?? (await openBoard(match)) ?? (await foundBoard(match, options)))()
     opening.set(match.id, pending)
     void pending.finally(() => opening.delete(match.id)).catch(() => {})
   }
@@ -107,19 +118,21 @@ export async function attachBoard(match: SavedMatch): Promise<boolean> {
   return true
 }
 
-async function foundBoard(match: SavedMatch): Promise<Board> {
+async function foundBoard(match: SavedMatch, { tournament }: GoLiveOptions): Promise<Board> {
   // Relays refuse events dated too far ahead: the board's clock is set by the app's server first.
   await syncClock()
-  const [authority, session, key] = await Promise.all([newKey(), newKey(), newKey()])
-  const relays = liveRelays()
+  const [authority, session, key] = await Promise.all([tournament ? keyOf(tournament.authority) : newKey(), newKey(), newKey()])
+  const relays = tournament?.relays?.length ? [...tournament.relays] : liveRelays()
   const at = createdAt()
-  const content = { sv: 1, session: session.pubkey, from: at, until: at + MAX_SESSION_SECONDS, agreement: agreementFor(match.config) }
-  const founding = await authority.signer.signEvent(await sealToMatch(buildRecord("match.session", content, { created_at: at }), authority.pubkey, key))
+  const content = { sv: 1, session: session.pubkey, from: at, until: at + MAX_SESSION_SECONDS, agreement: agreementFor(match.config, tournament && { id: tournament.id, slot: tournament.slot }) }
+  const template = buildRecord("match.session", content, { created_at: at })
+  const founding = await authority.signer.signEvent(tournament ? template : await sealToMatch(template, authority.pubkey, key))
   const record: BoardRecord = {
     id: "",
     local: match.id,
     match: founding.id,
     relays,
+    ...(tournament ? { public: true as const } : {}),
     keys: await sealKeys(secretsOf({ authority, session, match: key })),
     founding,
     session: founding,
@@ -168,7 +181,7 @@ function register(record: BoardRecord, keys: MatchKeys, game: SavedMatch): Board
 }
 
 const watchLink = (record: BoardRecord, keys: MatchKeys) =>
-  encodeLinkPayload({ type: "watch", match: record.match, key: toHex(keys.match.secret), relays: record.relays })
+  encodeLinkPayload({ type: "watch", match: record.match, ...(record.public ? {} : { key: toHex(keys.match.secret) }), relays: record.relays })
 
 function attach(board: Board, match: SavedMatch) {
   clearTimeout(board.timers.detach)
@@ -300,7 +313,7 @@ async function handover(board: Board, session: MatchKey) {
 
 async function sign<T extends RecordType>(board: Board, key: MatchKey, type: T, content: ContentOf<T>, at: number, opts: { d?: string }): Promise<SignedEvent> {
   const template = buildRecord(type, content, { created_at: at, root: board.record.match, ...opts })
-  return key.signer.signEvent(await sealToMatch(template, key.pubkey, board.keys.match))
+  return key.signer.signEvent(board.record.public ? template : await sealToMatch(template, key.pubkey, board.keys.match))
 }
 
 async function persist(board: Board, change: Partial<BoardRecord>) {
@@ -463,11 +476,17 @@ export type HandoffPackage = {
   seatAt: number
   outbox: SignedEvent[]
   game: { id: string; config: SavedMatch["config"]; throws: string; startedAt: string; acknowledgedLegs: number }
+  public?: true
 }
+
+// A tournament's match stays on the board it was called to: its authority is the board key the
+// organizer gave that device, which never leaves it, and only that board reports the result.
+export const staysOnBoard = (local: string) => boards.get(local)?.record.public === true
 
 export async function packBoard(local: string): Promise<HandoffPackage> {
   const board = boards.get(local)
   if (!board || board.ended) throw new Error("the match is not live here")
+  if (board.record.public) throw new Error("a tournament's match stays on its board")
   await board.queue
   const { record, keys, game } = board
   return {
@@ -486,6 +505,7 @@ export async function packBoard(local: string): Promise<HandoffPackage> {
     // of its own.
     outbox: (await pendingEvents(ofMatch(record.match))).filter((event) => event.kind === KIND_RECORD),
     game: { id: game.id, config: game.config, throws: encodeThrows(game.throws), startedAt: game.startedAt, acknowledgedLegs: game.acknowledgedLegs },
+    ...(record.public ? { public: true as const } : {}),
   }
 }
 
@@ -536,6 +556,7 @@ export async function adoptBoard(data: unknown): Promise<SavedMatch | null> {
     seats: pkg.seats,
     seatAt: pkg.seatAt,
     result: null,
+    ...(pkg.public ? { public: true as const } : {}),
   }
   // What the relays don't have yet goes out from here, in its order; the handover follows it.
   await enqueue(chained(pkg.outbox, pkg.relays))
@@ -568,6 +589,7 @@ function readPackage(data: unknown): HandoffPackage | null {
     Array.isArray(p.seats) &&
     Number.isInteger(p.seatAt) &&
     events(p.outbox) &&
-    typeof p.game?.throws === "string"
+    typeof p.game?.throws === "string" &&
+    (p.public === undefined || p.public === true)
   return ok ? (p as HandoffPackage) : null
 }

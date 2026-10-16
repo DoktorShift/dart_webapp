@@ -1,6 +1,6 @@
 # Familie: Turnier
 
-Stand: P0.05 (nach Review Runde 3). Code: [`tournament.ts`](../../../lib/protocol/tournament.ts) (Typen, Schemas, Auslosung), [`tournament-state.ts`](../../../lib/protocol/tournament-state.ts) (Zustand). Schema: [`schemas/tournament.schema.json`](../schemas/tournament.schema.json). Vektoren: [`vectors/tournament.json`](../vectors/tournament.json). Rechte: [permissions.md](../permissions.md).
+Stand: P0.05 (nach Review Runde 3), `tournament.correct` mit `walkover` und „neu spielen“ seit P6.02–P6.04 (Review Runde 1). Code: [`tournament.ts`](../../../lib/protocol/tournament.ts) (Typen, Schemas, Auslosung), [`tournament-state.ts`](../../../lib/protocol/tournament-state.ts) (Zustand). Schema: [`schemas/tournament.schema.json`](../schemas/tournament.schema.json). Vektoren: [`vectors/tournament.json`](../vectors/tournament.json). Rechte: [permissions.md](../permissions.md).
 
 ## Zweck
 
@@ -46,7 +46,7 @@ Spieler setzen `created_at` selbst. Deshalb entscheidet nichts, was ein Spieler 
 | `tournament.assign` | Veranstalter | `slot`, `board`, `prev` | nach der Auslosung; nicht für freigegebene Spiele |
 | `tournament.result` | zugewiesenes Board oder Veranstalter | `slot`, `winner`, `score`, `walkover?` (`noShow` / `retired`), `match?`, `result?` | während `running` / `paused`; zählt sofort bei `approval: "board"` oder vom Veranstalter |
 | `tournament.approve` | Veranstalter | `slot`, `submission`, `prev` | macht ein eingereichtes Ergebnis gültig |
-| `tournament.correct` | Veranstalter | `slot`, `winner`, `score`, `reason`, `prev` | ändert ein freigegebenes Ergebnis; abhängige, schon begonnene Spiele werden als `affected` markiert, nie still neu besetzt |
+| `tournament.correct` | Veranstalter | `slot`, `winner`, `score`, `walkover?` (`noShow` / `retired`), `reason`, `prev` | ändert ein freigegebenes Ergebnis, auch in ein Freilos durch Nichtantreten oder Aufgabe; abhängige, schon begonnene Spiele werden als `affected` markiert, nie still neu besetzt. `winner: null` heißt „neu spielen“: Der Slot beginnt von vorn (kein Ergebnis, keine Einreichungen, kein Board, nicht mehr `affected`), wird also neu aufgerufen, gespielt und entschieden; eine alte Einreichung lässt sich danach nicht mehr freigeben |
 | `tournament.handover.offer` | Veranstalter | `to`, `prev` (letzter Datensatz der Übergabekette oder Turnier-ID), `expires` (höchstens 7 Tage nach `created_at`), `core` (aktuelle Änderung des Turnierkerns oder Turnier-ID) | bietet die Leitung an und nennt den Kern, den sie übergibt |
 | `tournament.handover.cancel` | Veranstalter | `offer` | zieht das offene Angebot zurück; gilt nicht gegen eine Annahme, die vor ihm einsortiert ist oder ihn nicht kannte (Ü5, Ü6 a) |
 | `tournament.handover.accept` | angebotene Person | `offer`, `core` (letzte Änderung des Turnierkerns, die sie sah: der Kern des Angebots oder ein späterer, der darauf aufbaut) | nur die erste Annahme zählt, bis `expires`; Turnier-ID bleibt; die Clubrolle der übernehmenden Person prüft das Protokoll nicht (unten); hält den übernommenen Kern fest (unten) |
@@ -60,6 +60,10 @@ Es gelten die Übergaberegeln Ü1 bis Ü6 in [conflicts.md](../conflicts.md#übe
 Bei Club-Turnieren prüft das Protokoll die Clubrolle der übernehmenden Person nicht: Die Rollengeschichte eines Clubs können Eigentümer und Admins zurückdatieren, und eine vollzogene Übergabe darf davon nicht abhängen (Vektor `club-tournament`).
 
 Vorgaben für `lib/tournaments`: Angebote gelten 24 Stunden; angeboten und angenommen wird nur auf einem Gerät, das gerade geladen hat, und beide Seiten sehen den übergebenen Kern (Phase, Auslosung); die Leitung eines Clubturniers wird nur Eigentümern, Admins und Turnierleitern des Clubs angeboten, eine übernehmende Person ohne diese Rolle zeigt „Erweitert“ als Hinweis. Plätze, Boards und Spiele werden nicht festgehalten: Dort kann der bisherige Veranstalter weiter zurückdatieren, etwa einen Gast oder ein Herausnehmen vor der Auslosung, das sie ungültig macht ([conflicts.md](../conflicts.md#nicht-festgehalten), bekannte Grenze zu PR-10).
+
+## Boards
+
+Ein Board-Gerät erhält seinen Zugang vom Veranstalter als Code `#tournament=TB1.<Turnier>.<Board>.<Geheimnis des Board-Schlüssels>.<Relays>` ([links.ts](../../../lib/protocol/links.ts)); der öffentliche Schlüssel steht im `tournament.board`-Datensatz, das Geheimnis nur im Code (ein Inhaber-Geheimnis wie der Match-Schlüssel eines privaten Spiels). Das Gerät gründet das aufgerufene Spiel als öffentliches Live-Spiel unter diesem Schlüssel mit `agreement.tournament = { id, slot }` ([match-live.md](match-live.md)); Leitung, Spieler und Zuschauer finden laufende Spiele über die Schlüssel der aktiven Boards (`lib/live/follow.ts` `watchFoundings`). Das Turnier selbst hat keinen Datensatz „Spiel läuft“; der Aufruf (`tournament.assign`) und die Gründung sind die Hinweise, und ein Board ohne Verbindung meldet sein Ergebnis später.
 
 ## Auslosung
 
@@ -87,4 +91,4 @@ Wie bei Clubs: reguläre, nicht ersetzte Datensätze; Kopien sendet der Veransta
 
 ## Vektoren
 
-`registration-and-admission`, `capacity`, `guests-and-claims`, `checkin-and-draw`, `draw-holds-against-backdated-player-records`, `boards-and-results`, `organizer-handover`, `former-organizer-backdates`, `handover-cancel-then-expired-accept`, `handover-completed-then-old-offer-accepted`, `handover-accept-names-older-core`, `handover-lagging-offer`, `handover-crossing-cancel`, `later-offer-on-stale-base`, `missing-registration`, `rules-locked-and-unknown`, `club-tournament`, `club-tournament-by-member`, `newer-engine`. Dazu Clubturniere mit dem Rollenverlauf eines echten Clubzustands in den Club-Vektoren `public-club-read-by-*` und `closed-club-partial-reader`.
+`registration-and-admission`, `capacity`, `guests-and-claims`, `checkin-and-draw`, `draw-holds-against-backdated-player-records`, `boards-and-results`, `correction-replays-match`, `organizer-handover`, `former-organizer-backdates`, `handover-cancel-then-expired-accept`, `handover-completed-then-old-offer-accepted`, `handover-accept-names-older-core`, `handover-lagging-offer`, `handover-crossing-cancel`, `later-offer-on-stale-base`, `missing-registration`, `rules-locked-and-unknown`, `club-tournament`, `club-tournament-by-member`, `newer-engine`. Dazu Clubturniere mit dem Rollenverlauf eines echten Clubzustands in den Club-Vektoren `public-club-read-by-*` und `closed-club-partial-reader`.

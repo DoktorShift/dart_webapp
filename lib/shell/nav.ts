@@ -36,6 +36,9 @@ export type NavAction =
   // Swaps the top screen for another one, e.g. a scanned invitation for the scanner. On a root
   // it pushes instead.
   | { type: "replaceTop"; entry: StackEntry; tab?: TabId }
+  // Merges params into a pushed screen, which stays where it is: a screen opened from a link
+  // names what it shows once it has loaded it (its title reads the params).
+  | { type: "update"; key: string; params: ScreenParams }
 
 export const initialNavState = (tab: TabId = "play"): NavState => ({
   tab,
@@ -68,6 +71,11 @@ export function navReducer(state: NavState, action: NavAction): NavState {
       const tab = action.tab ?? state.tab
       const stack = state.stacks[tab]
       return { ...withStack(state, tab, [...stack.slice(0, Math.max(0, stack.length - 1)), action.entry]), tab }
+    }
+    case "update": {
+      const tab = (Object.keys(state.stacks) as TabId[]).find((id) => state.stacks[id].some((e) => e.key === action.key))
+      if (!tab) return state
+      return withStack(state, tab, state.stacks[tab].map((e) => (e.key === action.key ? { ...e, params: { ...e.params, ...action.params } } : e)))
     }
   }
 }

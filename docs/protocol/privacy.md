@@ -36,7 +36,7 @@ Zusätzlich sieht jedes Relay die IP-Adresse und die Zeit jeder Verbindung; alle
 
 Signierte öffentliche Daten über Dritte lassen sich nicht zuverlässig zurückholen (PR-14). Deshalb:
 
-- **Gäste erscheinen in öffentlichen Datensätzen nur unter einem Alias**, den die Leitung wählt (Vorschlag „Gast 1“, „Gast 2“). Ein echter Name steht dort nur, wenn die Person zugestimmt hat; das hält `named: true` fest (`tournament.guest`). Ohne Zustimmung bleibt `named` weg, und die App schlägt einen neutralen Alias vor.
+- **Gäste erscheinen in öffentlichen Datensätzen nur unter einem Alias**, den die Leitung wählt (etwa „Gast 1“ oder ein Spitzname). Die App übernimmt genau, was die Leitung eintippt, und sagt dabei, dass Gäste mit diesem Namen für alle mit dem Link erscheinen. Ein echter Name steht dort nur, wenn die Person zugestimmt hat; das hält `named: true` fest (`tournament.guest`). Ohne Zustimmung bleibt `named` weg; die App setzt es nicht, sie fragt nicht nach einer Zustimmung.
 - In Spielen stehen Plätze als `alias` mit optionalem `pubkey`; ein Pubkey nur, wenn die Person selbst mit ihrem Profil beigetreten ist. Für Gäste ohne Profil gilt dasselbe wie im Turnier: ein neutraler Alias, außer `named: true` hält die Zustimmung fest.
 - Echte Namen von Gästen gehören in verschlüsselte Daten (private Datensätze, versiegelte Clubdaten), nie in Klartext-Events. Deshalb trägt eine Einladung im Klartext keine Bezeichnung (sonst `invalid_content`): „Für Tom“ steht nur in versiegelten Einladungen.
 - Öffentliche Zusagen (NIP-52-RSVP) sind eine Entscheidung je Person.

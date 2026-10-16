@@ -33,6 +33,9 @@ export interface BoardRecord extends Keyed {
   // The newest result this session published: its event and what it states (content.ts
   // resultKey; "void" for a withdrawn one).
   result: { event: string; key: string } | null
+  // A tournament's match: written in the clear, found by the authority's key (lib/live/board.ts
+  // goLive). Missing in a private match.
+  public?: true
 }
 
 // A board record as stored: one written before the board's records moved to the outbox of

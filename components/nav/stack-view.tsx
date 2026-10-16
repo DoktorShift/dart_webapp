@@ -9,7 +9,7 @@ import { useFocusReturn } from "@/components/nav/use-focus-return"
 import { useRegistryVersion } from "@/components/nav/use-registry"
 import { useT } from "@/components/i18n-provider"
 import { getScreen, type ScreenProps } from "@/lib/shell/registry"
-import type { StackEntry, TabId } from "@/lib/shell/nav"
+import type { ScreenParams, StackEntry, TabId } from "@/lib/shell/nav"
 import { cn } from "@/lib/utils"
 
 // The same push and pop as the app's full-screen flows (motion.ts).
@@ -164,12 +164,15 @@ export const StackView = memo(function StackView({
   root,
   entries,
   onBack,
+  onUpdate,
 }: {
   tab: TabId
   active: boolean
   root: StackRoot
   entries: readonly StackEntry[]
   onBack: () => void
+  // Merges params into the entry with that key (ScreenProps.setParams).
+  onUpdate: (key: string, params: ScreenParams) => void
 }) {
   const t = useT()
   useRegistryVersion()
@@ -186,7 +189,7 @@ export const StackView = memo(function StackView({
       title,
       node: (
         <ScreenFrame title={title} largeTitle={definition.largeTitle ?? true} backLabel={layers[layers.length - 1].title} onBack={onBack}>
-          <LazyContent component={Screen} props={{ params: entry.params }} />
+          <LazyContent component={Screen} props={{ params: entry.params, setParams: (params: ScreenParams) => onUpdate(entry.key, params) }} />
         </ScreenFrame>
       ),
     })

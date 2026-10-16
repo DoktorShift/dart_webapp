@@ -20,21 +20,24 @@ class Fenced extends Component<{ children: ReactNode }, { failed: boolean }> {
 // a wrapper with `className`. Renders nothing, not even the wrapper, while nothing is registered.
 // Without className the pieces go straight into the parent, so rows in a Group get its
 // separators, and a piece that renders nothing leaves no trace. `ref` is the wrapper: its
-// children are the pieces that show something for this game.
+// children are the pieces that show something for this game. `only` keeps the pieces with these
+// ids (a result primary's `pieces`).
 export function SlotItems<K extends SlotListId>({
   list,
   props,
   className,
+  only,
   ref,
 }: {
   list: K
   // The props for the piece with this id.
   props: (id: string) => SlotListProps[K]
   className?: string
+  only?: readonly string[]
   ref?: Ref<HTMLDivElement>
 }) {
   useRegistryVersion()
-  const items = getSlotItems(list)
+  const items = getSlotItems(list).filter((item) => !only || only.includes(item.id))
   if (items.length === 0) return null
   const pieces = items.map(({ id, Component: Piece }) => (
     <Fenced key={id}>

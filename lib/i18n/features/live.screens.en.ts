@@ -46,6 +46,7 @@ export const liveScreensEn: Widen<typeof liveScreensDe> = {
     expired: "The code has expired. The game stays here.",
     silent: "The other device didn't confirm the handover. The game stays here.",
     tooLong: "This game is too long to hand over. It stays here.",
+    onBoard: "A tournament game stays on the board it was called to.",
     again: "Show a new code",
   },
 

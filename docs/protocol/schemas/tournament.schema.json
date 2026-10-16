@@ -901,7 +901,7 @@
       "additionalProperties": true
     },
     "tournament.correct": {
-      "description": "The organizer corrects an approved result",
+      "description": "The organizer corrects an approved result (winner null: the match is played again)",
       "kind": 1180,
       "encryption": "seal",
       "type": "object",
@@ -937,6 +937,10 @@
           "minItems": 2,
           "maxItems": 2,
           "description": "Legs (or sets) won by the two sides"
+        },
+        "walkover": {
+          "enum": ["noShow", "retired"],
+          "description": "The new winner won without (finishing) the match"
         },
         "reason": {
           "type": "string",

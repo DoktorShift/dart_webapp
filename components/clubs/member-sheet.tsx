@@ -12,9 +12,10 @@ import { InlineStatus } from "@/components/common/inline-status"
 import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
-import { Confirm, SheetBody, SheetButton, useChange } from "@/components/clubs/common"
+import { SheetBody, SheetButton, useChange } from "@/components/clubs/common"
+import { Confirm } from "@/components/ui/confirm"
 import { clubAuthor, useClub } from "@/components/clubs/use-clubs"
-import { useNames } from "@/components/clubs/use-names"
+import { useProfileNames } from "@/components/profile/use-profile-names"
 import { giveRecognition } from "@/lib/badges/organizer"
 import { isLeader, type ClubView } from "@/lib/clubs/club"
 import { isConfirmedMember, offerOwnership, openOffer, removeMember, setRole } from "@/lib/clubs/membership"
@@ -37,7 +38,7 @@ export function MemberSheet({ view, state, member, open, onOpenChange }: { view:
   const nav = useNav()
   const describe = useChange()
   const { refresh } = useClub(view.id)
-  const names = useNames(member ? [member] : [])
+  const names = useProfileNames(member ? [member] : [])
   const [reason, setReason] = useState("")
   const [removing, setRemoving] = useState(false)
   const [offering, setOffering] = useState(false)

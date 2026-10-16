@@ -1388,6 +1388,63 @@ function tournamentCases() {
     )
   }
   {
+    const c = newCase(
+      "correction-replays-match",
+      "A correction without a winner has the match played again: the slot starts over (no result, no submissions, no board), so it is called, played and decided anew, and an old submission can no longer be approved. A correction can also turn a result into a walkover. Matches built on a corrected result are marked.",
+    )
+    c.put("found", "organizer", "tournament.found", cup({ capacity: 4, checkIn: false }), { at: 0 })
+    c.setRoot("found")
+    const root = c.root()
+    for (const p of ["p1", "p2", "p3", "p4"]) c.put(p, p, "tournament.register", {}, { at: 10, root })
+    for (const [i, p] of ["p1", "p2", "p3", "p4"].entries()) c.put(`admit-${p}`, "organizer", "tournament.admit", { participant: pub(p), prev: c.id(p) }, { at: 11 + i, root })
+    const field = [pub("p1"), pub("p2"), pub("p3"), pub("p4")]
+    c.put("draw", "organizer", "tournament.draw", { seed: SEED, seeded: [], order: order(SEED, field), prev: root }, { at: 20, root })
+    const B1 = hex16("board-1")
+    c.put("board-1", "organizer", "tournament.board", { board: B1, name: "Board 1", key: pub("board1"), prev: root }, { at: 30, root })
+    c.put("start", "organizer", "tournament.phase", { phase: "running", prev: c.id("draw") }, { at: 31, root })
+    c.put("semi-1", "organizer", "tournament.result", { slot: "R1-1", winner: pub("p1"), score: [2, 1] }, { at: 40, root })
+    c.put("semi-2", "organizer", "tournament.result", { slot: "R1-2", winner: pub("p3"), score: [2, 0] }, { at: 41, root })
+    c.put("call-final", "organizer", "tournament.assign", { slot: "R2-1", board: B1, prev: root }, { at: 42, root })
+    c.put("final", "board1", "tournament.result", { slot: "R2-1", winner: pub("p1"), score: [2, 0] }, { at: 43, root })
+    c.put("approve-final", "organizer", "tournament.approve", { slot: "R2-1", submission: c.id("final"), prev: c.id("call-final") }, { at: 44, root })
+    c.put("to-walkover", "organizer", "tournament.correct", { slot: "R1-2", winner: pub("p4"), score: [0, 0], walkover: "retired", reason: "Aufgegeben, falsch eingetragen", prev: c.id("semi-2") }, { at: 50, root })
+    c.put("replay", "organizer", "tournament.correct", { slot: "R2-1", winner: null, score: [0, 0], reason: "Neu spielen", prev: c.id("approve-final") }, { at: 60, root })
+    c.put("old-approval", "organizer", "tournament.approve", { slot: "R2-1", submission: c.id("final"), prev: c.id("replay") }, { at: 61, root })
+    c.put("call-again", "organizer", "tournament.assign", { slot: "R2-1", board: B1, prev: c.id("replay") }, { at: 70, root })
+    c.put("final-again", "board1", "tournament.result", { slot: "R2-1", winner: pub("p4"), score: [0, 2] }, { at: 71, root })
+    c.put("approve-again", "organizer", "tournament.approve", { slot: "R2-1", submission: c.id("final-again"), prev: c.id("call-again") }, { at: 72, root })
+    cases.push(
+      c.done(
+        {
+          applied: [
+            "found",
+            ...["p1", "p2", "p3", "p4"].sort((a, b) => (c.id(a) < c.id(b) ? -1 : 1)),
+            "admit-p1",
+            "admit-p2",
+            "admit-p3",
+            "admit-p4",
+            "draw",
+            "board-1",
+            "start",
+            "semi-1",
+            "semi-2",
+            "call-final",
+            "final",
+            "approve-final",
+            "to-walkover",
+            "replay",
+            "call-again",
+            "final-again",
+            "approve-again",
+          ],
+          rejected: [["old-approval", "result_unknown"]],
+          state: { phase: "running", slots: { "R1-2": { winner: pub("p4"), walkover: "retired", corrected: true }, "R2-1": { winner: pub("p4"), corrected: false, affected: false } } },
+        },
+        { dependents: { "R1-1": ["R2-1"], "R1-2": ["R2-1"] } },
+      ),
+    )
+  }
+  {
     const c = newCase("organizer-handover", "The organization changes only by offer and acceptance. Afterwards the former organizer's decisions are refused.")
     c.put("found", "organizer", "tournament.found", cup(), { at: 0 })
     c.setRoot("found")

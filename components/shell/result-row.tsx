@@ -7,7 +7,8 @@ import { cn } from "@/lib/utils"
 
 // The one row an area's piece in "result.actions" (lib/shell/registry.ts) is made of: the area's
 // icon, one line that shrinks before it wraps, a tone that says how things stand, and at the end
-// a way to put the row away ("Später", an X) or the chevron of a row that leads on. The result is
+// a way to put the row away ("Später", an X) or the chevron of a row that leads on; a row that
+// leads nowhere only says how things stand (a status, without onClick). The result is
 // one fixed screen, so the row is 48 pt, and 44 pt without the icon on short screens (`short`).
 // The row keeps the placement contract itself: in the result's top bar ("bar", a phone in
 // landscape) it is one short line in the bar's colour, without box, icon or trailing part.
@@ -29,7 +30,8 @@ export interface ResultRowProps {
   // How things stand, said by the words as well: an invitation to act (accent, in the primary
   // colour), done (success) or something worth a look (warning).
   tone?: ResultRowTone
-  onClick: () => void
+  // What the row leads to; without one the row only says how things stand (a status).
+  onClick?: () => void
   placement: "row" | "bar"
   trailing?: ResultRowTrailing
   ariaLabel?: string
@@ -43,36 +45,36 @@ const TONES: Record<ResultRowTone, { box: string; pressed: string }> = {
 }
 
 export function ResultRow({ icon: Icon, label, tone = "neutral", onClick, placement, trailing, ariaLabel }: ResultRowProps) {
+  const Main = onClick ? "button" : "p"
+  const main = onClick ? { type: "button" as const, onClick } : { role: "status" }
   if (placement === "bar") {
     return (
-      <button
-        type="button"
-        onClick={onClick}
+      <Main
+        {...main}
         aria-label={ariaLabel}
         className="flex h-11 min-w-0 max-w-full items-center rounded-xl px-2 text-[0.9375rem] font-medium text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:bg-secondary/70"
       >
         <FitText minScale={0.7} className="leading-snug">
           {label}
         </FitText>
-      </button>
+      </Main>
     )
   }
 
   const { box, pressed } = TONES[tone]
   return (
     <div className={cn("flex min-h-12 items-stretch divide-x overflow-hidden rounded-2xl ring-1 ring-inset short:min-h-11", box)}>
-      <button
-        type="button"
-        onClick={onClick}
+      <Main
+        {...main}
         aria-label={ariaLabel}
-        className={cn("flex min-w-0 flex-1 items-center gap-3 py-1 pl-4 pr-3 text-left text-[1.0625rem] font-medium transition-colors focus-visible:outline-none", pressed)}
+        className={cn("flex min-w-0 flex-1 items-center gap-3 py-1 pl-4 pr-3 text-left text-[1.0625rem] font-medium transition-colors focus-visible:outline-none", onClick && pressed)}
       >
         <Icon className="h-5 w-5 shrink-0 short:hidden" aria-hidden />
         <FitText minScale={0.7} className="flex-1 leading-snug">
           {label}
         </FitText>
         {trailing?.kind === "chevron" && <ChevronRight className="-mr-1 h-5 w-5 shrink-0 text-muted-foreground/70" aria-hidden="true" />}
-      </button>
+      </Main>
       {trailing && trailing.kind !== "chevron" && (
         <button
           type="button"

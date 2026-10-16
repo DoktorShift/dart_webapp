@@ -8,13 +8,14 @@ import { InlineStatus } from "@/components/common/inline-status"
 import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
-import { Confirm, taskLabel, useChange } from "@/components/clubs/common"
+import { taskLabel, useChange } from "@/components/clubs/common"
+import { Confirm } from "@/components/ui/confirm"
 import { DecideSheet, EditSheet, InvitesSheet, type Decision } from "@/components/clubs/manage-sheets"
 import { RequestList } from "@/components/clubs/request-list"
 import { AwardsRow, useMissingAwards } from "@/components/clubs/season-awards"
 import { CLUB_SCREENS } from "@/components/clubs/screens"
 import { clubAuthor, useClub } from "@/components/clubs/use-clubs"
-import { useNames } from "@/components/clubs/use-names"
+import { useProfileNames } from "@/components/profile/use-profile-names"
 import { clubTasks, isManager } from "@/lib/clubs/club"
 import { clubExport } from "@/lib/clubs/export"
 import { cancelOffer, offerOwnership, openOffer, updateInfo } from "@/lib/clubs/membership"
@@ -38,7 +39,7 @@ export default function ManageScreen({ params }: ScreenProps) {
   const describe = useChange()
   const { view, refresh } = useClub(params.club ?? null)
   const state = view?.state
-  const names = useNames(state?.offer ? [state.offer.to] : [])
+  const names = useProfileNames(state?.offer ? [state.offer.to] : [])
   const awards = useMissingAwards(view)
   const [deciding, setDeciding] = useState<Decision | null>(null)
   const [editing, setEditing] = useState(false)

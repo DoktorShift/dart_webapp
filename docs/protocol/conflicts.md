@@ -111,6 +111,8 @@ Anmeldeschluss, Kapazität und Warteliste entscheidet der Veranstalter, nicht de
 6. **Clubrollen außerhalb des Clubs.** Ob ein Turnier zu einem Club gehört (`club.verified`), folgt aus der Rolle des Gründers zur Zeit der Gründung; wer Rollen des Clubs ändern darf, kann eine Herabstufung davor datieren und nimmt dem Turnier damit die Zuordnung (das Turnier selbst bleibt, Test „a club's tournament …“). Ebenso hängt an der Rollengeschichte, wer Clubauszeichnungen vergeben durfte (`mayIssueClubBadge`).
 7. **Gruppenlinks** ([Einladungen](#einladungen)). Wer den Link hat, kann einen Beitritt vor Widerruf, Ablauf oder Rollenende des Erstellers datieren.
 8. **Mitgliedergrenze geschlossener Clubs** ([Einladungen](#einladungen)). An der Grenze von 100 Mitgliedern ohne eigene Höchstzahl entscheiden die Zeitstempel der Beitretenden (Vektor `member-limit-displacement`).
+9. <a id="auslosung-ohne-vorher-bekannten-seed"></a>**Auslosung ohne vorher bekannten Seed.** Die Festlegung beweist nur, dass die Leitung nach ihr nicht mehr ausprobiert hat (Recherche PR-20); wann sie öffentlich war, verrät kein Zeitstempel. Die App legt sie deshalb mit der Gründung fest und bewahrt den Seed vor dem Senden auf. Fehlt er auf dem Gerät der Leitung (zweites Gerät, Übergabe, verlorene Daten), legt die App eine neue Festlegung als eigenen Datensatz fest und lost erst, wenn sie bei den Relays ist, nie Festlegung und Aufdeckung in einem Schritt. Wer die Festlegung erst kurz vor der Auslosung sah, kann daraus wenig schließen; das bleibt eine Vertrauensfrage.
+10. **Rückdatierter Rückzug nach der Auslosung.** Ein Spieler datiert seinen eigenen Rückzug. Spielplan und Tabellen wenden ihn dort an, wo er im Abspielprotokoll steht (`lib/tournaments/read.ts`): Ein vor ein schon eingetragenes Ergebnis datierter Rückzug gibt dieses Spiel kampflos an den Gegner, und Ergebnisse, die darauf aufbauten, passen nicht mehr. Sie bleiben, wie sie eingetragen wurden, und erscheinen der Leitung als Aufgabe („passt nicht zum Spielplan“); sie entscheidet neu. Schaden nimmt dabei nur der zurückziehende Spieler selbst.
 
 ## Sitzungen und Widerruf
 
@@ -161,7 +163,7 @@ Unter „Erweitert“ sichtbar, nie in normalen Ansichten.
 | `seed_not_committed` / `seed_mismatch` | keine Festlegung / Seed öffnet sie nicht |
 | `draw_mismatch` | Feld oder Reihenfolge der Auslosung stimmt nicht |
 | `board_unknown` / `board_not_assigned` | kein aktives Board / Spiel einem anderen Board zugewiesen |
-| `result_unknown` / `already_approved` | kein solches Ergebnis / schon freigegeben (Korrektur nutzen) |
+| `result_unknown` / `already_approved` | kein solches Ergebnis (auch: eine Einreichung von vor „neu spielen“) / schon freigegeben (Korrektur nutzen) |
 | `rules_locked` | Regeln nach der Auslosung fest |
 | `session_unknown` / `session_superseded` / `session_expired` / `session_mismatch` | Sitzung unbekannt / übergeben / außerhalb des Fensters / falsche eingebettete Berechtigung |
 | `not_a_player` | nicht der Spieler dieses Platzes |

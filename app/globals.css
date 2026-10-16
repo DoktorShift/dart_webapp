@@ -105,3 +105,12 @@
     user-select: text;
   }
 }
+
+/* A printable sheet (the tournament's pairings: components/tournaments/print-screen.tsx) is put
+   next to the app while its screen is open; printing shows only the sheet, without the app's
+   tab bar, sidebar or navigation, and lets it run over as many pages as it needs. */
+@media print {
+  body:has(> [data-print-sheet]) > :not([data-print-sheet]) {
+    display: none !important;
+  }
+}

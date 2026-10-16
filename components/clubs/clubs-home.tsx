@@ -6,6 +6,7 @@ import { Avatar } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
+import { CardSection } from "@/components/common/card-section"
 import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
@@ -44,18 +45,18 @@ export default function ClubsHome({ fallback }: { fallback: ReactNode }) {
   return (
     <>
       {invitations.length > 0 && (
-        <Cards title={tx.home.invitations}>
+        <CardSection title={tx.home.invitations}>
           {invitations.map((view) => (
             <ClubCard key={view.id} view={view} onOpen={() => nav.push(SCREENS.clubInvite, { club: view.id })} />
           ))}
-        </Cards>
+        </CardSection>
       )}
       {mine.length > 0 && (
-        <Cards title={tx.home.mine}>
+        <CardSection title={tx.home.mine}>
           {mine.map((view) => (
             <ClubCard key={view.id} view={view} onOpen={(params) => nav.push(CLUB_SCREENS.view, { club: view.id, name: view.info?.name ?? "", ...params })} />
           ))}
-        </Cards>
+        </CardSection>
       )}
       <div className="mt-6 grid gap-2 min-[360px]:grid-cols-2">
         <Button onClick={() => runAction(SCREENS.clubCreate, nav)} className="h-12 whitespace-normal rounded-xl text-[1.0625rem] font-semibold">
@@ -71,15 +72,6 @@ export default function ClubsHome({ fallback }: { fallback: ReactNode }) {
       </div>
       {discover}
     </>
-  )
-}
-
-function Cards({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="mt-8 first:mt-6">
-      <h2 className="mb-2 px-4 text-[0.8125rem] text-muted-foreground">{title}</h2>
-      <div className="flex flex-col gap-3">{children}</div>
-    </section>
   )
 }
 

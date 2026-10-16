@@ -2,9 +2,8 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import { CheckCode } from "@/components/common/check-code"
-import { QRCodeView } from "@/components/common/qr-code-view"
 import { InlineStatus } from "@/components/common/inline-status"
-import { ShareActions } from "@/components/common/share-actions"
+import { SheetCode } from "@/components/common/sheet-code"
 import { XSHORT, useMediaQuery } from "@/components/common/use-media-query"
 import { gameHandedOver } from "@/components/live/gate"
 import { sameNamed, shortKey, usePublicNames, type PublicName } from "@/components/live/use-public-names"
@@ -41,9 +40,6 @@ import { cn } from "@/lib/utils"
 
 const primary = "h-14 w-full rounded-2xl text-[1.0625rem] font-semibold"
 const secondary = "h-12 w-full rounded-2xl text-[1.0625rem]"
-// A code in a sheet leaves room for the share buttons below it (and a caption), even on an
-// iPhone SE (548 pt).
-const QR_IN_SHEET = "32dvh"
 
 export interface SheetProps {
   open: boolean
@@ -100,49 +96,6 @@ function Done({ onClose }: { onClose: () => void }) {
   )
 }
 
-// The code with what goes with it. On a phone in landscape (xshort) a sheet has about 140 pt
-// for its body: the code sits on the left, smaller, and on the right what must stay in view
-// without a scroll: the description (`description`, shown in the sheet's header elsewhere),
-// the share buttons, and `children` (the seats); the caption gives way. Elsewhere everything
-// stands below the code.
-function CodeWithActions({
-  value,
-  label,
-  caption,
-  description,
-  share,
-  children,
-}: {
-  value: string
-  label: string
-  caption?: string
-  description?: string
-  share: { url: string; title?: string; text?: string }
-  children?: ReactNode
-}) {
-  const xshort = useMediaQuery(XSHORT)
-  if (!xshort)
-    return (
-      <>
-        <QRCodeView value={value} label={label} caption={caption} share={share} maxSize={QR_IN_SHEET} />
-        {children}
-      </>
-    )
-  return (
-    <div className="flex items-start gap-4">
-      {/* The code's size is set here, not by the figure's own cap, so the column beside it keeps its room. */}
-      <div className="w-[45dvh] shrink-0">
-        <QRCodeView value={value} label={label} className="w-full" />
-      </div>
-      <div className="min-w-0 flex-1">
-        {description && <p className="mb-3 text-[0.9375rem] leading-snug text-muted-foreground">{description}</p>}
-        <ShareActions url={share.url} title={share.title} text={share.text} />
-        {children}
-      </div>
-    </div>
-  )
-}
-
 // ---- Zuschauen lassen ------------------------------------------------------------------------
 
 export function WatchSheet({ open, onClose, match, view, start }: SheetProps) {
@@ -155,7 +108,7 @@ export function WatchSheet({ open, onClose, match, view, start }: SheetProps) {
     <Sheet open={open} onOpenChange={(next) => !next && onClose()} title={tx.watchSheet.title} description={xshort ? undefined : tx.watchSheet.description}>
       <div className="min-h-0 overflow-y-auto overscroll-contain">
         {view && started.state === "ready" ? (
-          <CodeWithActions
+          <SheetCode
             value={linkFor("watch", view.watch)}
             label={tx.watchSheet.qrLabel}
             description={tx.watchSheet.description}
@@ -238,9 +191,9 @@ export function PlayersSheet({ open, onClose, match, view, start }: SheetProps) 
         ) : failed ? (
           <Starting state="failed" retry={() => setRound((n) => n + 1)} />
         ) : boardLink && seating ? (
-          <CodeWithActions value={boardLink} label={s.qrLabel} caption={s.codeValid(clock(t, seating.expires))} share={{ url: boardLink, title: s.title }}>
+          <SheetCode value={boardLink} label={s.qrLabel} caption={s.codeValid(clock(t, seating.expires))} share={{ url: boardLink, title: s.title }}>
             {seats}
-          </CodeWithActions>
+          </SheetCode>
         ) : (
           <>
             <Starting state="starting" retry={started.retry} />
@@ -361,7 +314,7 @@ export function HandoffSheet({ open, onClose, match, start, closeGame }: SheetPr
   let body: ReactNode
   if (!ready || !offer) body = <Starting state={started.state === "failed" ? "failed" : "starting"} retry={started.retry} />
   else if (offer.step === "waiting")
-    body = <CodeWithActions value={linkFor("handoff", offer.code)} label={s.qrLabel} description={s.description} share={{ url: linkFor("handoff", offer.code), title: s.title }} />
+    body = <SheetCode value={linkFor("handoff", offer.code)} label={s.qrLabel} description={s.description} share={{ url: linkFor("handoff", offer.code), title: s.title }} />
   else if (offer.step === "asked")
     // Side by side on a phone in landscape, so both buttons stay in view with the code.
     body = (
@@ -381,8 +334,8 @@ export function HandoffSheet({ open, onClose, match, start, closeGame }: SheetPr
   else
     body = (
       <div className="grid gap-4 pb-1">
-        <InlineStatus tone="error">{offer.reason === "expired" ? s.expired : offer.reason === "too-long" ? s.tooLong : s.silent}</InlineStatus>
-        {offer.reason !== "too-long" && (
+        <InlineStatus tone="error">{offer.reason === "expired" ? s.expired : offer.reason === "too-long" ? s.tooLong : offer.reason === "board" ? s.onBoard : s.silent}</InlineStatus>
+        {(offer.reason === "expired" || offer.reason === "silent") && (
           <Button onClick={() => setRound((n) => n + 1)} className={primary}>
             {s.again}
           </Button>

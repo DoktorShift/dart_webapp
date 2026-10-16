@@ -10,7 +10,7 @@ import { InlineStatus } from "@/components/common/inline-status"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
 import { SheetBody, SheetButton, personName, shortId } from "@/components/clubs/common"
-import { useNames } from "@/components/clubs/use-names"
+import { useProfileNames } from "@/components/profile/use-profile-names"
 import { useOwnProfile } from "@/components/profile/use-profile"
 import type { ClubView } from "@/lib/clubs/club"
 import { CLUB_EXTRA } from "@/lib/clubs/extra"
@@ -44,7 +44,7 @@ export function StartGameSheet({
   const own = useOwnProfile()
   const me = view.me.pubkey
   const members = Object.values(state.members).filter((m) => m.pubkey !== me)
-  const names = useNames(members.map((m) => m.pubkey))
+  const names = useProfileNames(members.map((m) => m.pubkey))
   const nameOf = (pubkey: string) => names(pubkey).name ?? tx.unnamed
   const sorted = [...members].sort((a, b) => nameOf(a.pubkey).localeCompare(nameOf(b.pubkey)))
   const [chosen, setChosen] = useState<string[]>(me ? [me] : [])

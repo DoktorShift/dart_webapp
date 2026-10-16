@@ -451,13 +451,20 @@ function apply(s: TournamentState, r: AnyRecord, ctx: Context): Problem {
       if (!slot?.approved) return ["result_unknown", "only an approved result is corrected"]
       if (c.prev !== slot.head) return stale(c.prev, "the slot was changed meanwhile")
       if (c.winner !== null && !s.participants[c.winner]) return ["not_registered", "the winner is not in the tournament"]
-      slot.approved = { event: r.id, winner: c.winner, score: c.score, at: r.created_at, corrected: true, reason: c.reason }
       slot.head = r.id
       // Matches built on the old result are marked, never silently re-paired.
       for (const dependent of opts.dependents?.(c.slot, s) ?? []) {
         const d = s.slots[dependent]
         if (d && (d.board !== undefined || d.approved || d.submissions.length > 0)) d.affected = true
       }
+      if (c.winner === null) {
+        // Played again: the slot starts over, to be called, played and decided like a new one;
+        // what was submitted for it before no longer counts.
+        slot.approved = null
+        slot.submissions = []
+        slot.affected = false
+        delete slot.board
+      } else slot.approved = { event: r.id, winner: c.winner, score: c.score, ...(c.walkover ? { walkover: c.walkover } : {}), at: r.created_at, corrected: true, reason: c.reason }
       return null
     }
 
