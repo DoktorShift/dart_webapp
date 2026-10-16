@@ -8,7 +8,7 @@ Eine Kind-Nummer je NIP-01-Bereich; der Datensatztyp ist ein NIP-32-Label. Relay
 
 | Kind | Bereich | Inhalt | Familien |
 | --- | --- | --- | --- |
-| **1180** | regulär | Unveränderliche Datensätze: Gründungen, Änderungen, Anfragen, Ergebnisse, Bestätigungen, Log-Stücke | [club](families/club.md), [tournament](families/tournament.md), [session-authorization](families/session-authorization.md), [match-result](families/match-result.md); als ungesignetes Rumor in [payment-request](families/payment-request.md) |
+| **1180** | regulär | Unveränderliche Datensätze: Gründungen, Änderungen, Anfragen, Ergebnisse, Bestätigungen, Log-Stücke, Auszeichnungsnachweise | [club](families/club.md), [tournament](families/tournament.md), [session-authorization](families/session-authorization.md), [match-result](families/match-result.md), [badges](families/badges.md); als ungesignetes Rumor in [payment-request](families/payment-request.md) |
 | **31180** | adressierbar | Aktueller Zustand unter `d`: Live-Spielstand (`d` = Match-ID), Statistikkarte (`d` = `stats`) | [match-live](families/match-live.md), [profile](families/profile.md) |
 | **21180** | flüchtig | Kopplungs- und Board-Nachrichten, nie gespeichert | [pairing](families/pairing.md), [board-join](families/board-join.md) |
 | 30078 | NIP-78 | Private, verschlüsselte Datensätze des Profils mit nicht sprechendem `d` | [private-records](families/private-records.md) |
@@ -74,14 +74,14 @@ Die vollständigen Inhaltsschemas stehen maschinenlesbar in [`schemas/`](schemas
 
 | Familie | Typen |
 | --- | --- |
-| Club (1180) | `club.found`, `club.update`, `club.invite`, `club.invite.revoke`, `club.join`, `club.accept`, `club.decline`, `club.leave`, `club.remove`, `club.role`, `club.owner.offer`, `club.owner.cancel`, `club.owner.accept`, `club.keys`, `club.season`, `club.season.rules`, `club.season.end`, `club.result`, `club.date` |
+| Club (1180) | `club.found`, `club.update`, `club.invite`, `club.invite.revoke`, `club.join`, `club.accept`, `club.decline`, `club.leave`, `club.remove`, `club.role`, `club.owner.offer`, `club.owner.cancel`, `club.owner.accept`, `club.keys`, `club.season`, `club.season.rules`, `club.season.end`, `club.result`, `club.date`, `club.game`, `club.rsvp` |
 | Turnier (1180) | `tournament.found`, `tournament.update`, `tournament.phase`, `tournament.seed`, `tournament.draw`, `tournament.register`, `tournament.withdraw`, `tournament.admit`, `tournament.waitlist`, `tournament.remove`, `tournament.guest`, `tournament.claim`, `tournament.link`, `tournament.checkin`, `tournament.board`, `tournament.board.revoke`, `tournament.assign`, `tournament.result`, `tournament.approve`, `tournament.correct`, `tournament.handover.offer`, `tournament.handover.cancel`, `tournament.handover.accept` |
 | Match (1180) | `match.session`, `match.seat`, `match.result`, `match.log`, `match.confirm` |
 | Match (31180) | `match.live` |
 | Profil (31180) | `profile.stats` |
 | Zahlung (Rumor, 1180) | `payment.request` |
 | Handshake (21180) | Bereich `pair` oder `board` als Label; der Nachrichtentyp steht im verschlüsselten Inhalt |
-| Auszeichnung (NIP-58) | `badge.definition` (30009), `badge.award` (8) |
+| Auszeichnung | `badge.evidence` (1180); im NIP-58-Format `badge.definition` (30009), `badge.award` (8) |
 
 ## Grenzen
 

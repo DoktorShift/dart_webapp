@@ -3,21 +3,28 @@ import { countOperators, isPublished, mergeRelays } from "../nostr/relays.ts"
 import type { NostrEvent } from "../nostr/types.ts"
 import { dbGetAll, dbWrite, onStorageChange, type Keyed, type WriteOp } from "../storage/db.ts"
 
-// The persistent outbox (docs/decisions/0002 §5, PLAN.md "Zuverlässige Speicherung"): signed
-// events wait here, in IndexedDB, until relays have them. It knows nothing about profiles, games
-// or clubs: callers hand over an event, its relays and a delivery rule.
+// The persistent outbox (docs/decisions/0002 §5, PLAN.md "Zuverlässige Speicherung"): the one
+// way signed events leave the device. They wait here, in IndexedDB, until relays have them. It
+// knows nothing about profiles, games or clubs: callers hand over an event, its relays, a
+// delivery rule and, where order matters, the events it goes out after.
 //
-//   await enqueue([{ event, relays }], { rule: "published", coalesce: true })
+//   await enqueue([{ event, relays, after: [founding.id] }], { rule: "published", coalesce: true })
 //   const [status] = await deliverNow([event.id])   // one attempt right away, if the caller waits for it
 //   await deliveryStatus(event.id)                   // later: waiting, delivered or refused; null once gone
 //   await sendWaitingNow()                           // on request: everything waiting, backoff or not
+//   await pendingEvents(select)                      // what another device takes over (and withdraw() here)
 //
 // - Rules: "published" (the default) is met once relays of two operators confirmed the event (OK
 //   true); "any" once one relay did (a live score, where the next one follows soon). Retrying also
 //   ends when every relay answered for good, whatever the rule.
 // - Answers: OK true (also "duplicate:") is a confirmed copy; "invalid:", "blocked:", "restricted:"
 //   and "pow:" are final refusals; everything else ("rate-limited:", "mute:", "error:", no answer,
-//   no connection) is tried again with capped exponential backoff and jitter.
+//   no connection) is tried again with capped exponential backoff and jitter. "mute:" is a relay's
+//   current policy towards a key, not a verdict on the event, so it is tried again like
+//   "rate-limited:"; a refusal that never lifts ends with the week below.
+// - Order: an entry goes out once each event in its `after` has a copy on some relay, or is no
+//   longer here (done, given up, never queued). One copy is the bar, the same as rule "any": a
+//   reader merges what every relay has, and the earlier event is on its way to the rest.
 // - coalesce: of replaceable and addressable events only the newest per coordinate stays (a newer
 //   live score replaces the waiting one); an older one handed over later is dropped.
 // - Copies still missing on some relay once the rule is met are sent again on every start of the
@@ -40,6 +47,8 @@ export interface EnqueueOptions {
 export interface Delivery {
   event: NostrEvent
   relays: readonly string[]
+  // Ids of the events this one goes out after (see the header).
+  after?: readonly string[]
 }
 
 // One relay's last answer.
@@ -59,6 +68,7 @@ interface Entry extends Keyed {
   rule: DeliveryRule
   // The coordinate of a coalesced event.
   coalesce: string | null
+  after: string[]
   answers: Record<string, RelayAnswer>
   attempts: number
   queuedAt: number
@@ -111,6 +121,31 @@ const openRelays = (entry: Entry) => entry.relays.filter((url) => !isFinal(entry
 function ruleMet(entry: Entry) {
   const confirmed = confirmedOf(entry)
   return entry.rule === "any" ? confirmed.length > 0 : isPublished(confirmed)
+}
+
+// Its turn: every event it goes out after has a copy somewhere, or is no longer here.
+const ready = (entry: Entry, entries: Map<string, Entry>) =>
+  entry.after.every((id) => {
+    const before = entries.get(id)
+    return !before || confirmedOf(before).length > 0
+  })
+
+// Oldest first, and an entry after the ones it goes out after.
+function inOrder(entries: readonly Entry[]): Entry[] {
+  const byId = new Map(entries.map((e) => [e.id, e]))
+  const ordered: Entry[] = []
+  const placed = new Set<string>()
+  const place = (entry: Entry) => {
+    if (placed.has(entry.id)) return
+    placed.add(entry.id)
+    for (const id of entry.after) {
+      const before = byId.get(id)
+      if (before) place(before)
+    }
+    ordered.push(entry)
+  }
+  for (const entry of [...entries].sort((a, b) => a.queuedAt - b.queuedAt)) place(entry)
+  return ordered
 }
 
 // The wait before attempt number `attempts + 1`: doubling from 5 s up to 10 min, half of it fixed
@@ -166,8 +201,8 @@ const putEntry = (entry: Entry): WriteOp => ({ store: "outbox", put: entry })
 // ---- Adding -----------------------------------------------------------------------------------
 
 // Queues signed events for their relays. An event already queued gets the new relays added and
-// is due again; a coalesced one older than a queued version of its coordinate is dropped.
-// Resolves once the queue is stored, before anything is sent.
+// is due again (its order stays as first queued); a coalesced one older than a queued version of
+// its coordinate is dropped. Resolves once the queue is stored, before anything is sent.
 export async function enqueue(deliveries: readonly Delivery[], options: EnqueueOptions = {}, now: Clock = Date.now): Promise<void> {
   if (deliveries.length === 0) return
   await withLock(true, async () => {
@@ -195,7 +230,7 @@ export async function enqueue(deliveries: readonly Delivery[], options: EnqueueO
           ops.set(old.id, { store: "outbox", delete: old.id })
         }
       }
-      put({ id: event.id, event, relays, rule: options.rule ?? "published", coalesce, answers: {}, attempts: 0, queuedAt: now(), retryAt: now(), sendingUntil: null })
+      put({ id: event.id, event, relays, rule: options.rule ?? "published", coalesce, after: [...(delivery.after ?? [])], answers: {}, attempts: 0, queuedAt: now(), retryAt: now(), sendingUntil: null })
     }
     await dbWrite([...ops.values()])
   })
@@ -206,13 +241,14 @@ export async function enqueue(deliveries: readonly Delivery[], options: EnqueueO
 
 // ---- Sending ----------------------------------------------------------------------------------
 
-// One round: picks entries under the lock (`choose`, among those not final and not leased) and
-// leases them, sends to their relays without a final answer, then merges the answers under the
-// lock again. Null when `wait` is false and another tab or call holds the lock.
+// One round: picks entries under the lock (`choose`, among those not final, not leased and whose
+// turn it is) and leases them, sends to their relays without a final answer, then merges the
+// answers under the lock again. Null when `wait` is false and another tab or call holds the lock.
 async function sendRound(choose: (open: Entry[], at: number) => Entry[], wait: boolean, now: Clock): Promise<Entry[] | null> {
   const picked = await withLock(wait, async () => {
     const at = now()
-    const open = (await readEntries()).filter((e) => openRelays(e).length > 0 && (e.sendingUntil ?? 0) <= at)
+    const entries = new Map((await readEntries()).map((e) => [e.id, e]))
+    const open = [...entries.values()].filter((e) => openRelays(e).length > 0 && (e.sendingUntil ?? 0) <= at && ready(e, entries))
     const chosen = choose(open, at)
     await dbWrite(chosen.map((e) => putEntry({ ...e, sendingUntil: at + LEASE_MS })))
     return chosen
@@ -288,9 +324,25 @@ export async function deliveryStatus(id: string): Promise<DeliveryStatus | null>
   return entry ? statusOf(entry) : null
 }
 
-// Everything in the outbox, oldest first: waiting events, and delivered ones still missing copies.
+// Everything in the outbox in sending order: waiting events, and delivered ones still missing
+// copies.
 export async function outboxStatus(): Promise<DeliveryStatus[]> {
-  return (await readEntries()).sort((a, b) => a.queuedAt - b.queuedAt).map(statusOf)
+  return inOrder(await readEntries()).map(statusOf)
+}
+
+// The events whose rule isn't met yet among those `select` picks, in sending order: what a
+// handoff carries to the device that sends them from now on.
+export async function pendingEvents(select: (event: NostrEvent) => boolean): Promise<NostrEvent[]> {
+  return inOrder((await readEntries()).filter((e) => select(e.event) && !ruleMet(e))).map((e) => e.event)
+}
+
+// Takes the selected events out, sent or not: another device sends them from now on.
+export async function withdraw(select: (event: NostrEvent) => boolean): Promise<void> {
+  await withLock(true, async () => {
+    const gone = (await readEntries()).filter((e) => select(e.event))
+    await dbWrite(gone.map((e): WriteOp => ({ store: "outbox", delete: e.id })))
+  })
+  schedule()
 }
 
 export interface OutboxCounts {
@@ -320,13 +372,15 @@ let resumed = false
 // is sending counts as due once its lease ends, not at its retryAt: a round can't pick it before,
 // so a wake-up at retryAt would only find nothing and schedule the next one at once, in every
 // open tab, as long as the send lasts. The merge rewrites the entry and announces that, so the
-// tab wakes up earlier when the answers are in.
+// tab wakes up earlier when the answers are in. An entry waiting for its turn isn't due by
+// itself, for the same reason: the answers to the events before it announce themselves.
 function schedule(atLeastMs = 0) {
   if (!resumed) return
   void readEntries().then(
     (entries) => {
       clearTimeout(timer)
-      const due = Math.min(...entries.flatMap((e) => (e.retryAt === null ? [] : [Math.max(e.retryAt, e.sendingUntil ?? 0)])))
+      const byId = new Map(entries.map((e) => [e.id, e]))
+      const due = Math.min(...entries.flatMap((e) => (e.retryAt === null || !ready(e, byId) ? [] : [Math.max(e.retryAt, e.sendingUntil ?? 0)])))
       if (!Number.isFinite(due)) return
       timer = setTimeout(() => void flushDue(), Math.min(Math.max(atLeastMs, due - Date.now()), 2 ** 31 - 1))
       ;(timer as { unref?: () => void }).unref?.()

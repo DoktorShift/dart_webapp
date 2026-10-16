@@ -1,8 +1,10 @@
 import type { EventTemplate } from "../nostr/types.ts"
-import { FORMAT_VERSION, KIND_BADGE_AWARD, KIND_BADGE_DEFINITION, KIND_PROFILE_BADGES, LABEL_NAMESPACE, MAX_EVENT_BYTES } from "./kinds.ts"
+import type { RecordSpec } from "./common.ts"
+import { MODE_ID, shortText } from "./common.ts"
+import { FORMAT_VERSION, KIND_BADGE_AWARD, KIND_BADGE_DEFINITION, KIND_PROFILE_BADGES, KIND_RECORD, LABEL_NAMESPACE, MAX_EVENT_BYTES } from "./kinds.ts"
 import type { Reason } from "./reasons.ts"
 import { ProtocolError } from "./reasons.ts"
-import { utf8Length } from "./schema.ts"
+import { int, obj, opt, refine, str, time, utf8Length } from "./schema.ts"
 import type { SignedEvent } from "./tags.ts"
 import { byReplayOrder, HEX64, oversizedTag, readLabels, signedEventBytes, tagValue, tagValues } from "./tags.ts"
 
@@ -12,7 +14,8 @@ import { byReplayOrder, HEX64, oversizedTag, readLabels, signedEventBytes, tagVa
 // rests on) and the occasion ("occasion"), so the same badge for the same occasion counts
 // once however often it is delivered or re-signed. Issuers are the club or tournament
 // organizer, or — marked "Selbst erreicht" — the player for their own milestone. There is no
-// BlueLine issuer key (docs/decisions/0001, F3).
+// BlueLine issuer key (docs/decisions/0001, F3). Where no other record is the evidence (a
+// milestone in the player's own game, a recognition), the issuer writes one: badge.evidence.
 
 export const BADGE_SCOPES = ["self", "club", "tournament", "recognition"] as const
 export type BadgeScope = (typeof BADGE_SCOPES)[number]
@@ -39,6 +42,31 @@ export const badgeD = (b: Pick<BadgeDefinitionInput, "badge" | "version" | "scop
   b.scopeId ? `blueline:${b.scope}:${b.scopeId}:${b.badge}:v${b.version}` : `blueline:${b.scope}:${b.badge}:v${b.version}`
 
 const D_PATTERN = /^blueline:(self|club|tournament|recognition):(?:([0-9a-f]{64}):)?([a-z0-9][a-z0-9-]{0,47}):v([1-9][0-9]{0,3})$/
+
+// What a badge rests on when no other record does (PLAN.md "Auszeichnungsnachweis": versioned
+// condition, concrete result, issuer = author): the player's own game for a milestone shown as
+// "Selbst erreicht", or the issuer's words for a recognition. Public and minimal: the game's id
+// on the player's devices, when it ended, its mode and the figure that met the condition, never
+// opponents or other games. The award names it in its "e" tag.
+const evidence = refine(
+  obj({
+    badge: str({ max: 200, pattern: D_PATTERN, description: "d of the badge definition: the versioned condition" }),
+    result: opt(
+      obj({
+        game: str({ min: 1, max: 64, pattern: /^[A-Za-z0-9-]+$/, description: "The game's id on the player's devices" }),
+        finishedAt: time(),
+        mode: str({ min: 1, max: 16, pattern: MODE_ID, description: "Game mode id" }),
+        value: int(0, 1_000_000_000, "The figure that met the condition, in the badge's unit (docs/protocol/families/badges.md)"),
+      }),
+    ),
+    note: opt(shortText()),
+  }),
+  (v) => (v.result || v.note ? null : "names a result or a note"),
+)
+
+export const BADGE_TYPES = {
+  "badge.evidence": { kind: KIND_RECORD, root: "self", encryption: "none", schema: evidence, description: "What a self-earned milestone or a recognition rests on" },
+} satisfies Record<string, RecordSpec>
 
 const labelTags = (type: string) => [
   ["L", LABEL_NAMESPACE],
@@ -221,22 +249,24 @@ export function profileBadgesTemplate(badges: readonly ProfileBadge[], created_a
 const isProfileChoice = (event: SignedEvent) =>
   event.kind === KIND_PROFILE_BADGES || (event.kind === KIND_PROFILE_BADGES_LEGACY && tagValue(event.tags, "d") === "profile_badges")
 
-// Walks the list: the a/e pairs it reads, and every other tag (unknown tags, an "a" without its
-// "e", an unreadable pair). The former list's d tag belongs to the old kind and is dropped.
+// Walks the list: the a/e pairs it reads (an "a" directly followed by its "e", as NIP-58 has
+// them), and every other tag in its order (unknown tags, an "a" without its "e", an unreadable
+// pair). The former list's d tag belongs to the old kind and is dropped.
 function walkProfile(event: SignedEvent): { badges: ProfileBadge[]; other: string[][] } {
   const badges: ProfileBadge[] = []
   const other: string[][] = []
   let a: string[] | undefined
   for (const t of event.tags) {
-    if (t[0] === "a") {
-      if (a) other.push(a)
-      a = t
-    } else if (t[0] === "e" && a) {
+    if (t[0] === "e" && a) {
       if (ADDRESS.test(a[1] ?? "") && HEX64.test(t[1] ?? "")) {
         badges.push({ address: a[1], award: t[1], ...(a[2] ? { addressRelay: a[2] } : {}), ...(t[2] ? { awardRelay: t[2] } : {}) })
       } else other.push(a, t)
       a = undefined
-    } else if (!(t[0] === "d" && event.kind === KIND_PROFILE_BADGES_LEGACY)) other.push(t)
+      continue
+    }
+    if (a) other.push(a)
+    a = t[0] === "a" ? t : undefined
+    if (!a && !(t[0] === "d" && event.kind === KIND_PROFILE_BADGES_LEGACY)) other.push(t)
   }
   if (a) other.push(a)
   return { badges, other }

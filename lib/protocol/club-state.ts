@@ -71,6 +71,8 @@ export interface ClubSeason {
   starts: number
   ends?: number
   ended: boolean
+  // When it was ended (club.season.end): games after that are no longer part of it.
+  endedAt?: number
   versions: { version: number; rules: SeasonRules; event: string; at: number; reason?: string }[]
 }
 
@@ -96,6 +98,18 @@ export interface ClubDate {
   by: string
   at: number
   head: string
+  // Members' answers (club.rsvp), the newest per member; kept when the date changes.
+  answers: Record<string, { answer: "yes" | "maybe" | "no"; at: number; event: string }>
+}
+
+// A game played for the club (club.game): where to find its match, and the key of a private
+// match. Whether it counts for a season is up to lib/clubs (season rules) and club.result.
+export interface ClubGame {
+  match: string
+  key?: string
+  by: string
+  at: number
+  event: string
 }
 
 export interface ClubState {
@@ -115,6 +129,8 @@ export interface ClubState {
   // Season → match id → the decision that counts.
   results: Record<string, Record<string, ClubResultDecision>>
   dates: Record<string, ClubDate>
+  // By match id.
+  games: Record<string, ClubGame>
   // Key shares (club.keys): who gave members access to earlier records, and how many.
   shares: { event: string; by: string; at: number; count: number }[]
   // Role of every key over time, oldest first (null = no longer a member), for checks in other
@@ -126,7 +142,7 @@ export interface ClubState {
 
 export type ClubResult = { state: ClubState } | { state: null; problem: FoundingProblem }
 
-const ARCHIVED_BLOCKS: readonly string[] = ["club.invite", "club.join", "club.accept", "club.season", "club.season.rules", "club.result", "club.date"]
+const ARCHIVED_BLOCKS: readonly string[] = ["club.invite", "club.join", "club.accept", "club.season", "club.season.rules", "club.result", "club.date", "club.game", "club.rsvp"]
 const memberSubject = (pubkey: string) => `member:${pubkey}`
 const HANDOVER: HandoverRules = {
   types: { offer: "club.owner.offer", cancel: "club.owner.cancel", accept: "club.owner.accept" },
@@ -186,6 +202,7 @@ function replay(env: Env, handovers: Handovers, demotions: readonly Pin[]) {
     seasons: {},
     results: {},
     dates: {},
+    games: {},
     shares: [],
     history: [{ pubkey: founding.pubkey, role: "owner", at: founding.created_at, event: founding.id }],
     heads: { info: founding.id, owner: founding.id },
@@ -496,6 +513,7 @@ function apply(s: ClubState, r: AnyRecord, ctx: Context): Problem {
       if (!season) return ["season_unknown", "no such season"]
       if (season.ended) return ["season_ended", "the season has ended"]
       season.ended = true
+      season.endedAt = r.created_at
       return null
     }
 
@@ -536,7 +554,27 @@ function apply(s: ClubState, r: AnyRecord, ctx: Context): Problem {
         by: r.pubkey,
         at: r.created_at,
         head: r.id,
+        answers: before?.answers ?? {},
       }
+      return null
+    }
+
+    case "club.game": {
+      const c = r.content
+      if (!role) return ["not_member", "only members name club games"]
+      // A public club's games are public matches; a key in the clear would only leak.
+      if (c.key !== undefined && r.encryption !== "seal") return ["invalid_content", "a match key only travels sealed, in a closed club"]
+      if (s.games[c.match]) return ["duplicate", "this game is already named"]
+      s.games[c.match] = { match: c.match, ...(c.key ? { key: c.key } : {}), by: r.pubkey, at: r.created_at, event: r.id }
+      return null
+    }
+
+    case "club.rsvp": {
+      const c = r.content
+      if (!role) return ["not_member", "only members answer dates"]
+      const date = s.dates[c.date]
+      if (!date) return ["waiting", "names a date this reader has not loaded"]
+      date.answers[r.pubkey] = { answer: c.answer, at: r.created_at, event: r.id }
       return null
     }
 

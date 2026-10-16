@@ -1,6 +1,6 @@
 # Familie: Auszeichnungen
 
-Stand: P0.05. Code: [`badges.ts`](../../../lib/protocol/badges.ts). Vektoren: [`vectors/badges.json`](../vectors/badges.json). Grundlage: Entscheidung 0001 F3, Entscheidung 0002 §6, PLAN.md „Auszeichnungen“, Recherche PR-03, PR-04, PR-09.
+Stand: P0.05, Nachweisdatensatz seit P7a.01. Code: [`badges.ts`](../../../lib/protocol/badges.ts); Verwendung in der App: `lib/badges/`. Vektoren: [`vectors/badges.json`](../vectors/badges.json), Schema: [`schemas/badges.schema.json`](../schemas/badges.schema.json). Grundlage: Entscheidung 0001 F3, Entscheidung 0002 §6, PLAN.md „Auszeichnungen“, Recherche PR-03, PR-04, PR-09.
 
 ## Zweck
 
@@ -13,6 +13,18 @@ Tags: `d` = `blueline:<scope>[:<scope-id>]:<badge>:v<version>`, `name`, `descrip
 ## Vergabe (Kind 8)
 
 Tags: `["a","30009:<aussteller>:<d>"]`, genau ein `["p",<empfänger>]`, genau ein `["e",<nachweis>]` (Ergebnis oder Entscheidung, auf der sie beruht), `["occasion",<anlass>]` (Turnier-, Saison- oder Ergebnis-ID oder `once`), Labels wie oben mit `badge.award`.
+
+## Nachweis (Kind 1180, `badge.evidence`)
+
+Wo kein anderer Datensatz der Nachweis ist, schreibt ihn der Aussteller selbst (PLAN.md „Auszeichnungsnachweis“: versionierte Bedingung, konkretes Ergebnis, Aussteller = Autor): für einen selbst erreichten Meilenstein das eigene Spiel, für eine Anerkennung die Worte des Ausstellers. Gründung ohne `e`-Tag, nie verschlüsselt, Pflicht-Tags nach [kinds.md](../kinds.md).
+
+| Feld | Inhalt |
+| --- | --- |
+| `badge` | `d` der Definition: die versionierte Bedingung |
+| `result?` | `game` (ID des Spiels auf den Geräten des Spielers), `finishedAt`, `mode` (Spielart-ID), `value` (die Zahl, mit der die Bedingung erfüllt wurde, in der Einheit der Auszeichnung) |
+| `note?` | Klartext des Ausstellers (Anerkennung), höchstens 280 Zeichen |
+
+Mindestens eines von `result` und `note`. Nie Gegner, Namen oder andere Spiele. Die Vergabe nennt den Nachweis in ihrem `e`-Tag.
 
 ## Prüfung (`checkBadgeAward`)
 

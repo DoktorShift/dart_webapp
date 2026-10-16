@@ -6,13 +6,14 @@ import { relayClient } from "../lib/nostr/client.ts"
 import { loadCore, type Core } from "../lib/nostr/core.ts"
 import type { NostrEvent } from "../lib/nostr/types.ts"
 import { closeDatabase } from "../lib/storage/db.ts"
-import { backoffMs, deliverNow, deliveryStatus, enqueue, flushDue, outboxStatus, resumeOutbox } from "../lib/sync/outbox.ts"
+import { backoffMs, deliverNow, deliveryStatus, enqueue, flushDue, outboxStatus, pendingEvents, resumeOutbox, withdraw } from "../lib/sync/outbox.ts"
 
 // The persistent outbox (lib/sync/outbox.ts) against in-memory relays: delivery rules, which
-// answers are tried again, backoff, coalescing, duplicates, relays going down and up, a reload in
-// the middle, the lock that covers the queue but never the sends, and a tab that waits for a
-// round's lease instead of spinning. Time is passed in, so retries are checked without waiting
-// for them. The tests that resume the background sender come last: its timer runs on the clock.
+// answers are tried again, backoff, coalescing, duplicates, order (`after`), what a handoff
+// carries and withdraws, relays going down and up, a reload in the middle, the lock that covers
+// the queue but never the sends, and a tab that waits for a round's lease or an entry's turn
+// instead of spinning. Time is passed in, so retries are checked without waiting for them. The
+// tests that resume the background sender come last: its timer runs on the clock.
 
 const network = new FakeNetwork()
 Object.assign(globalThis, { WebSocket: network.WebSocket })
@@ -158,6 +159,75 @@ test("the same event twice is one entry; a relay that has it already counts as a
   assert.deepEqual(status.confirmed, [URLS[0], URLS[1]])
 })
 
+test("an entry goes out after the ones it names: once they have a copy somewhere, or are gone", async () => {
+  relays.forEach(down)
+  const founding = event()
+  const result = event()
+  const seat = event()
+  const targets = URLS.slice(0, 2)
+  await enqueue(
+    [
+      { event: founding, relays: targets },
+      { event: result, relays: targets, after: [founding.id] },
+      // After an event that was never queued (or is long done): nothing to wait for.
+      { event: seat, relays: targets, after: ["0".repeat(64)] },
+    ],
+    {},
+    () => T0,
+  )
+  await flushDue(() => T0)
+  assert.equal((await deliveryStatus(founding.id))!.attempts, 1)
+  assert.equal((await deliveryStatus(result.id))!.attempts, 0, "not tried while no relay has the founding")
+  assert.equal((await deliveryStatus(seat.id))!.attempts, 1)
+  const listed = (await outboxStatus()).map((s) => s.id)
+  assert.ok(listed.indexOf(founding.id) < listed.indexOf(result.id), "listed in sending order")
+
+  // One relay back: the founding lands there in its retry, and the result follows it in the
+  // same flush. One copy is enough for the order; the founding itself still waits for the second
+  // relay.
+  relays[0].options.mode = "up"
+  await flushDue(() => T0 + 60 * 60_000)
+  const stored = relays[0].events.map((e) => e.id)
+  assert.ok(stored.includes(founding.id) && stored.includes(result.id))
+  assert.ok(stored.indexOf(founding.id) < stored.indexOf(result.id))
+  assert.equal((await deliveryStatus(founding.id))!.state, "waiting")
+  assert.equal((await deliveryStatus(result.id))!.attempts, 1)
+})
+
+test("pendingEvents lists what still waits for its rule, in sending order; withdraw takes it out", async () => {
+  down(relays[1])
+  down(relays[2])
+  const first = event()
+  const second = event()
+  const score = event(31180, [["d", "match-1"]])
+  const other = event()
+  const ofMatch = (e: NostrEvent) => [first.id, second.id, score.id].includes(e.id)
+  await enqueue(
+    [
+      { event: second, relays: URLS.slice(0, 3), after: [first.id] },
+      { event: first, relays: URLS.slice(0, 3) },
+      { event: other, relays: URLS.slice(0, 2) },
+    ],
+    {},
+    () => T0,
+  )
+  await enqueue([{ event: score, relays: URLS.slice(0, 2) }], { rule: "any" }, () => T0 + 1)
+  await flushDue(() => T0 + 1)
+  // The score is delivered (one relay) and only misses a copy; the records wait for a second operator.
+  assert.equal((await deliveryStatus(score.id))!.state, "delivered")
+  assert.deepEqual(
+    (await pendingEvents(ofMatch)).map((e) => e.id),
+    [first.id, second.id],
+  )
+
+  await withdraw(ofMatch)
+  assert.deepEqual(
+    (await outboxStatus()).map((s) => s.id),
+    [other.id],
+  )
+  assert.deepEqual(await pendingEvents(ofMatch), [])
+})
+
 test("waiting events survive a reload and go out once the relays are back", async () => {
   const e = event()
   relays.forEach(down)
@@ -247,4 +317,18 @@ test("while a round sends, the tab waits for the lease to end instead of spinnin
   // Queueing, the pick, the merge, and the wake-ups they announce: a dozen or so, not thousands.
   assert.ok(during < 50, `${during} IndexedDB transactions during one 1.5 s send`)
   assert.equal(transactions - after, 0, "nothing runs once the send is over")
+})
+
+test("an entry waiting for its turn doesn't wake the tab before the one before it is due", async () => {
+  await resumeOutbox()
+  relays.forEach(down)
+  const first = event()
+  const second = event()
+  const before = transactions
+  await enqueue([{ event: first, relays: [URLS[0]] }, { event: second, relays: [URLS[0]], after: [first.id] }], { rule: "any" })
+  await sleep(800)
+  assert.equal((await deliveryStatus(first.id))?.attempts, 1)
+  assert.equal((await deliveryStatus(second.id))?.attempts, 0)
+  // The first is due again after its backoff (2.5 s at least); until then nothing runs.
+  assert.ok(transactions - before < 50, `${transactions - before} IndexedDB transactions while an entry waits for its turn`)
 })

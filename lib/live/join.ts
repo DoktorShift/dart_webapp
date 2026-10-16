@@ -1,5 +1,4 @@
 import { openChannel, repeat, type Channel } from "../nostr/channel.ts"
-import { publish } from "../nostr/client.ts"
 import { nowSeconds, syncClock } from "../nostr/time.ts"
 import type { Signer } from "../nostr/types.ts"
 import type { BoardLink, BoardMessage } from "../protocol/board.ts"
@@ -11,6 +10,7 @@ import { buildRecord } from "../protocol/records.ts"
 import { createdAtAfter, type SignedEvent } from "../protocol/tags.ts"
 import { archiveFinished, unarchive } from "../storage/archive.ts"
 import { listPlayers } from "../storage/players.ts"
+import { deliverNow, enqueue } from "../sync/outbox.ts"
 import { resultGame } from "./content.ts"
 import type { MatchSource } from "./follow.ts"
 import { fromHex, keyOf, newKey, sealToMatch, toHex, type MatchKey } from "./keys.ts"
@@ -272,7 +272,8 @@ export const ownVerdict = (joined: JoinedMatch, state: MatchStateP) => {
 
 // The seat's verdict on the current result, signed by the profile (`profile`) or the guest's key.
 // Dated after the result and the seat it rests on, whatever this device's clock says, so every
-// reader replays it after them. True once a relay has it.
+// reader replays it after them. True once a relay has it; otherwise the outbox (lib/sync) keeps
+// trying, and the match shows the verdict once it lands.
 export async function giveVerdict(joined: JoinedMatch, state: MatchStateP, verdict: "confirm" | "dispute", profile: Signer | null): Promise<boolean> {
   const signer = profile ?? joined.guest?.signer
   const result = state.result
@@ -281,7 +282,9 @@ export async function giveVerdict(joined: JoinedMatch, state: MatchStateP, verdi
   const at = createdAtAfter(nowSeconds(), result.at, state.seats[joined.seat]?.since ?? 0)
   const template = buildRecord("match.confirm", { result: result.event, verdict, seat: joined.seat }, { created_at: at, root: joined.match })
   const event = await signer.signEvent(joined.key ? await sealToMatch(template, author, joined.key) : template)
-  return (await publish(event, joined.relays)).some((r) => r.ok)
+  await enqueue([{ event, relays: joined.relays }], { rule: "any" })
+  const [status] = await deliverNow([event.id])
+  return status?.state === "delivered"
 }
 
 // The player's own games follow the result they confirmed: in it once confirmed, out again

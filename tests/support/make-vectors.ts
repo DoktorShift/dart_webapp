@@ -1943,6 +1943,8 @@ function badgeCases() {
   const dC = badgeD({ badge: "season-winner", version: 1, scope: "club", scopeId: hex32("badge-club") })
   const award = (issuer: string, d: string, recipient: string, occasion: string, seconds: number, evidence = resultId) =>
     sign(issuer, badgeAwardTemplate({ issuer: pub(issuer), d, recipient: pub(recipient), evidence, occasion }, at(seconds)))
+  // The player's own record of the game a milestone was reached in: no opponents, no other games.
+  const evidenceSelf = sign("p1", buildRecord("badge.evidence", { badge: dS, result: { game: hex16("badge-game"), finishedAt: at(65), mode: "501", value: 180 } }, { created_at: at(66) }))
   const forged = sign("mallory", badgeAwardTemplate({ issuer: pub("organizer"), d: dT, recipient: pub("mallory"), evidence: resultId, occasion: tournament }, at(40)))
   const noRecipient = sign("organizer", {
     ...badgeAwardTemplate({ issuer: pub("organizer"), d: dT, recipient: pub("p1"), evidence: resultId, occasion: tournament }, at(41)),
@@ -1954,7 +1956,14 @@ function badgeCases() {
   const cases = [
     { name: "organizer-award", description: "The organizer awards the tournament win.", definition: defTournament, award: first, expect: { ok: true, self: false } },
     { name: "forged-issuer", description: "Mallory signs an award pointing at the organizer's badge: refused (nostr-core 1.0.4 would accept it).", definition: defTournament, award: forged, expect: { ok: false, reason: "issuer_mismatch" } },
-    { name: "self-earned", description: "A player shows a milestone as 'Selbst erreicht', with the match result as evidence.", definition: defSelf, award: award("p1", dS, "p1", "once", 70), expect: { ok: true, self: true } },
+    {
+      name: "self-earned",
+      description: "A player shows a milestone as 'Selbst erreicht'; the evidence is their own badge.evidence record of the game.",
+      definition: defSelf,
+      evidence: evidenceSelf,
+      award: award("p1", dS, "p1", "once", 70, evidenceSelf.id),
+      expect: { ok: true, self: true },
+    },
     { name: "self-for-other", description: "A self-earned badge given to someone else.", definition: defSelf, award: award("p1", dS, "p2", "once", 71), expect: { ok: false, reason: "issuer_mismatch" } },
     { name: "club-not-issuer", description: "A club badge from someone the club state does not name as issuer.", definition: defClub, award: award("owner", dC, "p1", hex16("season-1"), 72), expect: { ok: false, reason: "not_authorized" } },
     { name: "no-recipient", description: "An award without recipient.", definition: defTournament, award: noRecipient, expect: { ok: false, reason: "recipient_missing" } },
@@ -2189,7 +2198,7 @@ export function buildVectors(): Record<string, unknown> {
   }
 }
 
-const FAMILY_OF: Record<string, string> = { club: "club", tournament: "tournament", match: "match", payment: "payment-request", profile: "profile" }
+const FAMILY_OF: Record<string, string> = { club: "club", tournament: "tournament", match: "match", payment: "payment-request", profile: "profile", badge: "badges" }
 
 export function buildSchemas(): Record<string, JsonSchema> {
   const families: Record<string, Record<string, JsonSchema>> = {}

@@ -24,7 +24,7 @@ Dieses Dokument ist der Vertrag für alle Umsetzungsschritte. Abweichungen brauc
 | `lib/sync/` | Warteschlange (Outbox), private Historie, Selbstheilung, Diagnose | `lib/nostr`, `lib/storage`, `lib/profile` |
 | `lib/devices/` | Gerätekopplung per QR, Link und Code | `lib/nostr`, `lib/profile` |
 | `lib/recovery/` | Sicherungsdatei (NIP-49), Passkey-Paket | `lib/nostr`, `lib/profile`, `lib/storage` |
-| `lib/live/` | Zuschauen, Spieler am Board verbinden, Schreiberwechsel, Ergebnisbestätigung | `lib/nostr`, `lib/protocol`, `lib/game`; seit dem Nachtrag vom 6. Oktober 2026 auch `lib/storage` und `lib/profile/vault.ts` |
+| `lib/live/` | Zuschauen, Spieler am Board verbinden, Schreiberwechsel, Ergebnisbestätigung | `lib/nostr`, `lib/protocol`, `lib/game`; seit dem Nachtrag vom 6. Oktober 2026 auch `lib/storage` und `lib/profile/vault.ts`, seit dem 16. Oktober 2026 `lib/sync/outbox.ts` |
 | `lib/clubs/` | Clubs, Rollen, Einladungen, Saisons, Tabellen | `lib/protocol`, `lib/nostr` |
 | `lib/tournaments/` | `engine.ts` (rein, ohne Netz) und Turnierdaten | `lib/protocol`, `lib/nostr` |
 | `lib/badges/` | Katalog, Meilensteine, NIP-58 lesen und schreiben | `lib/protocol`, `lib/nostr`, `lib/storage` |
@@ -34,6 +34,8 @@ Dieses Dokument ist der Vertrag für alle Umsetzungsschritte. Abweichungen brauc
 Dateien unter `lib/`, die in Node getestet werden, verwenden relative Importe mit `.ts`-Endung und nur löschbare TypeScript-Syntax (keine `enum`, `namespace`, Parameter-Properties), wie die bestehenden Dateien.
 
 **Nachtrag 6. Oktober 2026 (Review P4 Runde 1, Entscheidung a):** `lib/live` darf zusätzlich `lib/storage` und `lib/profile/vault.ts` importieren. Ein Board hält seine Datensätze bis zur sicheren Speicherung und die Plätze seiner Spieler im Store „pending“ (`lib/storage/db.ts`), ein bestätigtes Ergebnis wandert in das eigene Archiv des Spielers (`lib/storage/archive.ts`), und die Schlüssel eines Spiels liegen versiegelt mit dem Geräteschlüssel (`lib/profile/vault.ts`), weil §4 Klartextschlüssel verbietet. Zwei Folgen: Wer sich abmeldet (`forgetVaultKey`), kann die Schlüssel eines laufenden Live-Spiels nach einem Neustart nicht mehr öffnen, das Spiel ist dann einfach nicht mehr live. Und die eigene Outbox des Boards verdoppelt, was die generische Outbox von `lib/sync` (P3a.02) übernehmen soll; sobald es sie gibt, zieht das Board dorthin um, statt zwei zu halten.
+
+**Nachtrag 16. Oktober 2026 (Zusammenführung Welle 3):** `lib/live` darf `lib/sync/outbox.ts` importieren; das Board hält keine eigene Warteschlange mehr, alle seine Datensätze und der Stand gehen durch die eine Outbox (Reihenfolge je Eintrag über `after`, Endgültigkeit nach deren Regel).
 
 ## 3 Speicherung
 

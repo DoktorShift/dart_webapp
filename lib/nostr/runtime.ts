@@ -8,9 +8,12 @@
 // (docs/implementation/evidence/P0.03/CORE.md, "Bundle-Messung").
 // Add a name here when lib/nostr starts using it.
 import {
+  buildCalendarEventAddress,
   createAuthEventTemplate,
+  createCalendarEventRSVPTemplate,
   createRumor,
   createSecretKeySigner,
+  createTimeBasedCalendarEventTemplate,
   createWrap,
   createZapRequestEventTemplate,
   decodeBolt11,
@@ -29,9 +32,11 @@ import {
   NWC,
   NWCConnectionError,
   NWCWalletError,
+  parseCalendarEventRSVP,
   parseConnectionURI,
   parseLightningAddress,
   parseNip05Address,
+  parseTimeBasedCalendarEvent,
   Relay,
   requestLnurlInvoice,
   verifiedSymbol,
@@ -39,9 +44,12 @@ import {
 } from "nostr-core"
 
 export {
+  buildCalendarEventAddress,
   createAuthEventTemplate,
+  createCalendarEventRSVPTemplate,
   createRumor,
   createSecretKeySigner,
+  createTimeBasedCalendarEventTemplate,
   createWrap,
   createZapRequestEventTemplate,
   decodeBolt11,
@@ -60,9 +68,11 @@ export {
   NWC,
   NWCConnectionError,
   NWCWalletError,
+  parseCalendarEventRSVP,
   parseConnectionURI,
   parseLightningAddress,
   parseNip05Address,
+  parseTimeBasedCalendarEvent,
   Relay,
   requestLnurlInvoice,
   verifiedSymbol,

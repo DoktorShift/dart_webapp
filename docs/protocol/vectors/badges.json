@@ -96,7 +96,7 @@
     },
     {
       "name": "self-earned",
-      "description": "A player shows a milestone as 'Selbst erreicht', with the match result as evidence.",
+      "description": "A player shows a milestone as 'Selbst erreicht'; the evidence is their own badge.evidence record of the game.",
       "definition": {
         "id": "2328e15be332df509f7054870690bfef564c1f9a8481b37bd06843e794a7076c",
         "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
@@ -114,22 +114,36 @@
         "content": "",
         "sig": "d85035dd69b71954ecf4942d95aa6cbdd97eab67411d1e17d3ff86d102475b15e32d094b0d582df73af926d42593956f4eb41b2b5077426d1cccfac107f67413"
       },
+      "evidence": {
+        "id": "26bdea92bbd94ac96c7ad90428c2415198c86b73115c9889daccee1d525de0a5",
+        "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
+        "created_at": 1760000066,
+        "kind": 1180,
+        "tags": [
+          ["L", "blueline"],
+          ["l", "badge.evidence", "blueline"],
+          ["v", "1"],
+          ["alt", "BlueLine Darts badge.evidence"]
+        ],
+        "content": "{\"badge\":\"blueline:self:first-180:v1\",\"result\":{\"game\":\"bab5e6e411e6dc63fb1ce03d3ccd0dd7\",\"finishedAt\":1760000065,\"mode\":\"501\",\"value\":180}}",
+        "sig": "2c193aa56e9bc5198f2efaaf978adc4f51fbcff7a6cf29135e49c97b7c7ee25fcce70220a4443d7c0ccae481385ff32a84b32e4c5a538bb7d370cabf5edbbe69"
+      },
       "award": {
-        "id": "908260060bec0623106fe67738bb6a240a091a561b4c7f68b1ce22f582b0955a",
+        "id": "01207c941d7d1274595f683ad4eddca6e3eb8782400c409aa87df39a93ff4fda",
         "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
         "created_at": 1760000070,
         "kind": 8,
         "tags": [
           ["a", "30009:b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0:blueline:self:first-180:v1"],
           ["p", "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0"],
-          ["e", "ae6d032afaa3bcfa3ad5f761d8a97939142bf8289a56a232ea9f36616fa26b8f"],
+          ["e", "26bdea92bbd94ac96c7ad90428c2415198c86b73115c9889daccee1d525de0a5"],
           ["occasion", "once"],
           ["L", "blueline"],
           ["l", "badge.award", "blueline"],
           ["v", "1"]
         ],
         "content": "",
-        "sig": "2b138975b688244acceb3b245d4050d532341f3a68542068e37fd48fdcc0f1aa8ca1e04e0ab2e004424ea7fdc2f02906c0a62c9349c57ed56ee73e042a51669f"
+        "sig": "a94a706f4ee382158c1f4c7d114774afdefa82dc7408e01ea988083cd9396e23d6d05d10312bc10ad51d01d84716486e92c1e5c79b95004ead3b1d04e924f6da"
       },
       "expect": {
         "ok": true,
