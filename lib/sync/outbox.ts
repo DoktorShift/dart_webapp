@@ -40,7 +40,8 @@ import { dbGetAll, dbWrite, onStorageChange, type Keyed, type WriteOp } from "..
 //   round picks its entries under it and leases them, sends without it, and merges the answers
 //   under it again. Other tabs' rounds pass leased entries over; enqueue() only ever waits for
 //   state writes. Nothing here ever waits on a UI path. The sending runs in a page once
-//   resumeOutbox() was called (lib/sync/service.ts at start) or something was queued.
+//   resumeOutbox() was called (at start by the shell when something waits,
+//   components/shell/outbox-start.ts, and by lib/sync/service.ts) or something was queued.
 
 export type DeliveryRule = "published" | "any"
 

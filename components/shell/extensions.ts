@@ -14,6 +14,7 @@
 // can leave the area out without touching the device's data.
 
 import "@/components/shell/builtin-screens"
+import "@/components/shell/outbox-start"
 import "@/components/profile/register"
 import "@/components/live/register"
 import "@/components/payments/register"
