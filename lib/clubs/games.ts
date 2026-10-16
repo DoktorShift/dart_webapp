@@ -10,7 +10,7 @@ import type { MatchStateP } from "../protocol/match-state.ts"
 import { reduceMatch } from "../protocol/match-state.ts"
 import { buildRecord, parseRecord } from "../protocol/records.ts"
 import { encodeThrows } from "../protocol/throws.ts"
-import { afterState, keep, recordTime, resend, send, sign, type Author, type Sent } from "./send.ts"
+import { afterState, keep, recordTime, send, sign, type Author, type Sent } from "./send.ts"
 
 // Club games (docs/protocol/families/club.md, "Clubspiele"). A game started from the club is
 // played on one device like any game; when it is finished, the host's profile records it as a
@@ -85,8 +85,7 @@ export async function recordGame(state: ClubState, game: FinishedGame, seats: Ag
   const named = buildRecord("club.game", { match, ...(key ? { key: bytesToHex(key.secretKey) } : {}) }, { created_at: now, root: state.id })
   const rest = await sign([{ template: result, link }, { template: named, ...(closed ? { seal: { readers: Object.keys(state.members) } } : {}) }], author.signer)
   const events = [...session.events, ...rest.events]
-  await keep(state.id, { events, keys: { ...session.keys, ...rest.keys } }, { recorded: { [game.id]: match } })
-  return { match, events, published: await resend(state.id, events) }
+  return { match, ...(await keep(state.id, { events, keys: { ...session.keys, ...rest.keys } }, { recorded: { [game.id]: match } })) }
 }
 
 // Whether a game with these players and exactly these throws was recorded for the club by

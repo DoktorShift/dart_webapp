@@ -6,10 +6,11 @@ import { tagValue } from "../protocol/tags.ts"
 import { CALENDAR_RSVP_KIND, CALENDAR_TIME_KIND } from "./dates.ts"
 
 // What relays hold about clubs. Everything is asked at the general relays (decision 0002 §5)
-// plus the relays an invite link named. "No relay answered" is unknown, never empty: callers
-// keep showing what this device has, with the time relays last answered.
+// plus the relays an invite link named, the club's relays, which are also where its events are
+// sent (send.ts). "No relay answered" is unknown, never empty: callers keep showing what this
+// device has, with the time relays last answered.
 
-const clubRelays = (hints: readonly string[] = []) => mergeRelays(generalRelays(), hints)
+export const clubRelays = (hints: readonly string[] = []) => mergeRelays(generalRelays(), hints)
 
 // What else belongs to a club once its records are read: the matches of its games and the
 // addresses of its public dates (for their answers).

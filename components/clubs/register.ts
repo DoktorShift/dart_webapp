@@ -71,17 +71,23 @@ if (featureOn("clubs")) {
     Component: screen(() => import("@/components/clubs/discover-screen")),
   });
 
-  // "Diagnose kopieren" (Profil › Erweitert): how many records each club has here, what is not
-  // sent yet and when relays last answered. Ids are cut short; nothing of the content.
+  // "Diagnose kopieren" (Profil › Erweitert): how many records each club has here, how many of
+  // them are still on their way and when relays last answered. Ids are cut short; nothing of the
+  // content.
   addDiagnostics(async () => {
-    const { storedClubs } = await import("@/lib/clubs/store");
+    const [{ storedClubs }, { waitingEvents }] = await Promise.all([
+      import("@/lib/clubs/store"),
+      import("@/lib/clubs/send"),
+    ]);
     const clubs = await storedClubs();
     if (clubs.length === 0) return null;
     return {
       title: "Clubs",
-      lines: clubs.map(
-        (c) =>
-          `${c.club.slice(0, 8)}: ${c.events.length} records, ${c.unsent.length} unsent, loaded ${c.loadedAt ? new Date(c.loadedAt).toISOString() : "never"}`,
+      lines: await Promise.all(
+        clubs.map(
+          async (c) =>
+            `${c.club.slice(0, 8)}: ${c.events.length} records, ${await waitingEvents(c.club)} waiting, loaded ${c.loadedAt ? new Date(c.loadedAt).toISOString() : "never"}`,
+        ),
       ),
     };
   });

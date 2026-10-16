@@ -1,6 +1,7 @@
 // Clubs against real relays (two "nak serve" on 127.0.0.1, P5.01/P5.02): every step is signed by
 // the person's own key and read back by the others from the relays, each on a fresh device (new
-// storage, own key), as if they opened the app on their phone. Nothing touches a public relay.
+// storage, own key), as if they opened the app on their phone. Everything leaves through the
+// outbox of lib/sync, resumed here as the app does at its start. Nothing touches a public relay.
 // Run: npm run test:relay
 import { after, before, test } from "node:test"
 import assert from "node:assert/strict"
@@ -22,6 +23,7 @@ import { seasonTable } from "../../lib/clubs/table.ts"
 import { getSigner, importLocalKey, signOut } from "../../lib/profile/session.ts"
 import { parseEnvelope, wrapsFor } from "../../lib/protocol/seal.ts"
 import { readLabels } from "../../lib/protocol/tags.ts"
+import { pendingEvents, resumeOutbox } from "../../lib/sync/outbox.ts"
 
 let core: Core
 let a: NakRelay
@@ -31,12 +33,12 @@ const now = () => Math.floor(Date.now() / 1000)
 
 before(async () => {
   core = await loadCore()
-  // Free ports, one after the other (a free port is only free until something listens on it);
-  // BLUELINE_NAK_PORTS="20600,20601" pins them to a range assigned on a shared machine.
-  const pinned = (process.env.BLUELINE_NAK_PORTS ?? "").split(",").map(Number)
-  a = await startRelay(Number.isInteger(pinned[0]) ? { port: pinned[0] } : {})
-  b = await startRelay(Number.isInteger(pinned[1]) ? { port: pinned[1] } : {})
+  // Free ports, one after the other (a free port is only free until something listens on it),
+  // from NAK_PORT_RANGE on a shared machine (tests/support/nak.ts).
+  a = await startRelay()
+  b = await startRelay()
   process.env.NEXT_PUBLIC_BLUELINE_RELAYS = `${a.url},${b.url}`
+  await resumeOutbox()
 })
 
 after(async () => {
@@ -51,8 +53,20 @@ const person = () => {
 }
 type Person = ReturnType<typeof person>
 
+// Waits until the outbox has put every change on relays of two operators, as a phone does in the
+// background before it is put away.
+async function sent() {
+  const until = Date.now() + 15_000
+  while ((await pendingEvents(() => true)).length > 0) {
+    if (Date.now() > until) assert.fail("changes still waiting in the outbox")
+    await new Promise((resolve) => setTimeout(resolve, 20))
+  }
+}
+
 // Opens the app on this person's own device: empty storage, their key (which signs by itself).
+// The device before has sent its changes.
 async function device(who: Person): Promise<Reader & { pubkey: string; signer: NonNullable<Reader["signer"]> }> {
+  await sent()
   await signOut({ keepLocalData: true })
   await resetStorage()
   await importLocalKey(who.secret)
@@ -84,11 +98,14 @@ test("a closed club: a member joins through a group link while no leader is onli
   let view = await refreshClub(club, author)
   assert.equal(view.state?.info.name, "Dartfreunde Nord")
   const invite = await createInvite(view.state!, { kind: "group", days: 7, hostName: "Olaf" }, author)
-  assert.ok(invite.sent.published)
   const link = clubLink(SITE, { club, invite: { id: invite.invite, token: invite.token }, relays: [] })
-  // Outsiders see nothing but ids: the founding and the invite are sealed.
-  const raw = await relayClient().query([{ ids: [club, invite.invite] }], [a.url])
-  assert.ok(raw.events.every((e) => !e.content.includes("Dartfreunde")))
+  // Both relays have the founding and the invite; outsiders see nothing but ids: both are sealed.
+  await sent()
+  for (const relay of [a, b]) {
+    const raw = await relayClient().query([{ ids: [club, invite.invite] }], [relay.url])
+    assert.equal(raw.events.length, 2)
+    assert.ok(raw.events.every((e) => !e.content.includes("Dartfreunde")))
+  }
 
   // Ben opens the link: the preview shows before any profile is needed, then he joins.
   const joining = await viaLink(link, ben)
@@ -307,6 +324,7 @@ test("a season table follows the games: a confirmed result counts, a correction 
   const seats = [{ name: "Olaf", pubkey: owner.pubkey }, { name: "Ben", pubkey: ben.pubkey }, { name: "Mia" }]
   const won: FinishedGame = { id: "local-1", config: config(["Olaf", "Ben", "Mia"]), seats, winner: 0, throws: visits(180, 60, 60, 180, 60, 60, 141) }
   const recorded = await recordGame(view.state!, won, gameSeats(seats, "closed", (n) => `Gast ${n}`), author)
+  await sent()
   const raw = await relayClient().query([{ ids: [recorded.match] }], [a.url])
   assert.ok(!raw.events[0].content.includes("Ben"), "the match is private: its agreement is encrypted")
   // The club remembers the game by its local id, and knows it by its throws: never twice.
@@ -379,6 +397,7 @@ test("a public club's dates are calendar events other apps read; members answer,
   view = await refreshClub(club, author)
   const first = now() + 86400
   await saveDates(view.state!, repeatDates({ title: "Clubabend", starts: first, ends: first + 3 * 3600, place: "Vereinsheim" }, 7, 3), author)
+  await sent()
   const calendar = await relayClient().query([{ kinds: [CALENDAR_TIME_KIND], "#e": [club] }], [a.url])
   assert.equal(calendar.events.length, 3)
   assert.equal(await runNak(["verify"], { input: `${calendar.events.map((e) => JSON.stringify(e)).join("\n")}\n` }), "")
