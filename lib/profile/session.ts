@@ -314,6 +314,15 @@ export async function startLocalProfile(options: SessionOptions = {}): Promise<S
   return begin({ pubkey, kind: "local", createdAt: Date.now(), madeHere: true, secret: await sealSecret(secretKey, "local-key") }, options)
 }
 
+// The profile key of a local session, for taking the profile to another device or into a
+// backup (lib/devices, lib/recovery): the only way it leaves the vault. Throws without a local
+// session.
+export async function openLocalKey(): Promise<Uint8Array> {
+  const stored = await readStored()
+  if (stored?.kind !== "local" || !stored.secret) throw new Error("no profile key is kept on this device")
+  return openSecret(stored.secret, "local-key")
+}
+
 // A key brought from elsewhere: another device of the same person, or a backup.
 export async function importLocalKey(secretKey: Uint8Array, options: SessionOptions = {}): Promise<Session> {
   const { createLocalSigner } = await import("../nostr/signers.ts")

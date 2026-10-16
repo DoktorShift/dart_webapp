@@ -11,8 +11,9 @@ const VAULT_KEY_ID = "profile.vault-key"
 // What a secret is for, bound into the encryption, so one secret can't stand in for another.
 // "match-keys": the keys of one live match (lib/live), which belong to the match, not the profile.
 // "wallet-connection": the NWC connection of a wallet (lib/payments). "data-key": the key of the
-// profile's private records (lib/sync).
-export type SecretPurpose = "local-key" | "connection-key" | "match-keys" | "wallet-connection" | "data-key"
+// profile's private records (lib/sync). "pairing": the one-time keys of a pairing in progress
+// (lib/devices).
+export type SecretPurpose = "local-key" | "connection-key" | "match-keys" | "wallet-connection" | "data-key" | "pairing"
 
 export interface SealedSecret {
   iv: Uint8Array<ArrayBuffer>
