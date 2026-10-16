@@ -194,7 +194,7 @@ await button(orga.page, "Fertig").click()
 await text(anna.page, "Dein nächstes Spiel", { timeout: 40_000 })
 await anna.page.waitForTimeout(500)
 await shot(anna.page, "player-next-de-light-iphone")
-check("a player sees opponent and board once called", (await anna.page.getByText(/^Board Board/).count()) === 1)
+check("a player sees opponent and board once called", (await anna.page.getByText(/^Board [12]$/).count()) === 1)
 
 // ---- The board device plays its match on the game screen -----------------------------------
 
@@ -214,13 +214,20 @@ await shot(board.page, "board-game-de-light-iphone")
 check("the board's match goes live on the local relay", board.sockets.length > 0 && board.sockets.every((u) => u.includes(`:${RELAY_PORT}`)))
 check("the game screen names the players, not their keys", (await board.page.getByText(/^(Anna|Ben|Mia|Jonas)$/).count()) >= 2)
 
-// Seat 0 wins 301 in one leg: T20 T20 T20, then T20 T11 D14. The multiplier is set before each dart.
+// Seat 0 wins 301 in one leg: T20 T20 T20, the opponent misses, then T20 T11 D14. The
+// multiplier is set before each dart.
 const key = (name) => board.page.getByRole("button", { name, exact: true }).first()
-for (const [toggle, n] of [["Triple", "T20"], ["Triple", "T20"], ["Triple", "T20"], ["Triple", "T20"], ["Triple", "T11"], ["Double", "D14"]]) {
-  await key(toggle).click()
-  await key(n).click()
-  await board.page.waitForTimeout(200)
+const darts = async (list) => {
+  for (const [toggle, n] of list) {
+    await key(toggle).click()
+    await key(n).click()
+    await board.page.waitForTimeout(200)
+  }
 }
+await darts([["Triple", "T20"], ["Triple", "T20"], ["Triple", "T20"]])
+await board.page.getByRole("button", { name: /^Rest der Aufnahme daneben/ }).click()
+await board.page.waitForTimeout(300)
+await darts([["Triple", "T20"], ["Triple", "T11"], ["Double", "D14"]])
 await board.page.locator("button:visible", { hasText: "Revanche" }).first().waitFor({ timeout: 20_000 })
 await text(board.page, "Ergebnis ans Turnier gemeldet", { timeout: 20_000 })
 await board.page.waitForTimeout(500)
