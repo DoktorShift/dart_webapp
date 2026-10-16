@@ -74,8 +74,8 @@ Reihenfolge und Titel wie in [PLAN.md](PLAN.md), Zeilen 658 bis 730. „Betroffe
 | P4.01 | Teilnahme und Board | Offen | ja | Widerruf von Board-Sitzungen nur signiert |
 | P4.02 | Schreiben und Zuschauen | Offen | ja | Live-Ziel hängt an Grenzen fremder Relays |
 | P4.03 | Ergebnislebenszyklus | Offen | nein | |
-| P5.01 | Clubbetrieb | Offen | ja | Geschlossene Daten nur verschlüsselt, Einladungen ohne Server, keine Uploads |
-| P5.02 | Saison und Übergabe | Offen | ja | Schlüsselwechsel und Clubexport ohne Serverbackups |
+| P5.01 | Clubbetrieb | In Prüfung ([P5.01](tasks/P5.01.md)) | ja | Geschlossene Daten nur verschlüsselt, Einladungen ohne Server, keine Uploads |
+| P5.02 | Saison und Übergabe | In Prüfung ([P5.01](tasks/P5.01.md)) | ja | Schlüsselwechsel und Clubexport ohne Serverbackups |
 | P6.01 | Turnierengine | In Prüfung | nein | |
 | P6.02 | Teilnahme | Offen | ja | Anmeldung, Warteliste und Fristen ohne vertrauenswürdige Zeit |
 | P6.03 | Leitungsbetrieb | Offen | ja | Aufruf nur bei offener App |

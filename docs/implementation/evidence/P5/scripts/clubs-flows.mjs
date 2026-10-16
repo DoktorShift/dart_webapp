@@ -1,5 +1,5 @@
 // Club flows (P5.01, P5.02) against a production build whose relays are two local "nak serve"
-// (NEXT_PUBLIC_BLUELINE_RELAYS=ws://127.0.0.1:20002,ws://127.0.0.1:20003), with two browser
+// (NEXT_PUBLIC_BLUELINE_RELAYS=ws://127.0.0.1:20602,ws://127.0.0.1:20603), with two browser
 // contexts as two phones: Olaf founds a closed club as a guest (profile made on the way),
 // invites; Ben opens the link, sees the preview, joins while Olaf's device is open; Olaf's
 // device shares access, enters a club night and a season, plays a club game against Ben from
@@ -15,7 +15,7 @@ const BASE = process.env.BASE ?? "http://localhost:3321"
 const OUT = process.env.OUT ?? "/tmp/blueline-clubs-shots"
 mkdirSync(OUT, { recursive: true })
 const NAK = "/opt/homebrew/bin/nak"
-const PORTS = [20002, 20003]
+const PORTS = [20602, 20603]
 const RELAYS = PORTS.map((port) => `ws://127.0.0.1:${port}`)
 const results = []
 const check = (name, ok, detail = "") => {
@@ -57,17 +57,18 @@ async function open({ viewport = { width: 390, height: 844 }, locale = "de-DE", 
   return { ctx, page, errors }
 }
 const wait = (page, ms = 600) => page.waitForTimeout(ms)
-const tab = (page, name) => page.getByRole("navigation", { name: "Bereiche" }).last().getByRole("button", { name, exact: true })
+const tab = (page, name) => page.getByRole("navigation", { name: /Bereiche|Sections/ }).last().getByRole("button", { name, exact: true })
 const shot = (page, name) => page.screenshot({ path: `${OUT}/${name}.png` })
 const layout = (page) =>
   page.evaluate(() => ({
     ellipsis: [...document.querySelectorAll("body *")].some((el) => getComputedStyle(el).textOverflow === "ellipsis" && el.scrollWidth > el.clientWidth + 1),
     hscroll: [...document.querySelectorAll("[data-scroll-container], body")].some((el) => el.scrollWidth > el.clientWidth + 1),
   }))
+// A dart on the keypad: with Double or Triple pressed first, the keys read "D14" or "T20".
 const dart = async (page, segment, multiplier = 1) => {
   if (multiplier === 3) await page.getByRole("button", { name: "Triple", exact: true }).click()
   if (multiplier === 2) await page.getByRole("button", { name: "Double", exact: true }).click()
-  await page.getByRole("button", { name: String(segment), exact: true }).first().click()
+  await page.getByRole("button", { name: new RegExp(`^${multiplier === 3 ? "T" : multiplier === 2 ? "D" : ""}\\s?${segment}$`) }).first().click()
   await wait(page, 250)
 }
 
@@ -151,7 +152,7 @@ await A.page.getByRole("button", { name: "Termin eintragen" }).waitFor({ timeout
 await A.page.getByRole("button", { name: "Termin eintragen" }).click()
 await A.page.getByRole("button", { name: "Eintragen", exact: true }).waitFor()
 await A.page.getByLabel("Ort (optional)").fill("Vereinsheim")
-await A.page.getByRole("radio", { name: "4× wöchentlich" }).click()
+await A.page.getByRole("radio", { name: "4×", exact: true }).click()
 await wait(A.page, 300)
 await shot(A.page, "date-form-de")
 await A.page.getByRole("button", { name: "Eintragen", exact: true }).click()
@@ -164,6 +165,8 @@ await wait(A.page, 800)
 await A.page.getByRole("button", { name: /Noch keine Saison/ }).click()
 await A.page.getByLabel("Name").first().waitFor({ timeout: 15000 })
 await A.page.getByLabel("Name").first().fill("Herbst 2026")
+// The quick game below is a 301; by default only 501 counts.
+await A.page.getByRole("button", { name: "301", exact: true }).click()
 await shot(A.page, "season-form-de")
 await A.page.getByRole("button", { name: "Saison starten" }).click()
 await A.page.getByRole("button", { name: /Herbst 2026/ }).waitFor({ timeout: 30000 })
@@ -243,7 +246,7 @@ await A.page.getByRole("table").waitFor({ timeout: 15000 })
 await wait(A.page, 800)
 await shot(A.page, "table-de")
 const rows = await A.page.evaluate(() => [...document.querySelectorAll("tbody tr")].map((r) => r.innerText.replace(/\s+/g, " ").trim()))
-check("the table: Olaf 1 game 2 points, Ben 1 game 0 points", rows.length === 2 && /^1 Olaf Du 1 2/.test(rows[0]) && /^2 Ben 1 0/.test(rows[1]), rows.join(" | "))
+check("the table: Olaf 1 game 2 points, Ben 1 game 0 points", rows.length === 2 && /^1 Olaf\s*Du 1 2/.test(rows[0]) && /^2 Ben 1 0/.test(rows[1]), rows.join(" | "))
 await A.page.getByRole("button", { name: "So wird gewertet" }).click()
 await wait(A.page, 800)
 await shot(A.page, "scoring-de")
