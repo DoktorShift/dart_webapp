@@ -157,7 +157,8 @@ const ACTION_TABS: Record<ShellAction, TabId> = {
 }
 
 // Where a link opens when no area handles it yet; the payload arrives as params.payload. A
-// signer answer only makes sense to the flow that asked for it, so without a handler it is dropped.
+// signer's or wallet's answer only makes sense to the flow that asked for it, so without a
+// handler it is dropped.
 export const LINK_ROUTES: Record<LinkKind, { tab: TabId; screen: string } | null> = {
   p: { tab: "profile", screen: SCREENS.profilePublic },
   watch: { tab: "play", screen: SCREENS.liveWatch },
@@ -167,6 +168,7 @@ export const LINK_ROUTES: Record<LinkKind, { tab: TabId; screen: string } | null
   board: { tab: "play", screen: SCREENS.liveBoard },
   handoff: { tab: "play", screen: SCREENS.liveHandoff },
   "signer-return": null,
+  "wallet-return": null,
 }
 
 // How the link arrived: in the page address (opened from outside), or scanned / pasted inside

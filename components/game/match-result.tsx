@@ -192,7 +192,7 @@ export function MatchResult({ state, match, onRematch, onNewGame, onHome, onLead
 
   // Areas' pieces are rendered once, next to the buttons on screen, not in both copies of them.
   // An empty list costs no room: a guest's result looks exactly as before.
-  const pieces = <SlotItems list="result.actions" props={() => ({ match: finished, placement: "row" })} className="mb-2 grid gap-2 empty:hidden" />
+  const pieces = <SlotItems list="result.actions" props={() => ({ match: finished, placement: "row" })} className="mb-2 grid gap-2 empty:hidden short:mb-1 short:gap-1" />
   const actions = (withPieces: boolean) => (
     <div>
       {withPieces && !xshort && pieces}
