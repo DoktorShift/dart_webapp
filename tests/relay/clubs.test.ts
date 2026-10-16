@@ -31,11 +31,10 @@ const now = () => Math.floor(Date.now() / 1000)
 
 before(async () => {
   core = await loadCore()
-  // Free ports, one after the other (a free port is only free until something listens on it);
-  // BLUELINE_NAK_PORTS="20600,20601" pins them to a range assigned on a shared machine.
-  const pinned = (process.env.BLUELINE_NAK_PORTS ?? "").split(",").map(Number)
-  a = await startRelay(Number.isInteger(pinned[0]) ? { port: pinned[0] } : {})
-  b = await startRelay(Number.isInteger(pinned[1]) ? { port: pinned[1] } : {})
+  // One after the other: a free port is only free until something listens on it. On a shared
+  // machine NAK_PORT_RANGE assigns the range (tests/support/nak.ts).
+  a = await startRelay()
+  b = await startRelay()
   process.env.NEXT_PUBLIC_BLUELINE_RELAYS = `${a.url},${b.url}`
 })
 
