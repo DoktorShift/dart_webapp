@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Avatar } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
 import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
 import { InlineStatus } from "@/components/common/inline-status"
@@ -29,9 +30,12 @@ export default function DiscoverScreen() {
   const nav = useNav()
   const [status, setStatus] = useState<"loading" | "offline" | "done">("loading")
   const [clubs, setClubs] = useState<Found[]>([])
+  // Counts the person's "Erneut versuchen" taps: each asks the relays again.
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     let alive = true
+    setStatus("loading")
     void fetchPublicClubs().then(
       ({ events, answered }) => {
         if (!alive) return
@@ -50,7 +54,7 @@ export default function DiscoverScreen() {
     return () => {
       alive = false
     }
-  }, [])
+  }, [attempt])
 
   const open = async (club: Found) => {
     await updateClub(club.id, { events: [club.event] })
@@ -62,9 +66,14 @@ export default function DiscoverScreen() {
       <p className="mt-2 text-[1.0625rem] leading-snug text-muted-foreground">{tx.discover.intro}</p>
       {status === "loading" && <p className="mt-6 px-4 text-[0.9375rem] text-muted-foreground">{tx.discover.loading}</p>}
       {status === "offline" && (
-        <InlineStatus tone="info" className="mt-6">
-          {tx.discover.offline}
-        </InlineStatus>
+        <>
+          <InlineStatus tone="info" className="mt-6">
+            {tx.discover.offline}
+          </InlineStatus>
+          <Button onClick={() => setAttempt((n) => n + 1)} className="mt-4 h-12 w-full rounded-xl text-[1.0625rem] font-semibold">
+            {tx.retry}
+          </Button>
+        </>
       )}
       {status === "done" && clubs.length === 0 && (
         <InlineStatus tone="info" className="mt-6">

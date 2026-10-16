@@ -6,7 +6,7 @@ import { InlineStatus } from "@/components/common/inline-status"
 import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
-import { ClubHeader, formatDateTime, useChange } from "@/components/clubs/common"
+import { ClubHeader, formatDate, formatDateTime, useChange } from "@/components/clubs/common"
 import { useGuestProfile } from "@/components/clubs/guest-profile"
 import { CLUB_SCREENS } from "@/components/clubs/screens"
 import { clubAuthor, useClub } from "@/components/clubs/use-clubs"
@@ -16,7 +16,7 @@ import { acceptInvitation, invitationState, openInvitation, type InvitationProbl
 import { readClubPayload } from "@/lib/clubs/links"
 import { forgetClub } from "@/lib/clubs/store"
 import { nowSeconds } from "@/lib/nostr/time"
-import type { ScreenProps } from "@/lib/shell/registry"
+import { SCREENS, runAction, type ScreenProps } from "@/lib/shell/registry"
 
 // An invitation: opened from its link (params.payload, with the secret that shows a closed
 // club's preview) or again from the Clubs tab (params.club). What the club is and who invites,
@@ -51,7 +51,19 @@ export default function InviteScreen({ params }: ScreenProps) {
 
   const { view, loaded, missing } = useClub(opening === "loading" ? null : clubId)
 
-  if (!clubId || (params.payload && !address)) return <InlineStatus tone="error" className="mt-6">{tx.invite.invalid}</InlineStatus>
+  // Not a complete link: scanning the code is the way forward.
+  if (!clubId || (params.payload && !address)) {
+    return (
+      <div className="pb-4">
+        <InlineStatus tone="error" className="mt-6">
+          {tx.invite.invalid}
+        </InlineStatus>
+        <Button onClick={() => runAction(SCREENS.clubOpenInvite, nav)} className="mt-4 h-12 w-full rounded-xl text-[1.0625rem] font-semibold">
+          {tx.home.openInvite}
+        </Button>
+      </div>
+    )
+  }
   if (address && !address.invite) return null
   if (opening && opening !== "loading") {
     return (
@@ -131,7 +143,7 @@ function Invitation({ view }: { view: ClubView }) {
       <ClubHeader view={view} subtitle={hostName ? tx.invite.from(hostName) : tx.invite.fromClub} />
       <div className="mt-4 flex flex-col gap-1 px-4 text-[0.9375rem] leading-snug text-muted-foreground">
         {kind && !outcome && <p>{kind === "group" ? (state === "request" ? tx.invite.groupLimited : tx.invite.group) : tx.invite.personal}</p>}
-        {expires !== undefined && !over && <p>{tx.invite.until(formatDateTime(expires, t))}</p>}
+        {expires !== undefined && !over && <p>{tx.invite.until(formatDate(expires, t))}</p>}
         {next && <p>{tx.home.next(formatDateTime(next.starts, t))}</p>}
         {view.info?.visibility === "closed" && <p>{tx.invite.closedHint}</p>}
       </div>

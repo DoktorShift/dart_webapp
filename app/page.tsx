@@ -376,7 +376,7 @@ export default function DartScorer() {
 
   let content: ReactNode = null
   if (screen === "setup") {
-    content = <SetupScreen type={setupType} preset={setupPreset} backLabel={returnLabel} onBack={() => backToTabs(returnTab)} onStart={startGame} />
+    content = <SetupScreen type={setupType} preset={setupPreset} backLabel={setupPreset?.backLabel ?? returnLabel} onBack={() => backToTabs(returnTab)} onStart={startGame} />
   } else if (screen === "game" && match) {
     content = (
       <GameScreen

@@ -89,6 +89,8 @@ export interface ShellNavigator {
 export interface SetupPreset {
   players?: readonly SetupSeat[]
   extras?: Readonly<Record<string, unknown>>
+  // What setup's back button says: the screen it was opened from (a club's name).
+  backLabel?: string
 }
 
 export interface ScreenProps {

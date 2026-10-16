@@ -122,7 +122,7 @@ export function SeasonForm({ state, season, onDone }: { state: ClubState; season
 
       <Group>
         <ChoiceRow title={sx.confirmations} hint={sx.confirmHint[rules.confirmations]} options={CONFIRMATIONS.map((c) => ({ value: c, label: sx.confirm[c] }))} value={rules.confirmations} onChange={(confirmations) => change({ confirmations })} />
-        <ChoiceRow title={sx.minGames} options={MIN_GAMES.map((n) => ({ value: n, label: sx.minGamesValue(n) }))} value={rules.minGames} onChange={(minGames) => change({ minGames })} />
+        <ChoiceRow title={sx.minGames} hint={sx.minGamesHint(rules.minGames)} options={MIN_GAMES.map((n) => ({ value: n, label: sx.minGamesValue(n) }))} value={rules.minGames} onChange={(minGames) => change({ minGames })} />
       </Group>
 
       <Group title={sx.tiebreak} footer={sx.tiebreakHint}>

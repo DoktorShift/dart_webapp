@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
 import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
 import { Sheet } from "@/components/ui/sheet"
@@ -9,7 +8,7 @@ import { InlineStatus } from "@/components/common/inline-status"
 import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
-import { Confirm, formatDate, useChange } from "@/components/clubs/common"
+import { Confirm, SheetBody, SheetButton, formatDate, useChange } from "@/components/clubs/common"
 import { ScoringText } from "@/components/clubs/scoring"
 import { SeasonForm } from "@/components/clubs/season-form"
 import { clubAuthor, useClub } from "@/components/clubs/use-clubs"
@@ -75,10 +74,8 @@ export default function SeasonScreen({ params }: ScreenProps) {
         </Group>
       )}
       <Sheet open={changing} onOpenChange={setChanging} title={tx.season.changeRules}>
-        <div className="min-h-0 overflow-y-auto overscroll-contain pb-1">{changing && <SeasonForm state={state} season={season} onDone={() => setChanging(false)} />}</div>
-        <Button variant="ghost" onClick={() => setChanging(false)} className="mt-2 h-12 w-full shrink-0 rounded-2xl text-[1.0625rem]">
-          {t.common.cancel}
-        </Button>
+        <SheetBody>{changing && <SeasonForm state={state} season={season} onDone={() => setChanging(false)} />}</SheetBody>
+        <SheetButton onClick={() => setChanging(false)}>{t.common.cancel}</SheetButton>
       </Sheet>
       <Confirm open={ending} onOpenChange={setEnding} title={tx.season.endTitle} text={tx.season.endText} confirm={tx.season.endConfirm} destructive onConfirm={() => void end()} />
     </div>

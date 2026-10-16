@@ -8,7 +8,7 @@ import { TextField } from "@/components/ui/text-field"
 import { InlineStatus } from "@/components/common/inline-status"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
-import { Confirm, formatDateTime, formatTime, personName, useChange } from "@/components/clubs/common"
+import { Confirm, SheetBody, SheetButton, formatDateTime, formatTime, personName, useChange } from "@/components/clubs/common"
 import { DateAnswer } from "@/components/clubs/date-answer"
 import { clubAuthor } from "@/components/clubs/use-clubs"
 import { useNames } from "@/components/clubs/use-names"
@@ -49,7 +49,7 @@ export function DateSheet({ view, state, date, open, onOpenChange }: { view: Clu
       title={date?.title ?? ""}
       description={date ? [`${formatDateTime(date.starts, t)}${date.ends !== undefined ? ` – ${formatTime(date.ends * 1000, t)}` : ""}`, date.place].filter(Boolean).join(" · ") : undefined}
     >
-      <div className="min-h-0 overflow-y-auto overscroll-contain pb-1">
+      <SheetBody>
         {date?.cancelled && (
           <InlineStatus tone="info" className="mb-4">
             {tx.dates.cancelled}
@@ -80,10 +80,8 @@ export function DateSheet({ view, state, date, open, onOpenChange }: { view: Clu
             {tx.dates.cancel}
           </Button>
         )}
-      </div>
-      <Button variant="ghost" onClick={() => onOpenChange(false)} className="mt-2 h-12 w-full shrink-0 rounded-2xl text-[1.0625rem]">
-        {t.common.done}
-      </Button>
+      </SheetBody>
+      <SheetButton onClick={() => onOpenChange(false)}>{t.common.done}</SheetButton>
       <Confirm open={cancelling} onOpenChange={setCancelling} title={tx.dates.cancelTitle} text={tx.dates.cancelText} confirm={tx.dates.cancelConfirm} destructive onConfirm={() => void cancel()} />
     </Sheet>
   )
@@ -148,27 +146,27 @@ export function DateFormSheet({ state, open, onOpenChange }: { state: ClubState;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title={tx.dates.add}>
-      <form onSubmit={submit} className="min-h-0 overflow-y-auto overscroll-contain pb-1">
-        <TextField label={f.title} value={title} onChange={(event) => setTitle(event.target.value)} maxLength={60} className="mt-0" />
-        <TextField label={f.starts} type="datetime-local" value={starts} onChange={(event) => setStarts(event.target.value)} required />
-        <TextField label={f.ends} type="datetime-local" value={ends} onChange={(event) => setEnds(event.target.value)} error={invalid ? f.invalid : undefined} />
-        <TextField label={f.place} value={place} onChange={(event) => setPlace(event.target.value)} maxLength={140} />
-        <TextField label={f.note} value={note} onChange={(event) => setNote(event.target.value)} maxLength={500} />
-        <div className="mt-6 rounded-2xl border border-border bg-card">
-          <ChoiceRow title={f.repeat} hint={f.repeatHint} options={REPEATS.map((n) => ({ value: n, label: n === 1 ? f.once : f.weekly(n) }))} value={repeat} onChange={setRepeat} />
-        </div>
-        {problem && (
-          <InlineStatus tone="error" className="mt-4">
-            {problem}
-          </InlineStatus>
-        )}
-        <Button type="submit" disabled={!ready || busy} className="mt-6 h-12 w-full rounded-xl text-[1.0625rem] font-semibold">
-          {busy ? f.saving : f.save}
-        </Button>
-      </form>
-      <Button variant="ghost" onClick={() => onOpenChange(false)} className="mt-2 h-12 w-full shrink-0 rounded-2xl text-[1.0625rem]">
-        {t.common.cancel}
-      </Button>
+      <SheetBody>
+        <form onSubmit={submit}>
+          <TextField label={f.title} value={title} onChange={(event) => setTitle(event.target.value)} maxLength={60} className="mt-0" />
+          <TextField label={f.starts} type="datetime-local" value={starts} onChange={(event) => setStarts(event.target.value)} required />
+          <TextField label={f.ends} type="datetime-local" value={ends} onChange={(event) => setEnds(event.target.value)} error={invalid ? f.invalid : undefined} />
+          <TextField label={f.place} value={place} onChange={(event) => setPlace(event.target.value)} maxLength={140} />
+          <TextField label={f.note} value={note} onChange={(event) => setNote(event.target.value)} maxLength={500} />
+          <div className="mt-6 rounded-2xl border border-border bg-card">
+            <ChoiceRow title={f.repeat} hint={f.repeatHint} options={REPEATS.map((n) => ({ value: n, label: n === 1 ? f.once : f.weekly(n) }))} value={repeat} onChange={setRepeat} />
+          </div>
+          {problem && (
+            <InlineStatus tone="error" className="mt-4">
+              {problem}
+            </InlineStatus>
+          )}
+          <Button type="submit" disabled={!ready || busy} className="mt-6 h-12 w-full rounded-xl text-[1.0625rem] font-semibold">
+            {busy ? f.saving : f.save}
+          </Button>
+        </form>
+      </SheetBody>
+      <SheetButton onClick={() => onOpenChange(false)}>{t.common.cancel}</SheetButton>
     </Sheet>
   )
 }

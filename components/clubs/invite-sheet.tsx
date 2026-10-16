@@ -10,7 +10,7 @@ import { InlineStatus } from "@/components/common/inline-status"
 import { QRCodeView } from "@/components/common/qr-code-view"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
-import { useChange } from "@/components/clubs/common"
+import { SheetBody, SheetButton, useChange } from "@/components/clubs/common"
 import { clubAuthor } from "@/components/clubs/use-clubs"
 import { useOwnProfile } from "@/components/profile/use-profile"
 import { nextDate, type ClubView } from "@/lib/clubs/club"
@@ -76,7 +76,7 @@ export function InviteSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title={tx.invites.title} description={link ? undefined : tx.invites.description}>
-      <div className="min-h-0 overflow-y-auto overscroll-contain pb-1">
+      <SheetBody>
         {link ? (
           <QRCodeView value={link} caption={tx.invites.caption} label={tx.invites.title} share={{ url: link, title: tx.invites.shareTitle(name) }} />
         ) : (
@@ -106,10 +106,8 @@ export function InviteSheet({
             </Button>
           </>
         )}
-      </div>
-      <Button variant="ghost" onClick={() => onOpenChange(false)} className="mt-2 h-12 w-full shrink-0 rounded-2xl text-[1.0625rem]">
-        {link ? t.common.done : t.common.cancel}
-      </Button>
+      </SheetBody>
+      <SheetButton onClick={() => onOpenChange(false)}>{link ? t.common.done : t.common.cancel}</SheetButton>
     </Sheet>
   )
 }

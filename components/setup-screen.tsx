@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState, type PointerEvent } from "react"
 import { Reorder, useDragControls } from "framer-motion"
-import { ChevronLeft, GripVertical, Minus, Plus, Shuffle, UserRoundCheck } from "lucide-react"
+import { GripVertical, Minus, Plus, Shuffle, UserRoundCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ChoiceRow, Group, SwitchRow } from "@/components/ui/group"
 import { Dartboard, GAME_HIGHLIGHTS } from "@/components/dartboard"
@@ -14,6 +14,7 @@ import { assignPlayers, listPlayers, MAX_SEAT_NAME, savePlayers, seatName, type 
 import { LEG_OPTIONS, SET_OPTIONS, START_SCORES, configFor, modeIdFor, type GameRules } from "@/lib/game/rules"
 import type { GameType, MatchConfig, MatchPlayer } from "@/lib/game/types"
 import type { SetupPreset, SetupSeat } from "@/lib/shell/registry"
+import { BackButton } from "@/components/nav/nav-header"
 import { cn } from "@/lib/utils"
 
 const MAX_PLAYERS = 6
@@ -211,16 +212,11 @@ export function SetupScreen({ type, preset, backLabel, onBack, onStart }: SetupS
   return (
     <div className="flex min-h-full flex-col">
       <header className="sticky top-0 z-20 border-b border-border/60 bg-background/80 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
-        <div className="relative mx-auto flex h-11 max-w-2xl items-center px-2">
-          <button
-            type="button"
-            onClick={onBack}
-            className="flex min-h-11 items-center gap-0.5 rounded-lg pr-3 text-[1.0625rem] text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <ChevronLeft className="h-7 w-7" aria-hidden="true" />
-            {backLabel ?? t.nav.play}
-          </button>
-          <span className="pointer-events-none absolute inset-x-0 text-center text-[1.0625rem] font-semibold">{t.setup.title}</span>
+        {/* The same bar as the shell's screens: a long previous title (a club's name) gives way
+            to "Zurück" or the chevron instead of running into the title. */}
+        <div className="mx-auto grid h-11 max-w-2xl grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1 px-2">
+          <BackButton label={backLabel ?? t.nav.play} onClick={onBack} />
+          <span className="col-start-2 row-start-1 text-center text-[1.0625rem] font-semibold">{t.setup.title}</span>
         </div>
       </header>
 

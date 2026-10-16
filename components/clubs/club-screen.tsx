@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { Calendar, ChartColumn, ChevronRight, Settings, Users } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { Calendar, ChartColumn, ChevronRight, ListTodo, Settings, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
@@ -16,32 +16,47 @@ import { useGuestProfile } from "@/components/clubs/guest-profile"
 import { InviteSheet } from "@/components/clubs/invite-sheet"
 import { CLUB_SCREENS } from "@/components/clubs/screens"
 import { StartGameSheet } from "@/components/clubs/start-game-sheet"
-import { clubAuthor, useClub } from "@/components/clubs/use-clubs"
+import { clubAuthor, clubReader, useClub } from "@/components/clubs/use-clubs"
 import { useNames } from "@/components/clubs/use-names"
 import { VerdictSheet } from "@/components/clubs/verdict-sheet"
 import { clubTasks, isLeader, isManager, nextDate, type ClubTask, type ClubView } from "@/lib/clubs/club"
 import type { ClubGame } from "@/lib/clubs/games"
-import { acceptOwnership, joinClub, leaveClub } from "@/lib/clubs/membership"
+import { acceptOwnership, ClubOutdatedError, joinClub, leaveClub, openOffer } from "@/lib/clubs/membership"
 import { watchClub } from "@/lib/clubs/relays"
 import type { Author } from "@/lib/clubs/send"
 import { updateClub } from "@/lib/clubs/store"
+import { grantAccess, maintainClub } from "@/lib/clubs/sync"
 import { currentSeason, seasonTable } from "@/lib/clubs/table"
 import { nowSeconds } from "@/lib/nostr/time"
+import type { NostrEvent } from "@/lib/nostr/types"
 import type { ClubState } from "@/lib/protocol/club-state"
+import { readLabels } from "@/lib/protocol/tags"
+import type { ScreenParams } from "@/lib/shell/nav"
 import { SCREENS, type ScreenProps } from "@/lib/shell/registry"
 
 // A club (PLAN.md "Gestaltung der Clubansichten"): the one thing it wants from you first, then
 // the next club night with your answer, the current season with your row, "Spiel starten", and
 // the sections Spieler, Tabelle, Termine & Turniere. Leaders get "Club verwalten"; nothing of
 // the management is mixed into the players' actions. Every state short of membership says
-// what it is and what comes next.
+// what it is and what comes next. Opening the club asks the relays once.
 export default function ClubScreen({ params }: ScreenProps) {
   const tx = useAreaT(CLUBS_TEXTS)
   const { view, loaded, missing, refresh } = useClub(params.club ?? null)
+  const id = view?.id
+  useEffect(() => {
+    if (id) void refresh()
+    // Once per club opened.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id])
   useWatch(view)
   if (!view) return <p className="mt-6 px-4 text-[1.0625rem] text-muted-foreground">{loaded && missing ? tx.club.state.missing : tx.club.loading}</p>
-  return <ClubBody view={view} refresh={() => void refresh()} />
+  return <ClubBody view={view} params={params} refresh={refresh} />
 }
+
+// Records that change who is in the club: a leader's device then shares access at once, so a
+// member who just joined through the link isn't left waiting (lib/clubs/sync.ts).
+const MEMBERSHIP_TYPES: readonly string[] = ["club.join", "club.accept", "club.role", "club.remove", "club.leave", "club.owner.offer"]
+const changesMembers = (event: NostrEvent) => MEMBERSHIP_TYPES.includes(readLabels(event.tags)?.type ?? "")
 
 // New records while the screen is open (a member joins, someone answers) go straight into the
 // local copy; the store re-reads it.
@@ -51,14 +66,18 @@ function useWatch(view: ClubView | undefined) {
   const relays = view?.relays.join(",") ?? ""
   useEffect(() => {
     if (!id || !ready) return
-    const watcher = watchClub(id, relays ? relays.split(",") : [], { matches: [], dates: [] }, (event) => void updateClub(id, { events: [event] }))
+    const watcher = watchClub(id, relays ? relays.split(",") : [], { matches: [], dates: [] }, (event) => {
+      void updateClub(id, { events: [event] }).then(async () => {
+        if (changesMembers(event)) await maintainClub(id, await clubReader())
+      })
+    })
     return () => watcher.close()
   }, [id, ready, relays])
 }
 
 type Run = (action: (author: Author) => Promise<unknown>) => Promise<void>
 
-function ClubBody({ view, refresh }: { view: ClubView; refresh: () => void }) {
+function ClubBody({ view, params, refresh }: { view: ClubView; params: ScreenParams; refresh: () => Promise<ClubView | null> }) {
   const t = useT()
   const tx = useAreaT(CLUBS_TEXTS)
   const nav = useNav()
@@ -95,6 +114,7 @@ function ClubBody({ view, refresh }: { view: ClubView; refresh: () => void }) {
   const onTask = (task: ClubTask) => {
     if (task.kind === "ownership") setAccepting(true)
     else if (task.kind === "verdict") setVerdict(task.game)
+    else if (task.kind === "access") void run((author) => grantAccess(view.id, author))
     else sub(CLUB_SCREENS.manage)
   }
 
@@ -103,6 +123,28 @@ function ClubBody({ view, refresh }: { view: ClubView; refresh: () => void }) {
   const season = state ? currentSeason(state, now) : null
   const table = state && season ? seasonTable(season, view.games, state.results[season.id]) : null
   const myRow = table && me.pubkey ? (table.ranked.find((r) => r.pubkey === me.pubkey) ?? table.unranked.find((r) => r.pubkey === me.pubkey) ?? null) : null
+  const waiting = table && me.pubkey ? table.open.filter((o) => o.why !== "excluded" && o.game.agreement.seats.some((s) => s.pubkey === me.pubkey)).length : 0
+
+  // Opened from the task line on the Clubs tab: straight into that task.
+  const openedTask = useRef(false)
+  useEffect(() => {
+    if (openedTask.current || !params.task) return
+    openedTask.current = true
+    const task = tasks.find((task) => task.kind === params.task && (!("game" in task) || task.game.match === params.game))
+    if (task) onTask(task)
+    // Once, on the first render with the club's state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Accepted on a device that just loaded (club.md "Übergabe"), and only counted once this
+  // device's own replay applied it: otherwise no reader would.
+  const accept = () =>
+    void run(async (author) => {
+      const fresh = (await refresh())?.state
+      if (!fresh) throw new ClubOutdatedError()
+      await acceptOwnership(fresh, author)
+      if ((await refresh())?.state?.owner !== author.pubkey) throw new ClubOutdatedError()
+    })
 
   return (
     <div className="pb-4">
@@ -121,10 +163,12 @@ function ClubBody({ view, refresh }: { view: ClubView; refresh: () => void }) {
           {tasks[0] && (
             <button
               type="button"
+              disabled={busy}
               onClick={() => onTask(tasks[0])}
-              className="mt-4 flex min-h-14 w-full items-center justify-between gap-3 rounded-2xl bg-primary px-4 py-3 text-left text-[1.0625rem] font-semibold text-primary-foreground shadow active:brightness-95"
+              className="mt-4 flex min-h-14 w-full items-center gap-3 rounded-2xl bg-primary/10 px-4 py-3 text-left text-[1.0625rem] font-semibold text-primary transition-colors active:bg-primary/20 disabled:opacity-60"
             >
-              <span className="[overflow-wrap:anywhere]">{taskLabel(tasks[0], tx, t)}</span>
+              <ListTodo className="h-5 w-5 shrink-0" aria-hidden="true" />
+              <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">{taskLabel(tasks[0], tx, t)}</span>
               <ChevronRight className="h-5 w-5 shrink-0" aria-hidden="true" />
             </button>
           )}
@@ -174,7 +218,12 @@ function ClubBody({ view, refresh }: { view: ClubView; refresh: () => void }) {
             {season && table ? (
               <ListRow
                 title={season.name}
-                subtitle={myRow ? (myRow.rank !== null ? tx.club.yourRow(myRow.rank, myRow.points, myRow.games) : tx.club.yourRowUnranked(myRow.games, table.rules.minGames)) : tx.club.notInTable}
+                subtitle={[
+                  myRow ? (myRow.rank !== null ? tx.club.yourRow(myRow.rank, myRow.points, myRow.games) : tx.club.yourRowUnranked(myRow.games, table.rules.minGames)) : waiting === 0 ? tx.club.notInTable : null,
+                  waiting > 0 ? tx.club.waitingGames(waiting) : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
                 value={tx.club.fullTable}
                 onClick={() => sub(CLUB_SCREENS.table)}
               />
@@ -228,14 +277,14 @@ function ClubBody({ view, refresh }: { view: ClubView; refresh: () => void }) {
             destructive
             onConfirm={() => void run((author) => leaveClub(view.id, state.log.applied.at(-1)?.at ?? 0, author))}
           />
-          {state.offer && (
+          {openOffer(state, now) && (
             <Confirm
               open={accepting}
               onOpenChange={setAccepting}
               title={tx.club.acceptTitle}
               text={`${tx.club.state.offer(names(state.owner).name ?? tx.unnamed)} ${tx.club.acceptText}`}
               confirm={tx.club.accept}
-              onConfirm={() => void run((author) => acceptOwnership(state, author))}
+              onConfirm={accept}
             />
           )}
         </>

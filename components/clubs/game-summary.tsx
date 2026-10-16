@@ -17,6 +17,8 @@ export function GameSummary({ game, me, className }: { game: ClubGame; me: strin
   const names = useNames(seats.map((s) => s.pubkey).filter((p): p is string => !!p).concat(game.result ? [game.result.by] : []))
   const result = game.result
   const nameOf = (pubkey: string | undefined, alias: string) => (pubkey ? personName(pubkey, names(pubkey), tx, { me, alias }) : alias)
+  // The viewer's own deeds in their own words ("Du hast gewonnen"), never "Du hat".
+  const mine = (pubkey: string | undefined) => !!me && pubkey === me
   return (
     <div className={cn("rounded-2xl border border-border bg-card px-4 py-3", className)}>
       <ul className="flex flex-col gap-1">
@@ -29,9 +31,9 @@ export function GameSummary({ game, me, className }: { game: ClubGame; me: strin
       </ul>
       {result && (
         <p className="mt-2 text-[0.8125rem] leading-snug text-muted-foreground">
-          {result.winner === null ? tx.game.draw : tx.game.won(nameOf(seats[result.winner]?.pubkey, seats[result.winner]?.alias ?? ""))}
+          {result.winner === null ? tx.game.draw : mine(seats[result.winner]?.pubkey) ? tx.game.wonMe : tx.game.won(nameOf(seats[result.winner]?.pubkey, seats[result.winner]?.alias ?? ""))}
           {" · "}
-          {tx.game.recordedBy(nameOf(result.by, tx.unnamed))}
+          {mine(result.by) ? tx.game.recordedByMe : tx.game.recordedBy(nameOf(result.by, tx.unnamed))}
           {" · "}
           {formatDateTime(result.at, t)}
           {result.replaces && ` · ${tx.game.corrected}`}

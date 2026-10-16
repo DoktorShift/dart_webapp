@@ -18,6 +18,7 @@ export interface ClubsSnapshot {
   views: readonly ClubView[]
   // The local copies were read once.
   loaded: boolean
+  // All clubs are being refreshed (the tab's first open for a profile).
   refreshing: boolean
   // What the last refresh found: whether any relay answered; null before the first.
   online: boolean | null
@@ -38,16 +39,18 @@ function emit(change: Partial<Omit<ClubsSnapshot, "views">> = {}) {
   for (const listener of listeners) listener()
 }
 
-async function reader(): Promise<Reader> {
+// The signed-in profile (or the guest) as the clubs' reader. Only a key kept on this device
+// signs without asking, so only then may a club's upkeep run by itself (lib/clubs/sync.ts).
+export async function clubReader(): Promise<Reader> {
   const session = await loadSession()
-  if (!session) return { pubkey: null, signer: null }
-  return { pubkey: session.pubkey, signer: await getSigner().catch(() => null) }
+  if (!session) return { pubkey: null, signer: null, automatic: false }
+  return { pubkey: session.pubkey, signer: await getSigner().catch(() => null), automatic: session.kind === "local" }
 }
 
 // Reads every club's local copy again (a write happened, or the session changed).
 async function readLocal() {
   const run = ++reading
-  const r = await reader()
+  const r = await clubReader()
   const stored = await storedClubs().catch(() => [])
   const read = await Promise.all(stored.map((s) => viewClub(s, r).catch(() => null)))
   if (run !== reading) return
@@ -56,19 +59,29 @@ async function readLocal() {
   emit({ loaded: true })
 }
 
+// Refreshes one club and tells whether a relay answered: the club's copy says when relays last
+// did, so the time before the refresh is what to compare with (the storage channel may have
+// replaced the view meanwhile).
+async function refreshOne(club: string, r: Reader): Promise<{ view: ClubView; reached: boolean } | null> {
+  const before = views.get(club)?.loadedAt ?? null
+  const view = await refreshClub(club, r).catch(() => null)
+  if (!view) return null
+  views.set(view.id, view)
+  return { view, reached: view.loadedAt !== null && view.loadedAt !== before }
+}
+
 async function refreshAll() {
   if (snapshot.refreshing) return
   emit({ refreshing: true })
-  const r = await reader()
+  const r = await clubReader()
   let online = false
   if (r.pubkey) online = await discoverClubs(r.pubkey).catch(() => false)
   const stored = await storedClubs().catch(() => [])
   // One club at a time: each is a few relay queries and, in a closed club, signer calls.
   for (const s of stored) {
-    const view = await refreshClub(s.club, r).catch(() => null)
-    if (!view) continue
-    if (view.loadedAt !== null) online = true
-    views.set(view.id, view)
+    const result = await refreshOne(s.club, r)
+    if (!result) continue
+    if (result.reached) online = true
     emit()
   }
   emit({ refreshing: false, online })
@@ -128,12 +141,9 @@ export function useClub(club: string | null): { view: ClubView | undefined; load
   const [missing, setMissing] = useState(false)
   const refresh = async () => {
     if (!club) return null
-    const next = await refreshClub(club, await reader()).catch(() => null)
-    if (next) {
-      views.set(next.id, next)
-      emit()
-    }
-    return next
+    const result = await refreshOne(club, await clubReader())
+    if (result) emit({ online: result.reached })
+    return result?.view ?? null
   }
   useEffect(() => {
     if (club && loaded && !view) void refresh().then((next) => setMissing(!next))

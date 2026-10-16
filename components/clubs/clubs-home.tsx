@@ -9,7 +9,7 @@ import { ListRow } from "@/components/ui/list-row"
 import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
-import { formatDateTime, membershipLine, taskLabel } from "@/components/clubs/common"
+import { formatDateTime, membershipLine, taskLabel, taskParams } from "@/components/clubs/common"
 import { CLUB_SCREENS } from "@/components/clubs/screens"
 import { useClubs } from "@/components/clubs/use-clubs"
 import { clubTasks, nextDate, type ClubView } from "@/lib/clubs/club"
@@ -53,7 +53,7 @@ export default function ClubsHome({ fallback }: { fallback: ReactNode }) {
       {mine.length > 0 && (
         <Cards title={tx.home.mine}>
           {mine.map((view) => (
-            <ClubCard key={view.id} view={view} onOpen={() => nav.push(CLUB_SCREENS.view, { club: view.id, name: view.info?.name ?? "" })} />
+            <ClubCard key={view.id} view={view} onOpen={(params) => nav.push(CLUB_SCREENS.view, { club: view.id, name: view.info?.name ?? "", ...params })} />
           ))}
         </Cards>
       )}
@@ -83,8 +83,9 @@ function Cards({ title, children }: { title: string; children: ReactNode }) {
   )
 }
 
-// One club: the card opens it; below it, the one thing the club wants from this person, if any.
-function ClubCard({ view, onOpen }: { view: ClubView; onOpen: () => void }) {
+// One club: the card opens it; below it, the one thing the club wants from this person, if
+// any, which opens the club right at that task.
+function ClubCard({ view, onOpen }: { view: ClubView; onOpen: (params?: Record<string, string>) => void }) {
   const t = useT()
   const tx = useAreaT(CLUBS_TEXTS)
   const now = nowSeconds()
@@ -92,7 +93,7 @@ function ClubCard({ view, onOpen }: { view: ClubView; onOpen: () => void }) {
   const task = clubTasks(view, now).find((task) => task.kind !== "answer")
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-card">
-      <button type="button" onClick={onOpen} className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors active:bg-secondary/70">
+      <button type="button" onClick={() => onOpen()} className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors active:bg-secondary/70">
         <Avatar seed={view.id} name={view.info?.name ?? undefined} src={view.info?.picture} size={48} />
         <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
           <span className="block text-[1.0625rem] font-semibold leading-snug">{view.info?.name ?? tx.unnamed}</span>
@@ -104,7 +105,7 @@ function ClubCard({ view, onOpen }: { view: ClubView; onOpen: () => void }) {
         <ChevronRight className="-mr-1 h-5 w-5 shrink-0 text-muted-foreground/70" aria-hidden="true" />
       </button>
       {task && (
-        <button type="button" onClick={onOpen} className="flex min-h-11 w-full items-center border-t border-border px-4 py-2 text-left text-[0.9375rem] font-semibold text-primary transition-colors active:bg-secondary/70 [overflow-wrap:anywhere]">
+        <button type="button" onClick={() => onOpen(taskParams(task))} className="flex min-h-11 w-full items-center border-t border-border px-4 py-2 text-left text-[0.9375rem] font-semibold text-primary transition-colors active:bg-secondary/70 [overflow-wrap:anywhere]">
           {taskLabel(task, tx, t)}
         </button>
       )}

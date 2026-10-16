@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, type ReactNode } from "react"
 import { RefreshCw } from "lucide-react"
 import {
   AlertDialog,
@@ -21,12 +22,16 @@ import { PROFILE_TEXTS, type ProfileTexts } from "@/lib/i18n/features/profile.sc
 import type { Messages } from "@/lib/i18n"
 import type { ClubTask, ClubView } from "@/lib/clubs/club"
 import type { ClubGame } from "@/lib/clubs/games"
+import { ClubOutdatedError } from "@/lib/clubs/membership"
 import { ClubSignerError, resend } from "@/lib/clubs/send"
+import { useClubs } from "@/components/clubs/use-clubs"
 import type { NameInfo } from "@/components/clubs/use-names"
+import { cn } from "@/lib/utils"
 
 // Small pieces every club screen shares: how times and people are written, what to say when
 // signing fails, the honest lines about the local copy (when relays last answered, what is not
-// sent yet), and the one question before something is removed or given away.
+// sent yet), the one question before something is removed or given away, and the shape of a
+// club sheet.
 
 export const formatDateTime = (unix: number, t: Messages) =>
   new Date(unix * 1000).toLocaleString(t.intl, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
@@ -52,9 +57,12 @@ export function sameNames(pubkeys: readonly string[], nameOf: (pubkey: string) =
   return new Set([...byName.values()].filter((keys) => keys.length > 1).flat())
 }
 
-// What to tell the person when a club change couldn't be signed or encrypted.
+// What to tell the person when a club change couldn't be signed, encrypted or built on what
+// this device has.
 function problemText(error: unknown, tx: ClubsTexts, px: ProfileTexts): string {
-  return error instanceof ClubSignerError ? tx.club.noEncryption : signerProblem(px, error)
+  if (error instanceof ClubSignerError) return tx.club.noEncryption
+  if (error instanceof ClubOutdatedError) return tx.club.outdated
+  return signerProblem(px, error)
 }
 
 // Runs a club change and reports its problem in the caller's words.
@@ -65,10 +73,23 @@ export function useChange() {
 }
 
 // When relays last answered for the club, and what this device wrote that no relay confirmed
-// yet, with one way to send it again.
-export function SyncLine({ view, onRefresh }: { view: ClubView; onRefresh?: () => void }) {
+// yet, with one way to send it again. "Aktualisieren" shows that it is working and, when no
+// relay answers, that the tap changed nothing but the knowledge.
+export function SyncLine({ view, onRefresh }: { view: ClubView; onRefresh?: () => Promise<unknown> }) {
   const t = useT()
   const tx = useAreaT(CLUBS_TEXTS)
+  const { refreshing, online } = useClubs()
+  const [busy, setBusy] = useState(false)
+  const loading = busy || refreshing
+  const refresh = async () => {
+    setBusy(true)
+    try {
+      await onRefresh?.()
+    } finally {
+      setBusy(false)
+    }
+  }
+  const when = view.loadedAt === null ? tx.club.neverLoaded : tx.club.loadedAt(formatTime(view.loadedAt, t))
   return (
     <div className="mt-6 flex flex-col gap-2">
       {view.unsent.length > 0 && (
@@ -80,11 +101,11 @@ export function SyncLine({ view, onRefresh }: { view: ClubView; onRefresh?: () =
         </InlineStatus>
       )}
       <div className="flex items-center justify-between gap-3 px-4 text-[0.8125rem] text-muted-foreground">
-        <span>{view.loadedAt === null ? tx.club.neverLoaded : tx.club.loadedAt(formatTime(view.loadedAt, t))}</span>
+        <span className="[overflow-wrap:anywhere]">{online === false && !loading ? `${tx.club.offline} · ${when}` : when}</span>
         {onRefresh && (
-          <Button variant="ghost" size="sm" onClick={onRefresh} className="h-9 gap-1.5 rounded-lg px-2 text-[0.8125rem] text-primary hover:bg-primary/10 hover:text-primary">
-            <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
-            {tx.club.refresh}
+          <Button variant="ghost" disabled={loading} onClick={() => void refresh()} className="h-11 shrink-0 gap-1.5 rounded-xl px-3 text-[0.9375rem] text-primary hover:bg-primary/10 hover:text-primary">
+            <RefreshCw className={cn("h-4 w-4", loading && "motion-safe:animate-spin")} aria-hidden="true" />
+            {loading ? tx.club.refreshing : tx.club.refresh}
           </Button>
         )}
       </div>
@@ -139,16 +160,24 @@ export function taskLabel(task: ClubTask, tx: ClubsTexts, t: Messages): string {
       return tx.tasks.ownership
     case "verdict":
       return tx.tasks.verdict(gameLabel(task.game))
+    case "access":
+      return tx.tasks.access(task.count)
     case "requests":
       return tx.tasks.requests(task.count)
     case "decide":
-      return tx.tasks.decide(gameLabel(task.game))
+      return task.why === "disputed" ? tx.tasks.disputed(gameLabel(task.game)) : tx.tasks.decide(gameLabel(task.game))
     case "answer":
       return tx.tasks.answer(formatDateTime(task.date.starts, t))
   }
 }
 
-// One question with a cancel and one answer; red when the answer removes something.
+// The task line's way into the club: which task to open there (club-screen.tsx).
+export function taskParams(task: ClubTask): Record<string, string> {
+  return { task: task.kind, ...(task.kind === "verdict" || task.kind === "decide" ? { game: task.game.match } : {}) }
+}
+
+// One question with a cancel and one answer; red when the answer removes something. A field
+// the answer needs (an optional reason) sits between question and answer.
 export function Confirm({
   open,
   onOpenChange,
@@ -157,6 +186,7 @@ export function Confirm({
   confirm,
   destructive,
   onConfirm,
+  children,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -165,6 +195,7 @@ export function Confirm({
   confirm: string
   destructive?: boolean
   onConfirm: () => void
+  children?: ReactNode
 }) {
   const t = useT()
   return (
@@ -174,6 +205,7 @@ export function Confirm({
           <AlertDialogTitle className="[overflow-wrap:anywhere]">{title}</AlertDialogTitle>
           <AlertDialogDescription>{text}</AlertDialogDescription>
         </AlertDialogHeader>
+        {children}
         <AlertDialogFooter className="gap-2">
           <AlertDialogCancel className="h-11">{t.common.cancel}</AlertDialogCancel>
           <AlertDialogAction onClick={onConfirm} className={destructive ? "h-11 bg-danger text-white hover:bg-danger/90" : "h-11"}>
@@ -182,5 +214,23 @@ export function Confirm({
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+  )
+}
+
+// The scrolling part of a club sheet: room at its end, so a button at the bottom is never cut
+// through its label by the pinned one on a small phone.
+export function SheetBody({ className, children }: { className?: string; children: ReactNode }) {
+  return <div className={cn("min-h-0 overflow-y-auto overscroll-contain pb-4", className)}>{children}</div>
+}
+
+// The pinned quiet button at the end of a club sheet ("Abbrechen", "Fertig"), with a fade above
+// it so content scrolling under it reads as more, never as cut off.
+export function SheetButton({ onClick, children }: { onClick: () => void; children: ReactNode }) {
+  return (
+    <div className="relative shrink-0 pt-2 before:pointer-events-none before:absolute before:inset-x-0 before:-top-4 before:h-4 before:bg-gradient-to-t before:from-background before:to-transparent">
+      <Button variant="ghost" onClick={onClick} className="h-12 w-full rounded-2xl text-[1.0625rem]">
+        {children}
+      </Button>
+    </div>
   )
 }

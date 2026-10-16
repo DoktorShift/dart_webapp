@@ -11,7 +11,7 @@ import { InlineStatus } from "@/components/common/inline-status"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
 import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
-import { Confirm, formatDateTime, useChange } from "@/components/clubs/common"
+import { Confirm, SheetBody, SheetButton, formatDate, useChange } from "@/components/clubs/common"
 import { GameSummary } from "@/components/clubs/game-summary"
 import { InviteSheet } from "@/components/clubs/invite-sheet"
 import { clubAuthor } from "@/components/clubs/use-clubs"
@@ -20,13 +20,21 @@ import type { ClubView } from "@/lib/clubs/club"
 import type { ClubGame } from "@/lib/clubs/games"
 import { revokeInvite, updateInfo, type InfoChange } from "@/lib/clubs/membership"
 import { decideResult } from "@/lib/clubs/seasons"
+import type { NotCounted } from "@/lib/clubs/table"
 import { nowSeconds } from "@/lib/nostr/time"
 import type { ClubSeason, ClubState } from "@/lib/protocol/club-state"
 import { safeImageUrl } from "@/lib/shell/avatar"
 
-// The sheets of "Club verwalten": a disputed result, the club's details, the invitations.
+// The sheets of "Club verwalten": a result the leaders decide, the club's details, the
+// invitations.
 
-export function DecideSheet({ view, state, season, game, open, onOpenChange }: { view: ClubView; state: ClubState; season: ClubSeason; game: ClubGame | null; open: boolean; onOpenChange: (open: boolean) => void }) {
+// A game of the season that does not count (yet), and why: what a leader decides on.
+export interface Decision {
+  game: ClubGame
+  why: NotCounted
+}
+
+export function DecideSheet({ view, state, season, decision, open, onOpenChange }: { view: ClubView; state: ClubState; season: ClubSeason; decision: Decision | null; open: boolean; onOpenChange: (open: boolean) => void }) {
   const t = useT()
   const tx = useAreaT(CLUBS_TEXTS)
   const describe = useChange()
@@ -35,11 +43,11 @@ export function DecideSheet({ view, state, season, game, open, onOpenChange }: {
   const [problem, setProblem] = useState<string | null>(null)
 
   const decide = async (count: boolean) => {
-    if (!game) return
+    if (!decision) return
     setBusy(true)
     setProblem(null)
     try {
-      await decideResult(state, season, game, count, await clubAuthor(), reason)
+      await decideResult(state, season, decision.game, count, await clubAuthor(), reason)
       onOpenChange(false)
     } catch (error) {
       setProblem(describe(error))
@@ -49,9 +57,9 @@ export function DecideSheet({ view, state, season, game, open, onOpenChange }: {
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange} title={tx.manage.decide.title} description={tx.manage.decide.text}>
-      <div className="min-h-0 overflow-y-auto overscroll-contain pb-1">
-        {game && <GameSummary game={game} me={view.me.pubkey} />}
+    <Sheet open={open} onOpenChange={onOpenChange} title={tx.manage.decide.title} description={decision ? tx.manage.decide.text[decision.why] : undefined}>
+      <SheetBody>
+        {decision && <GameSummary game={decision.game} me={view.me.pubkey} />}
         <TextField label={tx.manage.decide.reason} value={reason} onChange={(event) => setReason(event.target.value)} maxLength={280} className="mt-4" />
         {problem && (
           <InlineStatus tone="error" className="mt-4">
@@ -66,10 +74,8 @@ export function DecideSheet({ view, state, season, game, open, onOpenChange }: {
             {tx.manage.decide.exclude}
           </Button>
         </div>
-      </div>
-      <Button variant="ghost" onClick={() => onOpenChange(false)} className="mt-2 h-12 w-full shrink-0 rounded-2xl text-[1.0625rem]">
-        {t.common.cancel}
-      </Button>
+      </SheetBody>
+      <SheetButton onClick={() => onOpenChange(false)}>{t.common.cancel}</SheetButton>
     </Sheet>
   )
 }
@@ -113,7 +119,7 @@ export function EditSheet({ view, state, open, onOpenChange }: { view: ClubView;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title={tx.manage.details}>
-      <div className="min-h-0 overflow-y-auto overscroll-contain pb-1">
+      <SheetBody>
         <TextField label={tx.create.name} value={name} onChange={(event) => setName(event.target.value)} maxLength={60} className="mt-0" />
         <TextField label={tx.create.about} value={about} onChange={(event) => setAbout(event.target.value)} maxLength={500} />
         <TextField
@@ -148,10 +154,8 @@ export function EditSheet({ view, state, open, onOpenChange }: { view: ClubView;
         <Button onClick={() => void save()} disabled={!ready || busy} className="mt-6 h-12 w-full rounded-xl text-[1.0625rem] font-semibold">
           {busy ? tx.manage.edit.saving : tx.manage.edit.save}
         </Button>
-      </div>
-      <Button variant="ghost" onClick={() => onOpenChange(false)} className="mt-2 h-12 w-full shrink-0 rounded-2xl text-[1.0625rem]">
-        {t.common.cancel}
-      </Button>
+      </SheetBody>
+      <SheetButton onClick={() => onOpenChange(false)}>{t.common.cancel}</SheetButton>
     </Sheet>
   )
 }
@@ -183,7 +187,7 @@ export function InvitesSheet({ view, state, open, onOpenChange }: { view: ClubVi
   return (
     <>
       <Sheet open={open && !showing && !creating} onOpenChange={onOpenChange} title={tx.manage.invites}>
-        <div className="min-h-0 overflow-y-auto overscroll-contain pb-1">
+        <SheetBody>
           <Button onClick={() => setCreating(true)} disabled={state.info.archived} className="h-12 w-full rounded-xl text-[1.0625rem] font-semibold">
             {tx.invites.create}
           </Button>
@@ -198,7 +202,7 @@ export function InvitesSheet({ view, state, open, onOpenChange }: { view: ClubVi
                     {invite.label && `: ${invite.label}`}
                   </p>
                   <p className="mt-0.5 text-[0.8125rem] leading-snug text-muted-foreground">
-                    {tx.invites.uses(invite.uses.length)} · {tx.invites.until(formatDateTime(invite.expires, t))}
+                    {tx.invites.uses(invite.uses.length)} · {tx.invites.until(formatDate(invite.expires, t))}
                     {!token && ` · ${tx.invites.elsewhere}`}
                   </p>
                   <div className="mt-3 grid grid-cols-2 gap-2">
@@ -218,10 +222,8 @@ export function InvitesSheet({ view, state, open, onOpenChange }: { view: ClubVi
               {problem}
             </InlineStatus>
           )}
-        </div>
-        <Button variant="ghost" onClick={() => onOpenChange(false)} className="mt-2 h-12 w-full shrink-0 rounded-2xl text-[1.0625rem]">
-          {t.common.done}
-        </Button>
+        </SheetBody>
+        <SheetButton onClick={() => onOpenChange(false)}>{t.common.done}</SheetButton>
         <Confirm
           open={revoking !== null}
           onOpenChange={(next) => !next && setRevoking(null)}
