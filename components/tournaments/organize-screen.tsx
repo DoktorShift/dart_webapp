@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { Settings, UserRoundPlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Confirm } from "@/components/ui/confirm"
 import { EmptyState } from "@/components/ui/empty-state"
 import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
@@ -13,21 +12,18 @@ import { Waiting } from "@/components/live/waiting"
 import { useNav } from "@/components/nav/nav-context"
 import { useAreaT } from "@/components/i18n-provider"
 import { TOURNAMENTS_TEXTS } from "@/lib/i18n/features/tournaments.screens"
-import { useGiveAwards, useMissingAwards } from "@/components/tournaments/awards"
-import { boardName, PRIMARY, SECONDARY, useActions, useParticipantNames, useRoundLabel } from "@/components/tournaments/common"
+import { boardName, SECONDARY, useActions, useParticipantNames, useRoundLabel, type Names } from "@/components/tournaments/common"
 import { MatchesList } from "@/components/tournaments/matches-list"
-import { AddBoardSheet, BoardSheet, DrawSheet, GuestsSheet, ParticipantSheet, ResultSheet } from "@/components/tournaments/organize-sheets"
+import { useNextStep } from "@/components/tournaments/next-step"
+import { AddBoardSheet, BoardSheet, GuestsSheet, ParticipantSheet, ResultSheet } from "@/components/tournaments/organize-sheets"
 import { TOURNAMENT_SCREENS } from "@/components/tournaments/screens"
 import { useLiveMatches } from "@/components/tournaments/use-live-matches"
 import { useAutoAdmission, useTournament, type Entry } from "@/components/tournaments/use-tournaments"
 import { waitingList, type Participant } from "@/lib/protocol/tournament-state"
-import { featureOn } from "@/lib/shell/features"
 import type { ScreenProps } from "@/lib/shell/registry"
 import type { MatchView } from "@/lib/tournaments/engine"
-import { suggestBoards } from "@/lib/tournaments/engine"
-import { badgeOccasion } from "@/lib/tournaments/occasion"
 import { awaitingApproval, isGuestPlace, requests, shortKey } from "@/lib/tournaments/read"
-import { approveTemplate, assignTemplate, phaseTemplate } from "@/lib/tournaments/records"
+import { approveTemplate, assignTemplate } from "@/lib/tournaments/records"
 
 type Tab = "participants" | "boards" | "results"
 
@@ -45,8 +41,6 @@ export default function OrganizeScreen({ params }: ScreenProps) {
   return <Workspace entry={entry} />
 }
 
-type Names = ReturnType<typeof useParticipantNames>
-
 function Workspace({ entry }: { entry: Entry }) {
   const tx = useAreaT(TOURNAMENTS_TEXTS)
   const o = tx.organize
@@ -56,37 +50,11 @@ function Workspace({ entry }: { entry: Entry }) {
   const view = read.view
   const names = useParticipantNames(read)
   const [tab, setTab] = useState<Tab>(state.phase === "running" ? "results" : "participants")
-  const actions = useActions(read.id)
-  const giveAwards = useGiveAwards()
-  const [awardsRound, setAwardsRound] = useState(0)
-  const missingAwards = useMissingAwards(entry, awardsRound)
-  const [drawing, setDrawing] = useState(false)
-  const [finishing, setFinishing] = useState(false)
-  const activeBoards = Object.values(state.boards).filter((b) => b.active)
+  const next = useNextStep(entry, names)
   const pending = requests(state)
   const submitted = awaitingApproval(state)
   const affected = view?.matches.filter((m) => m.affected) ?? []
   const skipped = new Set(read.skipped.map((x) => x.slot).filter((slot) => view?.match(slot)))
-  const calls = view && (state.phase === "running" || state.phase === "drawn") ? suggestBoards(view, activeBoards.map((b) => b.id)) : []
-  const canDraw = state.phase === "checkin" || (state.phase === "registration" && !state.settings.checkIn)
-  const badges = featureOn("badges")
-  // Who would get a badge if the tournament ended now (said in the finish dialog).
-  const finishedOccasion = badgeOccasion({ ...read, state: { ...state, finished: state.finished ?? { event: "", by: state.organizer, at: 0 } } })
-
-  const pairing = (m: MatchView) => `${names.nameOf(m.slots[0].participant)} – ${names.nameOf(m.slots[1].participant)}`
-  const callAll = () => actions.run("calls", () => calls.map((c) => assignTemplate(state, c.match, c.board)))
-  const give = async () => {
-    if (!missingAwards) return
-    actions.setProblem(await giveAwards(missingAwards))
-    setAwardsRound((n) => n + 1)
-  }
-  // The end and, right after it, the badges; a lapse stays as a task until they are given.
-  const finish = async () => {
-    const fresh = await actions.run("finish", () => [phaseTemplate(state, "finished")])
-    const occasion = fresh && badges ? badgeOccasion(fresh.read) : null
-    if (occasion) actions.setProblem(await giveAwards(occasion))
-    setAwardsRound((n) => n + 1)
-  }
 
   const tasks = [
     ...(pending.length > 0 ? [{ label: o.tasks.requests(pending.length), onClick: () => setTab("participants") }] : []),
@@ -94,83 +62,53 @@ function Workspace({ entry }: { entry: Entry }) {
     ...(affected.length > 0 ? [{ label: o.tasks.affected(affected.length), onClick: () => setTab("results") }] : []),
     ...(skipped.size > 0 ? [{ label: o.tasks.skipped(skipped.size), onClick: () => setTab("results") }] : []),
   ]
-  // The one thing the phase asks for next, as the screen's one primary action. Calling matches
-  // to free boards goes out from here in one tap; one call names its pairing and board.
-  const single = calls.length === 1 ? view?.match(calls[0].match) : undefined
-  const primary =
-    state.phase === "registration" && state.settings.checkIn
-      ? { label: o.participants.openCheckIn, run: () => void actions.run("checkin", () => [phaseTemplate(state, "checkin")]) }
-      : canDraw
-        ? { label: o.tasks.draw, run: () => setDrawing(true) }
-        : state.phase === "drawn"
-          ? { label: o.tasks.start, run: () => void actions.run("start", () => [phaseTemplate(state, "running")]) }
-          : state.phase === "running" && view?.complete
-            ? { label: o.tasks.finish, run: () => setFinishing(true) }
-            : state.phase === "paused"
-              ? { label: o.participants.resume, run: () => void actions.run("resume", () => [phaseTemplate(state, "running")]) }
-              : calls.length > 0
-                ? { label: single ? o.tasks.call(pairing(single), boardName(state, calls[0].board)) : o.tasks.calls(calls.length), run: () => void callAll() }
-                : missingAwards
-                  ? { label: o.tasks.awards, run: () => void give() }
-                  : null
 
   return (
     <div className="pb-4">
-      <p className="mt-2 text-[1.0625rem] font-semibold leading-snug [overflow-wrap:anywhere]">{state.settings.name}</p>
-      <p className="text-[0.9375rem] text-muted-foreground">{tx.phase[state.phase]}</p>
-      {actions.problem && (
-        <InlineStatus tone="error" className="mt-4">
-          {actions.problem}
-        </InlineStatus>
-      )}
-      {(tasks.length > 0 || primary) && (
-        <Group title={o.tasks.title}>
-          {tasks.map((task) => (
-            <ListRow key={task.label} title={task.label} onClick={task.onClick} />
-          ))}
-          {primary && (
-            <div className="px-4 py-3">
-              <Button onClick={primary.run} disabled={actions.busy !== null} className={`${PRIMARY} h-auto min-h-14 whitespace-normal py-2 leading-snug [overflow-wrap:anywhere]`}>
-                {primary.label}
-              </Button>
-            </div>
-          )}
-        </Group>
-      )}
-      <div className="mt-6 flex items-center gap-2">
+      {/* The gear sits with the tournament's name, so the segments below get the full width. */}
+      <div className="mt-2 flex items-start gap-2">
         <div className="min-w-0 flex-1">
-          <Segmented
-            label={o.tabs.participants}
-            options={[
-              { value: "participants", label: o.tabs.participants },
-              { value: "boards", label: o.tabs.boards },
-              { value: "results", label: o.tabs.results },
-            ]}
-            value={tab}
-            onChange={setTab}
-          />
+          <p className="text-[1.0625rem] font-semibold leading-snug [overflow-wrap:anywhere]">{state.settings.name}</p>
+          <p className="text-[0.9375rem] text-muted-foreground">{tx.phase[state.phase]}</p>
         </div>
         <button
           type="button"
           onClick={() => nav.push(TOURNAMENT_SCREENS.settings, { tournament: read.id })}
           aria-label={o.tabs.settings}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:bg-primary/15"
+          className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:bg-primary/15"
         >
           <Settings className="h-6 w-6" aria-hidden="true" />
         </button>
       </div>
+      {next.problem && (
+        <InlineStatus tone="error" className="mt-4">
+          {next.problem}
+        </InlineStatus>
+      )}
+      {(tasks.length > 0 || next.button) && (
+        <Group title={o.tasks.title}>
+          {tasks.map((task) => (
+            <ListRow key={task.label} title={task.label} onClick={task.onClick} />
+          ))}
+          {next.button && <div className="px-4 py-3">{next.button}</div>}
+        </Group>
+      )}
+      <div className="mt-6">
+        <Segmented
+          label={o.tabs.participants}
+          options={[
+            { value: "participants", label: o.tabs.participants },
+            { value: "boards", label: o.tabs.boards },
+            { value: "results", label: o.tabs.results },
+          ]}
+          value={tab}
+          onChange={setTab}
+        />
+      </div>
       {tab === "participants" && <ParticipantsTab entry={entry} names={names} />}
-      {tab === "boards" && <BoardsTab entry={entry} names={names} calls={calls} />}
+      {tab === "boards" && <BoardsTab entry={entry} names={names} calls={next.calls} />}
       {tab === "results" && <ResultsTab entry={entry} names={names} />}
-      <DrawSheet entry={entry} names={names} open={drawing} onOpenChange={setDrawing} />
-      <Confirm
-        open={finishing}
-        onOpenChange={setFinishing}
-        title={o.participants.finishTitle}
-        text={!view?.complete ? o.participants.finishIncomplete : badges ? o.participants.finishText(finishedOccasion?.places.length ?? 0) : o.participants.finishPlain}
-        confirm={o.participants.finish}
-        onConfirm={() => void finish()}
-      />
+      {next.sheets}
     </div>
   )
 }

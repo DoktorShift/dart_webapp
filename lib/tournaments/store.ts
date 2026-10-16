@@ -1,6 +1,8 @@
 import type { NostrEvent } from "../nostr/types.ts"
 import type { SealedSecret } from "../profile/vault.ts"
-import { dbDelete, dbGet, dbKeys, dbWrite, kvGet, kvSet, type Keyed } from "../storage/db.ts"
+import { dbDelete, dbGet, dbKeys, kvGet, kvSet, type Keyed } from "../storage/db.ts"
+import { updateStored } from "../storage/lock.ts"
+import { addToCopy } from "../storage/record-copy.ts"
 import type { TournamentDraft } from "./draft.ts"
 
 // What a device keeps about tournaments. The local copy comes first (decision 0002 §1): a
@@ -70,29 +72,14 @@ export interface TournamentChange {
   openedAt?: number
 }
 
-// Changes of one tournament, one after another within this tab, so two quick writes never lose
-// each other. Events are only ever added, so another tab writing at the same moment can at
-// most drop events the next load brings back from relays.
-const queues = new Map<string, Promise<unknown>>()
-
-export function updateTournament(tournament: string, change: TournamentChange): Promise<StoredTournament> {
-  const run = (queues.get(tournament) ?? Promise.resolve()).catch(() => {}).then(async () => {
-    const stored = (await loadStoredTournament(tournament)) ?? empty(tournament)
-    const next = merge(stored, change)
-    await dbWrite([{ store: "objects", put: next }])
-    return next
-  })
-  queues.set(tournament, run)
-  return run
-}
+// Changes of one tournament, one after another in every tab: the copy also holds what no relay
+// can bring back (the draw seeds, the board keys).
+export const updateTournament = (tournament: string, change: TournamentChange) =>
+  updateStored<StoredTournament>("objects", objectId(tournament), (stored) => merge(stored ?? empty(tournament), change))
 
 function merge(stored: StoredTournament, change: TournamentChange): StoredTournament {
-  const byId = new Map(stored.events.map((e) => [e.id, e]))
-  for (const event of change.events ?? []) if (!byId.has(event.id)) byId.set(event.id, event)
   return {
-    ...stored,
-    events: [...byId.values()],
-    relays: change.relays ? [...new Set([...stored.relays, ...change.relays])] : stored.relays,
+    ...addToCopy(stored, change),
     loadedAt: change.loadedAt ?? stored.loadedAt,
     seeds: change.seed ? { ...stored.seeds, [change.seed.commit]: change.seed.seed } : stored.seeds,
     boardKeys: change.boardKey ? { ...stored.boardKeys, [change.boardKey.board]: change.boardKey.key } : stored.boardKeys,
@@ -138,23 +125,20 @@ export interface BoardDeviceRecord extends Keyed {
 const boardId = (tournament: string) => `${BOARD_PREFIX}${tournament}`
 
 export const loadBoardDevice = async (tournament: string) => (await dbGet<BoardDeviceRecord>("pending", boardId(tournament))) ?? null
-export const saveBoardDevice = (record: Omit<BoardDeviceRecord, "id">) => dbWrite([{ store: "pending", put: { ...record, id: boardId(record.tournament) } }])
 
-// A game of the board, written on top of the record as it is now (the board screen starts games
-// and the game screen reports them), one after another within this tab.
-const boardQueues = new Map<string, Promise<unknown>>()
-
-export function rememberGame(tournament: string, slot: string, game: (before: BoardGame | undefined) => BoardGame): Promise<BoardDeviceRecord | null> {
-  const run = (boardQueues.get(tournament) ?? Promise.resolve()).catch(() => {}).then(async () => {
-    const record = await loadBoardDevice(tournament)
-    if (!record) return null
-    const next = { ...record, games: { ...record.games, [slot]: game(record.games[slot]) } }
-    await saveBoardDevice(next)
-    return next
+// The board record written on top of what is stored now (the board screen starts games, the
+// game screen reports them, a new code replaces the board), one change after another in every
+// tab. `change` gets the record as stored (or null) and returns the new one, or null to write
+// nothing.
+export const changeBoardDevice = (tournament: string, change: (record: BoardDeviceRecord | null) => Omit<BoardDeviceRecord, "id"> | null) =>
+  updateStored<BoardDeviceRecord>("pending", boardId(tournament), (stored) => {
+    const next = change(stored ?? null)
+    return next && { ...next, id: boardId(tournament) }
   })
-  boardQueues.set(tournament, run)
-  return run
-}
+
+// A game of the board, written on top of the record as it is now; nothing without a record.
+export const rememberGame = (tournament: string, slot: string, game: (before: BoardGame | undefined) => BoardGame) =>
+  changeBoardDevice(tournament, (record) => record && { ...record, games: { ...record.games, [slot]: game(record.games[slot]) } })
 
 export async function listBoardDevices(): Promise<BoardDeviceRecord[]> {
   const ids = (await dbKeys("pending")).filter((id) => id.startsWith(BOARD_PREFIX))

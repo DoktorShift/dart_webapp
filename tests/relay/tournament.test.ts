@@ -28,12 +28,13 @@ let nostr: typeof import("../../lib/nostr/client.ts")
 let signers: typeof import("../../lib/nostr/signers.ts")
 let links: typeof import("../../lib/protocol/links.ts")
 let outbox: typeof import("../../lib/sync/outbox.ts")
+let archive: typeof import("../../lib/storage/archive.ts")
 
 before(async () => {
   relay = await startRelay()
   // Read whenever the code picks its relays: never a public relay in these tests.
   process.env.NEXT_PUBLIC_BLUELINE_RELAYS = relay.url
-  ;[records, read, send, sync, store, device, extra, draft, engine, live, follow, nostr, signers, links, outbox] = await Promise.all([
+  ;[records, read, send, sync, store, device, extra, draft, engine, live, follow, nostr, signers, links, outbox, archive] = await Promise.all([
     import("../../lib/tournaments/records.ts"),
     import("../../lib/tournaments/read.ts"),
     import("../../lib/tournaments/send.ts"),
@@ -49,6 +50,7 @@ before(async () => {
     import("../../lib/nostr/signers.ts"),
     import("../../lib/protocol/links.ts"),
     import("../../lib/sync/outbox.ts"),
+    import("../../lib/storage/archive.ts"),
   ])
 })
 
@@ -268,10 +270,13 @@ test("a board that is offline keeps its result in the outbox and sends it once t
   const game: SavedMatch = { id: "offline-game", config: config({ startScore: 301, players: [{ id: "seat0", name: "Gast Eins" }, { id: "seat1", name: "Gast Zwei" }] }), throws: [], startedAt: "", acknowledgedLegs: 0, status: "playing" }
   const won = { ...game, throws: play(game.config, [dart(20, 3), dart(20, 3), dart(20, 3), dart(1), dart(1), dart(1), dart(20, 3), dart(11, 3), dart(14, 2)]) }
 
-  // The relay goes away: the result waits in the outbox.
+  // The relay goes away: the result is reported the moment the game is won (as the game screen
+  // does) and waits in the outbox.
   const port = relay.port
   await relay.stop()
-  await device.reportResult(id, key, r.state as NonNullable<typeof r.state>, only.id, won)
+  await device.reportGame(id, only.id, game)
+  assert.equal((await store.loadBoardDevice(id))?.games[only.id].reported, null, "nothing while the game is not won")
+  await device.reportGame(id, only.id, won)
   await outbox.flushDue()
   const reported = (await store.loadBoardDevice(id))?.games[only.id].reported
   assert.ok(reported)
@@ -290,6 +295,47 @@ test("a board that is offline keeps its result in the outbox and sends it once t
   r = await fromRelay(id, organizer.pubkey)
   assert.equal(read.awaitingApproval(r.state as NonNullable<typeof r.state>).length, 1)
   assert.equal(read.awaitingApproval(r.state as NonNullable<typeof r.state>)[0].submissions[0].winner, pair[0])
+})
+
+test("a won game whose result screen was left at once is reported by the board, also before the device becomes another board", async () => {
+  const organizer = await person()
+  const seed = engine.createDrawSeed()
+  const d = draft.newDraft("quick", "Europe/Berlin", Date.now(), { name: "Schnell zurück", capacity: 2, checkIn: false, format: "single", boards: [] })
+  const [founding] = await sent(null, [records.foundTemplate(draft.foundContent(d, engine.commitSeed(seed)))], organizer)
+  const id = founding.id
+  const pair: [string, string] = ["a".repeat(32), "b".repeat(32)]
+  let state = (await fromRelay(id)).state as NonNullable<Awaited<ReturnType<typeof fromRelay>>["state"]>
+  await sent(id, [records.guestTemplate(state, pair[0], "Anna", false), records.guestTemplate(state, pair[1], "Mia", false)], organizer)
+  const [boardA, boardB] = [await person(), await person()]
+  const [boardAId, boardBId] = ["1".repeat(32), "2".repeat(32)]
+  state = (await fromRelay(id)).state as typeof state
+  await sent(id, [records.boardTemplate(state, boardAId, "Board 1", boardA.pubkey), records.boardTemplate(state, boardBId, "Board 2", boardB.pubkey)], organizer)
+  state = (await fromRelay(id)).state as typeof state
+  await sent(id, [records.drawTemplate(state, seed, read.drawField(state), [])], organizer)
+  state = (await fromRelay(id)).state as typeof state
+  await sent(id, [records.phaseTemplate(state, "running")], organizer)
+  let r = await fromRelay(id)
+  const only = r.view?.matches[0] as NonNullable<typeof r.view>["matches"][number]
+  await sent(id, [records.assignTemplate(r.state as NonNullable<typeof r.state>, only.id, boardAId)], organizer)
+
+  // Board 1 plays the match; the game is won and kept in the archive, but its result screen was
+  // closed before anything was reported (no game screen any more).
+  await device.becomeBoard({ tournament: id, board: boardAId, key: bytesToHex(boardA.secret), relays: [relay.url] })
+  const game: SavedMatch = { id: "quick-game", config: config({ startScore: 301, players: [{ id: "seat0", name: "Anna" }, { id: "seat1", name: "Mia" }] }), throws: [], startedAt: "", acknowledgedLegs: 0, status: "playing" }
+  await store.rememberGame(id, only.id, () => ({ local: game.id, match: null, players: pair, reported: null }))
+  const won = { ...game, throws: play(game.config, [dart(20, 3), dart(20, 3), dart(20, 3), dart(1), dart(1), dart(1), dart(20, 3), dart(11, 3), dart(14, 2)]) }
+  assert.equal(await archive.archiveFinished(won), true)
+
+  // The same device becomes Board 2: what it won as Board 1 goes out first.
+  await device.becomeBoard({ tournament: id, board: boardBId, key: bytesToHex(boardB.secret), relays: [relay.url] })
+  assert.deepEqual((await store.loadBoardDevice(id))?.games, {})
+  await outbox.flushDue()
+  r = await fromRelay(id, organizer.pubkey)
+  const submitted = read.awaitingApproval(r.state as NonNullable<typeof r.state>)[0]?.submissions[0]
+  assert.equal(submitted?.by, boardA.pubkey)
+  assert.equal(submitted?.winner, pair[0])
+  // The board screen on Board 2 has nothing of Board 1's to report.
+  assert.deepEqual(await device.reportPlayed(id), [])
 })
 
 test("fetching reads each relay to its end, so relays holding different records lose nothing", async () => {

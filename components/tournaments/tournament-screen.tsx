@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { useReducedMotion } from "framer-motion"
 import { Medal, MonitorPlay, Printer, Settings, Share, WifiOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -76,7 +77,21 @@ function TournamentView({ entry, onRefresh }: { entry: Entry; onRefresh: () => v
   const mine = read.me.participant?.id
   const next = mine && read.view && (state.phase === "running" || state.phase === "drawn") ? nextMatch(read.view, mine) : null
   const urgent = next?.state === "ready" || next?.state === "live"
-  const phaseCard = <PhaseCard entry={entry} names={names} />
+  // When the reader's match is called or starts, the card comes into view, wherever the page
+  // was scrolled to (after registering, say).
+  const card = useRef<HTMLDivElement>(null)
+  const reduceMotion = useReducedMotion()
+  const calledMatch = urgent ? next.match.id : null
+  useEffect(() => {
+    if (calledMatch) card.current?.scrollIntoView({ block: "nearest", behavior: reduceMotion ? "auto" : "smooth" })
+    // Once per match that turns urgent.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [calledMatch])
+  const phaseCard = (
+    <div ref={card} className="scroll-mt-16">
+      <PhaseCard entry={entry} names={names} />
+    </div>
+  )
   const bracketLabel = s.format === "roundRobin" || (s.format === "groups" && !read.view?.matches.some((m) => m.bracket === "main" && m.state !== "pending")) ? tx.tournament.tabs.groups : tx.tournament.tabs.bracket
 
   return (

@@ -14,7 +14,7 @@ import { SheetCode } from "@/components/common/sheet-code"
 import { XSHORT, useMediaQuery } from "@/components/common/use-media-query"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { TOURNAMENTS_TEXTS } from "@/lib/i18n/features/tournaments.screens"
-import { PRIMARY, QUIET, scoreText, SECONDARY, useActions, useParticipantNames, useRoundLabel } from "@/components/tournaments/common"
+import { PRIMARY, QUIET, scoreText, SECONDARY, useActions, useRoundLabel, type Names } from "@/components/tournaments/common"
 import { useProfileNames } from "@/components/profile/use-profile-names"
 import type { Entry } from "@/components/tournaments/use-tournaments"
 import { bytesToHex } from "@noble/hashes/utils"
@@ -24,6 +24,7 @@ import { openSecret, sealSecret } from "@/lib/profile/vault"
 import type { Participant } from "@/lib/protocol/tournament-state"
 import { SITE } from "@/lib/site"
 import { randomHex } from "@/lib/storage/ids"
+import { deliveryStatus } from "@/lib/sync/outbox"
 import { cleanNames, localTime } from "@/lib/tournaments/draft"
 import { createDrawSeed, commitSeed, previewChange, recordResult, recordWalkover, resetMatch, type Consequence, type MatchView, type WalkoverReason } from "@/lib/tournaments/engine"
 import { boardLink } from "@/lib/tournaments/links"
@@ -52,7 +53,6 @@ import { cn } from "@/lib/utils"
 // its code, a new board, one match's result or correction with its consequences, the
 // hand-over, and the details.
 
-type Names = ReturnType<typeof useParticipantNames>
 type State = NonNullable<Entry["read"]["state"]>
 
 const DESTRUCTIVE = cn(QUIET, "text-danger hover:bg-danger/10 hover:text-danger")
@@ -168,8 +168,7 @@ export function DrawSheet({ entry, names, open, onOpenChange }: { entry: Entry; 
   const missing = notCheckedIn(state)
   const preview = drawPreview(state, field, seeded)
   const seed = state.seedCommit ? stored.seeds[state.seedCommit] : undefined
-  // A commitment made on this device is drawn on once it left (a seed record still waiting).
-  const committing = seed !== undefined && entry.waiting > 0 && state.log.applied.some((e) => e.type === "tournament.seed")
+  const committing = useCommitWaiting(seed !== undefined ? [...state.log.applied].reverse().find((e) => e.type === "tournament.seed")?.id : undefined, entry.waiting)
   const toggle = (id: string) => setSeeded((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))
 
   const commit = async () => {
@@ -221,6 +220,21 @@ export function DrawSheet({ entry, names, open, onOpenChange }: { entry: Entry; 
   )
 }
 
+// A commitment made on this device is drawn on once relays have it: whether its seed record
+// still waits in the outbox (asked again as the tournament's waiting records change).
+function useCommitWaiting(record: string | undefined, waiting: number): boolean {
+  const [held, setHeld] = useState(false)
+  useEffect(() => {
+    let current = true
+    if (!record) setHeld(false)
+    else void deliveryStatus(record).then((status) => current && setHeld(status?.state === "waiting"), () => {})
+    return () => {
+      current = false
+    }
+  }, [record, waiting])
+  return held
+}
+
 // One board: its code for the device that scores there, and taking it out of the tournament
 // (asked first: the device there can never report again).
 export function BoardSheet({ entry, board, onOpenChange }: { entry: Entry; board: string | null; onOpenChange: (open: boolean) => void }) {
@@ -256,7 +270,7 @@ export function BoardSheet({ entry, board, onOpenChange }: { entry: Entry; board
     <Sheet open={board !== null} onOpenChange={onOpenChange} title={info ? b.codeTitle(info.name) : ""} description={xshort ? undefined : b.codeText}>
       <SheetBody>
         {link === null && <InlineStatus tone="error">{b.keyLost}</InlineStatus>}
-        {link && board && <SheetCode value={link} label={b.codeLabel} caption={b.codeCaption} description={b.codeText} share={{ url: link, title: info?.name }} />}
+        {link && board && <SheetCode value={link} label={b.codeLabel} description={b.codeText} share={{ url: link, title: info?.name }} />}
         <Problem text={actions.problem} />
         <Button variant="ghost" onClick={() => setRevoking(true)} disabled={actions.busy !== null} className={`${DESTRUCTIVE} mt-2`}>
           {b.revoke}
@@ -301,8 +315,11 @@ export function AddBoardSheet({ entry, open, onOpenChange }: { entry: Entry; ope
 // One match: enter its result (the winner, and how many legs or sets the loser took) or a
 // walkover, or correct a result that counts (filled in with it), with what that does to the
 // matches after it. A match a correction left without fitting players shows its new pairing:
-// enter the result it got, or have it played again.
+// enter the result it got, or have it played again. A walkover the bracket made from a
+// withdrawal (or a bye) takes no result while the player is out: it only says so, and a result
+// entered for it anyway can be taken back.
 export function ResultSheet({ entry, names, match: m, onOpenChange }: { entry: Entry; names: Names; match: MatchView | null; onOpenChange: (open: boolean) => void }) {
+  const t = useT()
   const tx = useAreaT(TOURNAMENTS_TEXTS)
   const r = tx.organize.results
   const round = useRoundLabel()
@@ -334,7 +351,8 @@ export function ResultSheet({ entry, names, match: m, onOpenChange }: { entry: E
   const sets = (m.format.setsToWin ?? 1) > 1
   const toWin = sets ? (m.format.setsToWin as number) : m.format.legsToWin
   const correcting = (state.slots[m.id]?.approved ?? null) !== null
-  const form = editing || (!decided && !m.affected)
+  const automatic = m.state === "walkover" && (m.walkover === "withdrawn" || m.walkover === "bye") && !bracket.records[m.id]
+  const form = !automatic && (editing || (!decided && !m.affected))
   const skipped = read.skipped.some((x) => x.slot === m.id)
   const w = winner !== null ? players.indexOf(winner) : -1
   const score: [number, number] | null = w < 0 ? null : w === 0 ? [toWin, loserCount] : [loserCount, toWin]
@@ -361,12 +379,13 @@ export function ResultSheet({ entry, names, match: m, onOpenChange }: { entry: E
       })
       .then((ok) => ok && onOpenChange(false))
   const replay = () => actions.run("replay", () => [correctTemplate(state, m.id, null, [0, 0], reason.trim() || r.replay)]).then((ok) => ok && onOpenChange(false))
+  const takeBack = () => actions.run("takeBack", () => [correctTemplate(state, m.id, null, [0, 0], r.takeBack)]).then((ok) => ok && onOpenChange(false))
 
   return (
     <Sheet open onOpenChange={onOpenChange} title={`${names.nameOf(players[0])} – ${names.nameOf(players[1])}`} description={`${round(m)} · ${tx.matchNumber(m.number)}`}>
       <SheetBody>
         {m.affected && <InlineStatus className="mt-1">{r.affected}</InlineStatus>}
-        {skipped && <InlineStatus className="mt-1">{r.skipped}</InlineStatus>}
+        {skipped && <InlineStatus className="mt-1">{automatic ? r.skippedWalkover : r.skipped}</InlineStatus>}
         {decided && !m.affected && !editing && (
           <p className="mt-2 text-[1.5rem] font-semibold [overflow-wrap:anywhere]">
             {m.state === "walkover" ? tx.walkover[m.walkover ?? "noShow"] : scoreText(m)} · {names.nameOf(m.winner)}
@@ -410,7 +429,17 @@ export function ResultSheet({ entry, names, match: m, onOpenChange }: { entry: E
         <Problem text={actions.problem} />
       </SheetBody>
       <div className="mt-4 grid shrink-0 gap-2">
-        {form ? (
+        {automatic ? (
+          skipped && correcting ? (
+            <Button variant="secondary" onClick={() => void takeBack()} disabled={actions.busy !== null} className={SECONDARY}>
+              {r.takeBack}
+            </Button>
+          ) : (
+            <Button variant="ghost" onClick={() => onOpenChange(false)} className={QUIET}>
+              {t.common.done}
+            </Button>
+          )
+        ) : form ? (
           <Button onClick={() => void submit()} disabled={!winner || actions.busy !== null} className={PRIMARY}>
             {r.save}
           </Button>

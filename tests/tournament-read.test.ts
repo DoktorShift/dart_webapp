@@ -7,6 +7,8 @@ import { reduceTournament } from "../lib/protocol/tournament-state.ts"
 import { cleanNames, draftProblems, foundContent, newDraft } from "../lib/tournaments/draft.ts"
 import { createLocalSigner } from "../lib/nostr/signers.ts"
 import { buildRecord } from "../lib/protocol/records.ts"
+import { tagValue } from "../lib/protocol/tags.ts"
+import type { SealedSecret } from "../lib/profile/vault.ts"
 import { dbGetAll } from "../lib/storage/db.ts"
 import { createDrawSeed, commitSeed, previewChange, recordResult } from "../lib/tournaments/engine.ts"
 import { exportFileName, tournamentCsv, tournamentJson } from "../lib/tournaments/export.ts"
@@ -31,7 +33,8 @@ import {
   withdrawTemplate,
 } from "../lib/tournaments/records.ts"
 import { send, waitingRecords } from "../lib/tournaments/send.ts"
-import { loadStoredTournament, type StoredTournament } from "../lib/tournaments/store.ts"
+import { admitNext } from "../lib/tournaments/admission.ts"
+import { loadStoredTournament, updateTournament, type StoredTournament } from "../lib/tournaments/store.ts"
 
 // The bridge from the tournament's records to the engine's bracket: the founding from a draft,
 // registrations admitted, the draw, boards called, a board's result approved, a correction that
@@ -346,6 +349,73 @@ test("a withdrawal dated before the draw takes the player out of the drawn field
   assert.notEqual(theirs.winner, players[2].pubkey)
 })
 
+test("a player who left before the draw and came back keeps what they played when they leave again", () => {
+  // Review round 2 (ADV5): the status at the draw decides, not the final one.
+  const seed = createDrawSeed()
+  const draft = newDraft("b", "Europe/Berlin", NOW * 1000, { name: "Zurück", capacity: 4, checkIn: false, boards: [] })
+  const found = sign(organizer, foundTemplate(foundContent(draft, commitSeed(seed)), NOW))
+  const id = found.id
+  const events = [found]
+  for (const p of players) events.push(sign(p, registerTemplate(state(events, id))))
+  for (const p of players) events.push(sign(organizer, admitTemplate(state(events, id), p.pubkey)))
+  const back = players[0]
+  events.push(sign(back, withdrawTemplate(state(events, id))))
+  events.push(sign(back, registerTemplate(state(events, id), "Wieder da")))
+  events.push(sign(organizer, admitTemplate(state(events, id), back.pubkey)))
+  events.push(sign(organizer, drawTemplate(state(events, id), seed, drawField(state(events, id)), [])))
+  events.push(sign(organizer, phaseTemplate(state(events, id), "running")))
+  const theirs = readyMatches(events, id).find((m) => m.slots.some((x) => x.participant === back.pubkey)) as Match
+  events.push(sign(organizer, resultTemplate(state(events, id), theirs.id, { winner: back.pubkey, score: [3, 2] })))
+  events.push(sign(back, withdrawTemplate(state(events, id), "Verletzt")))
+  let r = read(events, id)
+  assert.equal(r.view?.match(theirs.id)?.state, "finished")
+  assert.equal(r.view?.match(theirs.id)?.winner, back.pubkey)
+  assert.deepEqual(r.skipped, [])
+  // They left after their win: the final goes to the other semi's winner without a game.
+  const other = readyMatches(events, id)[0]
+  events.push(sign(organizer, resultTemplate(state(events, id), other.id, { winner: other.slots[0].participant, score: [3, 0] })))
+  r = read(events, id)
+  assert.equal(r.view?.complete, true)
+  assert.equal(r.view?.champion, other.slots[0].participant)
+})
+
+test("a result for a walkover from a withdrawal stays a task only until it is taken back", () => {
+  // Review round 2 (ADV9, ADV12): the bracket refuses a result for a match a player left; taking
+  // the decision back (a correction without a winner) is the one thing that clears it.
+  const { id, events, field } = running(4)
+  const m = readyMatches(events, id)[0]
+  const quitter = field.find((p) => p.pubkey === m.slots[1].participant) as ReturnType<typeof person>
+  events.push(sign(quitter, withdrawTemplate(state(events, id))))
+  assert.equal(read(events, id).view?.match(m.id)?.walkover, "withdrawn")
+  events.push(sign(organizer, resultTemplate(state(events, id), m.id, { winner: m.slots[1].participant, score: [1, 3] })))
+  let r = read(events, id)
+  assert.deepEqual(r.skipped.map((x) => x.slot), [m.id])
+  events.push(sign(organizer, correctTemplate(state(events, id), m.id, null, [0, 0], "Zurückgenommen")))
+  r = read(events, id)
+  assert.deepEqual(state(events, id).log.rejected, [])
+  assert.deepEqual(r.skipped, [])
+  assert.equal(r.view?.match(m.id)?.state, "walkover")
+  assert.equal(r.view?.match(m.id)?.winner, m.slots[0].participant)
+})
+
+test("a withdrawal dated before a played result of the same player: the tournament still finishes", () => {
+  const { id, events, field } = running(4)
+  const m = readyMatches(events, id)[0]
+  const result = sign(organizer, resultTemplate(state(events, id), m.id, { winner: m.slots[0].participant, score: [3, 0] }))
+  events.push(result)
+  const p = field.find((x) => x.pubkey === m.slots[0].participant) as ReturnType<typeof person>
+  events.push(sign(p, buildRecord("tournament.withdraw", {}, { created_at: result.created_at - 1, root: id })))
+  for (let next = readyMatches(events, id)[0]; next; next = readyMatches(events, id)[0])
+    events.push(sign(organizer, resultTemplate(state(events, id), next.id, { winner: next.slots[0].participant, score: [3, 0] })))
+  let r = read(events, id)
+  assert.equal(r.view?.complete, true)
+  assert.deepEqual(r.skipped.map((x) => x.slot), [m.id])
+  events.push(sign(organizer, correctTemplate(state(events, id), m.id, null, [0, 0], "Zurückgenommen")))
+  r = read(events, id)
+  assert.deepEqual(r.skipped, [])
+  assert.equal(r.view?.complete, true)
+})
+
 test("a live match counts only from the key of the board it is called to", () => {
   const { id, events } = running(4)
   const boardId = "b".repeat(32)
@@ -384,32 +454,34 @@ test("guests the organizer entered count as present at the check-in", () => {
   assert.deepEqual(drawField(s).sort(), ["a".repeat(32), players[0].pubkey].sort())
 })
 
-test("automatic admission keeps the waiting list's order and fills it once the field is full", () => {
+test("automatic admission takes requests by their date, keeps the waiting list's order and fills it once the field is full", () => {
   const draft = newDraft("a", "Europe/Berlin", NOW * 1000, { name: "Auto", capacity: 2, checkIn: false, boards: [], admission: "auto", waitlist: true })
   const found = sign(organizer, foundTemplate(foundContent(draft, commitSeed("s")), NOW))
   const id = found.id
   const events = [found]
-  // Seen in this order; the third asks with the earliest date, which decides nothing.
-  events.push(sign(players[0], registerTemplate(state(events, id))))
-  events.push(sign(players[1], registerTemplate(state(events, id))))
+  // Kept in this order (a fetch reads relays newest first); the third asks with the earliest date.
+  events.push(sign(players[0], buildRecord("tournament.register", {}, { created_at: NOW + 3, root: id })))
+  events.push(sign(players[1], buildRecord("tournament.register", {}, { created_at: NOW + 2, root: id })))
   events.push(sign(players[2], buildRecord("tournament.register", {}, { created_at: NOW + 1, root: id })))
-  const decide = () => nextAdmission(state(events, id), events)
+  const decide = () => nextAdmission(state(events, id))
   const step = () => {
     const next = decide() as NonNullable<ReturnType<typeof decide>>
     const s = state(events, id)
     events.push(sign(organizer, next.to === "admit" ? admitTemplate(s, next.participant.id) : waitlistTemplate(s, next.participant.id)))
     return [next.to, next.participant.id]
   }
-  assert.deepEqual(step(), ["admit", players[0].pubkey])
+  assert.deepEqual(step(), ["admit", players[2].pubkey])
   assert.deepEqual(step(), ["admit", players[1].pubkey])
-  assert.deepEqual(step(), ["waitlist", players[2].pubkey])
+  assert.deepEqual(step(), ["waitlist", players[0].pubkey])
   events.push(sign(players[3], registerTemplate(state(events, id))))
   assert.deepEqual(step(), ["waitlist", players[3].pubkey])
   assert.equal(decide(), null)
   // A place frees up and the one who left asks again: the first on the waiting list comes in.
-  events.push(sign(players[0], withdrawTemplate(state(events, id))))
-  events.push(sign(players[0], registerTemplate(state(events, id))))
-  assert.deepEqual(step(), ["admit", players[2].pubkey])
+  events.push(sign(players[2], withdrawTemplate(state(events, id))))
+  events.push(sign(players[2], registerTemplate(state(events, id))))
+  assert.deepEqual(step(), ["admit", players[0].pubkey])
+  // The full field again: the new request goes behind the one waiting longer.
+  assert.deepEqual(step(), ["waitlist", players[2].pubkey])
 })
 
 test("sending keeps the records, then queues them in order after what still waits", async () => {
@@ -429,4 +501,43 @@ test("sending keeps the records, then queues them in order after what still wait
   assert.deepEqual(after.get(update.id), [id])
   assert.deepEqual(after.get(phase.id), [update.id])
   assert.equal((await waitingRecords()).get(id), 3)
+})
+
+test("two tabs deciding automatic admission at the same moment sign each decision once", async () => {
+  const author = { pubkey: organizer.pubkey, signer: await createLocalSigner(organizer.secret) }
+  const draft = newDraft("t", "Europe/Berlin", NOW * 1000, { name: "Zwei Tabs", capacity: 2, checkIn: false, boards: [], admission: "auto", waitlist: true })
+  const [found] = await send(null, [foundTemplate(foundContent(draft, commitSeed("s")), NOW)], author)
+  const id = found.id
+  const asks = players.slice(0, 3).map((p, i) => sign(p, buildRecord("tournament.register", {}, { created_at: NOW + i + 1, root: id })))
+  await updateTournament(id, { events: asks })
+  // Both tabs see the same requests and decide at once; the second decides on the first's record.
+  const [a, b] = await Promise.all([admitNext(id, author), admitNext(id, author)])
+  assert.ok(a && b)
+  const third = await admitNext(id, author)
+  assert.equal(await admitNext(id, author), null)
+  const s = state((await loadStoredTournament(id))?.events ?? [], id)
+  assert.deepEqual(s.log.rejected, [])
+  assert.deepEqual([a, b, third].map((e) => e && tagValue(e.tags, "l")), ["tournament.admit", "tournament.admit", "tournament.waitlist"])
+  assert.equal(s.participants[players[0].pubkey].status, "registered")
+  assert.equal(s.participants[players[1].pubkey].status, "registered")
+  assert.equal(s.participants[players[2].pubkey].status, "waitlist")
+})
+
+test("writes of one tournament from two tabs at the same moment keep each other's seed and board key", async () => {
+  // Two module instances stand for two tabs: each has its own queues, only the lock is shared.
+  const secondTab = "../lib/tournaments/store.ts?tab=2"
+  const other = (await import(secondTab)) as typeof import("../lib/tournaments/store.ts")
+  const id = "c".repeat(64)
+  const key = {} as SealedSecret
+  await Promise.all([
+    updateTournament(id, { seed: { commit: "commit", seed: "seed" } }),
+    other.updateTournament(id, { boardKey: { board: "board", key } }),
+    updateTournament(id, { relays: ["wss://a.example"] }),
+    other.updateTournament(id, { openedAt: 1 }),
+  ])
+  const kept = await loadStoredTournament(id)
+  assert.equal(kept?.seeds.commit, "seed")
+  assert.ok(kept?.boardKeys.board)
+  assert.deepEqual(kept?.relays, ["wss://a.example"])
+  assert.equal(kept?.openedAt, 1)
 })

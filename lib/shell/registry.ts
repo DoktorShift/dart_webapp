@@ -71,10 +71,13 @@
 //   { id, label, icon?, onSelect }. onSelect gets the running game; the menu closes first.
 //   Nothing else on the game screen can be changed from outside.
 // - Result primaries: what the result of a game an area owns leads to instead of Revanche and
-//   Neues Spiel, each { id, owns(match), label, icon? }; the first registered that owns the
-//   finished game (FinishedMatch) wins. Its one big button leaves the result the way Fertig does,
-//   back to the screen the game was started from (a tournament game: "Zurück zum Board", as a
-//   rematch there would be an untracked friendly). Without one the result is as it always was.
+//   Neues Spiel, each { id, owns(match), label, icon?, pieces? }; the first registered that owns
+//   the finished game (FinishedMatch) wins. Its one big button leaves the result the way Fertig
+//   does, back to the screen the game was started from (a tournament game: "Zurück zum Board", as
+//   a rematch there would be an untracked friendly). `pieces` lists the "result.actions" piece ids
+//   that show for such a game, in their registration order; the others stay away (a shared board
+//   device shows the tournament's own row, no offer to keep the game in a profile). Without
+//   `pieces` every piece shows; without a primary the result is as it always was.
 // - Start tasks: work an area does once per page, after the first screen is up and the browser is
 //   idle (the shell picks the moment): resuming a queue, catching up with relays. Load the code
 //   behind an import() inside the task, so the start page carries only the call.
@@ -410,6 +413,8 @@ export interface ResultPrimary {
   owns: (match: FinishedMatch) => boolean
   label: (t: Messages) => string
   icon?: ComponentType<{ className?: string; "aria-hidden"?: boolean }>
+  // The "result.actions" pieces that show for the area's games; every piece when left out.
+  pieces?: readonly string[]
 }
 
 const resultPrimaries = new Map<string, ResultPrimary>()

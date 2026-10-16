@@ -5,7 +5,8 @@ import type { ClubView } from "@/lib/clubs/club"
 import type { Author } from "@/lib/clubs/send"
 import { storedClubs } from "@/lib/clubs/store"
 import { discoverClubs, refreshClub, viewClub, type Reader } from "@/lib/clubs/sync"
-import { getSession, getSigner, loadSession, subscribeSession } from "@/lib/profile/session"
+import { followProfile } from "@/components/profile/follow-profile"
+import { getSigner, loadSession } from "@/lib/profile/session"
 import { onStorageChange } from "@/lib/storage/db"
 
 // The clubs this device knows, as the signed-in profile (or a guest) reads them: one store for
@@ -28,8 +29,6 @@ const views = new Map<string, ClubView>()
 let snapshot: ClubsSnapshot = { views: [], loaded: false, refreshing: false, online: null }
 const listeners = new Set<() => void>()
 let watching = false
-// Which session the clubs were last refreshed for (pubkey, "" for a guest); undefined: never.
-let refreshedFor: string | undefined
 let reading = 0
 
 const byName = (a: ClubView, b: ClubView) => (a.info?.name ?? "￿").localeCompare(b.info?.name ?? "￿")
@@ -96,24 +95,12 @@ function watch() {
       emit()
     } else if (message.stores.includes("objects")) void readLocal()
   })
-  let last = getSession()?.pubkey ?? null
-  subscribeSession(() => {
-    const next = getSession()?.pubkey ?? null
-    if (next === last) return
-    last = next
-    refreshedFor = undefined
-    void start()
-  })
 }
 
-async function start() {
+const start = followProfile(async () => {
   watch()
   await readLocal()
-  const key = (await loadSession())?.pubkey ?? ""
-  if (refreshedFor === key) return
-  refreshedFor = key
-  await refreshAll()
-}
+}, refreshAll)
 
 function subscribe(listener: () => void) {
   listeners.add(listener)

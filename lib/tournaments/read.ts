@@ -171,8 +171,9 @@ type Step =
 
 // The steps in the order the replay applied them, from the draw the bracket is built from on.
 // The state keeps only the last decision per slot; the replay log says which records counted, in
-// which order, and the events their content. A player whose withdrawal is dated before the draw
-// and who never came back stays in the drawn field (the protocol's rule) and leaves first.
+// which order, and the events their content. A drawn player who had left when the draw was made
+// (a withdrawal dated before it, never followed by a new registration) stays in the drawn field
+// (the protocol's rule) and leaves first; what they do after the draw applies where it was made.
 function stepsOf(state: TournamentState, events: readonly NostrEvent[]): Step[] {
   const byId = new Map(events.map((e) => [e.id, e]))
   const contentOf = <T extends "tournament.result" | "tournament.approve" | "tournament.correct" | "tournament.assign" | "tournament.remove">(id: string, type: T): ContentOf<T> | null => {
@@ -182,27 +183,28 @@ function stepsOf(state: TournamentState, events: readonly NostrEvent[]): Step[] 
   const drawn = new Set(state.draw?.order ?? [])
   const drawAt = state.log.applied.findIndex((e) => e.id === state.draw?.event)
   const out: Step[] = []
-  const before: Step[] = []
+  // Who of the drawn field had left at the draw, by their last leaving before it.
+  const left = new Map<string, Step>()
   let organizer = state.founder
   state.log.applied.forEach((entry, at) => {
     if (entry.type === "tournament.handover.accept") organizer = entry.author
     const removal = entry.type === "tournament.remove" ? contentOf(entry.id, "tournament.remove") : null
     const participant = entry.type === "tournament.withdraw" ? entry.author : (removal?.participant ?? null)
     if (participant !== null) {
-      const status = state.participants[participant]?.status
-      const gone = drawn.has(participant) && (status === "withdrawn" || status === "removed")
       const step: Step = { kind: "leave", participant, how: removal?.reason === "disqualified" ? "disqualified" : "withdrawn" }
-      if (at > drawAt) {
-        if (drawn.has(participant)) out.push(step)
-      } else if (gone) {
-        // Only the last one before the draw counts; a later registration ends it (status).
-        const i = before.findIndex((s) => s.kind === "leave" && s.participant === participant)
-        if (i >= 0) before.splice(i, 1)
-        before.push(step)
+      if (!drawn.has(participant)) return
+      if (at > drawAt) out.push(step)
+      else {
+        left.delete(participant)
+        left.set(participant, step)
       }
       return
     }
-    if (at <= drawAt) return
+    if (at <= drawAt) {
+      // Registering again before the draw ends a withdrawal (a removal can't be undone).
+      if (entry.type === "tournament.register") left.delete(entry.author)
+      return
+    }
     if (entry.type === "tournament.assign") {
       const c = contentOf(entry.id, "tournament.assign")
       if (c) out.push({ kind: "assign", slot: c.slot, board: c.board })
@@ -218,19 +220,21 @@ function stepsOf(state: TournamentState, events: readonly NostrEvent[]): Step[] 
       if (c) out.push({ kind: "result", slot: c.slot, winner: c.winner, score: c.score, ...(c.walkover ? { walkover: c.walkover } : {}) })
     }
   })
-  return [...before, ...out]
+  return [...left.values(), ...out]
 }
 
 // The bracket with every step applied in the order it was made, then the matches boards are
 // playing. A decision the bracket cannot take as made (a winner who does not play the match, a
-// result for players the bracket no longer puts there) is kept in `skipped` for the organizer.
-function decide(bare: Tournament, state: TournamentState, events: readonly NostrEvent[], live: readonly LiveInput[], skipped: TournamentRead["skipped"]): { bracket: Tournament; live: Record<string, LiveSlot> } {
+// result for players the bracket no longer puts there) is kept in `skipped` for the organizer,
+// until a newer decision about the same slot replaces it.
+function decide(bare: Tournament, state: TournamentState, events: readonly NostrEvent[], live: readonly LiveInput[]): { bracket: Tournament; live: Record<string, LiveSlot>; skipped: TournamentRead["skipped"] } {
   let t = bare
+  const refused = new Map<string, string>()
   const attempt = (slot: string, change: () => Tournament) => {
     try {
       t = change()
     } catch (error) {
-      skipped.push({ slot, why: error instanceof Error ? error.message : String(error) })
+      refused.set(slot, error instanceof Error ? error.message : String(error))
     }
   }
   for (const step of stepsOf(state, events)) {
@@ -251,11 +255,12 @@ function decide(bare: Tournament, state: TournamentState, events: readonly Nostr
       if ((m.state === "ready" || m.state === "live") && m.board !== board) attempt(step.slot, () => assignBoard(t, step.slot, board))
       continue
     }
+    refused.delete(step.slot)
     const winner = step.winner
     if (winner === null) {
       if (t.records[step.slot]) attempt(step.slot, () => resetMatch(t, step.slot))
     } else if (!m.slots.some((s) => s.participant === winner)) {
-      skipped.push({ slot: step.slot, why: `${winner} does not play ${step.slot}` })
+      refused.set(step.slot, `${winner} does not play ${step.slot}`)
     } else if (step.walkover) {
       const reason = step.walkover
       attempt(step.slot, () => recordWalkover(t, step.slot, winner, reason))
@@ -271,7 +276,7 @@ function decide(bare: Tournament, state: TournamentState, events: readonly Nostr
     playing[l.slot] = { slot: l.slot, match: l.match, board: board.id }
     if (m.state === "ready") attempt(l.slot, () => startMatch(t, l.slot, board.id))
   }
-  return { bracket: t, live: playing }
+  return { bracket: t, live: playing, skipped: [...refused].map(([slot, why]) => ({ slot, why })) }
 }
 
 // ---- Reading ---------------------------------------------------------------------------------
@@ -292,9 +297,8 @@ export function readTournament(stored: StoredTournament, opts: ReadOptions): Tou
   const state = result.state
   const names: Record<string, string> = {}
   for (const p of Object.values(state.participants)) names[p.id] = placeName(p)
-  const skipped: TournamentRead["skipped"] = []
   const bare = bracketOf(state)
-  const decided = bare ? decide(bare, state, stored.events, opts.live ?? [], skipped) : null
+  const decided = bare ? decide(bare, state, stored.events, opts.live ?? []) : null
   const pubkey = opts.pubkey
   const participant = pubkey ? (state.participants[pubkey] ?? Object.values(state.participants).find((p) => p.player === pubkey) ?? null) : null
   const me: Me = {
@@ -311,7 +315,7 @@ export function readTournament(stored: StoredTournament, opts: ReadOptions): Tou
     names,
     me,
     live: decided?.live ?? {},
-    skipped,
+    skipped: decided?.skipped ?? [],
   }
 }
 
@@ -322,14 +326,12 @@ export const freePlaces = (state: TournamentState) => Math.max(0, state.settings
 export const requests = (state: TournamentState) => Object.values(state.participants).filter((p) => p.status === "pending")
 
 // What automatic admission decides next, if anything: while there is room, the first on the
-// waiting list before any request, then requests in the order this device first saw them
-// (`events` as kept, oldest first: players date their own requests, so their dates decide
-// nothing); once full, the next request goes on the waiting list where there is one.
-export function nextAdmission(state: TournamentState, events: readonly NostrEvent[]): { participant: Place; to: "admit" | "waitlist" } | null {
+// waiting list before any request, then requests by their date (a new registration after a
+// withdrawal is a new request), the same on every device, however relays delivered them; once
+// full, the next request goes on the waiting list where there is one.
+export function nextAdmission(state: TournamentState): { participant: Place; to: "admit" | "waitlist" } | null {
   if (state.settings.admission !== "auto" || (state.phase !== "registration" && state.phase !== "checkin")) return null
-  const seen = new Map<string, number>()
-  events.forEach((e, i) => !seen.has(e.pubkey) && seen.set(e.pubkey, i))
-  const asking = requests(state).sort((a, b) => (seen.get(a.id) ?? 0) - (seen.get(b.id) ?? 0))
+  const asking = requests(state).sort((a, b) => a.at - b.at || (a.id < b.id ? -1 : 1))
   const room = freePlaces(state) > 0
   const participant = room ? (waitingList(state)[0] ?? asking[0]) : state.settings.waitlist ? asking[0] : undefined
   return participant ? { participant, to: room ? "admit" : "waitlist" } : null

@@ -111,7 +111,7 @@ function CreateFlow({ initial, params }: { initial: TournamentDraft; params: Scr
       {step === 0 && <Basics draft={draft} change={change} />}
       {step === 1 && <FormatAndRules draft={draft} change={change} />}
       {step === 2 && <PlayersAndBoards draft={draft} change={change} />}
-      {step === 3 && <Preview draft={draft} onPublished={setPublished} />}
+      {step === 3 && <Preview draft={draft} stopSaving={() => clearTimeout(timer.current)} onPublished={setPublished} />}
       <div className="mt-8 grid gap-2">
         {step < STEPS - 1 && (
           <Button onClick={() => setStep(step + 1)} className={PRIMARY}>
@@ -318,8 +318,9 @@ function PlayersAndBoards({ draft, change }: StepProps) {
 
 // What will be published, what is missing, and the one button. Publishing founds the
 // tournament with the commitment to a draw seed kept on this device, then adds the guests and
-// the boards (each board with a key made here, sealed, so its code can be shown).
-function Preview({ draft, onPublished }: { draft: TournamentDraft; onPublished: (p: Published) => void }) {
+// the boards (each board with a key made here, sealed, so its code can be shown). A draft save
+// still waiting is dropped first, so a published draft never comes back.
+function Preview({ draft, stopSaving, onPublished }: { draft: TournamentDraft; stopSaving: () => void; onPublished: (p: Published) => void }) {
   const t = useT()
   const tx = useAreaT(TOURNAMENTS_TEXTS)
   const c = tx.create
@@ -336,6 +337,7 @@ function Preview({ draft, onPublished }: { draft: TournamentDraft; onPublished: 
     if (!ready) return
     setBusy(true)
     setProblem(null)
+    stopSaving()
     try {
       if (!(await guest.ensure())) return
       const author = await tournamentAuthor()

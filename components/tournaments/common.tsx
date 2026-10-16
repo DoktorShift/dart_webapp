@@ -30,6 +30,8 @@ export const formatDateTime = (unix: number, t: Messages) =>
 
 export const formatTime = (ms: number, t: Messages) => new Date(ms).toLocaleTimeString(t.intl, { hour: "2-digit", minute: "2-digit" })
 
+export type Names = ReturnType<typeof useParticipantNames>
+
 // What a participant is called: their public profile's name, else the alias they gave, else
 // the start of their key. Guests are the alias the organizer entered. Two people showing the
 // same name get the start of the key as a hint (design rules, impostor prevention).

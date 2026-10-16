@@ -277,6 +277,7 @@ export const tournamentsScreensDe = {
     full: "Keine freien Plätze",
     waitlistOpen: "Alle Plätze sind vergeben. Von der Warteliste rückst du nach, wenn jemand absagt.",
     joinWaitlist: "Auf die Warteliste",
+    playYourself: "Selbst mitspielen",
     closed: "Die Anmeldung ist geschlossen",
     late: "Der Anmeldeschluss ist vorbei; die Leitung entscheidet über Nachmeldungen.",
     needProfile: "Zum Anmelden brauchst du ein Profil. Du legst es mit einem Namen an.",
@@ -349,7 +350,7 @@ export const tournamentsScreensDe = {
 
   // The organizer's workspace.
   organize: {
-    tabs: { participants: "Teilnehmer", boards: "Boards", results: "Ergebnisse", settings: "Einstellungen" },
+    tabs: { participants: "Spieler", boards: "Boards", results: "Ergebnisse", settings: "Einstellungen" },
     tasks: {
       title: "Jetzt dran",
       requests: (n: number) => (n === 1 ? "1 Anfrage bestätigen" : `${n} Anfragen bestätigen`),
@@ -426,8 +427,7 @@ export const tournamentsScreensDe = {
       inactive: "Entfernt",
       showCode: "Code zeigen",
       codeTitle: (name: string) => `${name} verbinden`,
-      codeText: "Scanne den Code mit dem Gerät, das an diesem Board zählt. Es zeigt dann nur noch die Paarungen für dieses Board.",
-      codeCaption: "Mit dem Board-Gerät scannen",
+      codeText: "Mit dem Gerät am Board scannen. Es zeigt dann nur noch die Spiele dieses Boards.",
       codeLabel: "Code für das Board",
       keyLost: "Dieses Gerät kennt den Zugang des Boards nicht mehr. Entferne das Board und lege es neu an.",
       revoke: "Board entfernen",
@@ -456,6 +456,8 @@ export const tournamentsScreensDe = {
       affected: "Nach einer Korrektur passt dieses Spiel nicht mehr. Trage ein neues Ergebnis ein oder lass es neu spielen.",
       replay: "Neu spielen lassen",
       skipped: "Das zuletzt entschiedene Ergebnis passt nicht zu dieser Paarung. Trag das Ergebnis neu ein.",
+      skippedWalkover: "Das eingetragene Ergebnis zählt nicht, weil ein Spieler zurückgezogen hat. Nimm es zurück, dann bleibt es beim kampflosen Sieg.",
+      takeBack: "Ergebnis zurücknehmen",
       walkover: "Kampflos",
       by: (board: string) => `von ${board}`,
       wins: (name: string, score: string) => `${name} gewinnt ${score}`,
@@ -511,7 +513,7 @@ export const tournamentsScreensDe = {
   // What a tournament game adds to the game screen and its result.
   game: {
     reported: "Ergebnis ans Turnier gemeldet",
-    reporting: "Ergebnis wird gemeldet",
+    reporting: "Ergebnis wird gemeldet …",
     waiting: "Ergebnis wartet auf Verbindung",
   },
 

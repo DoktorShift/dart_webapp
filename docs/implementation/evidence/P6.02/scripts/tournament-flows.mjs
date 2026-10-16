@@ -11,7 +11,12 @@
 // names who is missing, the tournament's name in the navigation bar, Einstellungen behind the
 // gear, the board's result leading back to the board (no Revanche), the confirmation before a
 // board is removed, the QR sheets on an iPhone SE and in landscape, and printing without the
-// app around the sheet.
+// app around the sheet. Since review round 2: the organizer without a place gets the workspace's
+// next step as the primary, the workspace's segments fit an iPhone SE whichever is selected, a
+// player sees their own name and their called match comes into view, the board result goes out
+// when "Zurück zum Board" is tapped right after the winning dart (only the tournament's row on
+// the board's result), the board code's copy action clears the sheet's footer, and dark mode
+// prints in the light colours.
 //
 // Writes screenshots to ../screens and prints one PASS/FAIL line per check. Timings are lab
 // values on a loaded development machine, not field measurements.
@@ -167,7 +172,13 @@ await ben.page.waitForTimeout(500)
 await shot(ben.page, "player-registered-de-dark-se")
 check("the SE page has no horizontal scrolling", await noHorizontalScroll(ben.page))
 
-await text(orga.page, "Alle Plätze sind vergeben", { timeout: 30_000 })
+await text(orga.page, "Keine freien Plätze", { timeout: 30_000 })
+await orga.page.waitForTimeout(500)
+await shot(orga.page, "tournament-full-organizer-de-light-iphone")
+check(
+  "the organizer without a place gets the workspace's next step as the primary, playing along as a quiet choice",
+  (await button(orga.page, "Check-in öffnen").isVisible()) && (await orga.page.getByRole("button", { name: "Selbst mitspielen", exact: true }).first().getAttribute("class"))?.includes("bg-primary ") !== true,
+)
 
 // ---- Check-in, draw, start, boards ------------------------------------------------------------
 
@@ -177,6 +188,17 @@ await orga.page.waitForTimeout(500)
 await shot(orga.page, "organize-participants-de-light-iphone")
 check("the workspace lists the four participants", (await orga.page.getByText("Angemeldet (4)").count()) === 1)
 check("the workspace has three segments and the settings behind a gear", (await orga.page.getByRole("radio").count()) === 3 && (await orga.page.getByRole("button", { name: "Einstellungen" }).count()) === 1)
+await orga.page.setViewportSize(SE)
+const segmentsFit = []
+for (const name of ["Spieler", "Boards", "Ergebnisse"]) {
+  await orga.page.getByRole("radio", { name, exact: true }).click()
+  await orga.page.waitForTimeout(300)
+  await shot(orga.page, `organize-segments-${name.toLowerCase()}-de-light-se`)
+  segmentsFit.push(await orga.page.getByRole("radio").evaluateAll((all) => all.every((el) => el.scrollWidth <= el.clientWidth)))
+}
+check("the workspace's segments fit an iPhone SE, each one selected", segmentsFit.every(Boolean))
+await orga.page.getByRole("radio", { name: "Spieler", exact: true }).click()
+await orga.page.setViewportSize(PHONE)
 await button(orga.page, "Check-in öffnen").click()
 await text(anna.page, "Ich bin da", { timeout: 40_000 })
 await button(anna.page, "Ich bin da").click()
@@ -221,6 +243,11 @@ for (const [size, name] of [[SE, "board-code-de-light-se"], [{ width: 568, heigh
   await shot(orga.page, name)
 }
 check("the board code's QR and its copy action stay in view on an iPhone SE in landscape", await orga.page.getByRole("button", { name: "Link kopieren" }).last().isVisible())
+await orga.page.setViewportSize(SE)
+await orga.page.waitForTimeout(600)
+const copyBottom = await orga.page.getByRole("button", { name: "Link kopieren" }).last().evaluate((el) => el.getBoundingClientRect().bottom)
+const doneTop = await orga.page.getByRole("button", { name: "Fertig", exact: true }).last().evaluate((el) => el.getBoundingClientRect().top)
+check("the board code's copy action clears the sheet's footer on an iPhone SE", copyBottom <= doneTop, `${Math.round(copyBottom)} <= ${Math.round(doneTop)}`)
 await orga.page.setViewportSize(PHONE)
 await button(orga.page, "Fertig").click()
 
@@ -233,6 +260,14 @@ await anna.page.waitForTimeout(600)
 await shot(anna.page, "player-next-de-light-se-landscape")
 check("in landscape 'Dein nächstes Spiel' is in view at once", await anna.page.getByText("Dein nächstes Spiel").first().evaluate((el) => el.getBoundingClientRect().bottom < window.innerHeight))
 await anna.page.setViewportSize(PHONE)
+await text(ben.page, "Dein nächstes Spiel", { timeout: 40_000 })
+await ben.page.waitForTimeout(1200)
+await shot(ben.page, "player-next-de-dark-se")
+// In view below the navigation bar (44 pt).
+check("a called player's card comes into view on an iPhone SE", await ben.page.getByText("Dein nächstes Spiel").first().evaluate((el) => { const r = el.getBoundingClientRect(); return r.top >= 44 && r.bottom <= window.innerHeight }))
+await ben.page.getByRole("radio", { name: "Spiele", exact: true }).click()
+await ben.page.waitForTimeout(500)
+check("a player sees their own name in the matches, not their key", (await ben.page.getByText(/^Ben$/).locator("visible=true").count()) > 0 && (await ben.page.getByText(/^[0-9a-f]{4} [0-9a-f]{4}$/).locator("visible=true").count()) === 0)
 
 // ---- The board device plays its match on the game screen -----------------------------------
 
@@ -266,24 +301,26 @@ await darts([["Triple", "T20"], ["Triple", "T20"], ["Triple", "T20"]])
 await board.page.getByRole("button", { name: /^Rest der Aufnahme daneben/ }).click()
 await board.page.waitForTimeout(300)
 await darts([["Triple", "T20"], ["Triple", "T11"], ["Double", "D14"]])
-await board.page.locator("button:visible", { hasText: "Zurück zum Board" }).first().waitFor({ timeout: 20_000 })
-await board.page.waitForTimeout(3500)
+const backToBoard = board.page.locator("button:visible", { hasText: "Zurück zum Board" }).first()
+await backToBoard.waitFor({ timeout: 20_000 })
+const wonAt = Date.now()
+const tournamentRow = board.page.getByText(/Ergebnis (wird|ans Turnier) gemeldet/).locator("visible=true")
+await tournamentRow.first().waitFor({ timeout: 5000 })
 await shot(board.page, "board-result-de-light-se")
 check("a board's result leads back to the board, with no Revanche", (await board.page.locator("button:visible", { hasText: "Revanche" }).count()) === 0)
-// On a short phone the result shows one row and a count; the others are in its sheet.
-await board.page.locator("button:visible", { hasText: /^\+\d$/ }).first().click()
-await text(board.page, "Ergebnis ans Turnier gemeldet", { timeout: 20_000 })
-await board.page.waitForTimeout(600)
-await shot(board.page, "board-result-rows-de-light-se")
-check("the tournament row fits an iPhone SE", await board.page.getByText("Ergebnis ans Turnier gemeldet").first().evaluate((el) => el.getBoundingClientRect().right <= window.innerWidth))
-await board.page.keyboard.press("Escape")
-await board.page.setViewportSize(PHONE)
-await board.page.waitForTimeout(500)
-await shot(board.page, "board-result-de-light-iphone")
-await button(board.page, "Zurück zum Board").click()
+check("the shared board's result shows only the tournament's row", (await tournamentRow.count()) === 1 && (await board.page.getByText(/mitnehmen|Auszeichnung|^\+\d$/).locator("visible=true").count()) === 0)
+await board.page.setViewportSize({ width: 568, height: 320 })
+await board.page.waitForTimeout(300)
+await shot(board.page, "board-result-de-light-se-landscape")
+await board.page.setViewportSize(SE)
+// Straight back to the board: the result went out with the winning dart.
+await backToBoard.click()
+const backAfter = Date.now() - wonAt
+await text(board.page, "Jetzt an diesem Board", { timeout: 20_000 })
+check("after a quick 'Zurück zum Board' the board never offers the match again", (await board.page.getByRole("button", { name: "Spiel starten" }).count()) === 0, `back ${backAfter} ms after the winning dart`)
 await text(board.page, "Ergebnis gemeldet", { timeout: 20_000 })
 await board.page.waitForTimeout(500)
-await shot(board.page, "board-reported-de-light-iphone")
+await shot(board.page, "board-reported-de-light-se")
 
 // The organizer approves it; the player sees the final waiting for its other half.
 await orga.page.getByRole("radio", { name: "Ergebnisse" }).click()
@@ -334,6 +371,37 @@ await ben.page.setViewportSize({ width: 568, height: 320 })
 await ben.page.waitForTimeout(700)
 await shot(ben.page, "share-de-dark-se-landscape")
 check("the share sheet's copy action is in view in landscape", await ben.page.getByRole("button", { name: "Link kopieren" }).last().evaluate((el) => el.getBoundingClientRect().bottom <= window.innerHeight))
+await button(ben.page, "Fertig").click()
+await ben.page.setViewportSize({ width: 1024, height: 768 })
+await ben.page.getByRole("radio", { name: "Infos" }).click()
+await ben.page.getByRole("button", { name: /^Drucken & Export/ }).click()
+await text(ben.page, "CSV exportieren", { timeout: 20_000 })
+await ben.page.emulateMedia({ media: "print" })
+await ben.page.waitForTimeout(300)
+await shot(ben.page, "print-media-de-dark")
+const printGrey = await ben.page.locator("[data-print-sheet] p.text-muted-foreground").first().evaluate((el) => getComputedStyle(el).color)
+const [red, green, blue] = printGrey.match(/\d+/g).map(Number)
+check("dark mode prints the sheet's small text in dark grey", red + green + blue < 3 * 128, printGrey)
+await ben.page.emulateMedia({ media: "screen" })
+
+// ---- A player taken out after the draw: their match is a walkover with nothing to correct ------
+
+// The semi-final still open (the draw decides who plays it); its first player leaves.
+await orga.page.getByRole("radio", { name: "Ergebnisse", exact: true }).click()
+const openSemi = orga.page.getByRole("button", { name: /Spiel [12] · Board/ }).filter({ hasNotText: "1:0" }).first()
+const leaving = (await openSemi.innerText()).split("\n")[0].trim()
+await orga.page.getByRole("radio", { name: "Spieler", exact: true }).click()
+await orga.page.getByRole("button", { name: new RegExp(`^${leaving}\\b`) }).first().click()
+await button(orga.page, "Entfernen").click()
+await orga.page.getByRole("radio", { name: "Nicht erschienen", exact: true }).click()
+await orga.page.waitForTimeout(800)
+await orga.page.getByRole("radio", { name: "Ergebnisse", exact: true }).click()
+await orga.page.getByRole("button", { name: new RegExp(`${leaving}.*Spiel [12]`) }).first().click()
+await text(orga.page, /Nicht angetreten|Zurückgezogen/, { timeout: 20_000 })
+await orga.page.waitForTimeout(600)
+await shot(orga.page, "walkover-withdrawn-de-light-iphone")
+check("a walkover from a removal offers no correction the bracket would refuse", (await orga.page.getByRole("button", { name: "Korrigieren" }).locator("visible=true").count()) === 0 && (await button(orga.page, "Fertig").isVisible()))
+await button(orga.page, "Fertig").click()
 
 const errorsOf = (d, name) => check(`${name}: no page errors`, d.errors.length === 0, d.errors.slice(0, 3).join(" | "))
 for (const [d, name] of [[orga, "organizer"], [anna, "Anna"], [ben, "Ben"], [board, "board"], [tv, "TV"]]) errorsOf(d, name)

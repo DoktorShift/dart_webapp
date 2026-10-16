@@ -48,8 +48,9 @@ if (featureOn("tournaments")) {
   })
 
   // The result of a game a board played for the tournament leads back to the board, for the
-  // next call; a rematch there would be a friendly nobody counts.
-  registerResultPrimary({ id: "tournament", owns: (match) => tournamentGame(match) !== null, label: (t) => t.tournaments.backToBoard, icon: Target })
+  // next call; a rematch there would be a friendly nobody counts. The shared board device shows
+  // only the tournament's row, no offer to keep the game in whichever profile is signed in.
+  registerResultPrimary({ id: "tournament", owns: (match) => tournamentGame(match) !== null, label: (t) => t.tournaments.backToBoard, icon: Target, pieces: ["tournament"] })
 
   // Who may award a tournament's badges: the badges area asks while it checks awards, answered
   // by lib/tournaments/badges.ts, loaded then.

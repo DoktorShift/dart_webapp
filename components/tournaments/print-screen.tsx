@@ -18,7 +18,7 @@ import type { ScreenProps } from "@/lib/shell/registry"
 // Pairings and results as a printable sheet, and the exports: CSV for people and spreadsheets,
 // JSON with the signed records for another app. The sheet prints from a copy next to the app
 // (data-print-sheet, app/globals.css), so no tab bar or navigation comes along and long fields
-// run over several pages.
+// run over several pages. Paper always gets the light colours, in dark mode too.
 export default function PrintScreen({ params }: ScreenProps) {
   const tx = useAreaT(TOURNAMENTS_TEXTS)
   const { entry, loaded } = useTournament(params.tournament ?? null)
@@ -105,7 +105,7 @@ function Sheet({ entry }: { entry: Entry }) {
       )}
       <div className="print:hidden">{sheet}</div>
       {createPortal(
-        <div data-print-sheet className="hidden bg-white p-8 text-black print:block">
+        <div data-print-sheet className="light hidden bg-white p-8 text-black print:block">
           {sheet}
         </div>,
         document.body,

@@ -264,6 +264,7 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
     full: "No places left",
     waitlistOpen: "All places are taken. From the waiting list you move up when someone drops out.",
     joinWaitlist: "Join the waiting list",
+    playYourself: "Play yourself",
     closed: "Registration is closed",
     late: "Registration has closed; the organizer decides on late entries.",
     needProfile: "Registering needs a profile. You create it with a name.",
@@ -412,8 +413,7 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
       inactive: "Removed",
       showCode: "Show code",
       codeTitle: (name) => `Connect ${name}`,
-      codeText: "Scan the code with the device that scores at this board. It then shows only this board's pairings.",
-      codeCaption: "Scan with the board's device",
+      codeText: "Scan with the device at the board. It then shows only this board's matches.",
       codeLabel: "Code for the board",
       keyLost: "This device no longer has the board's access. Remove the board and add it again.",
       revoke: "Remove board",
@@ -442,6 +442,8 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
       affected: "After a correction this match no longer fits. Enter a new result or have it replayed.",
       replay: "Have it played again",
       skipped: "The last result decided for this match doesn't fit its pairing. Enter the result again.",
+      skippedWalkover: "The result entered doesn't count because a player withdrew. Take it back and the walkover stands.",
+      takeBack: "Take the result back",
       walkover: "Walkover",
       by: (board) => `from ${board}`,
       wins: (name, score) => `${name} wins ${score}`,
@@ -495,7 +497,7 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
 
   game: {
     reported: "Result reported to the tournament",
-    reporting: "Reporting result",
+    reporting: "Reporting the result …",
     waiting: "Result waiting for a connection",
   },
 

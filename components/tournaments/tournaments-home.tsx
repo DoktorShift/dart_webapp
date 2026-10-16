@@ -5,6 +5,7 @@ import { ChevronRight, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
+import { CardSection } from "@/components/common/card-section"
 import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { TOURNAMENTS_TEXTS } from "@/lib/i18n/features/tournaments.screens"
@@ -48,18 +49,18 @@ export default function TournamentsHome({ fallback }: { fallback: ReactNode }) {
         </Group>
       )}
       {mine.length > 0 && (
-        <Cards title={tx.home.mine}>
+        <CardSection title={tx.home.mine}>
           {[...mine].sort(byStart).map((entry) => (
             <TournamentCard key={entry.stored.tournament} entry={entry} status={statusLine(entry, boardOf(entry) !== undefined, tx)} onOpen={() => open(entry)} />
           ))}
-        </Cards>
+        </CardSection>
       )}
       {recent.length > 0 && (
-        <Cards title={tx.home.recent}>
+        <CardSection title={tx.home.recent}>
           {recent.map((entry) => (
             <TournamentCard key={entry.stored.tournament} entry={entry} status={null} onOpen={() => open(entry)} />
           ))}
-        </Cards>
+        </CardSection>
       )}
       <div className="mt-6 grid gap-2 min-[360px]:grid-cols-2">
         <Button onClick={() => runAction(SCREENS.tournamentCreate, nav)} className="h-12 whitespace-normal rounded-xl text-[1.0625rem] font-semibold">
@@ -88,15 +89,6 @@ function statusLine(entry: Entry, board: boolean, tx: TournamentTexts): string |
     default:
       return null
   }
-}
-
-function Cards({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="mt-8 first:mt-6">
-      <h2 className="mb-2 px-4 text-[0.8125rem] text-muted-foreground">{title}</h2>
-      <div className="flex flex-col gap-3">{children}</div>
-    </section>
-  )
 }
 
 // One tournament: name and rules, when and where, places and phase, and where this person stands.

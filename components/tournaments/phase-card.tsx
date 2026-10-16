@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, type ReactNode } from "react"
+import { lazy, Suspense, useState, type ReactNode } from "react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,7 +16,7 @@ import { ChoiceList } from "@/components/ui/choice-list"
 import { InlineStatus } from "@/components/common/inline-status"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { TOURNAMENTS_TEXTS } from "@/lib/i18n/features/tournaments.screens"
-import { boardName, formatDateTime, PRIMARY, QUIET, refusalText, scoreText, useProblemText, useRoundLabel } from "@/components/tournaments/common"
+import { boardName, formatDateTime, PRIMARY, QUIET, refusalText, scoreText, useProblemText, useRoundLabel, type Names } from "@/components/tournaments/common"
 import { useInlineProfile } from "@/components/profile/inline-profile"
 import { useLiveStanding } from "@/components/tournaments/use-live-matches"
 import { useOwnEvents } from "@/components/profile/use-profile"
@@ -33,11 +33,13 @@ import { freePlaces, isGuestPlace, registrationOpen } from "@/lib/tournaments/re
 import { acceptTemplate, checkInTemplate, claimTemplate, registerTemplate, withdrawTemplate } from "@/lib/tournaments/records"
 import { cn } from "@/lib/utils"
 
+const NextStepButton = lazy(() => import("@/components/tournaments/next-step"))
+
 // The one thing a player does or sees in the tournament's phase (PLAN.md table "Phase ·
 // Ansicht für Spieler"): register, check in, wait for the draw, go to the called board, see
 // the place at the end, or why nothing happens (paused, cancelled). One card, one primary
 // action, the state always in words.
-export function PhaseCard({ entry, names }: { entry: Entry; names: { nameOf: (id: string | null) => string } }) {
+export function PhaseCard({ entry, names }: { entry: Entry; names: Names }) {
   const tx = useAreaT(TOURNAMENTS_TEXTS)
   const x = tx.tournament
   const t = useT()
@@ -124,16 +126,38 @@ export function PhaseCard({ entry, names }: { entry: Entry; names: { nameOf: (id
     const open = registrationOpen(state, now)
     const free = freePlaces(state)
     if (!me || me.status === "withdrawn") {
-      if (!open) return <Card title={x.closed} tone="muted" />
       // Full with a waiting list: the request goes on the list.
       const toList = free === 0 && state.settings.waitlist
       const full = free === 0 && !toList
       const late = state.settings.registrationCloses !== undefined && now > state.settings.registrationCloses
+      const register = () => void run("register", () => [registerTemplate(state, ownName ?? undefined)])
+      // The organizer runs the evening first: their next step is the one primary, playing along
+      // a quiet second choice.
+      if (read.me.organizer) {
+        return (
+          <Card
+            title={free === 0 ? x.full : tx.home.free(free)}
+            problem={problem}
+            secondary={
+              open && !full ? (
+                <Button variant="ghost" onClick={register} disabled={busy !== null} className={QUIET}>
+                  {busy === "register" ? x.registering : x.playYourself}
+                </Button>
+              ) : null
+            }
+          >
+            <Suspense fallback={null}>
+              <NextStepButton entry={entry} names={names} />
+            </Suspense>
+          </Card>
+        )
+      }
+      if (!open) return <Card title={x.closed} tone="muted" />
       return (
         <Card title={full ? x.full : toList ? x.waitlistOpen : late ? x.late : tx.home.free(free)} text={!session && !full ? x.needProfile : undefined} problem={problem} tone={full ? "muted" : undefined}>
           {!full && guest.fields}
           {!full && (
-            <Button onClick={() => void run("register", () => [registerTemplate(state, ownName ?? undefined)])} disabled={busy !== null || !guest.ready} className={PRIMARY}>
+            <Button onClick={register} disabled={busy !== null || !guest.ready} className={PRIMARY}>
               {busy === "register" ? x.registering : toList ? x.joinWaitlist : x.register}
             </Button>
           )}

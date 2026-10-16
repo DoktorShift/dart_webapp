@@ -3,12 +3,13 @@
 import { useEffect, useState, useSyncExternalStore } from "react"
 import type { EventTemplate } from "@/lib/nostr/types"
 import { nowSeconds } from "@/lib/nostr/time"
-import { getSession, getSigner, loadSession, subscribeSession } from "@/lib/profile/session"
+import { followProfile } from "@/components/profile/follow-profile"
+import { getSession, getSigner, loadSession } from "@/lib/profile/session"
 import type { Reason } from "@/lib/protocol/reasons"
 import { onStorageChange } from "@/lib/storage/db"
 import type { TournamentDraft } from "@/lib/tournaments/draft"
 import { nextAdmission, readTournament, type LiveInput, type TournamentRead } from "@/lib/tournaments/read"
-import { admitTemplate, waitlistTemplate } from "@/lib/tournaments/records"
+import { admitNext } from "@/lib/tournaments/admission"
 import { send, waitingRecords, type Author } from "@/lib/tournaments/send"
 import { listBoardDevices, listDrafts, loadStoredTournament, storedTournaments, updateTournament, type BoardDeviceRecord, type StoredTournament } from "@/lib/tournaments/store"
 import { discoverTournaments, refreshTournament, watchTournament } from "@/lib/tournaments/sync"
@@ -45,8 +46,6 @@ let boards: BoardDeviceRecord[] = []
 let snapshot: TournamentsSnapshot = { entries: [], drafts: [], boards: [], loaded: false, refreshing: false }
 const listeners = new Set<() => void>()
 let watching = false
-// Which session the tournaments were last refreshed for (pubkey, "" for a guest); undefined: never.
-let refreshedFor: string | undefined
 let reading = 0
 
 function emit(change: Partial<Omit<TournamentsSnapshot, "entries" | "drafts" | "boards">> = {}) {
@@ -110,24 +109,12 @@ function watch() {
     } else if (message.stores.some((store) => store === "objects" || store === "kv" || store === "pending")) void readLocal()
     else if (message.stores.includes("outbox")) void readWaiting()
   })
-  let last = getSession()?.pubkey ?? null
-  subscribeSession(() => {
-    const next = getSession()?.pubkey ?? null
-    if (next === last) return
-    last = next
-    refreshedFor = undefined
-    void start()
-  })
 }
 
-async function start() {
+const start = followProfile(async () => {
   watch()
   await readLocal()
-  const key = (await loadSession())?.pubkey ?? ""
-  if (refreshedFor === key) return
-  refreshedFor = key
-  await refreshAll()
-}
+}, refreshAll)
 
 function subscribe(listener: () => void) {
   listeners.add(listener)
@@ -204,23 +191,21 @@ export function useTournament(tournament: string | null, hints: readonly string[
   return { entry, loaded, missing: missing && !entry?.read.state, refresh }
 }
 
-// "Anmeldungen automatisch aufnehmen": the protocol admits only through the organizer's own
-// record (docs/protocol/families/tournament.md), so the organizer's device signs one decision at
-// a time as it sees requests (lib/tournaments/read.ts nextAdmission), never twice for the same
-// state of a place. Only with a key kept by the app: a signer app would be asked out of the blue.
-const admitting = new Set<string>()
+// Automatic admission (lib/tournaments/admission.ts) while a screen of the tournament is open on
+// the organizer's device. Only with a key kept by the app: a signer app would be asked out of
+// the blue.
 export function useAutoAdmission(entry: Entry | undefined) {
   const state = entry?.read.state
-  const next = state && entry.read.me.organizer ? nextAdmission(state, entry.stored.events) : null
-  const mark = next && state ? `${state.id}:${next.participant.id}:${next.participant.head}` : null
+  const next = state && entry.read.me.organizer ? nextAdmission(state) : null
+  const decision = next && state ? `${state.id}:${next.participant.id}:${next.participant.head}:${next.to}` : null
   useEffect(() => {
-    if (!state || !next || !mark || admitting.has(mark) || getSession()?.kind !== "local") return
-    admitting.add(mark)
-    const template = next.to === "admit" ? admitTemplate(state, next.participant.id) : waitlistTemplate(state, next.participant.id)
-    void act(state.id, [template]).catch(() => admitting.delete(mark))
-    // The decision and the place's state it was made on decide; nothing else.
+    if (!state || !decision || getSession()?.kind !== "local") return
+    void tournamentAuthor()
+      .then((author) => admitNext(state.id, author))
+      .catch(() => {})
+    // A decision is tried once; the next one follows the state it changed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mark])
+  }, [decision])
 }
 
 // The signed-in profile as the author of tournament records. Throws without a profile.

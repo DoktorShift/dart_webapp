@@ -12,6 +12,7 @@ import { useAreaT, useT } from "@/components/i18n-provider"
 import { TOURNAMENTS_TEXTS } from "@/lib/i18n/features/tournaments.screens"
 import { PRIMARY, QUIET, useParticipantNames, useRoundLabel } from "@/components/tournaments/common"
 import { useLiveMatches } from "@/components/tournaments/use-live-matches"
+import { useReport } from "@/components/tournaments/use-report"
 import { useTournament, type Entry } from "@/components/tournaments/use-tournaments"
 import { loadMatch } from "@/lib/game/storage"
 import { modeName } from "@/lib/i18n"
@@ -19,7 +20,7 @@ import { goLive } from "@/lib/live/board"
 import { decodeLinkPayload } from "@/lib/protocol/links"
 import { onStorageChange } from "@/lib/storage/db"
 import type { LinkPayload } from "@/lib/protocol/links"
-import { becomeBoard, boardGame, codeFits, openBoardKey, type BoardKey } from "@/lib/tournaments/board-device"
+import { becomeBoard, boardGame, codeFits, openBoardKey, reportPlayed, type BoardKey } from "@/lib/tournaments/board-device"
 import { loadBoardDevice, rememberGame, type BoardDeviceRecord, type BoardGame } from "@/lib/tournaments/store"
 import { SCREENS, type ScreenProps } from "@/lib/shell/registry"
 
@@ -115,6 +116,24 @@ function useBoardDevice(tournament: string): { record: BoardDeviceRecord | null 
   return { record, key }
 }
 
+// The calls this board won a game for here; any whose result has not gone out yet (the result
+// screen was left at once, the app was closed) is reported now, with the board's key and the
+// tournament as kept. Asked again when the board's games change.
+function usePlayed(tournament: string, record: BoardDeviceRecord): Set<string> {
+  const [played, setPlayed] = useState<Set<string>>(new Set())
+  useEffect(() => {
+    let current = true
+    void reportPlayed(tournament).then(
+      (slots) => current && setPlayed(new Set(slots)),
+      () => {},
+    )
+    return () => {
+      current = false
+    }
+  }, [tournament, record.games])
+  return played
+}
+
 function BoardDevice({ tournament, hints, title, setTitle }: { tournament: string; hints: readonly string[]; title: string | undefined; setTitle: (name: string) => void }) {
   const tx = useAreaT(TOURNAMENTS_TEXTS)
   const b = tx.board
@@ -158,7 +177,12 @@ function CurrentMatch({ entry, record, boardKey, onTournament }: { entry: Entry;
   const game = m ? record.games[m.id] : undefined
   const kept = loadMatch()
   const continuing = game && kept?.id === game.local && kept.status === "paused" ? kept : null
-  const reported = game?.reported ? slot?.submissions.find((s) => s.event === game.reported?.event) : undefined
+  const played = usePlayed(state.id, record)
+  const report = useReport(state.id, m?.id ?? null)
+  // The result of this call is on its way or there: reported for it, or won here and about to be
+  // (never started again). A report the tournament did not take (the match was reset since) lets
+  // the board start it anew.
+  const reporting = game?.reported ? slot?.submissions.some((s) => s.event === game.reported?.event) : !!m && played.has(m.id)
   const over = state.phase === "finished" || state.phase === "cancelled"
   // The last result this board reported that counts now, said once it was approved.
   const lastApproved = !slot && Object.values(state.slots).some((s) => s.board === record.board && s.approved && record.games[s.slot]?.reported)
@@ -191,7 +215,7 @@ function CurrentMatch({ entry, record, boardKey, onTournament }: { entry: Entry;
   return (
     <div className="pb-4">
       <p className="mt-2 text-[0.9375rem] text-muted-foreground [overflow-wrap:anywhere]">{state.settings.name}</p>
-      {entry.waiting > 0 && <InlineStatus className="mt-4">{b.unsent(entry.waiting)}</InlineStatus>}
+      {entry.waiting > 0 && !reporting && <InlineStatus className="mt-4">{b.unsent(entry.waiting)}</InlineStatus>}
       {over ? (
         <section className="mt-6 rounded-2xl border border-border bg-secondary/40 px-4 py-4">
           <h2 className="text-xl font-semibold leading-tight">{b.over}</h2>
@@ -212,14 +236,22 @@ function CurrentMatch({ entry, record, boardKey, onTournament }: { entry: Entry;
           </p>
           <h2 className="mt-1 grid text-[1.75rem] font-semibold leading-tight [overflow-wrap:anywhere]">
             <span>{names.nameOf(m.slots[0].participant)}</span>
-            <span aria-hidden="true" className="text-[1.0625rem] font-normal text-muted-foreground">–</span>
-            <span>{names.nameOf(m.slots[1].participant)}</span>
+            <span>
+              <span aria-hidden="true" className="font-normal text-muted-foreground">
+                –{" "}
+              </span>
+              {names.nameOf(m.slots[1].participant)}
+            </span>
           </h2>
-          {reported ? (
-            <InlineStatus tone="success" className="mt-4">
-              <span className="block font-semibold">{b.reported}</span>
-              {state.settings.approval === "organizer" && b.reportedText}
-            </InlineStatus>
+          {reporting ? (
+            report === "reported" ? (
+              <InlineStatus tone="success" className="mt-4">
+                <span className="block font-semibold">{b.reported}</span>
+                {state.settings.approval === "organizer" && b.reportedText}
+              </InlineStatus>
+            ) : (
+              <InlineStatus className="mt-4">{tx.game[report]}</InlineStatus>
+            )
           ) : (
             <div className="mt-4 grid gap-2">
               {failed && <InlineStatus tone="error">{tx.failed}</InlineStatus>}
