@@ -69,6 +69,17 @@ Ablauf QR: neues Gerät zeigt `P1`-QR → vorhandenes Gerät scannt, sendet `hel
 
 `applyPairingMessage` und `confirmPairingHere` führen den Zustand (`waiting` → `confirm` → `transfer` → `done`, oder `aborted` / `expired`) rein funktional; `lib/devices` speichert ihn.
 
+## Profilpaket
+
+`data` der `package`-Nachricht ([`lib/recovery/package.ts`](../../../lib/recovery/package.ts), dasselbe Paket steckt verschlüsselt in der Sicherungsdatei und im Passkey-Paket):
+
+```
+{ v: 1, pubkey, access: { kind: "local", key } | { kind: "nip07" | "nip46" | "nip55" },
+  dataKey?: { key, created, event }, events: [<Relay-Liste 10002>, <Metadaten 0>] }
+```
+
+`access.kind` „local“ trägt den Profilschlüssel; ein Profil in einer Signer-App trägt keinen Schlüssel, das neue Gerät verbindet seinen eigenen Signer. `dataKey` ist der Datenschlüssel der privaten Datensatze samt seinem signierten Datensatz ([private-records.md](private-records.md)); `events` sind die eigenen ersetzbaren Events, wie das sendende Gerät sie kennt, damit das neue Gerät Name und Relays sofort hat. Das empfangende Gerät prüft jede Signatur und dass der Schlüssel zum `pubkey` gehört, bevor es etwas behält. Name und Relay-Liste werden zuerst weggelassen, wenn das Paket sonst nicht in die Nachricht passt. Das neue Gerät zeigt auf beiden Wegen zuerst den QR-Link und den eintippbaren Code zugleich (zwei Sitzungen auf einem Einmalschlüssel; die zuerst beantwortete gilt, die andere schließt).
+
 ## Ablehnungen
 
 `wrong_flow`, `session_mismatch`, `session_taken`, `out_of_order`, `mac_invalid`, `expired_message`, `future_timestamp`, `invalid_content`, `invalid_tags`, `unknown_version`.
