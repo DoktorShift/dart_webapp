@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, type FormEvent } from "react"
+import { useEffect, useRef, useState, type FormEvent } from "react"
 import { AppWindow, ExternalLink, Puzzle, Smartphone } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ChoiceList } from "@/components/ui/choice-list"
@@ -176,7 +176,9 @@ function ExtensionStep({ onConnected, onBack }: { onConnected: (pubkey: string) 
 }
 
 // The code for a signer app to scan (nostrconnect://), or a pasted bunker:// link. A second
-// device answering the same code means someone else saw it: a new code replaces it.
+// device answering the same code means someone else saw it: a new code replaces it. A code that
+// was answered and then not kept is replaced too: its wait is over, scanning it again would go
+// unanswered.
 function SignerAppStep({ onConnected, onBack }: { onConnected: (pubkey: string) => void; onBack: () => void }) {
   const t = useT()
   const tx = useAreaT(PROFILE_TEXTS)
@@ -189,6 +191,10 @@ function SignerAppStep({ onConnected, onBack }: { onConnected: (pubkey: string) 
   const [pasted, setPasted] = useState("")
   const [pasteProblem, setPasteProblem] = useState<string | null>(null)
   const [pasting, setPasting] = useState(false)
+  // A pasted link's connection is open before the person confirms it: leaving the step before
+  // that closes it (the code's own connection ends with the code).
+  const unkept = useRef<Nip46Connection | null>(null)
+  useEffect(() => () => unkept.current?.remote.close(), [])
 
   useEffect(() => {
     let alive = true
@@ -209,7 +215,7 @@ function SignerAppStep({ onConnected, onBack }: { onConnected: (pubkey: string) 
             })
             if (!alive) return resolve(false)
             // The code is on screen, so the start has finished and its connection follows the
-            // confirmation. Dropped after that, the connection is closed again.
+            // confirmation.
             const connection = () => started!.connection
             setCandidate({
               pubkey: account.userPubkey,
@@ -217,8 +223,10 @@ function SignerAppStep({ onConnected, onBack }: { onConnected: (pubkey: string) 
                 resolve(true)
                 await connectExternal("nip46", { connection: await connection() }, options)
               },
+              // A fresh code: cancelling this one ends a confirmation still open; a connection
+              // already made is closed here.
               drop: () => {
-                resolve(false)
+                setRound((n) => n + 1)
                 void connection().then((c) => c.remote.close(), () => {})
               },
             })
@@ -229,7 +237,7 @@ function SignerAppStep({ onConnected, onBack }: { onConnected: (pubkey: string) 
       started.connection.catch((error: unknown) => {
         if (!alive) return
         setCandidate(null)
-        // A second answer, a "no", or no scan in ten minutes: start over with a fresh code.
+        // A second answer, or no scan in ten minutes: start over with a fresh code.
         setNotice((error as { code?: string })?.code === "mismatch" ? c.newCode : null)
         setRound((n) => n + 1)
       })
@@ -250,7 +258,18 @@ function SignerAppStep({ onConnected, onBack }: { onConnected: (pubkey: string) 
     try {
       const { connectBunker } = await import("@/lib/nostr/signers")
       const connection: Nip46Connection = await connectBunker(pasted.trim(), { perms: PERMISSIONS, onAuthUrl: setAuthUrl })
-      setCandidate({ pubkey: connection.pubkey, keep: (options) => connectExternal("nip46", { connection } satisfies ExternalParams["nip46"], options), drop: () => connection.remote.close() })
+      unkept.current = connection
+      setCandidate({
+        pubkey: connection.pubkey,
+        keep: async (options) => {
+          await connectExternal("nip46", { connection } satisfies ExternalParams["nip46"], options)
+          unkept.current = null
+        },
+        drop: () => {
+          unkept.current = null
+          connection.remote.close()
+        },
+      })
     } catch (error) {
       setPasteProblem((error as { code?: string })?.code === "invalid" ? c.pasteInvalid : signerProblem(tx, error))
     } finally {
