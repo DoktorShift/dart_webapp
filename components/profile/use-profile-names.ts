@@ -4,8 +4,8 @@ import { useEffect, useSyncExternalStore } from "react"
 import { readMetadata } from "@/lib/profile/metadata"
 import { cachedProfile, loadProfiles } from "@/lib/profile/public-profile"
 
-// Names and pictures of the people in a club, from their public profiles: a club's records name
-// only keys. What this device has shows first; the relays are asked once per person and page
+// Names and pictures of people a club or a tournament names only by key, from their public
+// profiles, asked for all at once (loadProfiles). What this device has shows first; the relays are asked once per person and page
 // load. Unknown stays unknown ("Ohne Namen" with the start of the key), never a made-up name.
 
 export interface NameInfo {
@@ -43,7 +43,7 @@ function subscribe(listener: () => void) {
 }
 
 // The name and picture of each key, as far as known.
-export function useNames(pubkeys: readonly string[]): (pubkey: string) => NameInfo {
+export function useProfileNames(pubkeys: readonly string[]): (pubkey: string) => NameInfo {
   useSyncExternalStore(subscribe, () => version, () => 0)
   const key = pubkeys.join(",")
   useEffect(() => {

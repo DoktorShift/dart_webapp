@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button"
 import { InlineStatus } from "@/components/common/inline-status"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { signerProblem } from "@/components/profile/signer-status"
-import { useNames } from "@/components/tournaments/use-names"
-import { act } from "@/components/tournaments/use-tournaments"
+import { useProfileNames } from "@/components/profile/use-profile-names"
+import { act, type Entry } from "@/components/tournaments/use-tournaments"
 import type { EventTemplate } from "@/lib/nostr/types"
 import type { Messages } from "@/lib/i18n"
 import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
@@ -17,8 +17,8 @@ import type { tournamentsScreensDe } from "@/lib/i18n/features/tournaments.scree
 import type { TournamentState } from "@/lib/protocol/tournament-state"
 import type { MatchView } from "@/lib/tournaments/engine"
 import { roundLabel } from "@/lib/tournaments/labels"
+import type { Reason } from "@/lib/protocol/reasons"
 import { isGuestPlace, shortKey, type TournamentRead } from "@/lib/tournaments/read"
-import { resendUnsent } from "@/lib/tournaments/send"
 
 // Small pieces every tournament screen shares: how times, people and matches are written,
 // what to say when signing fails, and the honest lines about the local copy.
@@ -37,7 +37,7 @@ export function useParticipantNames(read: TournamentRead | undefined): { nameOf:
   const tx = useAreaT(TOURNAMENTS_TEXTS)
   const state = read?.state
   const pubkeys = state ? Object.values(state.participants).filter((p) => !isGuestPlace(p)).map((p) => p.id) : []
-  const info = useNames(pubkeys)
+  const info = useProfileNames(pubkeys)
   const shown = (id: string) => (state?.participants[id] && !isGuestPlace(state.participants[id]) ? info(id).name : null) ?? read?.names[id] ?? tx.unnamed
   const counts = new Map<string, number>()
   for (const id of Object.keys(state?.participants ?? {})) counts.set(shown(id), (counts.get(shown(id)) ?? 0) + 1)
@@ -76,49 +76,56 @@ export function useProblemText() {
   }
 }
 
+// Why the tournament did not take a change, in the person's words.
+export function refusalText(reason: Reason, tx: TournamentTexts): string {
+  if (reason === "stale_predecessor" || reason === "superseded") return tx.refused.changed
+  if (reason === "already_approved") return tx.refused.decided
+  if (reason === "tournament_full") return tx.refused.full
+  if (reason === "phase_invalid" || reason === "registration_closed" || reason === "rules_locked") return tx.refused.phase
+  return tx.refused.other
+}
+
 // Signing and sending records of a tournament from a screen: which action is under way, and
-// the problem of the last one in the person's words. `run` resolves true when the records went
-// out (whatever the relays said), false when signing failed.
+// the problem of the last one in the person's words: the signer's, or why the tournament did
+// not take it (another device changed the same thing meanwhile, say). `run` resolves with the
+// fresh reading when the tournament took the records (relays get them through the outbox), null
+// otherwise.
 export function useActions(tournament: string) {
+  const tx = useAreaT(TOURNAMENTS_TEXTS)
   const describe = useProblemText()
   const [busy, setBusy] = useState<string | null>(null)
   const [problem, setProblem] = useState<string | null>(null)
-  const run = async (what: string, templates: () => readonly EventTemplate[] | Promise<readonly EventTemplate[]>): Promise<boolean> => {
+  const run = async (what: string, templates: () => readonly EventTemplate[] | Promise<readonly EventTemplate[]>): Promise<Entry | null> => {
     setBusy(what)
     setProblem(null)
     try {
-      await act(tournament, await templates())
-      return true
+      const { entry, refused } = await act(tournament, await templates())
+      if (refused) setProblem(refusalText(refused, tx))
+      return refused ? null : entry
     } catch (error) {
       setProblem(describe(error))
-      return false
+      return null
     } finally {
       setBusy(null)
     }
   }
-  return { busy, problem, run, clear: () => setProblem(null) }
+  return { busy, problem, run, setProblem }
 }
 
-// When relays last answered for the tournament, and what this device wrote that no relay
-// confirmed yet, with one way to send it again.
-export function SyncLine({ read, onRefresh }: { read: TournamentRead; onRefresh?: () => void }) {
+// When relays last answered for the tournament, and how many of this device's changes are
+// still on their way (the outbox sends them by itself).
+export function SyncLine({ entry, onRefresh }: { entry: Entry; onRefresh?: () => void }) {
   const t = useT()
   const tx = useAreaT(TOURNAMENTS_TEXTS)
+  const { read } = entry
   return (
     <div className="mt-6 flex flex-col gap-2">
-      {read.unsent.length > 0 && (
-        <InlineStatus tone="info">
-          {tx.unsent(read.unsent.length)}{" "}
-          <button type="button" onClick={() => void resendUnsent(read.id)} className="font-semibold text-primary underline-offset-2 hover:underline">
-            {tx.resend}
-          </button>
-        </InlineStatus>
-      )}
+      {entry.waiting > 0 && <InlineStatus tone="info">{tx.waiting(entry.waiting)}</InlineStatus>}
       <div className="flex items-center justify-between gap-3 px-4 text-[0.8125rem] text-muted-foreground">
         <span>{read.loadedAt === null ? tx.neverLoaded : tx.loadedAt(formatTime(read.loadedAt, t))}</span>
         {onRefresh && (
-          <Button variant="ghost" size="sm" onClick={onRefresh} className="h-9 gap-1.5 rounded-lg px-2 text-[0.8125rem] text-primary hover:bg-primary/10 hover:text-primary">
-            <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+          <Button variant="ghost" size="sm" onClick={onRefresh} className="h-11 gap-1.5 rounded-xl px-3 text-[0.9375rem] text-primary hover:bg-primary/10 hover:text-primary">
+            <RefreshCw className="h-4 w-4" aria-hidden="true" />
             {tx.refresh}
           </Button>
         )}

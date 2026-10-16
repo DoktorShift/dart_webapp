@@ -82,8 +82,10 @@ export const resultTemplate = (state: TournamentState, slot: string, result: Sub
 
 export const approveTemplate = (state: TournamentState, slot: string, submission: string) => record(state, "tournament.approve", { slot, submission, prev: slotHead(state, slot) })
 
-export const correctTemplate = (state: TournamentState, slot: string, winner: string | null, score: [number, number], reason: string) =>
-  record(state, "tournament.correct", { slot, winner, score, reason, prev: slotHead(state, slot) })
+// A correction of a result that counts, also into a walkover; winner null has the match played
+// again (it starts over: called, played and decided anew).
+export const correctTemplate = (state: TournamentState, slot: string, winner: string | null, score: [number, number], reason: string, walkover?: "noShow" | "retired") =>
+  record(state, "tournament.correct", { slot, winner, score, ...(walkover ? { walkover } : {}), reason, prev: slotHead(state, slot) })
 
 export function offerTemplate(state: TournamentState, to: string) {
   const at = afterState(state)

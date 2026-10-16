@@ -2,7 +2,7 @@ import type { NostrEvent } from "../nostr/types.ts"
 import { parseRecord, type ContentOf } from "../protocol/records.ts"
 import type { FoundingProblem } from "../protocol/replay.ts"
 import { isGuestId } from "../protocol/tournament.ts"
-import { reduceTournament, type Participant as Place, type TournamentState } from "../protocol/tournament-state.ts"
+import { reduceTournament, waitingList, type Participant as Place, type TournamentState } from "../protocol/tournament-state.ts"
 import {
   assignBoard,
   createTournament,
@@ -73,11 +73,10 @@ export interface TournamentRead {
   names: Record<string, string>
   me: Me
   live: Record<string, LiveSlot>
-  // Decisions the bracket could not take as entered (a result for players the bracket no longer
-  // puts there): kept as submitted, listed for Erweitert.
+  // Decisions the bracket could not take as made (a winner who does not play the match, a result
+  // for players the bracket no longer puts there): kept as made, a task for the organizer.
   skipped: { slot: string; why: string }[]
   relays: string[]
-  unsent: string[]
   loadedAt: number | null
 }
 
@@ -161,24 +160,50 @@ function scoreOf(m: MatchView, score: readonly number[], winner: string): Score 
   return { legs: [a, b] }
 }
 
-// A step the replay applied that the bracket takes too: a board called to a slot, or a decision
+// A step the replay applied that the bracket takes too: a board called to a slot, a decision
 // about a slot's result (the organizer's own result or, where boards approve, a board's; an
-// approval of a submission; a correction).
-type Step = { kind: "assign"; slot: string; board: string } | { kind: "result"; slot: string; winner: string | null; score: number[]; walkover?: "noShow" | "retired" }
+// approval of a submission; a correction), or a player leaving after the draw (their own
+// withdrawal, or the organizer taking them out).
+type Step =
+  | { kind: "assign"; slot: string; board: string }
+  | { kind: "result"; slot: string; winner: string | null; score: number[]; walkover?: "noShow" | "retired" }
+  | { kind: "leave"; participant: string; how: "withdrawn" | "disqualified" }
 
-// The steps in the order they were made. The state keeps only the last decision per slot; the
-// replay log says which records counted, in which order, and the events their content.
+// The steps in the order the replay applied them, from the draw the bracket is built from on.
+// The state keeps only the last decision per slot; the replay log says which records counted, in
+// which order, and the events their content. A player whose withdrawal is dated before the draw
+// and who never came back stays in the drawn field (the protocol's rule) and leaves first.
 function stepsOf(state: TournamentState, events: readonly NostrEvent[]): Step[] {
   const byId = new Map(events.map((e) => [e.id, e]))
-  const contentOf = <T extends "tournament.result" | "tournament.approve" | "tournament.correct" | "tournament.assign">(id: string, type: T): ContentOf<T> | null => {
+  const contentOf = <T extends "tournament.result" | "tournament.approve" | "tournament.correct" | "tournament.assign" | "tournament.remove">(id: string, type: T): ContentOf<T> | null => {
     const parsed = parseRecord(byId.get(id))
     return parsed.status === "ok" && parsed.record.type === type ? (parsed.record.content as ContentOf<T>) : null
   }
-  let organizer = state.founder
+  const drawn = new Set(state.draw?.order ?? [])
+  const drawAt = state.log.applied.findIndex((e) => e.id === state.draw?.event)
   const out: Step[] = []
-  for (const entry of state.log.applied) {
+  const before: Step[] = []
+  let organizer = state.founder
+  state.log.applied.forEach((entry, at) => {
     if (entry.type === "tournament.handover.accept") organizer = entry.author
-    else if (entry.type === "tournament.assign") {
+    const removal = entry.type === "tournament.remove" ? contentOf(entry.id, "tournament.remove") : null
+    const participant = entry.type === "tournament.withdraw" ? entry.author : (removal?.participant ?? null)
+    if (participant !== null) {
+      const status = state.participants[participant]?.status
+      const gone = drawn.has(participant) && (status === "withdrawn" || status === "removed")
+      const step: Step = { kind: "leave", participant, how: removal?.reason === "disqualified" ? "disqualified" : "withdrawn" }
+      if (at > drawAt) {
+        if (drawn.has(participant)) out.push(step)
+      } else if (gone) {
+        // Only the last one before the draw counts; a later registration ends it (status).
+        const i = before.findIndex((s) => s.kind === "leave" && s.participant === participant)
+        if (i >= 0) before.splice(i, 1)
+        before.push(step)
+      }
+      return
+    }
+    if (at <= drawAt) return
+    if (entry.type === "tournament.assign") {
       const c = contentOf(entry.id, "tournament.assign")
       if (c) out.push({ kind: "assign", slot: c.slot, board: c.board })
     } else if (entry.type === "tournament.result" && (entry.author === organizer || state.settings.approval === "board")) {
@@ -190,14 +215,15 @@ function stepsOf(state: TournamentState, events: readonly NostrEvent[]): Step[] 
       if (c && sub) out.push({ kind: "result", slot: c.slot, winner: sub.winner, score: sub.score, ...(sub.walkover ? { walkover: sub.walkover } : {}) })
     } else if (entry.type === "tournament.correct") {
       const c = contentOf(entry.id, "tournament.correct")
-      if (c) out.push({ kind: "result", slot: c.slot, winner: c.winner, score: c.score })
+      if (c) out.push({ kind: "result", slot: c.slot, winner: c.winner, score: c.score, ...(c.walkover ? { walkover: c.walkover } : {}) })
     }
-  }
-  return out
+  })
+  return [...before, ...out]
 }
 
-// The bracket with every step applied in the order it was made, then withdrawals after the
-// draw and the matches boards are playing.
+// The bracket with every step applied in the order it was made, then the matches boards are
+// playing. A decision the bracket cannot take as made (a winner who does not play the match, a
+// result for players the bracket no longer puts there) is kept in `skipped` for the organizer.
 function decide(bare: Tournament, state: TournamentState, events: readonly NostrEvent[], live: readonly LiveInput[], skipped: TournamentRead["skipped"]): { bracket: Tournament; live: Record<string, LiveSlot> } {
   let t = bare
   const attempt = (slot: string, change: () => Tournament) => {
@@ -208,6 +234,16 @@ function decide(bare: Tournament, state: TournamentState, events: readonly Nostr
     }
   }
   for (const step of stepsOf(state, events)) {
+    if (step.kind === "leave") {
+      // Refused only once the bracket is complete (or for the same kind again): nobody plays
+      // any more, so nothing waits for the organizer.
+      try {
+        t = withdraw(t, step.participant, step.how)
+      } catch {
+        // The bracket stays as it is.
+      }
+      continue
+    }
     const m = resolveTournament(t).match(step.slot)
     if (!m) continue
     if (step.kind === "assign") {
@@ -218,24 +254,22 @@ function decide(bare: Tournament, state: TournamentState, events: readonly Nostr
     const winner = step.winner
     if (winner === null) {
       if (t.records[step.slot]) attempt(step.slot, () => resetMatch(t, step.slot))
+    } else if (!m.slots.some((s) => s.participant === winner)) {
+      skipped.push({ slot: step.slot, why: `${winner} does not play ${step.slot}` })
     } else if (step.walkover) {
       const reason = step.walkover
       attempt(step.slot, () => recordWalkover(t, step.slot, winner, reason))
     } else attempt(step.slot, () => recordResult(t, step.slot, scoreOf(m, step.score, winner)))
   }
-  for (const p of Object.values(state.participants)) {
-    if (p.status !== "withdrawn" && p.status !== "removed") continue
-    if (!t.participants.some((e) => e.id === p.id)) continue
-    const kind = p.status === "removed" && p.reason === "disqualified" ? "disqualified" : "withdrawn"
-    attempt(p.id, () => withdraw(t, p.id, kind))
-  }
+  // A live match counts only from the key of the board the match is called to, while that board
+  // is in the tournament: a board code that got out cannot start other matches.
   const playing: Record<string, LiveSlot> = {}
   for (const l of live) {
-    const board = Object.values(state.boards).find((b) => b.key === l.by)?.id ?? null
     const m = resolveTournament(t).match(l.slot)
-    if (!m || playing[l.slot]) continue
-    playing[l.slot] = { slot: l.slot, match: l.match, board }
-    if (m.state === "ready") attempt(l.slot, () => startMatch(t, l.slot, board ?? undefined))
+    const board = m?.board ? state.boards[m.board] : undefined
+    if (!m || playing[l.slot] || !board?.active || board.key !== l.by) continue
+    playing[l.slot] = { slot: l.slot, match: l.match, board: board.id }
+    if (m.state === "ready") attempt(l.slot, () => startMatch(t, l.slot, board.id))
   }
   return { bracket: t, live: playing }
 }
@@ -251,7 +285,7 @@ export function readTournament(stored: StoredTournament, opts: ReadOptions): Tou
       return bare ? dependentSlots(bare, slot) : []
     },
   })
-  const base = { id: stored.tournament, relays: stored.relays, unsent: stored.unsent, loadedAt: stored.loadedAt }
+  const base = { id: stored.tournament, relays: stored.relays, loadedAt: stored.loadedAt }
   if (!result.state) {
     return { ...base, state: null, problem: result.problem, bracket: null, view: null, names: {}, me: { participant: null, organizer: false, offered: false }, live: {}, skipped: [] }
   }
@@ -287,6 +321,20 @@ export const admitted = (state: TournamentState) => Object.values(state.particip
 export const freePlaces = (state: TournamentState) => Math.max(0, state.settings.capacity - admitted(state).length)
 export const requests = (state: TournamentState) => Object.values(state.participants).filter((p) => p.status === "pending")
 
+// What automatic admission decides next, if anything: while there is room, the first on the
+// waiting list before any request, then requests in the order this device first saw them
+// (`events` as kept, oldest first: players date their own requests, so their dates decide
+// nothing); once full, the next request goes on the waiting list where there is one.
+export function nextAdmission(state: TournamentState, events: readonly NostrEvent[]): { participant: Place; to: "admit" | "waitlist" } | null {
+  if (state.settings.admission !== "auto" || (state.phase !== "registration" && state.phase !== "checkin")) return null
+  const seen = new Map<string, number>()
+  events.forEach((e, i) => !seen.has(e.pubkey) && seen.set(e.pubkey, i))
+  const asking = requests(state).sort((a, b) => (seen.get(a.id) ?? 0) - (seen.get(b.id) ?? 0))
+  const room = freePlaces(state) > 0
+  const participant = room ? (waitingList(state)[0] ?? asking[0]) : state.settings.waitlist ? asking[0] : undefined
+  return participant ? { participant, to: room ? "admit" : "waitlist" } : null
+}
+
 // Registration is open while the tournament takes registrations and the announced deadline, if
 // any, has not passed (by this device's clock).
 export const registrationOpen = (state: TournamentState, now: number) =>
@@ -295,8 +343,15 @@ export const registrationOpen = (state: TournamentState, now: number) =>
 // Slots with a submitted result the organizer has not decided on.
 export const awaitingApproval = (state: TournamentState) => Object.values(state.slots).filter((s) => !s.approved && s.submissions.length > 0)
 
-// The field the organizer draws: everyone admitted, and with a check-in only those present.
-export const drawField = (state: TournamentState) => admitted(state).filter((p) => !state.settings.checkIn || state.phase !== "checkin" || p.checkedIn).map((p) => p.id)
+// Who has not checked in while check-in is open: admitted players only. Guests are the
+// organizer's to bring and count as present.
+export const notCheckedIn = (state: TournamentState) => (state.phase === "checkin" ? admitted(state).filter((p) => !p.checkedIn && !isGuestPlace(p)) : [])
+
+// The field the organizer draws: everyone admitted but those not checked in.
+export function drawField(state: TournamentState): string[] {
+  const missing = new Set(notCheckedIn(state).map((p) => p.id))
+  return admitted(state).filter((p) => !missing.has(p.id)).map((p) => p.id)
+}
 
 // What a draw of `field` with `seeded` in front would give: how many matches, how many byes.
 // null when the engine cannot draw this field for the format.

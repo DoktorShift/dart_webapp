@@ -3,19 +3,22 @@
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { ChoiceList } from "@/components/ui/choice-list"
+import { Confirm } from "@/components/ui/confirm"
 import { Group, SwitchRow } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
 import { Segmented } from "@/components/ui/segmented"
-import { Sheet } from "@/components/ui/sheet"
+import { Sheet, SheetBody } from "@/components/ui/sheet"
 import { TextField } from "@/components/ui/text-field"
 import { InlineStatus } from "@/components/common/inline-status"
-import { QRCodeView } from "@/components/common/qr-code-view"
+import { SheetCode } from "@/components/common/sheet-code"
+import { XSHORT, useMediaQuery } from "@/components/common/use-media-query"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { TOURNAMENTS_TEXTS } from "@/lib/i18n/features/tournaments.screens"
 import { PRIMARY, QUIET, scoreText, SECONDARY, useActions, useParticipantNames, useRoundLabel } from "@/components/tournaments/common"
-import { useNames } from "@/components/tournaments/use-names"
-import { act, type Entry } from "@/components/tournaments/use-tournaments"
+import { useProfileNames } from "@/components/profile/use-profile-names"
+import type { Entry } from "@/components/tournaments/use-tournaments"
 import { bytesToHex } from "@noble/hashes/utils"
+import type { EventTemplate } from "@/lib/nostr/types"
 import { createLocalKey, createLocalSigner } from "@/lib/nostr/signers"
 import { openSecret, sealSecret } from "@/lib/profile/vault"
 import type { Participant } from "@/lib/protocol/tournament-state"
@@ -24,7 +27,7 @@ import { randomHex } from "@/lib/storage/ids"
 import { cleanNames, localTime } from "@/lib/tournaments/draft"
 import { createDrawSeed, commitSeed, previewChange, recordResult, recordWalkover, resetMatch, type Consequence, type MatchView, type WalkoverReason } from "@/lib/tournaments/engine"
 import { boardLink } from "@/lib/tournaments/links"
-import { admitted, drawField, drawPreview, freePlaces, isGuestPlace } from "@/lib/tournaments/read"
+import { admitted, drawField, drawPreview, freePlaces, isGuestPlace, notCheckedIn } from "@/lib/tournaments/read"
 import {
   admitTemplate,
   boardTemplate,
@@ -52,6 +55,8 @@ import { cn } from "@/lib/utils"
 type Names = ReturnType<typeof useParticipantNames>
 type State = NonNullable<Entry["read"]["state"]>
 
+const DESTRUCTIVE = cn(QUIET, "text-danger hover:bg-danger/10 hover:text-danger")
+
 const Problem = ({ text }: { text: string | null }) =>
   text ? (
     <InlineStatus tone="error" className="mt-3">
@@ -68,16 +73,16 @@ export function ParticipantSheet({ entry, names, participant, onOpenChange }: { 
   const actions = useActions(entry.read.id)
   const [removing, setRemoving] = useState(false)
   const x = participant && state.participants[participant.id]
-  const claimants = useNames(x?.claims ?? [])
+  const claimants = useProfileNames(x?.claims ?? [])
   const beforeDraw = state.phase === "registration" || state.phase === "checkin"
-  const run = async (what: string, templates: () => Parameters<typeof act>[1]) => {
+  const run = async (what: string, templates: () => readonly EventTemplate[]) => {
     if (await actions.run(what, templates)) onOpenChange(false)
   }
   const reasons = Object.keys(p.reasons) as (keyof typeof p.reasons)[]
   return (
     <Sheet open={participant !== null} onOpenChange={onOpenChange} title={participant ? names.nameOf(participant.id) : ""} description={x && isGuestPlace(x) ? p.guest : undefined}>
       {x && (
-        <div className="min-h-0 overflow-y-auto overscroll-contain pb-1">
+        <SheetBody>
           <Problem text={actions.problem} />
           <div className="mt-2 grid gap-2">
             {beforeDraw && (x.status === "pending" || x.status === "waitlist") && freePlaces(state) > 0 && (
@@ -85,7 +90,7 @@ export function ParticipantSheet({ entry, names, participant, onOpenChange }: { 
                 {p.admit}
               </Button>
             )}
-            {state.phase === "checkin" && x.status === "registered" && !x.checkedIn && (
+            {state.phase === "checkin" && x.status === "registered" && !x.checkedIn && !isGuestPlace(x) && (
               <Button onClick={() => void run("checkin", () => [checkInTemplate(state, x.id)])} disabled={actions.busy !== null} className={PRIMARY}>
                 {p.checkIn}
               </Button>
@@ -103,7 +108,7 @@ export function ParticipantSheet({ entry, names, participant, onOpenChange }: { 
               </Group>
             )}
             {x.status !== "removed" && !removing && (
-              <Button variant="ghost" onClick={() => setRemoving(true)} disabled={actions.busy !== null} className={cn(QUIET, "text-danger hover:bg-danger/10 hover:text-danger")}>
+              <Button variant="ghost" onClick={() => setRemoving(true)} disabled={actions.busy !== null} className={DESTRUCTIVE}>
                 {p.remove}
               </Button>
             )}
@@ -114,13 +119,14 @@ export function ParticipantSheet({ entry, names, participant, onOpenChange }: { 
               </section>
             )}
           </div>
-        </div>
+        </SheetBody>
       )}
     </Sheet>
   )
 }
 
-// Guests without a profile, by name, one per line.
+// Guests without a profile, by name, one per line. They appear under the names typed here
+// (docs/protocol/privacy.md: the organizer's choice), which the hint says.
 export function GuestsSheet({ entry, open, onOpenChange }: { entry: Entry; open: boolean; onOpenChange: (open: boolean) => void }) {
   const tx = useAreaT(TOURNAMENTS_TEXTS)
   const p = tx.organize.participants
@@ -146,9 +152,11 @@ export function GuestsSheet({ entry, open, onOpenChange }: { entry: Entry; open:
   )
 }
 
-// The draw: who is in the field, who is seeded (tapped in order), what it gives, then one
-// button. The seed was committed at the founding (or is committed now) and is revealed by
-// the draw, so everyone can check the order.
+// The draw: who is missing (and one tap to mark them all as here), who is seeded (tapped in
+// order), what it gives, then one button. The draw reveals the seed whose commitment players
+// saw before: the founding's, kept on this device. A device without that seed (a second device,
+// a hand-over, lost data) commits a new one first and draws once relays have it, never both in
+// one step (docs/protocol/conflicts.md, "Auslosung ohne vorher bekannten Seed").
 export function DrawSheet({ entry, names, open, onOpenChange }: { entry: Entry; names: Names; open: boolean; onOpenChange: (open: boolean) => void }) {
   const tx = useAreaT(TOURNAMENTS_TEXTS)
   const p = tx.organize.participants
@@ -157,31 +165,32 @@ export function DrawSheet({ entry, names, open, onOpenChange }: { entry: Entry; 
   const actions = useActions(read.id)
   const [seeded, setSeeded] = useState<string[]>([])
   const field = drawField(state)
-  const notPresent = admitted(state).length - field.length
+  const missing = notCheckedIn(state)
   const preview = drawPreview(state, field, seeded)
+  const seed = state.seedCommit ? stored.seeds[state.seedCommit] : undefined
+  // A commitment made on this device is drawn on once it left (a seed record still waiting).
+  const committing = seed !== undefined && entry.waiting > 0 && state.log.applied.some((e) => e.type === "tournament.seed")
   const toggle = (id: string) => setSeeded((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))
 
-  const draw = async () => {
-    await actions.run("draw", async () => {
-      // A commitment this device made opens with the seed it kept; otherwise a new one is
-      // committed first and the draw builds on that record.
-      let seed = state.seedCommit ? stored.seeds[state.seedCommit] : undefined
-      let base = state
-      if (!seed) {
-        seed = createDrawSeed()
-        await updateTournament(read.id, { seed: { commit: commitSeed(seed), seed } })
-        const next = await act(read.id, [seedTemplate(state, seed)])
-        if (!next.read.state) throw new Error("the commitment does not replay")
-        base = next.read.state
-      }
-      return [drawTemplate(base, seed, field, seeded)]
-    }).then((ok) => ok && onOpenChange(false))
+  const commit = async () => {
+    const fresh = createDrawSeed()
+    // The seed is kept before its commitment can reach anyone.
+    await updateTournament(read.id, { seed: { commit: commitSeed(fresh), seed: fresh } })
+    await actions.run("commit", () => [seedTemplate(state, fresh)])
   }
+  const draw = () => seed && void actions.run("draw", () => [drawTemplate(state, seed, field, seeded)]).then((ok) => ok && onOpenChange(false))
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title={p.drawTitle} description={p.drawField(field.length)}>
-      <div className="min-h-0 overflow-y-auto overscroll-contain pb-1">
-        {notPresent > 0 && <InlineStatus className="mt-1">{p.drawNotPresent(notPresent)}</InlineStatus>}
+      <SheetBody>
+        {missing.length > 0 && (
+          <div className="mt-1 grid gap-2">
+            <InlineStatus>{p.drawMissing(missing.map((x) => names.nameOf(x.id)).join(", "))}</InlineStatus>
+            <Button variant="secondary" onClick={() => void actions.run("present", () => missing.map((x) => checkInTemplate(state, x.id)))} disabled={actions.busy !== null} className={SECONDARY}>
+              {p.allPresent}
+            </Button>
+          </div>
+        )}
         {preview ? <p className="mt-3 text-[1.0625rem] font-semibold">{p.drawPreview(preview.matches, preview.byes)}</p> : <InlineStatus tone="error" className="mt-3">{p.tooFew}</InlineStatus>}
         {preview && preview.byes > 0 && <p className="mt-1 text-[0.9375rem] text-muted-foreground">{tx.seeding.byes}</p>}
         <section className="mt-4">
@@ -195,24 +204,35 @@ export function DrawSheet({ entry, names, open, onOpenChange }: { entry: Entry; 
             })}
           </div>
         </section>
+        {!seed && <InlineStatus className="mt-4">{p.drawPrepare}</InlineStatus>}
+        {committing && <InlineStatus className="mt-4">{p.drawCommitWaiting}</InlineStatus>}
         <Problem text={actions.problem} />
-      </div>
-      <Button onClick={() => void draw()} disabled={!preview || actions.busy !== null} className={`${PRIMARY} mt-4 shrink-0`}>
-        {actions.busy === "draw" ? p.drawing : p.drawConfirm}
-      </Button>
+      </SheetBody>
+      {seed ? (
+        <Button onClick={draw} disabled={!preview || committing || actions.busy !== null} className={`${PRIMARY} mt-4 shrink-0`}>
+          {actions.busy === "draw" ? p.drawing : p.drawConfirm}
+        </Button>
+      ) : (
+        <Button onClick={() => void commit()} disabled={actions.busy !== null} className={`${PRIMARY} mt-4 shrink-0`}>
+          {p.drawCommit}
+        </Button>
+      )}
     </Sheet>
   )
 }
 
-// One board: its code for the device that scores there, and taking it out of the tournament.
+// One board: its code for the device that scores there, and taking it out of the tournament
+// (asked first: the device there can never report again).
 export function BoardSheet({ entry, board, onOpenChange }: { entry: Entry; board: string | null; onOpenChange: (open: boolean) => void }) {
   const t = useT()
   const tx = useAreaT(TOURNAMENTS_TEXTS)
   const b = tx.organize.boards
+  const xshort = useMediaQuery(XSHORT)
   const { read, stored } = entry
   const state = read.state as State
   const actions = useActions(read.id)
   const [link, setLink] = useState<string | null | undefined>(undefined)
+  const [revoking, setRevoking] = useState(false)
   const info = board ? state.boards[board] : undefined
   useEffect(() => {
     if (!board) return
@@ -231,21 +251,21 @@ export function BoardSheet({ entry, board, onOpenChange }: { entry: Entry; board
       current = false
     }
   }, [board, stored.boardKeys, read.id, read.relays])
+  const revoke = () => board && void actions.run("revoke", () => [revokeBoardTemplate(state, board)]).then((ok) => ok && onOpenChange(false))
   return (
-    <Sheet open={board !== null} onOpenChange={onOpenChange} title={info ? b.codeTitle(info.name) : ""} description={b.codeText}>
-      <div className="min-h-0 overflow-y-auto overscroll-contain pb-1">
+    <Sheet open={board !== null} onOpenChange={onOpenChange} title={info ? b.codeTitle(info.name) : ""} description={xshort ? undefined : b.codeText}>
+      <SheetBody>
         {link === null && <InlineStatus tone="error">{b.keyLost}</InlineStatus>}
-        {link && board && <QRCodeView value={link} caption={b.codeCaption} label={b.codeLabel} maxSize="50dvh" share={{ url: link, title: info?.name }} />}
+        {link && board && <SheetCode value={link} label={b.codeLabel} caption={b.codeCaption} description={b.codeText} share={{ url: link, title: info?.name }} />}
         <Problem text={actions.problem} />
-      </div>
-      <div className="mt-2 grid shrink-0 gap-2">
-        <Button variant="ghost" onClick={() => board && void actions.run("revoke", () => [revokeBoardTemplate(state, board)]).then((ok) => ok && onOpenChange(false))} disabled={actions.busy !== null} className={cn(QUIET, "text-danger hover:bg-danger/10 hover:text-danger")}>
+        <Button variant="ghost" onClick={() => setRevoking(true)} disabled={actions.busy !== null} className={`${DESTRUCTIVE} mt-2`}>
           {b.revoke}
         </Button>
-        <Button variant="ghost" onClick={() => onOpenChange(false)} className={QUIET}>
-          {t.common.done}
-        </Button>
-      </div>
+      </SheetBody>
+      <Button variant="ghost" onClick={() => onOpenChange(false)} className={`${QUIET} mt-2 shrink-0`}>
+        {t.common.done}
+      </Button>
+      <Confirm open={revoking} onOpenChange={setRevoking} title={b.revokeTitle(info?.name ?? "")} text={b.revokeText} confirm={b.revoke} destructive onConfirm={revoke} />
     </Sheet>
   )
 }
@@ -278,8 +298,10 @@ export function AddBoardSheet({ entry, open, onOpenChange }: { entry: Entry; ope
   )
 }
 
-// One match: enter its result (the winner, and how many legs or sets the loser took), a
-// walkover, or correct a result that counts, with what that does to the matches after it.
+// One match: enter its result (the winner, and how many legs or sets the loser took) or a
+// walkover, or correct a result that counts (filled in with it), with what that does to the
+// matches after it. A match a correction left without fitting players shows its new pairing:
+// enter the result it got, or have it played again.
 export function ResultSheet({ entry, names, match: m, onOpenChange }: { entry: Entry; names: Names; match: MatchView | null; onOpenChange: (open: boolean) => void }) {
   const tx = useAreaT(TOURNAMENTS_TEXTS)
   const r = tx.organize.results
@@ -292,67 +314,72 @@ export function ResultSheet({ entry, names, match: m, onOpenChange }: { entry: E
   const [walkover, setWalkover] = useState<WalkoverReason | null>(null)
   const [reason, setReason] = useState("")
   const [editing, setEditing] = useState(false)
+  const decided = m?.state === "finished" || m?.state === "walkover"
+  // A correction starts from what counts now.
   useEffect(() => {
-    setWinner(null)
-    setLoserCount(0)
-    setWalkover(null)
+    const side = m?.winner ? m.slots.findIndex((s) => s.participant === m.winner) : -1
+    const sets = (m?.format.setsToWin ?? 1) > 1
+    const lost = side < 0 || !m?.score ? 0 : ((sets ? m.score.sets?.[1 - side] : m.score.legs[1 - side]) ?? 0)
+    setWinner(decided ? (m?.winner ?? null) : null)
+    setLoserCount(decided ? lost : 0)
+    setWalkover(decided && m?.state === "walkover" && (m.walkover === "noShow" || m.walkover === "retired") ? m.walkover : null)
     setReason("")
     setEditing(false)
+    // Once per match opened.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [m?.id])
   if (!m || !read.bracket) return null
+  const bracket = read.bracket
   const players = m.slots.map((s) => s.participant)
   const sets = (m.format.setsToWin ?? 1) > 1
   const toWin = sets ? (m.format.setsToWin as number) : m.format.legsToWin
-  const decided = m.state === "finished" || m.state === "walkover"
-  const correcting = decided || m.affected
-  const form = !decided || editing
+  const correcting = (state.slots[m.id]?.approved ?? null) !== null
+  const form = editing || (!decided && !m.affected)
+  const skipped = read.skipped.some((x) => x.slot === m.id)
   const w = winner !== null ? players.indexOf(winner) : -1
   const score: [number, number] | null = w < 0 ? null : w === 0 ? [toWin, loserCount] : [loserCount, toWin]
   const engineScore = score && (sets ? { legs: [score[0] * m.format.legsToWin, score[1] * m.format.legsToWin] as [number, number], sets: score } : { legs: score })
 
   // What the change does to the other matches, from the engine, before it is sent.
-  let consequences: Consequence[] = []
-  if (correcting && winner && read.bracket) {
+  const consequencesOf = (after: () => typeof bracket): Consequence[] => {
     try {
-      const after = walkover ? recordWalkover(read.bracket, m.id, winner, walkover) : engineScore ? recordResult(read.bracket, m.id, engineScore) : read.bracket
-      consequences = previewChange(read.bracket, after).filter((c) => c.match !== m.id)
+      return previewChange(bracket, after()).filter((c) => c.match !== m.id)
     } catch {
-      consequences = []
+      return []
     }
   }
-  const replayConsequences = m.affected && read.bracket && read.bracket.records[m.id] ? previewChange(read.bracket, resetMatch(read.bracket, m.id)).filter((c) => c.match !== m.id) : []
+  const consequences = correcting && form && winner ? consequencesOf(() => (walkover ? recordWalkover(bracket, m.id, winner, walkover) : engineScore ? recordResult(bracket, m.id, engineScore) : bracket)) : []
+  const replayConsequences = m.affected && !form && bracket.records[m.id] ? consequencesOf(() => resetMatch(bracket, m.id)) : []
 
   const submit = () =>
     actions
       .run("result", () => {
         if (!winner || !score) return []
-        if (correcting) return [correctTemplate(state, m.id, winner, walkover ? [0, 0] : score, reason.trim() || r.reason)]
-        return [resultTemplate(state, m.id, { winner, score: walkover ? [0, 0] : score, ...(walkover ? { walkover } : {}) })]
+        const entered: [number, number] = walkover ? [0, 0] : score
+        if (correcting) return [correctTemplate(state, m.id, winner, entered, reason.trim() || r.reason, walkover ?? undefined)]
+        return [resultTemplate(state, m.id, { winner, score: entered, ...(walkover ? { walkover } : {}) })]
       })
       .then((ok) => ok && onOpenChange(false))
   const replay = () => actions.run("replay", () => [correctTemplate(state, m.id, null, [0, 0], reason.trim() || r.replay)]).then((ok) => ok && onOpenChange(false))
 
   return (
     <Sheet open onOpenChange={onOpenChange} title={`${names.nameOf(players[0])} – ${names.nameOf(players[1])}`} description={`${round(m)} · ${tx.matchNumber(m.number)}`}>
-      <div className="min-h-0 overflow-y-auto overscroll-contain pb-1">
+      <SheetBody>
         {m.affected && <InlineStatus className="mt-1">{r.affected}</InlineStatus>}
-        {decided && !editing && (
-          <>
-            <p className="mt-2 text-[1.5rem] font-semibold">
-              {m.state === "walkover" ? tx.walkover[m.walkover ?? "noShow"] : scoreText(m)} · {names.nameOf(m.winner)}
-            </p>
-            <Button variant="secondary" onClick={() => setEditing(true)} className={`${SECONDARY} mt-4`}>
-              {r.correct}
-            </Button>
-          </>
+        {skipped && <InlineStatus className="mt-1">{r.skipped}</InlineStatus>}
+        {decided && !m.affected && !editing && (
+          <p className="mt-2 text-[1.5rem] font-semibold [overflow-wrap:anywhere]">
+            {m.state === "walkover" ? tx.walkover[m.walkover ?? "noShow"] : scoreText(m)} · {names.nameOf(m.winner)}
+          </p>
         )}
+        {m.affected && !form && <Consequences list={replayConsequences} names={names} />}
         {form && (
           <>
             <section className="mt-2">
               <p className="mb-2 px-4 text-[0.8125rem] text-muted-foreground">{r.winner}</p>
               <ChoiceList label={r.winner} options={players.filter((p): p is string => p !== null).map((p) => ({ value: p, title: names.nameOf(p) }))} value={winner} onChange={setWinner} />
             </section>
-            {!walkover && (
+            {!walkover && toWin > 1 && (
               <section className="mt-4">
                 <p className="mb-2 px-4 text-[0.8125rem] text-muted-foreground">
                   {r.score} · {sets ? tx.sets(toWin) : tx.legs(toWin)} : {sets ? tx.sets(loserCount) : tx.legs(loserCount)}
@@ -380,21 +407,28 @@ export function ResultSheet({ entry, names, match: m, onOpenChange }: { entry: E
             {correcting && winner && <Consequences list={consequences} names={names} />}
           </>
         )}
-        {m.affected && (
-          <>
-            <Consequences list={replayConsequences} names={names} />
-            <Button variant="secondary" onClick={() => void replay()} disabled={actions.busy !== null} className={`${SECONDARY} mt-4`}>
-              {r.replay}
-            </Button>
-          </>
-        )}
         <Problem text={actions.problem} />
+      </SheetBody>
+      <div className="mt-4 grid shrink-0 gap-2">
+        {form ? (
+          <Button onClick={() => void submit()} disabled={!winner || actions.busy !== null} className={PRIMARY}>
+            {r.save}
+          </Button>
+        ) : m.affected ? (
+          <Button onClick={() => setEditing(true)} className={PRIMARY}>
+            {r.enter}
+          </Button>
+        ) : (
+          <Button variant="secondary" onClick={() => setEditing(true)} className={SECONDARY}>
+            {r.correct}
+          </Button>
+        )}
+        {m.affected && !form && correcting && (
+          <Button variant="secondary" onClick={() => void replay()} disabled={actions.busy !== null} className={SECONDARY}>
+            {r.replay}
+          </Button>
+        )}
       </div>
-      {form && (
-        <Button onClick={() => void submit()} disabled={!winner || actions.busy !== null} className={`${PRIMARY} mt-4 shrink-0`}>
-          {r.save}
-        </Button>
-      )}
     </Sheet>
   )
 }
@@ -423,17 +457,19 @@ export function HandoverSheet({ entry, names, open, onOpenChange }: { entry: Ent
   const people = [...new Set(Object.values(state.participants).filter((p) => p.status === "registered").map((p) => (isGuestPlace(p) ? p.player : p.id)).filter((x): x is string => !!x && x !== state.organizer))]
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title={s.handover} description={s.handoverText}>
-      <div className="min-h-0 overflow-y-auto overscroll-contain pb-1">
+      <SheetBody>
         {people.length === 0 ? (
           <InlineStatus className="mt-1">{s.handoverNone}</InlineStatus>
         ) : (
           <ChoiceList label={s.handoverTo} options={people.map((p) => ({ value: p, title: names.nameOf(p) }))} value={to} onChange={setTo} className="mt-1" />
         )}
         <Problem text={actions.problem} />
-      </div>
-      <Button onClick={() => to && void actions.run("offer", () => [offerTemplate(state, to)]).then((ok) => ok && onOpenChange(false))} disabled={!to || actions.busy !== null} className={`${PRIMARY} mt-4 shrink-0`}>
-        {s.handover}
-      </Button>
+      </SheetBody>
+      {people.length > 0 && (
+        <Button onClick={() => to && void actions.run("offer", () => [offerTemplate(state, to)]).then((ok) => ok && onOpenChange(false))} disabled={!to || actions.busy !== null} className={`${PRIMARY} mt-4 shrink-0`}>
+          {s.handover}
+        </Button>
+      )}
     </Sheet>
   )
 }
@@ -470,14 +506,14 @@ export function DetailsSheet({ entry, open, onOpenChange }: { entry: Entry; open
       .then((ok) => ok && onOpenChange(false))
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title={tx.organize.settings.details}>
-      <div className="min-h-0 overflow-y-auto overscroll-contain pb-1">
+      <SheetBody>
         <TextField label={c.name} value={name} onChange={(e) => setName(e.target.value)} maxLength={60} className="mt-2" />
         <TextField label={c.about} value={about} onChange={(e) => setAbout(e.target.value)} maxLength={500} />
         <TextField label={c.place} value={place} onChange={(e) => setPlace(e.target.value)} maxLength={140} />
         <TextField label={c.starts} type="datetime-local" value={starts} onChange={(e) => setStarts(e.target.value)} />
         <TextField label={c.capacity} type="number" inputMode="numeric" min={admitted(state).length} max={128} value={capacity} onChange={(e) => setCapacity(e.target.value)} />
         <Problem text={actions.problem} />
-      </div>
+      </SheetBody>
       <Button onClick={() => void save()} disabled={actions.busy !== null} className={`${PRIMARY} mt-4 shrink-0`}>
         {tx.organize.settings.save}
       </Button>

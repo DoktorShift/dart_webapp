@@ -3,7 +3,8 @@
 import { useEffect, useRef } from "react"
 import { useTournament } from "@/components/tournaments/use-tournaments"
 import type { SavedMatch } from "@/lib/game/types"
-import { openBoardKey, reportResult, resultOf, type TournamentExtra } from "@/lib/tournaments/board-device"
+import { openBoardKey, reportResult } from "@/lib/tournaments/board-device"
+import type { TournamentExtra } from "@/lib/tournaments/extra"
 import { loadBoardDevice } from "@/lib/tournaments/store"
 
 // Once the game stays won for a moment (an Undo right after the winning dart reports nothing),
@@ -26,11 +27,8 @@ export default function Reporter({ extra, match }: { extra: TournamentExtra; mat
       reporting.current = reporting.current
         .then(async () => {
           const record = await loadBoardDevice(extra.id)
-          const players = record?.games[extra.slot]?.players
-          const result = players && resultOf(game, players)
-          if (!record || !result) return
-          const key = await openBoardKey(record)
-          if (key) await reportResult(record, key, current, extra.slot, result)
+          const key = record && (await openBoardKey(record))
+          if (key) await reportResult(extra.id, key, current, extra.slot, game)
         })
         .catch(() => {
           // Signing or storing failed: the next change of the game tries again.

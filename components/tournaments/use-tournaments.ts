@@ -4,11 +4,12 @@ import { useEffect, useState, useSyncExternalStore } from "react"
 import type { EventTemplate } from "@/lib/nostr/types"
 import { nowSeconds } from "@/lib/nostr/time"
 import { getSession, getSigner, loadSession, subscribeSession } from "@/lib/profile/session"
+import type { Reason } from "@/lib/protocol/reasons"
 import { onStorageChange } from "@/lib/storage/db"
 import type { TournamentDraft } from "@/lib/tournaments/draft"
-import { freePlaces, readTournament, requests, type LiveInput, type TournamentRead } from "@/lib/tournaments/read"
-import { admitTemplate } from "@/lib/tournaments/records"
-import { send, type Author } from "@/lib/tournaments/send"
+import { nextAdmission, readTournament, type LiveInput, type TournamentRead } from "@/lib/tournaments/read"
+import { admitTemplate, waitlistTemplate } from "@/lib/tournaments/records"
+import { send, waitingRecords, type Author } from "@/lib/tournaments/send"
 import { listBoardDevices, listDrafts, loadStoredTournament, storedTournaments, updateTournament, type BoardDeviceRecord, type StoredTournament } from "@/lib/tournaments/store"
 import { discoverTournaments, refreshTournament, watchTournament } from "@/lib/tournaments/sync"
 
@@ -16,12 +17,14 @@ import { discoverTournaments, refreshTournament, watchTournament } from "@/lib/t
 // store for every tournament screen. The local copies show at once; relays bring what is new
 // when the tab first opens for a profile and whenever a screen asks (refresh). Writes of this
 // tab and of other tabs arrive through the storage channel, so every open screen stays in
-// step. Live matches a tournament's boards are playing (lib/live) are reported here by the
-// screen that follows them (setLive) and go into the reading.
+// step; so does what still waits in the outbox. Live matches a tournament's boards are playing
+// (lib/live) are reported here by the screen that follows them (setLive) and go into the reading.
 
 export interface Entry {
   stored: StoredTournament
   read: TournamentRead
+  // Records of it this device signed that relays don't have safely yet (lib/sync/outbox.ts).
+  waiting: number
 }
 
 export interface TournamentsSnapshot {
@@ -36,6 +39,7 @@ export interface TournamentsSnapshot {
 
 const entries = new Map<string, Entry>()
 const live = new Map<string, LiveInput[]>()
+let waiting = new Map<string, number>()
 let drafts: TournamentDraft[] = []
 let boards: BoardDeviceRecord[] = []
 let snapshot: TournamentsSnapshot = { entries: [], drafts: [], boards: [], loaded: false, refreshing: false }
@@ -50,14 +54,24 @@ function emit(change: Partial<Omit<TournamentsSnapshot, "entries" | "drafts" | "
   for (const listener of listeners) listener()
 }
 
-const read = (stored: StoredTournament, pubkey: string | null): Entry => ({ stored, read: readTournament(stored, { pubkey, now: nowSeconds(), live: live.get(stored.tournament) ?? [] }) })
+const read = (stored: StoredTournament, pubkey: string | null): Entry => ({
+  stored,
+  read: readTournament(stored, { pubkey, now: nowSeconds(), live: live.get(stored.tournament) ?? [] }),
+  waiting: waiting.get(stored.tournament) ?? 0,
+})
 
 // Reads every local copy again (a write happened, or the session changed).
 async function readLocal() {
   const run = ++reading
   const pubkey = (await loadSession())?.pubkey ?? null
-  const [stored, found, devices] = await Promise.all([storedTournaments().catch(() => []), listDrafts().catch(() => []), listBoardDevices().catch(() => [])])
+  const [stored, found, devices, unsent] = await Promise.all([
+    storedTournaments().catch(() => []),
+    listDrafts().catch(() => []),
+    listBoardDevices().catch(() => []),
+    waitingRecords().catch(() => new Map<string, number>()),
+  ])
   if (run !== reading) return
+  waiting = unsent
   entries.clear()
   for (const s of stored) entries.set(s.tournament, read(s, pubkey))
   drafts = found
@@ -65,12 +79,21 @@ async function readLocal() {
   emit({ loaded: true })
 }
 
+// The outbox changed (something was queued or reached relays): only the counts change.
+async function readWaiting() {
+  const unsent = await waitingRecords().catch(() => null)
+  if (!unsent) return
+  waiting = unsent
+  for (const [id, entry] of entries) if (entry.waiting !== (unsent.get(id) ?? 0)) entries.set(id, { ...entry, waiting: unsent.get(id) ?? 0 })
+  emit()
+}
+
 async function refreshAll() {
   if (snapshot.refreshing) return
   emit({ refreshing: true })
   const pubkey = (await loadSession())?.pubkey ?? null
   if (pubkey) await discoverTournaments(pubkey).catch(() => false)
-  // One tournament at a time: each is a relay query and, with unsent events, sends.
+  // One tournament at a time: each is a few relay queries.
   for (const s of await storedTournaments().catch(() => [])) await refreshTournament(s.tournament).catch(() => null)
   emit({ refreshing: false })
 }
@@ -85,6 +108,7 @@ function watch() {
       boards = []
       emit()
     } else if (message.stores.some((store) => store === "objects" || store === "kv" || store === "pending")) void readLocal()
+    else if (message.stores.includes("outbox")) void readWaiting()
   })
   let last = getSession()?.pubkey ?? null
   subscribeSession(() => {
@@ -123,11 +147,13 @@ export function useTournaments(): TournamentsSnapshot & { refresh: () => Promise
 }
 
 // Re-reads one tournament's local copy (after a write by this tab, or new live matches).
-async function reread(tournament: string) {
+async function reread(tournament: string): Promise<Entry | null> {
   const stored = await loadStoredTournament(tournament).catch(() => null)
-  if (!stored) return
-  entries.set(tournament, read(stored, (await loadSession())?.pubkey ?? null))
+  if (!stored) return null
+  const entry = read(stored, (await loadSession())?.pubkey ?? null)
+  entries.set(tournament, entry)
   emit()
+  return entry
 }
 
 // The matches the tournament's boards are playing now, as the screen following them reports.
@@ -147,6 +173,8 @@ export interface TournamentHandle {
 }
 
 // One tournament, from the store; one not kept here yet (opened from a link) is fetched once.
+// While the screen is open, new records come in as they are sent, and whatever came while the
+// device was offline or the app hidden is fetched when it is back.
 export function useTournament(tournament: string | null, hints: readonly string[] = []): TournamentHandle {
   const { entries: all, loaded } = useTournaments()
   const entry = tournament ? all.find((e) => e.stored.tournament === tournament) : undefined
@@ -161,10 +189,15 @@ export function useTournament(tournament: string | null, hints: readonly string[
   useEffect(() => {
     if (!tournament || !loaded) return
     void updateTournament(tournament, { openedAt: Date.now(), ...(hintKey ? { relays: hintKey.split(",") } : {}) }).then(() => refresh())
-    // New records while the screen is open (a registration, a result, a call) go into the
-    // local copy, which every open screen reads again.
     const sub = watchTournament(tournament, hintKey ? hintKey.split(",") : [], (event) => void updateTournament(tournament, { events: [event] }))
-    return () => sub.close()
+    const again = () => document.visibilityState === "visible" && void refresh()
+    window.addEventListener("online", again)
+    document.addEventListener("visibilitychange", again)
+    return () => {
+      sub.close()
+      window.removeEventListener("online", again)
+      document.removeEventListener("visibilitychange", again)
+    }
     // Once per tournament the screen opens.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tournament, loaded])
@@ -172,25 +205,22 @@ export function useTournament(tournament: string | null, hints: readonly string[
 }
 
 // "Anmeldungen automatisch aufnehmen": the protocol admits only through the organizer's own
-// record (docs/protocol/families/tournament.md), so the organizer's device signs one for each
-// request as it sees it, while there is room and the field is not drawn. Only with a key kept
-// by the app: a signer app would be asked out of the blue. One request at a time, never twice.
+// record (docs/protocol/families/tournament.md), so the organizer's device signs one decision at
+// a time as it sees requests (lib/tournaments/read.ts nextAdmission), never twice for the same
+// state of a place. Only with a key kept by the app: a signer app would be asked out of the blue.
 const admitting = new Set<string>()
 export function useAutoAdmission(entry: Entry | undefined) {
   const state = entry?.read.state
-  const organizer = entry?.read.me.organizer ?? false
-  const waiting = state && organizer && state.settings.admission === "auto" && (state.phase === "registration" || state.phase === "checkin") ? requests(state).slice(0, Math.max(0, freePlaces(state))) : []
-  const key = waiting.map((p) => p.id).join(",")
+  const next = state && entry.read.me.organizer ? nextAdmission(state, entry.stored.events) : null
+  const mark = next && state ? `${state.id}:${next.participant.id}:${next.participant.head}` : null
   useEffect(() => {
-    if (!state || !key || getSession()?.kind !== "local") return
-    const next = waiting.find((p) => !admitting.has(`${state.id}:${p.id}:${p.head}`))
-    if (!next) return
-    const mark = `${state.id}:${next.id}:${next.head}`
+    if (!state || !next || !mark || admitting.has(mark) || getSession()?.kind !== "local") return
     admitting.add(mark)
-    void act(state.id, [admitTemplate(state, next.id)]).catch(() => admitting.delete(mark))
-    // The request list and the state it was read from decide; nothing else.
+    const template = next.to === "admit" ? admitTemplate(state, next.participant.id) : waitlistTemplate(state, next.participant.id)
+    void act(state.id, [template]).catch(() => admitting.delete(mark))
+    // The decision and the place's state it was made on decide; nothing else.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, state?.id, state?.heads.core])
+  }, [mark])
 }
 
 // The signed-in profile as the author of tournament records. Throws without a profile.
@@ -200,15 +230,20 @@ export async function tournamentAuthor(): Promise<Author> {
   return { pubkey: session.pubkey, signer: await getSigner() }
 }
 
-// Signs and sends records of a tournament as the profile, then re-reads it. The caller gets
-// the fresh reading, to build the next record on (a draw after its seed commitment).
-export async function act(tournament: string, templates: readonly EventTemplate[]): Promise<Entry> {
+export interface Acted {
+  // The fresh reading, to build the next record on (a draw after its seed commitment).
+  entry: Entry
+  // Why the tournament did not take one of the records just sent: another device changed the
+  // same thing meanwhile, say. A record that waits for one it builds on is not refused.
+  refused: Reason | null
+}
+
+// Signs and sends records of a tournament as the profile, then re-reads it.
+export async function act(tournament: string, templates: readonly EventTemplate[]): Promise<Acted> {
   const author = await tournamentAuthor()
-  await send(tournament, templates, author)
-  const stored = await loadStoredTournament(tournament)
-  if (!stored) throw new Error("the tournament is gone")
-  const entry = read(stored, author.pubkey)
-  entries.set(tournament, entry)
-  emit()
-  return entry
+  const sent = new Set((await send(tournament, templates, author)).map((e) => e.id))
+  const entry = await reread(tournament)
+  if (!entry) throw new Error("the tournament is gone")
+  const refused = entry.read.state?.log.rejected.find((r) => sent.has(r.id))?.reason ?? null
+  return { entry, refused }
 }

@@ -16,8 +16,8 @@ import { ChoiceList } from "@/components/ui/choice-list"
 import { InlineStatus } from "@/components/common/inline-status"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { TOURNAMENTS_TEXTS } from "@/lib/i18n/features/tournaments.screens"
-import { boardName, formatDateTime, PRIMARY, QUIET, scoreText, useProblemText, useRoundLabel } from "@/components/tournaments/common"
-import { useGuestProfile } from "@/components/tournaments/guest-profile"
+import { boardName, formatDateTime, PRIMARY, QUIET, refusalText, scoreText, useProblemText, useRoundLabel } from "@/components/tournaments/common"
+import { useInlineProfile } from "@/components/profile/inline-profile"
 import { useLiveStanding } from "@/components/tournaments/use-live-matches"
 import { useOwnEvents } from "@/components/profile/use-profile"
 import { readMetadata } from "@/lib/profile/metadata"
@@ -25,7 +25,9 @@ import { OWN } from "@/lib/profile/own-events"
 import { act, type Entry } from "@/components/tournaments/use-tournaments"
 import { nowSeconds } from "@/lib/nostr/time"
 import { useSession } from "@/lib/profile/session"
-import { waitingList } from "@/lib/protocol/tournament-state"
+import { reduceTournament, waitingList } from "@/lib/protocol/tournament-state"
+import { featureOn } from "@/lib/shell/features"
+import { refreshTournament } from "@/lib/tournaments/sync"
 import { nextMatch } from "@/lib/tournaments/engine"
 import { freePlaces, isGuestPlace, registrationOpen } from "@/lib/tournaments/read"
 import { acceptTemplate, checkInTemplate, claimTemplate, registerTemplate, withdrawTemplate } from "@/lib/tournaments/records"
@@ -43,7 +45,7 @@ export function PhaseCard({ entry, names }: { entry: Entry; names: { nameOf: (id
   const state = read.state as NonNullable<typeof read.state>
   const session = useSession()
   const describe = useProblemText()
-  const guest = useGuestProfile()
+  const guest = useInlineProfile()
   const [busy, setBusy] = useState<string | null>(null)
   const [problem, setProblem] = useState<string | null>(null)
   const [withdrawing, setWithdrawing] = useState(false)
@@ -82,7 +84,8 @@ export function PhaseCard({ entry, names }: { entry: Entry; names: { nameOf: (id
     setProblem(null)
     try {
       if (!(await guest.ensure())) return
-      await act(read.id, templates())
+      const { refused } = await act(read.id, templates())
+      if (refused) setProblem(refusalText(refused, tx))
     } catch (error) {
       setProblem(describe(error))
     } finally {
@@ -90,11 +93,22 @@ export function PhaseCard({ entry, names }: { entry: Entry; names: { nameOf: (id
     }
   }
 
-  // The offered organization comes before everything else: the person takes over here.
+  // The offered organization comes before everything else: the person takes over here, on the
+  // state relays have now (the acceptance names the core it takes over).
+  const accept = async () => {
+    setBusy("accept")
+    setProblem(null)
+    const stored = await refreshTournament(read.id).catch(() => null)
+    const fresh = stored && stored.loadedAt !== read.loadedAt ? reduceTournament(stored.events, read.id).state : null
+    const offer = fresh?.offer
+    if (fresh && offer) return run("accept", () => [acceptTemplate(fresh, offer.event)])
+    setProblem(x.takeOverOffline)
+    setBusy(null)
+  }
   if (read.me.offered) {
     return (
       <Card title={x.takeOver} text={x.takeOverText} problem={problem}>
-        <Button onClick={() => void run("accept", () => [acceptTemplate(state, (state.offer as NonNullable<typeof state.offer>).event)])} disabled={busy !== null} className={PRIMARY}>
+        <Button onClick={() => void accept()} disabled={busy !== null} className={PRIMARY}>
           {busy === "accept" ? x.takingOver : x.takeOver}
         </Button>
       </Card>
@@ -111,14 +125,16 @@ export function PhaseCard({ entry, names }: { entry: Entry; names: { nameOf: (id
     const free = freePlaces(state)
     if (!me || me.status === "withdrawn") {
       if (!open) return <Card title={x.closed} tone="muted" />
-      const full = free === 0 && !state.settings.waitlist
+      // Full with a waiting list: the request goes on the list.
+      const toList = free === 0 && state.settings.waitlist
+      const full = free === 0 && !toList
       const late = state.settings.registrationCloses !== undefined && now > state.settings.registrationCloses
       return (
-        <Card title={full ? x.full : late ? x.late : tx.home.free(free)} text={!session && !full ? x.needProfile : undefined} problem={problem} tone={full ? "muted" : undefined}>
+        <Card title={full ? x.full : toList ? x.waitlistOpen : late ? x.late : tx.home.free(free)} text={!session && !full ? x.needProfile : undefined} problem={problem} tone={full ? "muted" : undefined}>
           {!full && guest.fields}
           {!full && (
             <Button onClick={() => void run("register", () => [registerTemplate(state, ownName ?? undefined)])} disabled={busy !== null || !guest.ready} className={PRIMARY}>
-              {busy === "register" ? x.registering : x.register}
+              {busy === "register" ? x.registering : toList ? x.joinWaitlist : x.register}
             </Button>
           )}
           {guest.dialog}
@@ -131,7 +147,7 @@ export function PhaseCard({ entry, names }: { entry: Entry; names: { nameOf: (id
     if (me.status === "waitlist") return <Card title={x.waitlist(waitingList(state).findIndex((p) => p.id === me.id) + 1)} problem={problem} secondary={withdrawControls} />
     if (state.phase === "checkin" && !me.checkedIn && !isGuestPlace(me)) {
       return (
-        <Card title={x.checkIn} text={x.checkInHint} problem={problem} secondary={withdrawControls}>
+        <Card title={x.checkIn} text={state.settings.starts !== undefined ? `${x.checkInUntil(formatDateTime(state.settings.starts, t))} ${x.checkInHint}` : x.checkInHint} problem={problem} secondary={withdrawControls}>
           <Button onClick={() => void run("checkin", () => [checkInTemplate(state)])} disabled={busy !== null} className={PRIMARY}>
             {busy === "checkin" ? x.checkingIn : x.checkIn}
           </Button>
@@ -150,7 +166,7 @@ export function PhaseCard({ entry, names }: { entry: Entry; names: { nameOf: (id
     return (
       <Card title={x.finished} text={champion ? x.champion(names.nameOf(champion)) : undefined} tone="success">
         {place && <p className="text-[1.0625rem] font-semibold">{x.yourPlace(tx.place(place.place, place.placeTo))}</p>}
-        {place && session && <p className="text-[0.9375rem] text-muted-foreground">{x.badgeHint}</p>}
+        {place && session && featureOn("badges") && <p className="text-[0.9375rem] text-muted-foreground">{x.badgeHint}</p>}
       </Card>
     )
   }

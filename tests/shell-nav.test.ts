@@ -67,6 +67,18 @@ test("replaceTop swaps the top screen, and pushes on a root", () => {
   assert.deepEqual(screens(state), ["club.invite"])
 })
 
+test("update merges params into a screen and keeps it where it is, in any tab", () => {
+  const link = { ...entry("tournament.view"), params: { payload: "T1" } }
+  let state = navReducer(initialNavState("tournaments"), { type: "push", entry: link })
+  state = navReducer(state, { type: "push", entry: entry("tournament.organize") })
+  state = navReducer(state, { type: "select", tab: "play" })
+  state = navReducer(state, { type: "update", key: link.key, params: { name: "Pub Open" } })
+  assert.equal(state.tab, "play")
+  assert.deepEqual(state.stacks.tournaments[0], { ...link, params: { payload: "T1", name: "Pub Open" } })
+  assert.deepEqual(screens(state, "tournaments"), ["tournament.view", "tournament.organize"])
+  assert.equal(navReducer(state, { type: "update", key: "gone", params: { name: "x" } }), state)
+})
+
 test("entries get keys no other entry has, and their own copy of the params", () => {
   const params = { payload: "x" }
   const a = makeEntry("club.invite", params)

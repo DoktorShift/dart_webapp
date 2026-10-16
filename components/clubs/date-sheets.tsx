@@ -8,10 +8,11 @@ import { TextField } from "@/components/ui/text-field"
 import { InlineStatus } from "@/components/common/inline-status"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
-import { Confirm, SheetBody, SheetButton, formatDateTime, formatTime, personName, useChange } from "@/components/clubs/common"
+import { SheetBody, SheetButton, formatDateTime, formatTime, personName, useChange } from "@/components/clubs/common"
+import { Confirm } from "@/components/ui/confirm"
 import { DateAnswer } from "@/components/clubs/date-answer"
 import { clubAuthor } from "@/components/clubs/use-clubs"
-import { useNames } from "@/components/clubs/use-names"
+import { useProfileNames } from "@/components/profile/use-profile-names"
 import { isLeader, type ClubView } from "@/lib/clubs/club"
 import { cancelDate, repeatDates, saveDates, type Answer, type ClubDate } from "@/lib/clubs/dates"
 import type { ClubState } from "@/lib/protocol/club-state"
@@ -24,7 +25,7 @@ export function DateSheet({ view, state, date, open, onOpenChange }: { view: Clu
   const tx = useAreaT(CLUBS_TEXTS)
   const describe = useChange()
   const answers = date ? Object.entries(date.answers) : []
-  const names = useNames(answers.map(([pubkey]) => pubkey))
+  const names = useProfileNames(answers.map(([pubkey]) => pubkey))
   const [cancelling, setCancelling] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)
   const leader = isLeader(view.me.role) && !state.info.archived

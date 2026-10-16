@@ -13,7 +13,7 @@ import { InviteSheet } from "@/components/clubs/invite-sheet"
 import { MemberSheet } from "@/components/clubs/member-sheet"
 import { RequestList } from "@/components/clubs/request-list"
 import { useClub } from "@/components/clubs/use-clubs"
-import { useNames } from "@/components/clubs/use-names"
+import { useProfileNames } from "@/components/profile/use-profile-names"
 import { isLeader, isManager } from "@/lib/clubs/club"
 import type { ClubRole } from "@/lib/protocol/club"
 import { SCREENS, type ScreenProps } from "@/lib/shell/registry"
@@ -30,7 +30,7 @@ export default function MembersScreen({ params }: ScreenProps) {
   const { view } = useClub(params.club ?? null)
   const state = view?.state
   const members = state ? Object.values(state.members) : []
-  const names = useNames(members.map((m) => m.pubkey))
+  const names = useProfileNames(members.map((m) => m.pubkey))
   const [inviting, setInviting] = useState(false)
   const [managing, setManaging] = useState<string | null>(null)
   if (!view || !state) return null

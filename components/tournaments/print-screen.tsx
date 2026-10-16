@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { createPortal } from "react-dom"
 import { Download, Printer } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { InlineStatus } from "@/components/common/inline-status"
@@ -14,8 +15,10 @@ import { nowSeconds } from "@/lib/nostr/time"
 import { exportFileName, tournamentCsv, tournamentJson } from "@/lib/tournaments/export"
 import type { ScreenProps } from "@/lib/shell/registry"
 
-// Pairings and results as a printable sheet (print styles hide the app around it), and the
-// exports: CSV for people and spreadsheets, JSON with the signed records for another app.
+// Pairings and results as a printable sheet, and the exports: CSV for people and spreadsheets,
+// JSON with the signed records for another app. The sheet prints from a copy next to the app
+// (data-print-sheet, app/globals.css), so no tab bar or navigation comes along and long fields
+// run over several pages.
 export default function PrintScreen({ params }: ScreenProps) {
   const tx = useAreaT(TOURNAMENTS_TEXTS)
   const { entry, loaded } = useTournament(params.tournament ?? null)
@@ -45,9 +48,43 @@ function Sheet({ entry }: { entry: Entry }) {
     saveFile(new Blob([text], { type }), exportFileName(state.settings.name, extension))
     setSaved(true)
   }
+  const sheet = (
+    <article className="mt-6">
+      <h2 className="text-2xl font-semibold leading-tight [overflow-wrap:anywhere]">{state.settings.name}</h2>
+      <p className="mt-1 text-[0.9375rem] text-muted-foreground">
+        {[rulesLine(state, tx), tx.formats[state.settings.format].name, state.settings.starts !== undefined ? formatDateTime(state.settings.starts, t) : null, state.settings.place].filter(Boolean).join(" · ")}
+      </p>
+      <p className="text-[0.8125rem] text-muted-foreground">{p.generated(formatDateTime(nowSeconds(), t))}</p>
+      <table className="mt-4 w-full border-collapse text-[0.9375rem]">
+        <thead>
+          <tr className="text-left text-[0.8125rem] text-muted-foreground">
+            {p.columns.map((c) => (
+              <th key={c} className="border-b border-border py-2 pr-2 font-normal">
+                {c}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {matches.map((m) => (
+            <tr key={m.id} className="border-b border-border align-top">
+              <td className="py-2 pr-2 tabular-nums">{m.number}</td>
+              <td className="py-2 pr-2">{round(m)}</td>
+              <td className="py-2 pr-2 [overflow-wrap:anywhere]">{m.slots[0].empty ? tx.tournament.bye : names.nameOf(m.slots[0].participant)}</td>
+              <td className="py-2 pr-2 [overflow-wrap:anywhere]">{m.slots[1].empty ? tx.tournament.bye : names.nameOf(m.slots[1].participant)}</td>
+              <td className="py-2 pr-2 tabular-nums">{m.state === "walkover" ? tx.walkover[m.walkover ?? "noShow"] : scoreText(m)}</td>
+              <td className="py-2 pr-2 [overflow-wrap:anywhere]">{m.winner ? names.nameOf(m.winner) : ""}</td>
+              <td className="py-2 pr-2">{boardName(state, m.board)}</td>
+              <td className="py-2">{labels.state(m)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </article>
+  )
   return (
-    <div className="pb-4 print:pb-0">
-      <div className="mt-4 grid gap-2 min-[480px]:grid-cols-3 print:hidden">
+    <div className="pb-4">
+      <div className="mt-4 grid gap-2 min-[480px]:grid-cols-3">
         <Button onClick={() => window.print()} className="h-12 gap-2 rounded-xl text-[1.0625rem] font-semibold">
           <Printer className="h-5 w-5" aria-hidden="true" />
           {p.print}
@@ -62,42 +99,17 @@ function Sheet({ entry }: { entry: Entry }) {
         </Button>
       </div>
       {saved && (
-        <InlineStatus tone="success" className="mt-3 print:hidden">
+        <InlineStatus tone="success" className="mt-3">
           {p.saved}
         </InlineStatus>
       )}
-      <article className="mt-6 print:mt-0">
-        <h2 className="text-2xl font-semibold leading-tight [overflow-wrap:anywhere]">{state.settings.name}</h2>
-        <p className="mt-1 text-[0.9375rem] text-muted-foreground">
-          {[rulesLine(state, tx), tx.formats[state.settings.format].name, state.settings.starts !== undefined ? formatDateTime(state.settings.starts, t) : null, state.settings.place].filter(Boolean).join(" · ")}
-        </p>
-        <p className="text-[0.8125rem] text-muted-foreground">{p.generated(formatDateTime(nowSeconds(), t))}</p>
-        <table className="mt-4 w-full border-collapse text-[0.9375rem]">
-          <thead>
-            <tr className="text-left text-[0.8125rem] text-muted-foreground">
-              {p.columns.map((c) => (
-                <th key={c} className="border-b border-border py-2 pr-2 font-normal">
-                  {c}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {matches.map((m) => (
-              <tr key={m.id} className="border-b border-border align-top">
-                <td className="py-2 pr-2 tabular-nums">{m.number}</td>
-                <td className="py-2 pr-2">{round(m)}</td>
-                <td className="py-2 pr-2 [overflow-wrap:anywhere]">{m.slots[0].empty ? tx.tournament.bye : names.nameOf(m.slots[0].participant)}</td>
-                <td className="py-2 pr-2 [overflow-wrap:anywhere]">{m.slots[1].empty ? tx.tournament.bye : names.nameOf(m.slots[1].participant)}</td>
-                <td className="py-2 pr-2 tabular-nums">{m.state === "walkover" ? tx.walkover[m.walkover ?? "noShow"] : scoreText(m)}</td>
-                <td className="py-2 pr-2 [overflow-wrap:anywhere]">{m.winner ? names.nameOf(m.winner) : ""}</td>
-                <td className="py-2 pr-2">{boardName(state, m.board)}</td>
-                <td className="py-2">{labels.state(m)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </article>
+      <div className="print:hidden">{sheet}</div>
+      {createPortal(
+        <div data-print-sheet className="hidden bg-white p-8 text-black print:block">
+          {sheet}
+        </div>,
+        document.body,
+      )}
     </div>
   )
 }

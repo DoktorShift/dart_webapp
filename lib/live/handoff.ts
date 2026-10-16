@@ -5,7 +5,7 @@ import { encodeHandoffLink, handoffPlaintext, handoffTemplate, MAX_HANDOFF_PACKA
 import { MAX_HANDSHAKE_SECONDS } from "../protocol/kinds.ts"
 import { packageHash, pairingCheckCode } from "../protocol/pairing.ts"
 import { utf8Length } from "../protocol/schema.ts"
-import { adoptBoard, handedOver, packBoard, seatInfo } from "./board.ts"
+import { adoptBoard, handedOver, packBoard, seatInfo, staysOnBoard } from "./board.ts"
 import { openChannel, repeat, type ChannelFlow } from "./channel.ts"
 import { newKey, toHex } from "./keys.ts"
 
@@ -27,7 +27,7 @@ export type HandoffOffer =
   | { step: "asked"; checkCode: string }
   | { step: "sending" }
   | { step: "done" }
-  | { step: "failed"; reason: "expired" | "silent" | "too-long" }
+  | { step: "failed"; reason: "expired" | "silent" | "too-long" | "board" }
 
 export interface HandoffOfferControl {
   give: () => void
@@ -35,9 +35,15 @@ export interface HandoffOfferControl {
   close: () => void
 }
 
+const NOTHING_TO_CONTROL: HandoffOfferControl = { give() {}, decline() {}, close() {} }
+
 export async function offerHandoff(local: string, onChange: (offer: HandoffOffer) => void): Promise<HandoffOfferControl> {
   const relays = seatInfo(local)?.relays
   if (!relays) throw new Error("the match is not live here")
+  if (staysOnBoard(local)) {
+    onChange({ step: "failed", reason: "board" })
+    return NOTHING_TO_CONTROL
+  }
   const key = await newKey()
   const sid = toHex(crypto.getRandomValues(new Uint8Array(16)))
   const expires = nowSeconds() + MAX_HANDSHAKE_SECONDS

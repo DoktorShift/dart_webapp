@@ -10,14 +10,15 @@ import { useNav } from "@/components/nav/nav-context"
 import { SlotItems } from "@/components/shell/slot-items"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
-import { ClubHeader, Confirm, SyncLine, formatDateTime, membershipLine, taskLabel, useChange } from "@/components/clubs/common"
+import { ClubHeader, SyncLine, formatDateTime, membershipLine, taskLabel, useChange } from "@/components/clubs/common"
+import { Confirm } from "@/components/ui/confirm"
 import { DateAnswer, answerCounts } from "@/components/clubs/date-answer"
-import { useGuestProfile } from "@/components/clubs/guest-profile"
+import { useInlineProfile } from "@/components/profile/inline-profile"
 import { InviteSheet } from "@/components/clubs/invite-sheet"
 import { CLUB_SCREENS } from "@/components/clubs/screens"
 import { StartGameSheet } from "@/components/clubs/start-game-sheet"
 import { clubAuthor, clubReader, useClub } from "@/components/clubs/use-clubs"
-import { useNames } from "@/components/clubs/use-names"
+import { useProfileNames } from "@/components/profile/use-profile-names"
 import { VerdictSheet } from "@/components/clubs/verdict-sheet"
 import { clubTasks, isLeader, isManager, nextDate, type ClubTask, type ClubView } from "@/lib/clubs/club"
 import type { ClubGame } from "@/lib/clubs/games"
@@ -97,7 +98,7 @@ function ClubBody({ view, params, refresh }: { view: ClubView; params: ScreenPar
   const [accepting, setAccepting] = useState(false)
   const [busy, setBusy] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)
-  const names = useNames(state?.offer ? [state.owner] : [])
+  const names = useProfileNames(state?.offer ? [state.owner] : [])
 
   const run: Run = async (action) => {
     setBusy(true)
@@ -319,7 +320,7 @@ function NoState({ view }: { view: ClubView }) {
 function Outsider({ view, state, busy, problem, run }: { view: ClubView; state: ClubState; busy: boolean; problem: string | null; run: Run }) {
   const tx = useAreaT(CLUBS_TEXTS)
   const nav = useNav()
-  const guest = useGuestProfile()
+  const guest = useInlineProfile()
   const { me } = view
   const canAsk = state.info.visibility === "public" && !state.info.archived && me.status !== "request"
   const text = me.status === "request" ? tx.club.state.request : me.status === "removed" ? tx.club.state.removed : me.status === "left" ? tx.club.state.left : tx.club.state.outsider

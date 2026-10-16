@@ -9,7 +9,7 @@ import { useAreaT } from "@/components/i18n-provider"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
 import { shortId, useChange } from "@/components/clubs/common"
 import { clubAuthor } from "@/components/clubs/use-clubs"
-import { useNames } from "@/components/clubs/use-names"
+import { useProfileNames } from "@/components/profile/use-profile-names"
 import { acceptRequest, declineRequest } from "@/lib/clubs/membership"
 import type { ClubState } from "@/lib/protocol/club-state"
 
@@ -19,7 +19,7 @@ export function RequestList({ state }: { state: ClubState }) {
   const tx = useAreaT(CLUBS_TEXTS)
   const describe = useChange()
   const requests = Object.values(state.requests).sort((a, b) => a.at - b.at)
-  const names = useNames(requests.map((r) => r.pubkey))
+  const names = useProfileNames(requests.map((r) => r.pubkey))
   const [busy, setBusy] = useState<string | null>(null)
   const [problem, setProblem] = useState<string | null>(null)
   if (requests.length === 0) return null

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useId, useMemo, useRef, useState, type TextareaHTMLAttributes } from "react"
-import { Share } from "lucide-react"
+import { ChevronDown, Share } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,14 +22,13 @@ import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { TOURNAMENTS_TEXTS } from "@/lib/i18n/features/tournaments.screens"
 import { PRIMARY, QUIET, useProblemText } from "@/components/tournaments/common"
-import { useGuestProfile } from "@/components/tournaments/guest-profile"
+import { useInlineProfile } from "@/components/profile/inline-profile"
 import { ShareSheet } from "@/components/tournaments/share-sheet"
 import { tournamentAuthor } from "@/components/tournaments/use-tournaments"
 import { createLocalKey, createLocalSigner } from "@/lib/nostr/signers"
 import { nowSeconds } from "@/lib/nostr/time"
 import { sealSecret } from "@/lib/profile/vault"
 import { reduceTournament } from "@/lib/protocol/tournament-state"
-import { MAX_PARTICIPANTS } from "@/lib/protocol/tournament"
 import type { ScreenParams } from "@/lib/shell/nav"
 import type { ScreenProps } from "@/lib/shell/registry"
 import { SCREENS } from "@/lib/shell/registry"
@@ -48,11 +47,20 @@ import { cn } from "@/lib/utils"
 const STEPS = 4
 const FORMATS: TournamentFormat[] = ["single", "double", "roundRobin", "groups"]
 const START_SCORES = [301, 501, 701]
-const LEGS = [1, 2, 3, 4, 5, 6]
+// Five choices at most per row, so each stays a 44 pt target on an iPhone SE; more places can be
+// set later under "Angaben ändern".
+const LEGS = [1, 2, 3, 4, 5]
 const SETS = [1, 2, 3]
-const CAPACITIES = [4, 8, 16, 32, 64, MAX_PARTICIPANTS]
+const CAPACITIES = [4, 8, 16, 32, 64]
 const GROUP_COUNTS = [2, 4, 8, 16]
 const ADVANCE = [1, 2, 4]
+
+// A published tournament; `incomplete` when its guests or boards could not be added yet.
+interface Published {
+  id: string
+  name: string
+  incomplete: boolean
+}
 
 const deviceZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
 
@@ -80,7 +88,7 @@ function CreateFlow({ initial, params }: { initial: TournamentDraft; params: Scr
   const nav = useNav()
   const [draft, setDraft] = useState(initial)
   const [step, setStep] = useState(0)
-  const [published, setPublished] = useState<{ id: string; name: string } | null>(null)
+  const [published, setPublished] = useState<Published | null>(null)
   const [discarding, setDiscarding] = useState(false)
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
@@ -94,7 +102,7 @@ function CreateFlow({ initial, params }: { initial: TournamentDraft; params: Scr
     })
   useEffect(() => () => clearTimeout(timer.current), [])
 
-  if (published) return <Published id={published.id} name={published.name} />
+  if (published) return <PublishedView {...published} />
   return (
     <div className="pb-4">
       <p className="mt-2 text-[0.8125rem] text-muted-foreground">{c.step(step + 1, STEPS)}</p>
@@ -226,7 +234,7 @@ function FormatAndRules({ draft, change }: StepProps) {
         <SwitchRow title={c.doubleIn} checked={draft.rules.doubleIn} onCheckedChange={(doubleIn) => rules({ doubleIn })} />
       </Group>
       <Group footer={draft.final ? tx.finalLine(draft.final.legsToWin, draft.final.setsToWin) : undefined}>
-        <SwitchRow title={c.final} hint={c.finalHint} checked={draft.final !== null} onCheckedChange={(on) => change({ final: on ? { legsToWin: Math.min(6, draft.rules.legsToWin + 1), setsToWin: draft.rules.setsToWin } : null })} />
+        <SwitchRow title={c.final} hint={c.finalHint} checked={draft.final !== null} onCheckedChange={(on) => change({ final: on ? { legsToWin: Math.min(LEGS[LEGS.length - 1], draft.rules.legsToWin + 1), setsToWin: draft.rules.setsToWin } : null })} />
         {draft.final && (
           <>
             <ChoiceRow title={c.finalLegs} options={options(LEGS)} value={draft.final.legsToWin} onChange={(legsToWin) => change({ final: { ...(draft.final as NonNullable<typeof draft.final>), legsToWin } })} />
@@ -238,11 +246,14 @@ function FormatAndRules({ draft, change }: StepProps) {
   )
 }
 
+// Places, guests and boards; how registration, check-in and results run has sensible defaults
+// and stays folded away under "Mehr Optionen" (the preview names them).
 function PlayersAndBoards({ draft, change }: StepProps) {
   const tx = useAreaT(TOURNAMENTS_TEXTS)
   const c = tx.create
   const [guests, setGuests] = useState(draft.guests.join("\n"))
   const [boards, setBoards] = useState(draft.boards.join("\n"))
+  const [more, setMore] = useState(false)
   return (
     <>
       <Group footer={c.capacityHint}>
@@ -252,28 +263,7 @@ function PlayersAndBoards({ draft, change }: StepProps) {
           value={draft.capacity}
           onChange={(capacity) => change({ capacity })}
         />
-        <SwitchRow title={c.waitlist} hint={c.waitlistHint} checked={draft.waitlist} onCheckedChange={(waitlist) => change({ waitlist })} />
-        <SwitchRow title={c.checkIn} hint={c.checkInHint} checked={draft.checkIn} onCheckedChange={(checkIn) => change({ checkIn })} />
-        <ChoiceRow
-          title={c.admission}
-          options={[
-            { value: "auto", label: c.admissionAuto },
-            { value: "manual", label: c.admissionManual },
-          ]}
-          value={draft.admission}
-          onChange={(admission) => change({ admission })}
-        />
-        <ChoiceRow
-          title={c.approval}
-          options={[
-            { value: "organizer", label: c.approvalOrganizer },
-            { value: "board", label: c.approvalBoard },
-          ]}
-          value={draft.approval}
-          onChange={(approval) => change({ approval })}
-        />
       </Group>
-      <TextField label={c.registrationCloses} type="datetime-local" value={draft.registrationCloses} onChange={(e) => change({ registrationCloses: e.target.value })} />
       <TextArea
         label={c.guests}
         hint={c.guestsHint}
@@ -294,6 +284,34 @@ function PlayersAndBoards({ draft, change }: StepProps) {
           change({ boards: e.target.value.split("\n") })
         }}
       />
+      <Group>
+        <ListRow title={c.moreOptions} onClick={() => setMore((m) => !m)} chevron={false} trailing={<ChevronDown className={cn("h-5 w-5 text-muted-foreground transition-transform motion-reduce:transition-none", more && "rotate-180")} aria-hidden="true" />} />
+        {more && (
+          <>
+            <SwitchRow title={c.waitlist} hint={c.waitlistHint} checked={draft.waitlist} onCheckedChange={(waitlist) => change({ waitlist })} />
+            <SwitchRow title={c.checkIn} hint={c.checkInHint} checked={draft.checkIn} onCheckedChange={(checkIn) => change({ checkIn })} />
+            <ChoiceRow
+              title={c.admission}
+              options={[
+                { value: "auto", label: c.admissionAuto },
+                { value: "manual", label: c.admissionManual },
+              ]}
+              value={draft.admission}
+              onChange={(admission) => change({ admission })}
+            />
+            <ChoiceRow
+              title={c.approval}
+              options={[
+                { value: "organizer", label: c.approvalOrganizer },
+                { value: "board", label: c.approvalBoard },
+              ]}
+              value={draft.approval}
+              onChange={(approval) => change({ approval })}
+            />
+          </>
+        )}
+      </Group>
+      {more && <TextField label={c.registrationCloses} type="datetime-local" value={draft.registrationCloses} onChange={(e) => change({ registrationCloses: e.target.value })} />}
     </>
   )
 }
@@ -301,11 +319,11 @@ function PlayersAndBoards({ draft, change }: StepProps) {
 // What will be published, what is missing, and the one button. Publishing founds the
 // tournament with the commitment to a draw seed kept on this device, then adds the guests and
 // the boards (each board with a key made here, sealed, so its code can be shown).
-function Preview({ draft, onPublished }: { draft: TournamentDraft; onPublished: (p: { id: string; name: string }) => void }) {
+function Preview({ draft, onPublished }: { draft: TournamentDraft; onPublished: (p: Published) => void }) {
   const t = useT()
   const tx = useAreaT(TOURNAMENTS_TEXTS)
   const c = tx.create
-  const guest = useGuestProfile()
+  const guest = useInlineProfile()
   const describe = useProblemText()
   const [busy, setBusy] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)
@@ -321,22 +339,28 @@ function Preview({ draft, onPublished }: { draft: TournamentDraft; onPublished: 
     try {
       if (!(await guest.ensure())) return
       const author = await tournamentAuthor()
+      // The seed behind the founding's commitment is kept with the founding, before it can reach
+      // anyone; from then on the draft is the tournament, so pressing again never founds twice.
       const seed = createDrawSeed()
-      const found = await send(null, [foundTemplate(foundContent(draft, commitSeed(seed)), nowSeconds())], author)
-      const id = found.events[0].id
-      await updateTournament(id, { seed: { commit: commitSeed(seed), seed } })
-      const state = reduceTournament(found.events, id).state
-      if (!state) throw new Error("the founding does not replay")
-      const templates = guests.map((alias) => guestTemplate(state, randomHex(16), alias, false))
-      for (const name of boards) {
-        const { secretKey } = await createLocalKey()
-        const boardId = randomHex(16)
-        templates.push(boardTemplate(state, boardId, name, await (await createLocalSigner(secretKey)).getPublicKey()))
-        await updateTournament(id, { boardKey: { board: boardId, key: await sealSecret(secretKey, "board-key") } })
-      }
-      if (templates.length > 0) await send(id, templates, author)
+      const [founding] = await send(null, [foundTemplate(foundContent(draft, commitSeed(seed)), nowSeconds())], author, { seed: { commit: commitSeed(seed), seed } })
       await deleteDraft(draft.id).catch(() => {})
-      onPublished({ id, name: draft.name.trim() })
+      const published = { id: founding.id, name: draft.name.trim() }
+      const state = reduceTournament([founding], founding.id).state
+      try {
+        if (!state) throw new Error("the founding does not replay")
+        const templates = guests.map((alias) => guestTemplate(state, randomHex(16), alias, false))
+        for (const name of boards) {
+          const { secretKey } = await createLocalKey()
+          const boardId = randomHex(16)
+          templates.push(boardTemplate(state, boardId, name, await (await createLocalSigner(secretKey)).getPublicKey()))
+          await updateTournament(founding.id, { boardKey: { board: boardId, key: await sealSecret(secretKey, "board-key") } })
+        }
+        if (templates.length > 0) await send(founding.id, templates, author)
+        onPublished({ ...published, incomplete: false })
+      } catch {
+        // Founded all the same: guests and boards can be added in the organizer's workspace.
+        onPublished({ ...published, incomplete: guests.length + boards.length > 0 })
+      }
     } catch (error) {
       setProblem(describe(error))
     } finally {
@@ -352,6 +376,16 @@ function Preview({ draft, onPublished }: { draft: TournamentDraft; onPublished: 
         <ListRow title={tx.formats[draft.format].name} subtitle={tx.formats[draft.format].summary} />
         <ListRow title={tx.rulesLine(draft.rules.startScore, draft.rules.legsToWin, draft.rules.setsToWin)} subtitle={draft.final ? tx.finalLine(draft.final.legsToWin, draft.final.setsToWin) : undefined} />
         <ListRow title={c.fieldLine(draft.capacity)} subtitle={[c.guestsCount(guests.length), c.boardsCount(boards.length)].join(" · ")} />
+        <ListRow
+          title={c.flow}
+          subtitle={[
+            draft.waitlist ? c.withWaitlist : c.noWaitlist,
+            draft.checkIn ? c.withCheckIn : c.noCheckIn,
+            draft.admission === "auto" ? c.admissionAuto : c.admissionManual,
+            draft.approval === "organizer" ? c.approvalOrganizer : c.approvalBoard,
+            ...(draft.registrationCloses ? [c.closesAt(new Date(draft.registrationCloses).toLocaleString(t.intl, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))] : []),
+          ].join(" · ")}
+        />
         <ListRow title={c.visibility} subtitle={c.visibilityHint} />
       </Group>
       {problems.length > 0 && (
@@ -379,7 +413,7 @@ function Preview({ draft, onPublished }: { draft: TournamentDraft; onPublished: 
 }
 
 // The tournament is there: share it now, or go to it.
-function Published({ id, name }: { id: string; name: string }) {
+function PublishedView({ id, name, incomplete }: Published) {
   const tx = useAreaT(TOURNAMENTS_TEXTS)
   const nav = useNav()
   const [sharing, setSharing] = useState(false)
@@ -390,6 +424,11 @@ function Published({ id, name }: { id: string; name: string }) {
         <span className="block font-semibold">{tx.create.publishedTitle}</span>
         {tx.create.publishedText}
       </InlineStatus>
+      {incomplete && (
+        <InlineStatus tone="error" className="mt-4">
+          {tx.create.publishedIncomplete}
+        </InlineStatus>
+      )}
       <Button onClick={() => setSharing(true)} className={`${PRIMARY} mt-6 gap-2`}>
         <Share className="h-5 w-5" aria-hidden="true" />
         {tx.tournament.share}

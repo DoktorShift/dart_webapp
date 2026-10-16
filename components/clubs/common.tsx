@@ -2,16 +2,6 @@
 
 import { useEffect, useState, type ReactNode } from "react"
 import { RefreshCw } from "lucide-react"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 import { Avatar } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { useAreaT, useT } from "@/components/i18n-provider"
@@ -24,7 +14,7 @@ import type { ClubGame } from "@/lib/clubs/games"
 import { ClubOutdatedError } from "@/lib/clubs/membership"
 import { ClubSignerError, waitingEvents } from "@/lib/clubs/send"
 import { useClubs } from "@/components/clubs/use-clubs"
-import type { NameInfo } from "@/components/clubs/use-names"
+import type { NameInfo } from "@/components/profile/use-profile-names"
 import { onStorageChange } from "@/lib/storage/db"
 import { cn } from "@/lib/utils"
 
@@ -191,47 +181,6 @@ export function taskLabel(task: ClubTask, tx: ClubsTexts, t: Messages): string {
 // The task line's way into the club: which task to open there (club-screen.tsx).
 export function taskParams(task: ClubTask): Record<string, string> {
   return { task: task.kind, ...(task.kind === "verdict" || task.kind === "decide" ? { game: task.game.match } : {}) }
-}
-
-// One question with a cancel and one answer; red when the answer removes something. A field
-// the answer needs (an optional reason) sits between question and answer.
-export function Confirm({
-  open,
-  onOpenChange,
-  title,
-  text,
-  confirm,
-  destructive,
-  onConfirm,
-  children,
-}: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  title: string
-  text: string
-  confirm: string
-  destructive?: boolean
-  onConfirm: () => void
-  children?: ReactNode
-}) {
-  const t = useT()
-  return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-[calc(100vw-2rem)] rounded-2xl sm:max-w-md">
-        <AlertDialogHeader>
-          <AlertDialogTitle className="[overflow-wrap:anywhere]">{title}</AlertDialogTitle>
-          <AlertDialogDescription>{text}</AlertDialogDescription>
-        </AlertDialogHeader>
-        {children}
-        <AlertDialogFooter className="gap-2">
-          <AlertDialogCancel className="h-11">{t.common.cancel}</AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm} className={destructive ? "h-11 bg-danger text-white hover:bg-danger/90" : "h-11"}>
-            {confirm}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  )
 }
 
 // The scrolling part of a club sheet: room at its end, so a button at the bottom is never cut

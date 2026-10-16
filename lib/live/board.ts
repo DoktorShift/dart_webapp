@@ -479,9 +479,14 @@ export type HandoffPackage = {
   public?: true
 }
 
+// A tournament's match stays on the board it was called to: its authority is the board key the
+// organizer gave that device, which never leaves it, and only that board reports the result.
+export const staysOnBoard = (local: string) => boards.get(local)?.record.public === true
+
 export async function packBoard(local: string): Promise<HandoffPackage> {
   const board = boards.get(local)
   if (!board || board.ended) throw new Error("the match is not live here")
+  if (board.record.public) throw new Error("a tournament's match stays on its board")
   await board.queue
   const { record, keys, game } = board
   return {

@@ -39,6 +39,12 @@ export const profileScreensEn: Widen<typeof profileScreensDe> = {
     boardShort: (name) => `At the board you're "${name}".`,
   },
 
+  inline: {
+    name: "Your name",
+    namePlaceholder: "Your player name",
+    hint: "This gives you a profile. Your games stay on this device.",
+  },
+
   home: {
     boardName: (name) => `At the board: ${name}`,
     nameLoading: "Loading",

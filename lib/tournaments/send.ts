@@ -1,72 +1,52 @@
-import { publish as publishDirect, type PublishResult } from "../nostr/client.ts"
-import { generalRelays, isPublished, mergeRelays } from "../nostr/relays.ts"
+import { generalRelays, mergeRelays } from "../nostr/relays.ts"
 import type { EventTemplate, NostrEvent, Signer } from "../nostr/types.ts"
-import { getSession } from "../profile/session.ts"
-import { publish } from "../sync/publish.ts"
-import { loadStoredTournament, updateTournament } from "./store.ts"
+import { KIND_RECORD } from "../protocol/kinds.ts"
+import { tagValue } from "../protocol/tags.ts"
+import { enqueue, pendingEvents } from "../sync/outbox.ts"
+import { updateTournament, type TournamentChange } from "./store.ts"
 
-// The one way a tournament's events leave this device: signed (one after another: a signer app
-// asks for each), kept in the tournament's local copy first, then handed to relays. A change
-// counts as made once it is signed and kept (decision 0002 §1); relays that can't be reached
-// don't undo it, the tournament shows it as not sent yet and sends it again (resendUnsent).
+// The one way a tournament's records leave this device, the organizer's, a player's and a
+// board's alike: signed one after another (a signer app asks for each), kept in the tournament's
+// local copy, then handed to the persistent outbox of lib/sync (decision 0002 §2) for the
+// tournament's relays, as the clubs do (lib/clubs/send.ts). A change counts as made once it is
+// signed and kept; the outbox sends it until relays of two operators have it (rule
+// "published"), across reloads and without anyone waiting.
 //
-// The profile's own events go through lib/sync/publish.ts, as every profile event does. A
-// board's events are signed by the board key the organizer authorized, which that module
-// refuses (it publishes only the signed-in profile's events), so they go straight to the
-// relays. The persistent outbox replaces both paths at integration (store.ts `unsent`).
+// Order: a change's records go out one after another, the first after the tournament's newest
+// record still waiting here. Every record is written on top of the tournament as this device
+// saw it, so no relay gets a decision before the records it builds on.
 
 export interface Author {
   pubkey: string
   signer: Signer
 }
 
-export interface Sent {
-  events: NostrEvent[]
-  // Every event reached relays of two operators, or every relay gave a final answer.
-  published: boolean
-}
-
 // Where a tournament travels: the general relays (decision 0002 §5) and the relays its link named.
 export const tournamentRelays = (hints: readonly string[] = []) => mergeRelays(generalRelays(), hints)
 
-// An answer that will not change by trying again later.
-const TRANSIENT = new Set(["timeout", "unreachable", "rate-limited", "auth-required", "error", ""])
-const delivered = (results: readonly PublishResult[]) =>
-  results.length > 0 && (isPublished(results.filter((r) => r.ok).map((r) => r.url)) || results.every((r) => r.ok || !TRANSIENT.has(r.code)))
+const ofTournament = (tournament: string) => (event: NostrEvent) => event.kind === KIND_RECORD && (event.id === tournament || tagValue(event.tags, "e") === tournament)
 
-// `tournament` null: the first event founds the tournament, and its id is the tournament's.
-export async function send(tournament: string | null, templates: readonly EventTemplate[], author: Author, hints: readonly string[] = []): Promise<Sent> {
+// `tournament` null: the first record founds the tournament, and its id is the tournament's.
+// `keep` is stored together with the records, before anything goes out (the seed behind the
+// founding's commitment, say), so a record never reaches a relay without it.
+export async function send(tournament: string | null, templates: readonly EventTemplate[], author: Author, keep: Omit<TournamentChange, "events"> = {}): Promise<NostrEvent[]> {
   const events: NostrEvent[] = []
   for (const template of templates) events.push(await author.signer.signEvent(template))
   const id = tournament ?? events[0].id
-  await updateTournament(id, { events, relays: hints, sent: { confirmed: [], missing: events.map((e) => e.id) } })
-  return { events, published: await resend(id, events) }
+  const stored = await updateTournament(id, { ...keep, events })
+  const last = (await pendingEvents(ofTournament(id))).at(-1)
+  const relays = tournamentRelays(stored.relays)
+  await enqueue(events.map((event, i) => ({ event, relays, after: i > 0 ? [events[i - 1].id] : last ? [last.id] : [] })), { rule: "published" })
+  return events
 }
 
-// Hands signed events to relays, in order: right after signing, and again from "Erneut senden".
-export async function resend(tournament: string, events: readonly NostrEvent[]): Promise<boolean> {
-  const stored = await loadStoredTournament(tournament)
-  const relays = tournamentRelays(stored?.relays)
-  const session = getSession()
-  const confirmed = new Set<string>()
-  const own = events.filter((e) => e.pubkey === session?.pubkey)
-  if (own.length > 0) {
-    const reports = await publish(own).catch(() => [])
-    for (const report of reports) if (delivered(report.results)) confirmed.add(report.event.id)
+// How many records this device signed that relays don't have safely yet, by the tournament
+// (or other object) they belong to: what the screens say still waits.
+export async function waitingRecords(): Promise<Map<string, number>> {
+  const counts = new Map<string, number>()
+  for (const event of await pendingEvents((e) => e.kind === KIND_RECORD)) {
+    const root = tagValue(event.tags, "e") ?? event.id
+    counts.set(root, (counts.get(root) ?? 0) + 1)
   }
-  for (const event of events) {
-    if (own.includes(event)) continue
-    const results = await publishDirect(event, relays).catch((): PublishResult[] => [])
-    if (delivered(results)) confirmed.add(event.id)
-  }
-  await updateTournament(tournament, { sent: { confirmed: [...confirmed], missing: events.map((e) => e.id).filter((id) => !confirmed.has(id)) } })
-  return events.every((e) => confirmed.has(e.id))
-}
-
-// Everything of the tournament no relay confirmed yet, oldest first.
-export async function resendUnsent(tournament: string): Promise<boolean> {
-  const stored = await loadStoredTournament(tournament)
-  if (!stored || stored.unsent.length === 0) return true
-  const byId = new Map(stored.events.map((e) => [e.id, e]))
-  return resend(tournament, stored.unsent.map((id) => byId.get(id)).filter((e): e is NostrEvent => e !== undefined))
+  return counts
 }

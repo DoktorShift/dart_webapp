@@ -42,6 +42,14 @@ export const profileScreensDe = {
     boardShort: (name: string) => `Am Board heißt du „${name}“.`,
   },
 
+  // A profile made right where it is needed (founding or joining a club, registering for or
+  // creating a tournament): one name, and whose games here become the profile's (create above).
+  inline: {
+    name: "Dein Name",
+    namePlaceholder: "Dein Spielername",
+    hint: "Damit bekommst du ein Profil. Deine Spiele bleiben auf diesem Gerät.",
+  },
+
   // The signed-in Profile tab.
   home: {
     boardName: (name: string) => `Am Board: ${name}`,

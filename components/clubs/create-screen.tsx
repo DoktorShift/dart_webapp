@@ -9,7 +9,7 @@ import { useNav } from "@/components/nav/nav-context"
 import { useAreaT } from "@/components/i18n-provider"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
 import { useChange } from "@/components/clubs/common"
-import { useGuestProfile } from "@/components/clubs/guest-profile"
+import { useInlineProfile } from "@/components/profile/inline-profile"
 import { InviteSheet } from "@/components/clubs/invite-sheet"
 import { CLUB_SCREENS } from "@/components/clubs/screens"
 import { clubAuthor, useClub } from "@/components/clubs/use-clubs"
@@ -21,7 +21,7 @@ import { foundClub } from "@/lib/clubs/membership"
 export default function CreateScreen() {
   const tx = useAreaT(CLUBS_TEXTS)
   const c = tx.create
-  const guest = useGuestProfile()
+  const guest = useInlineProfile()
   const describe = useChange()
   const [name, setName] = useState("")
   const [about, setAbout] = useState("")

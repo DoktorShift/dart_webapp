@@ -1,3 +1,7 @@
+// "First to 3 Legs", "First to 1 Leg", in sets "First to 2 Sätze à 3 Legs".
+const legsWord = (n: number) => (n === 1 ? "Leg" : "Legs")
+const firstTo = (legs: number, sets: number) => (sets > 1 ? `First to ${sets} Sätze à ${legs} ${legsWord(legs)}` : `First to ${legs} ${legsWord(legs)}`)
+
 // German texts for the tournaments area. The English file must have the same shape (see ../index.ts).
 // The rules texts say exactly what lib/tournaments/engine.ts does; change both together.
 export const tournamentsScreensDe = {
@@ -123,16 +127,23 @@ export const tournamentsScreensDe = {
   you: "Du",
   retry: "Erneut versuchen",
   failed: "Das hat gerade nicht geklappt. Prüfe die Verbindung.",
-  unsent: (n: number) => (n === 1 ? "1 Änderung ist noch nicht gesendet." : `${n} Änderungen sind noch nicht gesendet.`),
-  resend: "Erneut senden",
+  waiting: (n: number) => (n === 1 ? "1 Änderung ist noch unterwegs. Sie wird von selbst gesendet." : `${n} Änderungen sind noch unterwegs. Sie werden von selbst gesendet.`),
+  // Why the tournament did not take a change.
+  refused: {
+    changed: "Das hat sich inzwischen geändert. Sieh es dir an und versuch es nochmal.",
+    decided: "Für dieses Spiel zählt schon ein Ergebnis.",
+    full: "Das Turnier ist voll.",
+    phase: "Das geht in dieser Phase des Turniers nicht mehr.",
+    other: "Das Turnier hat diese Änderung nicht übernommen.",
+  },
   loadedAt: (time: string) => `Zuletzt geladen um ${time}`,
   neverLoaded: "Noch nicht geladen",
   refresh: "Aktualisieren",
   legs: (n: number) => (n === 1 ? "1 Leg" : `${n} Legs`),
   sets: (n: number) => (n === 1 ? "1 Satz" : `${n} Sätze`),
   // "501, First to 3 Legs" and, in sets, "501, First to 2 Sätze à 3 Legs".
-  rulesLine: (startScore: number, legs: number, sets: number) => (sets > 1 ? `${startScore}, First to ${sets} Sätze à ${legs} Legs` : `${startScore}, First to ${legs} Legs`),
-  finalLine: (legs: number, sets: number) => (sets > 1 ? `Finale: First to ${sets} Sätze à ${legs} Legs` : `Finale: First to ${legs} Legs`),
+  rulesLine: (startScore: number, legs: number, sets: number) => `${startScore}, ${firstTo(legs, sets)}`,
+  finalLine: (legs: number, sets: number) => `Finale: ${firstTo(legs, sets)}`,
   phase: {
     registration: "Anmeldung offen",
     checkin: "Check-in läuft",
@@ -162,9 +173,6 @@ export const tournamentsScreensDe = {
     pending: "Anfrage wartet",
     waitlist: "Warteliste",
     checkedIn: "Eingecheckt",
-    forget: "Aus der Liste entfernen",
-    forgetTitle: (name: string) => `${name} entfernen?`,
-    forgetText: "Das Turnier verschwindet nur aus deiner Liste. Mit dem Link kannst du es wieder öffnen.",
   },
 
   // Creating a tournament in four steps.
@@ -201,7 +209,7 @@ export const tournamentsScreensDe = {
     groupsCount: "Gruppen",
     groupsAdvance: "Kommen je Gruppe weiter",
     capacity: "Plätze",
-    capacityHint: "Höchstens 128 Spieler, im Jeder-gegen-jeden 64.",
+    capacityHint: "Mehr Plätze, bis 128, später unter „Angaben ändern“. Jeder gegen jeden: höchstens 64.",
     waitlist: "Warteliste",
     waitlistHint: "Wer keinen Platz mehr bekommt, rückt nach, wenn jemand absagt.",
     checkIn: "Check-in vor der Auslosung",
@@ -213,8 +221,15 @@ export const tournamentsScreensDe = {
     approvalOrganizer: "Leitung gibt frei",
     approvalBoard: "Board zählt sofort",
     registrationCloses: "Anmeldeschluss (optional)",
+    moreOptions: "Mehr Optionen",
+    flow: "Ablauf",
+    withWaitlist: "Mit Warteliste",
+    noWaitlist: "Ohne Warteliste",
+    withCheckIn: "Mit Check-in",
+    noCheckIn: "Ohne Check-in",
+    closesAt: (when: string) => `Anmeldeschluss ${when}`,
     guests: "Gäste ohne Profil",
-    guestsHint: "Ein Name pro Zeile. Gäste spielen unter diesem Namen und können ihren Platz später mit einem Profil verbinden.",
+    guestsHint: "Ein Name pro Zeile. Gäste erscheinen mit dem Namen, den du eingibst, für alle mit dem Link. Ihren Platz können sie später mit einem Profil verbinden.",
     guestsPlaceholder: "Mia\nJonas",
     guestsCount: (n: number) => (n === 1 ? "1 Gast" : `${n} Gäste`),
     boards: "Boards",
@@ -238,6 +253,7 @@ export const tournamentsScreensDe = {
     deleteDraftTitle: "Entwurf verwerfen?",
     publishedTitle: "Dein Turnier ist veröffentlicht",
     publishedText: "Teile den Link, damit sich Spieler anmelden. Die Codes für die Boards findest du in der Turnierleitung.",
+    publishedIncomplete: "Gäste und Boards sind noch nicht eingetragen. Füge sie in der Turnierleitung hinzu.",
     openTournament: "Zum Turnier",
   },
 
@@ -259,6 +275,8 @@ export const tournamentsScreensDe = {
     withdrawn: "Du hast dich abgemeldet",
     removed: "Du bist nicht mehr dabei",
     full: "Keine freien Plätze",
+    waitlistOpen: "Alle Plätze sind vergeben. Von der Warteliste rückst du nach, wenn jemand absagt.",
+    joinWaitlist: "Auf die Warteliste",
     closed: "Die Anmeldung ist geschlossen",
     late: "Der Anmeldeschluss ist vorbei; die Leitung entscheidet über Nachmeldungen.",
     needProfile: "Zum Anmelden brauchst du ein Profil. Du legst es mit einem Namen an.",
@@ -266,7 +284,7 @@ export const tournamentsScreensDe = {
     checkingIn: "Wird gemeldet",
     checkedIn: "Du bist eingecheckt",
     checkInHint: "Melde dich, sobald du da bist. Ausgelost werden nur Anwesende.",
-    checkInUntil: (when: string) => `Check-in bis ${when}`,
+    checkInUntil: (when: string) => `Check-in bis ${when}.`,
     preparing: "Paarungen werden vorbereitet",
     preparingText: "Die Turnierleitung lost aus. Dein erstes Spiel steht gleich hier.",
     nextMatch: "Dein nächstes Spiel",
@@ -294,6 +312,7 @@ export const tournamentsScreensDe = {
     takeOver: "Leitung übernehmen",
     takeOverText: "Dir wurde die Turnierleitung übertragen. Übernimm sie, sobald das Turnier hier aktuell ist.",
     takingOver: "Wird übernommen",
+    takeOverOffline: "Keine Verbindung: Übernehmen geht nur mit dem aktuellen Stand. Versuch es gleich nochmal.",
     organize: "Turnierleitung",
     organizeTasks: (n: number) => (n === 1 ? "1 offene Aufgabe" : `${n} offene Aufgaben`),
     share: "Teilen",
@@ -337,6 +356,9 @@ export const tournamentsScreensDe = {
       results: (n: number) => (n === 1 ? "1 Ergebnis freigeben" : `${n} Ergebnisse freigeben`),
       affected: (n: number) => (n === 1 ? "1 Spiel nach Korrektur entscheiden" : `${n} Spiele nach Korrektur entscheiden`),
       calls: (n: number) => (n === 1 ? "1 Spiel aufrufen" : `${n} Spiele aufrufen`),
+      call: (pairing: string, board: string) => `${pairing} an ${board} aufrufen`,
+      skipped: (n: number) => (n === 1 ? "1 Ergebnis passt nicht zum Spielplan" : `${n} Ergebnisse passen nicht zum Spielplan`),
+      awards: "Auszeichnungen vergeben",
       draw: "Auslosen",
       start: "Turnier starten",
       finish: "Turnier beenden",
@@ -369,10 +391,14 @@ export const tournamentsScreensDe = {
       draw: "Auslosen",
       drawTitle: "Auslosung",
       drawField: (n: number) => (n === 1 ? "1 Spieler im Feld" : `${n} Spieler im Feld`),
-      drawNotPresent: (n: number) => (n === 1 ? "1 angemeldeter Spieler ist nicht eingecheckt und bleibt draußen." : `${n} angemeldete Spieler sind nicht eingecheckt und bleiben draußen.`),
+      drawMissing: (names: string) => `Nicht eingecheckt, bleiben draußen: ${names}`,
+      allPresent: "Alle als da melden",
+      drawPrepare: "Auf diesem Gerät liegt die Festlegung der Auslosung nicht. Lege sie jetzt neu fest; auslosen kannst du, sobald sie bei den Servern ist.",
+      drawCommit: "Auslosung festlegen",
+      drawCommitWaiting: "Die Festlegung ist noch unterwegs. Auslosen geht gleich.",
       drawSeeded: "Gesetzte Spieler",
       drawSeededHint: "Antippen in der Reihenfolge der Setzliste. Ohne Setzung werden alle ausgelost.",
-      drawPreview: (matches: number, byes: number) => (byes === 0 ? `${matches} Spiele` : `${matches} Spiele, ${byes} Freilose`),
+      drawPreview: (matches: number, byes: number) => [matches === 1 ? "1 Spiel" : `${matches} Spiele`, ...(byes === 0 ? [] : [byes === 1 ? "1 Freilos" : `${byes} Freilose`])].join(", "),
       drawConfirm: "Jetzt auslosen",
       drawing: "Wird ausgelost",
       tooFew: "Für dieses Format sind zu wenige Spieler im Feld.",
@@ -382,6 +408,8 @@ export const tournamentsScreensDe = {
       finish: "Turnier beenden",
       finishTitle: "Turnier beenden?",
       finishText: (places: number) => (places === 1 ? "Die Platzierungen stehen. 1 Spieler mit Profil bekommt eine Auszeichnung." : `Die Platzierungen stehen. ${places} Spieler mit Profil bekommen eine Auszeichnung.`),
+      finishPlain: "Die Platzierungen stehen.",
+      awardsLapsed: "Keine Verbindung: Die Auszeichnungen sind noch nicht vergeben. Versuch es gleich nochmal.",
       finishIncomplete: "Noch nicht alle Spiele sind entschieden. Beenden setzt die Platzierungen so, wie sie jetzt stehen.",
       cancel: "Turnier absagen",
       cancelTitle: "Turnier absagen?",
@@ -407,7 +435,6 @@ export const tournamentsScreensDe = {
       revokeText: "Das Gerät am Board kann danach keine Ergebnisse mehr melden.",
       calls: "Bereit zum Aufruf",
       call: "Aufrufen",
-      callAll: (n: number) => (n === 1 ? "1 Spiel aufrufen" : `${n} Spiele aufrufen`),
       noFree: "Kein Board frei. Sobald ein Spiel endet, geht es weiter.",
       noReady: "Kein Spiel wartet auf ein Board.",
       choose: "Board wählen",
@@ -428,8 +455,10 @@ export const tournamentsScreensDe = {
       noConsequences: "Kein anderes Spiel ist betroffen.",
       affected: "Nach einer Korrektur passt dieses Spiel nicht mehr. Trage ein neues Ergebnis ein oder lass es neu spielen.",
       replay: "Neu spielen lassen",
+      skipped: "Das zuletzt entschiedene Ergebnis passt nicht zu dieser Paarung. Trag das Ergebnis neu ein.",
       walkover: "Kampflos",
       by: (board: string) => `von ${board}`,
+      wins: (name: string, score: string) => `${name} gewinnt ${score}`,
       byOrganizer: "von der Leitung",
       none: "Noch keine Ergebnisse.",
       save: "Speichern",
@@ -455,7 +484,6 @@ export const tournamentsScreensDe = {
 
   // This device as a board.
   board: {
-    connected: (board: string, tournament: string) => `${board} · ${tournament}`,
     become: "Dieses Gerät wird zum Board",
     becomeText: (board: string, tournament: string) => `Es zeigt ab jetzt die Spiele für ${board} beim Turnier „${tournament}“ und meldet die Ergebnisse.`,
     becomeConfirm: "Board verwenden",
@@ -484,8 +512,7 @@ export const tournamentsScreensDe = {
   game: {
     reported: "Ergebnis ans Turnier gemeldet",
     reporting: "Ergebnis wird gemeldet",
-    pending: "Ergebnis wartet auf Verbindung",
-    forSlot: (round: string) => `Turnierspiel: ${round}`,
+    waiting: "Ergebnis wartet auf Verbindung",
   },
 
   // The TV view: large type, nothing to touch.
@@ -498,6 +525,7 @@ export const tournamentsScreensDe = {
     fullScreen: "Vollbild",
     closeFullScreen: "Vollbild beenden",
     progress: (decided: number, total: number) => `${decided} von ${total} Spielen entschieden`,
+    winner: "Sieger",
     champion: (name: string) => `Turniersieger: ${name}`,
   },
 
@@ -511,15 +539,6 @@ export const tournamentsScreensDe = {
     saved: "Datei gespeichert",
   },
 
-  // A guest creating a profile where they are (registering, creating a tournament).
-  guest: {
-    who: "Wer bist du auf diesem Gerät?",
-    nobody: "Niemand davon",
-    nobodyHint: "Ein neues Profil ohne bisherige Spiele",
-    name: "Dein Name",
-    namePlaceholder: "Wie dich die anderen nennen",
-    hint: "Du bekommst ein Profil mit diesem Namen. Mehr brauchst du nicht.",
-  },
 
   // The club's tournaments (registry slot "club.tournaments" of the clubs area).
   club: {

@@ -18,16 +18,18 @@ import { modeName } from "@/lib/i18n"
 import { goLive } from "@/lib/live/board"
 import { decodeLinkPayload } from "@/lib/protocol/links"
 import { onStorageChange } from "@/lib/storage/db"
-import { becomeBoard, boardGame, flushBoard, openBoardKey, rememberGame, type BoardKey } from "@/lib/tournaments/board-device"
-import { loadBoardDevice, type BoardDeviceRecord, type BoardGame } from "@/lib/tournaments/store"
+import type { LinkPayload } from "@/lib/protocol/links"
+import { becomeBoard, boardGame, codeFits, openBoardKey, type BoardKey } from "@/lib/tournaments/board-device"
+import { loadBoardDevice, rememberGame, type BoardDeviceRecord, type BoardGame } from "@/lib/tournaments/store"
 import { SCREENS, type ScreenProps } from "@/lib/shell/registry"
 
 // This device as one board of a tournament (PLAN.md "Das Board-Gerät zeigt ausschließlich
 // aktuelle Paarung, Scoreeingabe und Ergebnisübergabe"): the match called to it, one button to
 // start it on the normal game screen (live for the organizer and spectators), the result's
 // way to the tournament, then the next match. Opened with the organizer's code (params.payload,
-// TB1) or from the tab for a board this device already is (params.tournament).
-export default function BoardScreen({ params }: ScreenProps) {
+// TB1) or from the tab for a board this device already is (params.tournament). Its title is the
+// board's name once known.
+export default function BoardScreen({ params, setParams }: ScreenProps) {
   const tx = useAreaT(TOURNAMENTS_TEXTS)
   const link = useMemo(() => readPayload("tournamentBoard", params.payload), [params.payload])
   const [tournament, setTournament] = useState<string | null>(params.tournament ?? null)
@@ -48,21 +50,32 @@ export default function BoardScreen({ params }: ScreenProps) {
     )
   }
   if (!tournament) return <EmptyState icon={Target} title={tx.board.notBoard} description={tx.board.notBoardText} />
-  return <BoardDevice tournament={tournament} hints={link?.relays ?? []} />
+  return <BoardDevice tournament={tournament} hints={link?.relays ?? []} title={params.name} setTitle={(name) => setParams({ name })} />
 }
 
-// What scanning the organizer's code does, said before it happens.
-function BecomeBoard({ link, problem, onConfirm }: { link: { board: string; tournament: string; relays: string[] }; problem: boolean; onConfirm: () => void }) {
+// What scanning the organizer's code does, said before it happens. Only a code with the key the
+// organizer authorized for a board still in the tournament makes this device that board.
+function BecomeBoard({ link, problem, onConfirm }: { link: Extract<LinkPayload, { type: "tournamentBoard" }>; problem: boolean; onConfirm: () => void }) {
   const tx = useAreaT(TOURNAMENTS_TEXTS)
   const { entry } = useTournament(link.tournament, link.relays)
   const state = entry?.read.state
+  const [fits, setFits] = useState<boolean | null>(null)
+  useEffect(() => {
+    if (!state) return
+    let current = true
+    void codeFits(state, link).then((ok) => current && setFits(ok))
+    return () => {
+      current = false
+    }
+  }, [state, link])
+  if (fits === false) return <EmptyState icon={Target} title={tx.board.invalid} description={tx.board.invalidText} />
   const name = state?.boards[link.board]?.name ?? tx.unnamed
   return (
     <div className="mt-2 grid gap-4">
       <p className="text-xl font-semibold leading-tight">{tx.board.become}</p>
       <p className="text-[1.0625rem] leading-snug text-muted-foreground [overflow-wrap:anywhere]">{tx.board.becomeText(name, state?.settings.name ?? "…")}</p>
       {problem && <InlineStatus tone="error">{tx.failed}</InlineStatus>}
-      <Button onClick={onConfirm} className={PRIMARY}>
+      <Button onClick={onConfirm} disabled={!fits} className={PRIMARY}>
         {tx.board.becomeConfirm}
       </Button>
     </div>
@@ -77,22 +90,16 @@ function useBoardDevice(tournament: string): { record: BoardDeviceRecord | null 
     let current = true
     const load = () =>
       void loadBoardDevice(tournament).then(
-        (found) => {
-          if (!current) return
-          setRecord(found)
-          if (found) void flushBoard(found).catch(() => {})
-        },
+        (found) => current && setRecord(found),
         () => current && setRecord(null),
       )
     load()
     const stop = onStorageChange((message) => {
       if (message.type === "wipe" || message.stores.includes("pending")) load()
     })
-    window.addEventListener("online", load)
     return () => {
       current = false
       stop()
-      window.removeEventListener("online", load)
     }
   }, [tournament])
   useEffect(() => {
@@ -108,13 +115,19 @@ function useBoardDevice(tournament: string): { record: BoardDeviceRecord | null 
   return { record, key }
 }
 
-function BoardDevice({ tournament, hints }: { tournament: string; hints: readonly string[] }) {
+function BoardDevice({ tournament, hints, title, setTitle }: { tournament: string; hints: readonly string[]; title: string | undefined; setTitle: (name: string) => void }) {
   const tx = useAreaT(TOURNAMENTS_TEXTS)
   const b = tx.board
   const nav = useNav()
   const { entry, loaded } = useTournament(tournament, hints)
   const { record, key } = useBoardDevice(tournament)
   useLiveMatches(entry?.read)
+  const name = record ? entry?.read.state?.boards[record.board]?.name : undefined
+  useEffect(() => {
+    if (name && name !== title) setTitle(name)
+    // The title follows the board's name.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [name, title])
   if (!loaded || record === undefined) return null
   if (record === null) return <EmptyState icon={Target} title={b.notBoard} description={b.notBoardText} />
   if (key === null) return <EmptyState icon={Target} title={b.keyLost} />
@@ -138,7 +151,6 @@ function CurrentMatch({ entry, record, boardKey, onTournament }: { entry: Entry;
   const { read } = entry
   const state = read.state as NonNullable<typeof read.state>
   const view = read.view
-  const boardInfo = state.boards[record.board]
   // The slot the organizer called to this board that has no result that counts yet; a
   // finished one shows what became of its report until the next call.
   const slot = Object.values(state.slots).find((s) => s.board === record.board && !s.approved)
@@ -148,6 +160,8 @@ function CurrentMatch({ entry, record, boardKey, onTournament }: { entry: Entry;
   const continuing = game && kept?.id === game.local && kept.status === "paused" ? kept : null
   const reported = game?.reported ? slot?.submissions.find((s) => s.event === game.reported?.event) : undefined
   const over = state.phase === "finished" || state.phase === "cancelled"
+  // The last result this board reported that counts now, said once it was approved.
+  const lastApproved = !slot && Object.values(state.slots).some((s) => s.board === record.board && s.approved && record.games[s.slot]?.reported)
 
   const start = async () => {
     if (!m || !boardKey || starting) return
@@ -158,10 +172,10 @@ function CurrentMatch({ entry, record, boardKey, onTournament }: { entry: Entry;
       const shown = Object.fromEntries(players.map((id) => [id, names.nameOf(id)]))
       const next = boardGame(state, m, shown, record.board, modeName(t, state.settings.rules.modeId, state.settings.rules.modeId))
       const game: BoardGame = { local: next.id, match: null, players, reported: null }
-      const remembered = await rememberGame(record, m.id, game)
+      await rememberGame(state.id, m.id, () => game)
       try {
         const live = await goLive(next, { tournament: { id: state.id, slot: m.id, authority: boardKey.secret, relays: read.relays } })
-        await rememberGame(remembered, m.id, { ...game, match: decodeLinkPayload("watch", live.watch).match })
+        await rememberGame(state.id, m.id, (before) => ({ ...(before ?? game), match: decodeLinkPayload("watch", live.watch).match }))
       } catch {
         // Not live (no connection to set the clock, say): the game is scored here all the same
         // and its result reported; the organizer sees it when it comes.
@@ -176,8 +190,8 @@ function CurrentMatch({ entry, record, boardKey, onTournament }: { entry: Entry;
 
   return (
     <div className="pb-4">
-      <p className="mt-2 text-[0.9375rem] text-muted-foreground [overflow-wrap:anywhere]">{b.connected(boardInfo?.name ?? tx.unnamed, state.settings.name)}</p>
-      {record.outbox.length > 0 && <InlineStatus className="mt-4">{b.unsent(record.outbox.length)}</InlineStatus>}
+      <p className="mt-2 text-[0.9375rem] text-muted-foreground [overflow-wrap:anywhere]">{state.settings.name}</p>
+      {entry.waiting > 0 && <InlineStatus className="mt-4">{b.unsent(entry.waiting)}</InlineStatus>}
       {over ? (
         <section className="mt-6 rounded-2xl border border-border bg-secondary/40 px-4 py-4">
           <h2 className="text-xl font-semibold leading-tight">{b.over}</h2>
@@ -189,15 +203,18 @@ function CurrentMatch({ entry, record, boardKey, onTournament }: { entry: Entry;
       ) : !m ? (
         <section className="mt-6 rounded-2xl border border-border bg-secondary/40 px-4 py-4">
           <h2 className="text-xl font-semibold leading-tight">{b.waiting}</h2>
-          <p className="mt-1 text-[0.9375rem] text-muted-foreground">{b.waitingText}</p>
+          <p className="mt-1 text-[0.9375rem] text-muted-foreground">{lastApproved ? `${b.approved}. ${b.waitingText}` : b.waitingText}</p>
         </section>
       ) : (
         <section className="mt-6 rounded-2xl border border-border bg-card px-4 py-4">
           <p className="text-[0.8125rem] text-muted-foreground">
             {b.now} · {round(m)} · {tx.matchNumber(m.number)}
           </p>
-          <h2 className="mt-1 text-[1.75rem] font-semibold leading-tight [overflow-wrap:anywhere]">{names.nameOf(m.slots[0].participant)}</h2>
-          <p className="text-[1.0625rem] text-muted-foreground">{tx.tournament.versus(names.nameOf(m.slots[1].participant))}</p>
+          <h2 className="mt-1 grid text-[1.75rem] font-semibold leading-tight [overflow-wrap:anywhere]">
+            <span>{names.nameOf(m.slots[0].participant)}</span>
+            <span aria-hidden="true" className="text-[1.0625rem] font-normal text-muted-foreground">–</span>
+            <span>{names.nameOf(m.slots[1].participant)}</span>
+          </h2>
           {reported ? (
             <InlineStatus tone="success" className="mt-4">
               <span className="block font-semibold">{b.reported}</span>

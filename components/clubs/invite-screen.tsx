@@ -7,10 +7,10 @@ import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
 import { ClubHeader, formatDate, formatDateTime, useChange } from "@/components/clubs/common"
-import { useGuestProfile } from "@/components/clubs/guest-profile"
+import { useInlineProfile } from "@/components/profile/inline-profile"
 import { CLUB_SCREENS } from "@/components/clubs/screens"
 import { clubAuthor, useClub } from "@/components/clubs/use-clubs"
-import { useNames } from "@/components/clubs/use-names"
+import { useProfileNames } from "@/components/profile/use-profile-names"
 import { nextDate, type ClubView } from "@/lib/clubs/club"
 import { acceptInvitation, invitationState, openInvitation, type InvitationProblem } from "@/lib/clubs/invitation"
 import { readClubPayload } from "@/lib/clubs/links"
@@ -90,14 +90,14 @@ function Invitation({ view }: { view: ClubView }) {
   const t = useT()
   const tx = useAreaT(CLUBS_TEXTS)
   const nav = useNav()
-  const guest = useGuestProfile()
+  const guest = useInlineProfile()
   const describe = useChange()
   const now = nowSeconds()
   const opened = view.invite
   const preview = opened?.preview
   const record = opened && view.state ? view.state.invites[opened.invite] : undefined
   const host = preview?.host ?? record?.by ?? null
-  const names = useNames(host ? [host] : [])
+  const names = useProfileNames(host ? [host] : [])
   const hostName = preview?.hostName ?? (host ? names(host).name : null)
   const kind = record?.kind ?? preview?.kind
   const expires = record?.expires ?? preview?.expires

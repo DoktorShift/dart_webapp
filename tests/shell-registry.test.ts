@@ -8,6 +8,8 @@ import {
   getSlotItems,
   registerAction,
   registerGameMenuItem,
+  registerResultPrimary,
+  resultPrimaryFor,
   registerLinkHandler,
   registerScreen,
   registerSlotItem,
@@ -139,4 +141,15 @@ test("open screens hear about new slot pieces and menu items", () => {
   remove()
   stop()
   assert.equal(heard, 3)
+})
+
+test("a result primary belongs to the first area that owns the finished game", () => {
+  const game = (extras: Record<string, unknown>) => ({ id: "g", config: { extras } as never, players: [], winner: 0, solo: false, throws: [] })
+  const removeA = registerResultPrimary({ id: "a", owns: (m) => "a" in (m.config.extras ?? {}), label: () => "A" })
+  registerResultPrimary({ id: "b", owns: (m) => "a" in (m.config.extras ?? {}) || "b" in (m.config.extras ?? {}), label: () => "B" })
+  assert.equal(resultPrimaryFor(game({ a: 1 }))?.id, "a")
+  assert.equal(resultPrimaryFor(game({ b: 1 }))?.id, "b")
+  assert.equal(resultPrimaryFor(game({})), null)
+  removeA()
+  assert.equal(resultPrimaryFor(game({ a: 1 }))?.id, "b")
 })

@@ -50,7 +50,9 @@ export function MatchRow({ read, m, names, me, onClick }: { read: TournamentRead
   const mine = me !== null && (a.participant === me || b.participant === me)
   const nameOf = (p: string | null, empty: boolean) => (empty ? tx.tournament.bye : names.nameOf(p))
   const value = m.state === "live" && live ? `${live.standing.legs[0]}:${live.standing.legs[1]}` : m.state === "finished" ? scoreText(m) : m.state === "walkover" ? tx.walkover[m.walkover ?? "noShow"] : ""
-  const status = m.affected ? tx.affected : m.state === "live" ? tx.tournament.live : m.state === "ready" ? (m.board ? tx.tournament.onBoard(boardName(read.state, m.board)) : tx.state.ready) : m.state === "pending" ? "" : m.board ? boardName(read.state, m.board) : ""
+  const slot = read.state?.slots[m.id]
+  const submitted = !slot?.approved && (slot?.submissions.length ?? 0) > 0 && (m.state === "ready" || m.state === "live")
+  const status = m.affected ? tx.affected : submitted ? tx.organize.results.submitted : m.state === "live" ? tx.tournament.live : m.state === "ready" ? (m.board ? tx.tournament.onBoard(boardName(read.state, m.board)) : tx.state.ready) : m.state === "pending" ? "" : m.board ? boardName(read.state, m.board) : ""
   return (
     <ListRow
       onClick={onClick}

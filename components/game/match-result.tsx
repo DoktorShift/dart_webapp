@@ -16,7 +16,7 @@ import { legsWonInGame, perfectLegDarts, playsSets, type MatchState } from "@/li
 import { legName } from "@/lib/game/words"
 import { modeName, type Messages } from "@/lib/i18n"
 import type { SavedMatch } from "@/lib/game/types"
-import type { FinishedMatch } from "@/lib/shell/registry"
+import { resultPrimaryFor, type FinishedMatch } from "@/lib/shell/registry"
 import type { ResultImage } from "@/lib/result-image"
 import { SITE } from "@/lib/site"
 import { cn } from "@/lib/utils"
@@ -181,6 +181,10 @@ export function MatchResult({ state, match, onRematch, onNewGame, onHome, onLead
     [match, state.winner],
   )
 
+  // A game an area owns (a tournament game on its board) leads back where it came from instead.
+  const primary = useMemo(() => resultPrimaryFor(finished), [finished])
+  const PrimaryIcon = primary?.icon
+
   const picture = useMemo<ResultImage>(
     () => ({
       brand: SITE.name,
@@ -225,14 +229,23 @@ export function MatchResult({ state, match, onRematch, onNewGame, onHome, onLead
   const actions = (withPieces: boolean) => (
     <div>
       {withPieces && !xshort && pieces}
-      <Button onClick={onRematch} className="h-14 w-full gap-2 rounded-2xl text-[1.0625rem] font-semibold xshort:h-12">
-        <RotateCcw className="h-5 w-5" aria-hidden="true" />
-        {t.result.rematch}
-      </Button>
-      <Button variant="secondary" onClick={onNewGame} className="mt-2 h-12 w-full gap-2 rounded-2xl text-[1.0625rem] xshort:h-11">
-        <Users className="h-5 w-5" aria-hidden="true" />
-        {t.result.newGame}
-      </Button>
+      {primary ? (
+        <Button onClick={onHome} className="h-14 w-full gap-2 rounded-2xl text-[1.0625rem] font-semibold xshort:h-12">
+          {PrimaryIcon && <PrimaryIcon className="h-5 w-5" aria-hidden />}
+          {primary.label(t)}
+        </Button>
+      ) : (
+        <>
+          <Button onClick={onRematch} className="h-14 w-full gap-2 rounded-2xl text-[1.0625rem] font-semibold xshort:h-12">
+            <RotateCcw className="h-5 w-5" aria-hidden="true" />
+            {t.result.rematch}
+          </Button>
+          <Button variant="secondary" onClick={onNewGame} className="mt-2 h-12 w-full gap-2 rounded-2xl text-[1.0625rem] xshort:h-11">
+            <Users className="h-5 w-5" aria-hidden="true" />
+            {t.result.newGame}
+          </Button>
+        </>
+      )}
       <div className="mt-1 grid grid-cols-4 gap-1">
         <SmallAction icon={Share} label={t.result.share} onClick={share} />
         <SmallAction icon={ChartColumn} label={t.result.allStats} onClick={() => setStatsOpen(true)} />

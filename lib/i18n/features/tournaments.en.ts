@@ -4,8 +4,10 @@ import type { Messages } from "../index"
 export const tournamentsEn: Messages["tournaments"] = {
   titles: {
     organize: "Organizer",
+    settings: "Settings",
     board: "Board",
     tv: "TV view",
     print: "Print & export",
   },
+  backToBoard: "Back to the board",
 }

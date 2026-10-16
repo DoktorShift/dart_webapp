@@ -64,14 +64,6 @@ export const clubsScreensEn: Widen<typeof clubsScreensDe> = {
     later: "Later",
   },
 
-  guest: {
-    name: "Your name",
-    namePlaceholder: "What you're called at the board",
-    hint: "This gives you a profile. Your games stay on this device.",
-    who: "Do any games on this device belong to you?",
-    nobody: "No, start fresh",
-    nobodyHint: "A new profile",
-  },
 
   invite: {
     from: (host) => `Invitation from ${host}`,

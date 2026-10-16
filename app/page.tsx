@@ -41,7 +41,7 @@ import {
 } from "@/lib/game/storage"
 import type { GameType, MatchConfig, SavedMatch } from "@/lib/game/types"
 import { isAnswerLink, parseHash, type AppLink } from "@/lib/shell/links"
-import { TABS, depthOf, initialNavState, makeEntry, navReducer, type TabId } from "@/lib/shell/nav"
+import { TABS, depthOf, initialNavState, makeEntry, navReducer, type ScreenParams, type TabId } from "@/lib/shell/nav"
 import { canOpenLink, dispatchLink, getScreen, hasScreen, runStartTasks, type SetupPreset, type ShellNavigator } from "@/lib/shell/registry"
 
 // "tabs" is the app with its tab bar or sidebar; setup and game are full-screen flows on top.
@@ -179,6 +179,9 @@ export default function DartScorer() {
     }),
     [go, openSetup, showTab],
   )
+
+  // A screen names what it shows once it has loaded it (ScreenProps.setParams).
+  const updateEntry = useCallback((key: string, params: ScreenParams) => dispatchNav({ type: "update", key, params }), [])
 
   // An app link (/#club=…) opens its screen in its tab. Setup is left; a running game is kept
   // as "paused", exactly as "save and leave" does, and waits on the Play tab. Another app's answer
@@ -375,11 +378,11 @@ export default function DartScorer() {
     () => (
       <AppShell tab={nav.tab} onTabChange={onTabChange}>
         {TABS.filter((id) => opened.includes(id)).map((id) => (
-          <StackView key={id} tab={id} active={nav.tab === id} root={roots[id]} entries={nav.stacks[id]} onBack={navigator.pop} />
+          <StackView key={id} tab={id} active={nav.tab === id} root={roots[id]} entries={nav.stacks[id]} onBack={navigator.pop} onUpdate={updateEntry} />
         ))}
       </AppShell>
     ),
-    [nav, opened, roots, onTabChange, navigator],
+    [nav, opened, roots, onTabChange, navigator, updateEntry],
   )
 
   // Setup's back button names the screen it goes back to: the tab, or "Back" above a pushed screen.

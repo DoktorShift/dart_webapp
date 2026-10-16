@@ -11,7 +11,7 @@ import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
 import { SheetBody, SheetButton, gameLabel, personName, useChange } from "@/components/clubs/common"
 import { GameSummary } from "@/components/clubs/game-summary"
 import { clubAuthor } from "@/components/clubs/use-clubs"
-import { useNames } from "@/components/clubs/use-names"
+import { useProfileNames } from "@/components/profile/use-profile-names"
 import type { ClubView } from "@/lib/clubs/club"
 import { answerGame, awaitsVerdict, correctGame, type ClubGame, type Outcome } from "@/lib/clubs/games"
 import type { ClubState } from "@/lib/protocol/club-state"
@@ -113,7 +113,7 @@ export function VerdictSheet({ view, state, game, open, onOpenChange }: { view: 
 function Correction({ game, me, outcome, onChange, busy, problem, onSend }: { game: ClubGame; me: string | null; outcome: Outcome; onChange: (outcome: Outcome) => void; busy: boolean; problem: string | null; onSend: (outcome: Outcome, why: string) => unknown }) {
   const tx = useAreaT(CLUBS_TEXTS)
   const seats = game.agreement.seats
-  const names = useNames(seats.map((s) => s.pubkey).filter((p): p is string => !!p))
+  const names = useProfileNames(seats.map((s) => s.pubkey).filter((p): p is string => !!p))
   const [why, setWhy] = useState("")
   const nameOf = (i: number) => (seats[i].pubkey ? personName(seats[i].pubkey, names(seats[i].pubkey), tx, { me, alias: seats[i].alias }) : seats[i].alias)
   const result = game.result!

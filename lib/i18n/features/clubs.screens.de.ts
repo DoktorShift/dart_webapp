@@ -67,15 +67,6 @@ export const clubsScreensDe = {
     later: "Später",
   },
 
-  // A guest needs a profile to found or join a club: made here, with one name.
-  guest: {
-    name: "Dein Name",
-    namePlaceholder: "So heißt du am Board",
-    hint: "Damit bekommst du ein Profil. Deine Spiele bleiben auf diesem Gerät.",
-    who: "Gehören dir Spiele auf diesem Gerät?",
-    nobody: "Nein, neu anfangen",
-    nobodyHint: "Ein frisches Profil",
-  },
 
   // An invitation link that was opened.
   invite: {

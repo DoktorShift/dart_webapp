@@ -12,8 +12,10 @@ import type { TournamentDraft } from "./draft.ts"
 //   a guest looks at a tournament, a board device scores for one, so signing out keeps it.
 // - "kv" tournament-draft:<id>: a tournament being created, saved as it is typed.
 // - "pending" tournament-board:<tournament id>: this device as a board of a tournament, with the
-//   board key sealed by the device's vault key (lib/profile/vault.ts) and the results it signed
-//   but no relay has yet (an offline board finishes its match and sends later).
+//   board key sealed by the device's vault key (lib/profile/vault.ts) and the games it started.
+//
+// What this device signed waits in the persistent outbox (lib/sync/outbox.ts) until relays have
+// it; nothing here keeps a second list of it (send.ts).
 
 export const TOURNAMENT_OBJECT_PREFIX = "tournament:"
 const DRAFT_PREFIX = "tournament-draft:"
@@ -24,10 +26,6 @@ export interface StoredTournament extends Keyed {
   events: NostrEvent[]
   // Relays a link named, read along with the usual ones.
   relays: string[]
-  // Events signed here that no relay confirmed yet, oldest first; sent again from "Erneut
-  // senden" and whenever the tournament is opened. The coordinator moves this onto the
-  // persistent outbox (lib/sync/outbox.ts) at integration.
-  unsent: string[]
   // When relays last answered for it (ms); null if they never did.
   loadedAt: number | null
   // The organizer's device: the draw seed behind each commitment it published, until revealed.
@@ -46,7 +44,6 @@ const empty = (tournament: string): StoredTournament => ({
   tournament,
   events: [],
   relays: [],
-  unsent: [],
   loadedAt: null,
   seeds: {},
   boardKeys: {},
@@ -66,9 +63,7 @@ export async function storedTournaments(): Promise<StoredTournament[]> {
 export interface TournamentChange {
   events?: readonly NostrEvent[]
   relays?: readonly string[]
-  // Own events just handed to relays: confirmed ones leave `unsent`, the others join it.
-  sent?: { confirmed: readonly string[]; missing: readonly string[] }
-  // Relays answered (a fetch): events they returned count as sent.
+  // Every relay that answered a fetch was read to the end.
   loadedAt?: number
   seed?: { commit: string; seed: string }
   boardKey?: { board: string; key: SealedSecret }
@@ -94,29 +89,16 @@ export function updateTournament(tournament: string, change: TournamentChange): 
 function merge(stored: StoredTournament, change: TournamentChange): StoredTournament {
   const byId = new Map(stored.events.map((e) => [e.id, e]))
   for (const event of change.events ?? []) if (!byId.has(event.id)) byId.set(event.id, event)
-  let unsent = stored.unsent
-  if (change.loadedAt !== undefined) {
-    const seen = new Set((change.events ?? []).map((e) => e.id))
-    unsent = unsent.filter((id) => !seen.has(id))
-  }
-  if (change.sent) {
-    const confirmed = new Set(change.sent.confirmed)
-    unsent = [...new Set([...unsent.filter((id) => !confirmed.has(id)), ...change.sent.missing])]
-  }
   return {
     ...stored,
     events: [...byId.values()],
     relays: change.relays ? [...new Set([...stored.relays, ...change.relays])] : stored.relays,
-    unsent,
     loadedAt: change.loadedAt ?? stored.loadedAt,
     seeds: change.seed ? { ...stored.seeds, [change.seed.commit]: change.seed.seed } : stored.seeds,
     boardKeys: change.boardKey ? { ...stored.boardKeys, [change.boardKey.board]: change.boardKey.key } : stored.boardKeys,
     openedAt: change.openedAt ?? stored.openedAt,
   }
 }
-
-// Forgets a tournament this device only looked at.
-export const forgetTournament = (tournament: string) => dbWrite([{ store: "objects", delete: objectId(tournament) }])
 
 // ---- Drafts ----------------------------------------------------------------------------------
 
@@ -149,8 +131,7 @@ export interface BoardDeviceRecord extends Keyed {
   board: string
   relays: string[]
   key: SealedSecret
-  // Results signed here that no relay took yet, in order.
-  outbox: NostrEvent[]
+  // The game started for each slot called to this board.
   games: Record<string, BoardGame>
 }
 
@@ -158,7 +139,22 @@ const boardId = (tournament: string) => `${BOARD_PREFIX}${tournament}`
 
 export const loadBoardDevice = async (tournament: string) => (await dbGet<BoardDeviceRecord>("pending", boardId(tournament))) ?? null
 export const saveBoardDevice = (record: Omit<BoardDeviceRecord, "id">) => dbWrite([{ store: "pending", put: { ...record, id: boardId(record.tournament) } }])
-export const dropBoardDevice = (tournament: string) => dbDelete("pending", boardId(tournament))
+
+// A game of the board, written on top of the record as it is now (the board screen starts games
+// and the game screen reports them), one after another within this tab.
+const boardQueues = new Map<string, Promise<unknown>>()
+
+export function rememberGame(tournament: string, slot: string, game: (before: BoardGame | undefined) => BoardGame): Promise<BoardDeviceRecord | null> {
+  const run = (boardQueues.get(tournament) ?? Promise.resolve()).catch(() => {}).then(async () => {
+    const record = await loadBoardDevice(tournament)
+    if (!record) return null
+    const next = { ...record, games: { ...record.games, [slot]: game(record.games[slot]) } }
+    await saveBoardDevice(next)
+    return next
+  })
+  boardQueues.set(tournament, run)
+  return run
+}
 
 export async function listBoardDevices(): Promise<BoardDeviceRecord[]> {
   const ids = (await dbKeys("pending")).filter((id) => id.startsWith(BOARD_PREFIX))

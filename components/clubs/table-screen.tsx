@@ -15,7 +15,7 @@ import { DecideSheet, type Decision } from "@/components/clubs/manage-sheets"
 import { ScoringText } from "@/components/clubs/scoring"
 import { CLUB_SCREENS } from "@/components/clubs/screens"
 import { useClub } from "@/components/clubs/use-clubs"
-import { useNames } from "@/components/clubs/use-names"
+import { useProfileNames } from "@/components/profile/use-profile-names"
 import { VerdictSheet } from "@/components/clubs/verdict-sheet"
 import { isLeader, isManager } from "@/lib/clubs/club"
 import type { ClubGame } from "@/lib/clubs/games"
@@ -48,7 +48,7 @@ export default function TableScreen({ params }: ScreenProps) {
   const season = seasons.find((s) => s.id === chosen) ?? (state && currentSeason(state, now)) ?? seasons[0] ?? null
   const table = state && season ? seasonTable(season, view.games, state.results[season.id]) : null
   const rows = table ? [...table.ranked, ...table.unranked] : []
-  const names = useNames(rows.map((r) => r.pubkey))
+  const names = useProfileNames(rows.map((r) => r.pubkey))
   if (!view || !state) return null
   const manager = isManager(view.me.role) && !state.info.archived
   const leader = isLeader(view.me.role) && !state.info.archived

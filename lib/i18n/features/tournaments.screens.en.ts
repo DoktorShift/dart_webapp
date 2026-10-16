@@ -2,6 +2,10 @@ import type { Widen } from "../index"
 import type { tournamentsScreensDe } from "./tournaments.screens.de.ts"
 
 // English texts for the tournaments area. Same shape as tournaments.screens.de.ts.
+// "first to 3 legs", "first to 1 leg", in sets "first to 2 sets of 3 legs".
+const legsWord = (n: number) => (n === 1 ? "leg" : "legs")
+const firstTo = (legs: number, sets: number) => (sets > 1 ? `first to ${sets} sets of ${legs} ${legsWord(legs)}` : `first to ${legs} ${legsWord(legs)}`)
+
 export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
   formats: {
     single: { name: "Knockout", summary: "Lose a match and you're out. Seeded players meet late." },
@@ -115,15 +119,21 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
   you: "You",
   retry: "Try again",
   failed: "That didn't work just now. Check the connection.",
-  unsent: (n) => (n === 1 ? "1 change hasn't been sent yet." : `${n} changes haven't been sent yet.`),
-  resend: "Send again",
+  waiting: (n) => (n === 1 ? "1 change is still on its way. It's sent automatically." : `${n} changes are still on their way. They're sent automatically.`),
+  refused: {
+    changed: "This has changed in the meantime. Take a look and try again.",
+    decided: "A result already counts for this match.",
+    full: "The tournament is full.",
+    phase: "That's no longer possible in this phase of the tournament.",
+    other: "The tournament didn't take this change.",
+  },
   loadedAt: (time) => `Last loaded at ${time}`,
   neverLoaded: "Not loaded yet",
   refresh: "Refresh",
   legs: (n) => (n === 1 ? "1 leg" : `${n} legs`),
   sets: (n) => (n === 1 ? "1 set" : `${n} sets`),
-  rulesLine: (startScore, legs, sets) => (sets > 1 ? `${startScore}, first to ${sets} sets of ${legs} legs` : `${startScore}, first to ${legs} legs`),
-  finalLine: (legs, sets) => (sets > 1 ? `Final: first to ${sets} sets of ${legs} legs` : `Final: first to ${legs} legs`),
+  rulesLine: (startScore, legs, sets) => `${startScore}, ${firstTo(legs, sets)}`,
+  finalLine: (legs, sets) => `Final: ${firstTo(legs, sets)}`,
   phase: {
     registration: "Registration open",
     checkin: "Check-in open",
@@ -152,9 +162,6 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
     pending: "Request pending",
     waitlist: "Waiting list",
     checkedIn: "Checked in",
-    forget: "Remove from list",
-    forgetTitle: (name) => `Remove ${name}?`,
-    forgetText: "The tournament only leaves your list. You can open it again with its link.",
   },
 
   create: {
@@ -190,7 +197,7 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
     groupsCount: "Groups",
     groupsAdvance: "Go through per group",
     capacity: "Places",
-    capacityHint: "At most 128 players, 64 in a round robin.",
+    capacityHint: "More places, up to 128, later under “Change details”. Round robin: at most 64.",
     waitlist: "Waiting list",
     waitlistHint: "Whoever doesn't get a place moves up when someone drops out.",
     checkIn: "Check-in before the draw",
@@ -202,8 +209,15 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
     approvalOrganizer: "Organizer approves",
     approvalBoard: "Board counts at once",
     registrationCloses: "Registration closes (optional)",
+    moreOptions: "More options",
+    flow: "How it runs",
+    withWaitlist: "With waiting list",
+    noWaitlist: "No waiting list",
+    withCheckIn: "With check-in",
+    noCheckIn: "No check-in",
+    closesAt: (when) => `Registration closes ${when}`,
     guests: "Guests without a profile",
-    guestsHint: "One name per line. Guests play under this name and can link their place to a profile later.",
+    guestsHint: "One name per line. Guests appear with the name you enter, for everyone with the link. They can link their place to a profile later.",
     guestsPlaceholder: "Mia\nJonas",
     guestsCount: (n) => (n === 1 ? "1 guest" : `${n} guests`),
     boards: "Boards",
@@ -227,6 +241,7 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
     deleteDraftTitle: "Discard the draft?",
     publishedTitle: "Your tournament is published",
     publishedText: "Share the link so players can register. The boards' codes are in the organizer's workspace.",
+    publishedIncomplete: "Guests and boards aren't in yet. Add them in the organizer view.",
     openTournament: "Go to tournament",
   },
 
@@ -247,6 +262,8 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
     withdrawn: "You have withdrawn",
     removed: "You are no longer in",
     full: "No places left",
+    waitlistOpen: "All places are taken. From the waiting list you move up when someone drops out.",
+    joinWaitlist: "Join the waiting list",
     closed: "Registration is closed",
     late: "Registration has closed; the organizer decides on late entries.",
     needProfile: "Registering needs a profile. You create it with a name.",
@@ -254,7 +271,7 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
     checkingIn: "Checking in",
     checkedIn: "You are checked in",
     checkInHint: "Check in once you're here. Only those present are drawn.",
-    checkInUntil: (when) => `Check-in until ${when}`,
+    checkInUntil: (when) => `Check in by ${when}.`,
     preparing: "Pairings are being prepared",
     preparingText: "The organizer is drawing. Your first match will appear here.",
     nextMatch: "Your next match",
@@ -282,6 +299,7 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
     takeOver: "Take over organizing",
     takeOverText: "You've been offered the organization. Take it over once the tournament is up to date here.",
     takingOver: "Taking over",
+    takeOverOffline: "No connection: taking over needs the current state. Try again in a moment.",
     organize: "Organizer workspace",
     organizeTasks: (n) => (n === 1 ? "1 open task" : `${n} open tasks`),
     share: "Share",
@@ -324,6 +342,9 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
       results: (n) => (n === 1 ? "Approve 1 result" : `Approve ${n} results`),
       affected: (n) => (n === 1 ? "Decide 1 match after a correction" : `Decide ${n} matches after a correction`),
       calls: (n) => (n === 1 ? "Call 1 match" : `Call ${n} matches`),
+      call: (pairing, board) => `Call ${pairing} to ${board}`,
+      skipped: (n) => (n === 1 ? "1 result doesn't fit the schedule" : `${n} results don't fit the schedule`),
+      awards: "Give the badges",
       draw: "Draw",
       start: "Start tournament",
       finish: "Finish tournament",
@@ -356,10 +377,14 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
       draw: "Draw",
       drawTitle: "Draw",
       drawField: (n) => (n === 1 ? "1 player in the field" : `${n} players in the field`),
-      drawNotPresent: (n) => (n === 1 ? "1 registered player isn't checked in and stays out." : `${n} registered players aren't checked in and stay out.`),
+      drawMissing: (names) => `Not checked in, staying out: ${names}`,
+      allPresent: "Mark everyone as here",
+      drawPrepare: "This device doesn't have the commitment for the draw. Make a new one now; you can draw as soon as it has reached the servers.",
+      drawCommit: "Commit the draw",
+      drawCommitWaiting: "The commitment is still on its way. You can draw in a moment.",
       drawSeeded: "Seeded players",
       drawSeededHint: "Tap in seeding order. Without seeding everyone is drawn.",
-      drawPreview: (matches, byes) => (byes === 0 ? `${matches} matches` : `${matches} matches, ${byes} byes`),
+      drawPreview: (matches, byes) => [matches === 1 ? "1 match" : `${matches} matches`, ...(byes === 0 ? [] : [byes === 1 ? "1 bye" : `${byes} byes`])].join(", "),
       drawConfirm: "Draw now",
       drawing: "Drawing",
       tooFew: "Too few players in the field for this format.",
@@ -369,6 +394,8 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
       finish: "Finish tournament",
       finishTitle: "Finish the tournament?",
       finishText: (places) => (places === 1 ? "The places are set. 1 player with a profile gets a badge." : `The places are set. ${places} players with a profile get a badge.`),
+      finishPlain: "The places are set.",
+      awardsLapsed: "No connection: the badges haven't been given yet. Try again in a moment.",
       finishIncomplete: "Not every match is decided yet. Finishing fixes the places as they stand now.",
       cancel: "Cancel tournament",
       cancelTitle: "Cancel the tournament?",
@@ -394,7 +421,6 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
       revokeText: "The device at the board can't report results afterwards.",
       calls: "Ready to call",
       call: "Call",
-      callAll: (n) => (n === 1 ? "Call 1 match" : `Call ${n} matches`),
       noFree: "No board free. It goes on as soon as a match ends.",
       noReady: "No match is waiting for a board.",
       choose: "Choose board",
@@ -414,9 +440,11 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
       consequences: "Consequences for other matches",
       noConsequences: "No other match is affected.",
       affected: "After a correction this match no longer fits. Enter a new result or have it replayed.",
-      replay: "Replay",
+      replay: "Have it played again",
+      skipped: "The last result decided for this match doesn't fit its pairing. Enter the result again.",
       walkover: "Walkover",
       by: (board) => `from ${board}`,
+      wins: (name, score) => `${name} wins ${score}`,
       byOrganizer: "by the organizer",
       none: "No results yet.",
       save: "Save",
@@ -441,7 +469,6 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
   },
 
   board: {
-    connected: (board, tournament) => `${board} · ${tournament}`,
     become: "This device becomes the board",
     becomeText: (board, tournament) => `From now on it shows the matches for ${board} at "${tournament}" and reports the results.`,
     becomeConfirm: "Use as board",
@@ -469,8 +496,7 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
   game: {
     reported: "Result reported to the tournament",
     reporting: "Reporting result",
-    pending: "Result waiting for a connection",
-    forSlot: (round) => `Tournament match: ${round}`,
+    waiting: "Result waiting for a connection",
   },
 
   tv: {
@@ -482,6 +508,7 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
     fullScreen: "Full screen",
     closeFullScreen: "Leave full screen",
     progress: (decided, total) => `${decided} of ${total} matches decided`,
+    winner: "Winner",
     champion: (name) => `Champion: ${name}`,
   },
 
@@ -494,14 +521,6 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
     saved: "File saved",
   },
 
-  guest: {
-    who: "Who are you on this device?",
-    nobody: "None of them",
-    nobodyHint: "A new profile without earlier games",
-    name: "Your name",
-    namePlaceholder: "What the others call you",
-    hint: "You get a profile with this name. That's all it takes.",
-  },
 
   club: {
     none: "No tournament yet",
