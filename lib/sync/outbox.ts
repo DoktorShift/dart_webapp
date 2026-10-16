@@ -316,13 +316,17 @@ export async function outboxCounts(): Promise<OutboxCounts> {
 let timer: ReturnType<typeof setTimeout> | undefined
 let resumed = false
 
-// Wakes this tab up when the next entry falls due (no earlier than `atLeastMs`).
+// Wakes this tab up when the next entry falls due (no earlier than `atLeastMs`). An entry a round
+// is sending counts as due once its lease ends, not at its retryAt: a round can't pick it before,
+// so a wake-up at retryAt would only find nothing and schedule the next one at once, in every
+// open tab, as long as the send lasts. The merge rewrites the entry and announces that, so the
+// tab wakes up earlier when the answers are in.
 function schedule(atLeastMs = 0) {
   if (!resumed) return
   void readEntries().then(
     (entries) => {
       clearTimeout(timer)
-      const due = Math.min(...entries.flatMap((e) => (e.retryAt === null ? [] : [e.retryAt])))
+      const due = Math.min(...entries.flatMap((e) => (e.retryAt === null ? [] : [Math.max(e.retryAt, e.sendingUntil ?? 0)])))
       if (!Number.isFinite(due)) return
       timer = setTimeout(() => void flushDue(), Math.min(Math.max(atLeastMs, due - Date.now()), 2 ** 31 - 1))
       ;(timer as { unref?: () => void }).unref?.()

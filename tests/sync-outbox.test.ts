@@ -10,8 +10,9 @@ import { backoffMs, deliverNow, deliveryStatus, enqueue, flushDue, outboxStatus,
 
 // The persistent outbox (lib/sync/outbox.ts) against in-memory relays: delivery rules, which
 // answers are tried again, backoff, coalescing, duplicates, relays going down and up, a reload in
-// the middle, and the lock that covers the queue but never the sends. Time is passed in, so
-// retries are checked without waiting for them.
+// the middle, the lock that covers the queue but never the sends, and a tab that waits for a
+// round's lease instead of spinning. Time is passed in, so retries are checked without waiting
+// for them. The tests that resume the background sender come last: its timer runs on the clock.
 
 const network = new FakeNetwork()
 Object.assign(globalThis, { WebSocket: network.WebSocket })
@@ -20,6 +21,14 @@ const URLS = ["wss://one.example", "wss://relay.two.example", "wss://three.examp
 const relays = URLS.map((url) => network.add(url))
 let core: Core
 let key: Uint8Array
+
+// Every IndexedDB transaction opened, by anything: the measure of a tab that spins.
+let transactions = 0
+const openTransaction = IDBDatabase.prototype.transaction
+IDBDatabase.prototype.transaction = function (this: IDBDatabase, ...args: Parameters<IDBDatabase["transaction"]>) {
+  transactions++
+  return openTransaction.apply(this, args)
+}
 
 before(async () => {
   core = await loadCore()
@@ -221,4 +230,21 @@ test("copies still missing once delivered are sent again when the app starts", a
   await resumeOutbox()
   assert.ok(stored(relays[2], e))
   assert.equal(await deliveryStatus(e.id), null)
+})
+
+test("while a round sends, the tab waits for the lease to end instead of spinning over the entry", async () => {
+  await resumeOutbox()
+  relays[0].options.delayMs = 1500
+  const e = event()
+  const before = transactions
+  await enqueue([{ event: e, relays: [URLS[0]] }], { rule: "any" })
+  await sleep(1800)
+  const during = transactions - before
+  assert.ok(stored(relays[0], e))
+  assert.equal(await deliveryStatus(e.id), null)
+  const after = transactions
+  await sleep(500)
+  // Queueing, the pick, the merge, and the wake-ups they announce: a dozen or so, not thousands.
+  assert.ok(during < 50, `${during} IndexedDB transactions during one 1.5 s send`)
+  assert.equal(transactions - after, 0, "nothing runs once the send is over")
 })

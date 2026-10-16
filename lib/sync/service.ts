@@ -124,7 +124,10 @@ function follow() {
   pubkey = next
   const mine = generation
   setSyncStatus({ pubkey: next })
-  const seeded = session.madeHere ? loadEngine().then(({ markSyncedAtBirth }) => markSyncedAtBirth(session.pubkey, session.createdAt)) : Promise.resolve()
+  // The engine loads over the network on a cold start: by then the profile may be gone or replaced.
+  const seeded = session.madeHere
+    ? loadEngine().then(({ markSyncedAtBirth }) => (generation === mine && getSession()?.pubkey === session.pubkey ? markSyncedAtBirth(session.pubkey, session.createdAt) : undefined))
+    : Promise.resolve()
   void seeded.then(() => refresh(session.pubkey)).then((meta) => {
     if (generation === mine) void run("start", meta.lastCheck === null || Date.now() - meta.lastCheck > FULL_EVERY_MS)
   })

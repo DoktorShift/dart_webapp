@@ -24,8 +24,9 @@ import { openRecords } from "../lib/sync/records.ts"
 // same games without duplicates, deletions stay deleted (a reset of the Rangliste is no deletion),
 // large records come in parts, relays that don't answer give "unavailable" or "partial" (never an
 // empty history), a data key made twice ends as one and is only ever the profile's own, a device
-// whose clock runs behind still writes versions relays keep, and a sync whose session ends keeps
-// nothing. Each device is its own IndexedDB and localStorage; they take turns.
+// whose clock runs behind still writes versions relays keep, one whose clock runs ahead still
+// finds new games, and a sync whose session ends keeps nothing. Each device is its own IndexedDB
+// and localStorage; they take turns.
 
 const URLS = ["wss://one.example", "wss://two.example", "wss://three.example"]
 process.env.NEXT_PUBLIC_BLUELINE_RELAYS = URLS.join(",")
@@ -69,15 +70,16 @@ async function send() {
   await deliverNow((await outboxStatus()).map((s) => s.id))
 }
 
-// One sync without sending. The session stays signed in, so it never ends without a result.
-async function syncOnly(full: boolean) {
-  const result = await syncHistory(pubkey, { full })
+// One sync without sending, on the device's clock. The session stays signed in, so it never ends
+// without a result.
+async function syncOnly(full: boolean, now?: () => number) {
+  const result = await syncHistory(pubkey, { full }, now)
   assert.ok(result, "the sync ran for the signed-in session")
   return result
 }
 
-async function sync(full = true) {
-  const result = await syncOnly(full)
+async function sync(full = true, now?: () => number) {
+  const result = await syncOnly(full, now)
   await send()
   return result
 }
@@ -432,6 +434,32 @@ test("a device whose clock runs behind still writes above the version relays hol
   await on(a)
   await sync(false)
   assert.deepEqual(await ids(), [])
+})
+
+test("a device whose clock runs ahead still finds the other device's new game in an incremental sync", async () => {
+  const [a, b] = [newDevice(), newDevice()]
+  await on(a)
+  await savePlayers([profilePlayer()])
+  await play101("game-1", annaBen, "2026-10-01T20:00:00.000Z")
+  await sync()
+
+  // B's clock is twenty minutes ahead, and the app's origin has told it so.
+  const ahead = () => Date.now() + 20 * 60_000
+  await on(b)
+  adjustClock(new Date(), ahead())
+  assert.equal((await sync(true, ahead)).state, "complete")
+  assert.deepEqual(await ids(), ["game-1"])
+
+  await on(a)
+  adjustClock(new Date())
+  await play101("game-2", annaBen, "2026-10-02T20:00:00.000Z")
+  assert.equal((await sync(false)).state, "complete")
+
+  // B asks for what changed since its last sync: in the relays' time, not in its own.
+  await on(b)
+  adjustClock(new Date(), ahead())
+  assert.equal((await sync(false, ahead)).state, "complete")
+  assert.deepEqual(await ids(), ["game-1", "game-2"])
 })
 
 test("the data key is only ever taken from the profile's own record", async () => {

@@ -1,6 +1,6 @@
 import { query, supersedes } from "../nostr/client.ts"
 import { countOperators } from "../nostr/relays.ts"
-import { nowSeconds, syncClock } from "../nostr/time.ts"
+import { clockOffset, nowSeconds, syncClock } from "../nostr/time.ts"
 import type { Filter, NostrEvent, Signer } from "../nostr/types.ts"
 import { fetchOwnEvents, ownEvents, ownRelaySettings } from "../profile/own-events.ts"
 import { publishTargets } from "../profile/relay-list.ts"
@@ -37,8 +37,8 @@ import type { SyncProblem, SyncState } from "./status.ts"
 //
 // 1. read: the profile's kind-30078 events from each relay, page by page: all of them ("full"),
 //    or only those since the last sync with some overlap. A relay that doesn't answer is unknown,
-//    never empty. Once relays answered the device is online, so the clock is corrected
-//    (lib/nostr/time.ts) before anything is signed.
+//    never empty. A sync goes online anyway, so the clock is corrected first (lib/nostr/time.ts):
+//    the window of an incremental read is asked in the relays' time, and so is everything signed.
 // 2. settleKey: the data key, kept here, or unwrapped from relays once, or made on first write
 //    (only once relays of two operators, or all of them, said there is none). Two keys:
 //    ./data-key.ts.
@@ -278,10 +278,12 @@ async function finish(sync: Sync, state: SyncState, problem: SyncProblem | null,
 async function read(sync: Sync): Promise<boolean> {
   if (sync.full) await fetchOwnEvents(sync.pubkey).catch(() => null)
   sync.targets = publishTargets(KIND_PRIVATE, ownRelaySettings(await ownEvents(sync.pubkey)))
-  const since = sync.full || sync.meta.lastSync === null ? undefined : Math.floor(sync.meta.lastSync / 1000) - OVERLAP_SECONDS
+  await syncClock()
+  // lastSync is this device's time; the relays hold created_at of real time. A clock that runs
+  // ahead would otherwise ask for events of the future and miss the other devices' new games.
+  const since = sync.full || sync.meta.lastSync === null ? undefined : Math.floor(sync.meta.lastSync / 1000) + clockOffset() - OVERLAP_SECONDS
   sync.answered = await readRelays(sync.targets, { kinds: [KIND_PRIVATE], authors: [sync.pubkey], ...(since ? { since } : {}) })
   if (sync.answered.length === 0) return false
-  await syncClock()
   sync.events = new Map(sync.answered.flatMap((r) => r.events.map((e) => [e.id, e] as const)))
   sync.conclusive = sync.answered.length === sync.targets.length || countOperators(sync.answered.map((r) => r.url)) >= 2
   return true
