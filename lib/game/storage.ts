@@ -89,10 +89,8 @@ export function loadMatch(): SavedMatch | null {
 
 export const saveMatch = (match: SavedMatch | null) => write(MATCH_KEY, match)
 
-export function loadLastPlayers(): string[] {
-  const value = read(PLAYERS_KEY)
-  return Array.isArray(value) ? value.filter((n): n is string => typeof n === "string").slice(0, 6) : []
-}
+// Still written as 1.0.0 reads it (tests/storage-v1.test.ts); setup seats the last game's players
+// from the game itself (loadLastGame), which also carries their ids.
 export const saveLastPlayers = (names: string[]) => write(PLAYERS_KEY, names)
 
 export function loadSettings(): AppSettings {

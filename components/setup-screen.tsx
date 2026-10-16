@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useRef, useState, type PointerEvent } from "react"
+import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react"
 import { Reorder, useDragControls } from "framer-motion"
 import { ChevronLeft, GripVertical, Minus, Plus, Shuffle, UserRoundCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -9,7 +9,7 @@ import { Dartboard, GAME_HIGHLIGHTS } from "@/components/dartboard"
 import { SlotItems } from "@/components/shell/slot-items"
 import { useT } from "@/components/i18n-provider"
 import { recentPlayerNames, useMatchHistory } from "@/lib/leaderboard"
-import { loadLastPlayers, loadRules } from "@/lib/game/storage"
+import { loadLastGame, loadRules } from "@/lib/game/storage"
 import { assignPlayers, listPlayers, MAX_SEAT_NAME, savePlayers, type PlayerRecord } from "@/lib/storage/players"
 import { LEG_OPTIONS, SET_OPTIONS, START_SCORES, configFor, modeIdFor, type GameRules } from "@/lib/game/rules"
 import type { GameType, MatchConfig, MatchPlayer } from "@/lib/game/types"
@@ -25,6 +25,8 @@ interface SetupPlayer {
   name: string
   // Filled from a profile ("setup.players": a scanned profile, a saved round).
   pubkey?: string
+  // Prefilled from the last game: the player's directory id, until the directory is read.
+  from?: string
 }
 
 interface SetupScreenProps {
@@ -38,10 +40,12 @@ interface SetupScreenProps {
 let keySeed = 0
 const newKey = () => `p${Date.now().toString(36)}${keySeed++}`
 
+// The seats of the last game, as it was started; its players' directory ids come along so each
+// can be seated as the directory knows them now.
 function initialPlayers(): SetupPlayer[] {
-  const last = loadLastPlayers().slice(0, MAX_PLAYERS)
-  const names = last.length > 0 ? last : ["", ""]
-  return names.map((name) => ({ key: newKey(), name }))
+  const last = (loadLastGame()?.players ?? []).slice(0, MAX_PLAYERS)
+  if (last.length === 0) return [{ key: newKey(), name: "" }, { key: newKey(), name: "" }]
+  return last.map((p) => ({ key: newKey(), name: p.name, from: p.id }))
 }
 
 function PlayerRow({
@@ -138,6 +142,19 @@ export function SetupScreen({ type, backLabel, onBack, onStart }: SetupScreenPro
   const inputs = useRef(new Map<string, HTMLInputElement>())
   const { all: matches, players: directory } = useMatchHistory()
   const starting = useRef(false)
+
+  // Seats prefilled from the last game show its players as the directory knows them now: a
+  // player renamed since keeps the seat under the new name, one linked to a profile meanwhile
+  // brings the link. A seat typed over before the directory was read is left as typed.
+  useEffect(() => {
+    if (!directory) return
+    setPlayers((prev) =>
+      prev.map(({ from, ...seat }) => {
+        const record = from ? directory.find((p) => p.id === from) : undefined
+        return record ? { ...seat, name: record.name, pubkey: record.pubkey } : seat
+      }),
+    )
+  }, [directory])
   // Values areas add below the rules ("setup.extras" in lib/shell/registry.ts), by area id.
   const [extras, setExtras] = useState<Record<string, unknown>>({})
 

@@ -4,7 +4,7 @@ import { ANNA, BEN, at, resetStorage } from "./storage-helpers.ts"
 import { matchA } from "./storage-fixtures.ts"
 import { addProfilePlayer, claimPlayer, claimSeat, profilePlayers } from "../lib/profile/claim.ts"
 import { archiveFinished, loadArchive } from "../lib/storage/archive.ts"
-import { assignPlayers, listPlayers, newPlayerRecord, savePlayers, seatName } from "../lib/storage/players.ts"
+import { assignPlayers, listPlayers, newPlayerRecord, renamePlayer, savePlayers, seatName } from "../lib/storage/players.ts"
 
 // A profile's player on this device keeps the name they play under: the public name lives in
 // the profile, and setup finds the player by that name or, as "Du", by the profile itself.
@@ -32,6 +32,20 @@ test("claiming a seat links the player and their games, and leaves their name al
   assert.equal(assignPlayers(["Anna", "Ben"], players).players[0].id, ANNA)
   assert.equal(assignPlayers(["Anna"], players, undefined, [ME]).players[0].id, ANNA)
   assert.equal(profilePlayers(ME, players, games).key, `id:${ANNA}`)
+})
+
+test("a renamed player keeps their seat in the next game: the directory says who sits there, not the old name", async () => {
+  await annaAndBen()
+  await claimSeat("match-a", 0, ME)
+  await renamePlayer(ANNA, "Annie")
+  const players = await listPlayers()
+  // Setup seats the last game's players by their ids (components/setup-screen.tsx): the record
+  // brings the new name and the profile link, and the seat is hers.
+  const anna = players.find((p) => p.id === ANNA)!
+  assert.deepEqual([anna.name, anna.pubkey], ["Annie", ME])
+  assert.equal(assignPlayers([anna.name, "Ben"], players, undefined, [anna.pubkey]).players[0].id, ANNA)
+  // The old spelling alone would seat a new, unlinked player: why setup never seats by name.
+  assert.notEqual(assignPlayers(["Anna", "Ben"], players).players[0].id, ANNA)
 })
 
 test("a player who belongs to another profile is never taken", async () => {

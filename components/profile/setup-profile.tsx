@@ -28,7 +28,7 @@ import { deletedRoundTemplate, newRoundId, roundTemplate, savedRounds, type Roun
 import { getSigner, type Session } from "@/lib/profile/session"
 import type { SetupPlayersProps, SetupSeat } from "@/lib/shell/registry"
 import { usePlayers } from "@/lib/storage/hooks"
-import { isUnnamed, seatName } from "@/lib/storage/players"
+import { isUnnamed, nameKey, seatName } from "@/lib/storage/players"
 import { submitOwn } from "@/lib/sync/publish"
 
 // The signed-in profile's quick picks in game setup: "Du" (its own seat, linked by the profile
@@ -55,9 +55,11 @@ export default function ProfileSeats({ session, players, canAdd, addPlayer, repl
   }, [events, directory])
 
   // The profile's own seat: named as its player here, else as its public profile; nothing until
-  // one of them is known. Not offered while it is already in the game.
+  // one of them is known. Not offered while the person is already in the game, seated as the
+  // profile or under that name.
   const myName = (directory && profilePlayers(session.pubkey, directory, []).player?.name) || seatName(readMetadata(events?.get(OWN.metadata)).name ?? "")
-  const me = myName && canAdd && !players.some((p) => p.pubkey === session.pubkey) ? { name: myName, pubkey: session.pubkey } : null
+  const seated = players.some((p) => p.pubkey === session.pubkey || nameKey(p.name) === nameKey(myName))
+  const me = myName && canAdd && !seated ? { name: myName, pubkey: session.pubkey } : null
 
   return (
     <>
