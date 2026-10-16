@@ -13,7 +13,7 @@ import { milestoneById } from "../lib/badges/catalog.ts"
 import { evaluateMilestones } from "../lib/badges/milestones.ts"
 import { currentSelection } from "../lib/badges/selection.ts"
 import { readEvidence, selfAwardHolds } from "../lib/badges/self-award.ts"
-import { fetchBadges, storedBadgeEvents } from "../lib/badges/store.ts"
+import { fetchBadges, FOREIGN_AWARDS_KEPT, storedBadgeEvents } from "../lib/badges/store.ts"
 import { lookupOwnEvents } from "../lib/profile/own-events.ts"
 import { importLocalKey, signOut } from "../lib/profile/session.ts"
 import { archiveFinished, loadArchive } from "../lib/storage/archive.ts"
@@ -151,6 +151,24 @@ test("a second device finds the badges on relays, each once however often it is 
   const awards = await validAwards(stored, pubkey)
   assert.deepEqual(awards.map((a) => a.name).sort(), ["Darts-Fan", "Erste 180"])
   assert.equal(currentSelection(stored, pubkey).badges.length, 1)
+})
+
+test("of others' awards only the newest fifty stay on the device, with the definitions they point at", async () => {
+  await device()
+  const other = generateSecretKey()
+  const extra = 5
+  for (let i = 0; i < FOREIGN_AWARDS_KEPT + extra; i++) {
+    const definition = finalizeEvent({ kind: 30009, created_at: 1_790_000_000 + i, content: "", tags: [["d", `badge-${i}`], ["name", `Badge ${i}`]] }, other) as NostrEvent
+    const given = finalizeEvent({ kind: 8, created_at: 1_790_100_000 + i, content: "", tags: [["a", `30009:${definition.pubkey}:badge-${i}`], ["p", pubkey]] }, other) as NostrEvent
+    relays[0].events.push(definition, given)
+  }
+  await lookupOwnEvents(pubkey)
+  assert.equal(await fetchBadges(pubkey), "complete")
+  const stored = await storedBadgeEvents(pubkey)
+  const awards = stored.filter((e) => e.kind === 8)
+  assert.equal(awards.length, FOREIGN_AWARDS_KEPT)
+  assert.ok(awards.every((a) => a.created_at >= 1_790_100_000 + extra))
+  assert.equal(stored.filter((e) => e.kind === 30009 && e.pubkey !== pubkey).length, FOREIGN_AWARDS_KEPT)
 })
 
 test("corrected, then reached again: the old award is taken back, the new game is the evidence, the list names the new one", async () => {
