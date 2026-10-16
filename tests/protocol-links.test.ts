@@ -16,6 +16,7 @@ const samples: LinkPayload[] = [
   { type: "club", club: K, relays: ["wss://nos.lol"] },
   { type: "club", club: K, invite: "5".repeat(64), token: "4".repeat(32), relays: ["wss://nostr.oxtr.dev/path"] },
   { type: "tournament", tournament: K, relays: ["wss://nos.lol"] },
+  { type: "tournamentBoard", tournament: K, board: S, key: "6".repeat(64), relays: ["wss://nos.lol"] },
   { type: "profile", pubkey: K, relays: [] },
 ]
 
@@ -38,7 +39,7 @@ test("links stay short enough for a comfortable QR code", () => {
 test("a payload is only read as its own type", () => {
   const encoded = samples.map((p) => encodeLinkPayload(p))
   for (const [i, text] of encoded.entries()) {
-    for (const type of ["pair", "board", "watch", "club", "tournament", "profile"] as const) {
+    for (const type of ["pair", "board", "watch", "club", "tournament", "tournamentBoard", "profile"] as const) {
       if (type === samples[i].type) continue
       assert.throws(() => decodeLinkPayload(type, text), /wrong_flow/, `${samples[i].type} read as ${type}`)
     }

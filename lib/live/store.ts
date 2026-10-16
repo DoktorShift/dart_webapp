@@ -35,6 +35,9 @@ export interface BoardRecord extends Keyed {
   result: { event: string; key: string } | null
   // Records signed but not yet on enough relays, in order.
   outbox: SignedEvent[]
+  // A tournament's match: written in the clear, found by the authority's key (lib/live/board.ts
+  // goLive). Missing in a private match.
+  public?: true
 }
 
 export interface BoardSecrets {

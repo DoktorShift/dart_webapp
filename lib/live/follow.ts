@@ -1,8 +1,10 @@
 import { query, subscribe } from "../nostr/client.ts"
 import type { Filter } from "../nostr/types.ts"
 import { KIND_RECORD, KIND_STATE } from "../protocol/kinds.ts"
+import type { Agreement } from "../protocol/match.ts"
 import type { MatchStateP } from "../protocol/match-state.ts"
 import { reduceMatch } from "../protocol/match-state.ts"
+import { parseRecord } from "../protocol/records.ts"
 import type { FoundingProblem } from "../protocol/replay.ts"
 import type { SignedEvent } from "../protocol/tags.ts"
 import { fromHex, keyOf, openFromMatch } from "./keys.ts"
@@ -157,4 +159,31 @@ export function followMatch(source: MatchSource, onChange: (followed: Followed) 
       }
     },
   }
+}
+
+// A public match founded by one of `authors`: a tournament's board (lib/tournaments) founds the
+// matches it scores under the key the organizer authorized, so the tournament finds them by
+// those keys alone, with no record of its own for "this slot is being played". The agreement
+// names the tournament and the slot.
+export interface Founding {
+  match: string
+  by: string
+  at: number
+  agreement: Agreement
+}
+
+// Follows the foundings of public matches by `authors` (what relays have, then new ones), e.g.
+// a tournament's boards; a founding that isn't a readable sv 1 session is left out.
+export function watchFoundings(source: { authors: readonly string[]; relays: readonly string[] }, onFounding: (founding: Founding) => void): { close: () => void } {
+  const seen = new Set<string>()
+  const take = (event: unknown) => {
+    const parsed = parseRecord(event)
+    if (parsed.status !== "ok" || parsed.record.type !== "match.session" || seen.has(parsed.record.id)) return
+    const { content } = parsed.record
+    if (content.sv !== 1 || !content.agreement) return
+    seen.add(parsed.record.id)
+    onFounding({ match: parsed.record.id, by: parsed.record.pubkey, at: parsed.record.created_at, agreement: content.agreement })
+  }
+  if (source.authors.length === 0) return { close() {} }
+  return subscribe([{ kinds: [KIND_RECORD], authors: [...source.authors], "#l": ["match.session"] }], source.relays, { onevent: take })
 }

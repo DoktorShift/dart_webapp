@@ -16,13 +16,16 @@ import { decodeThrows, encodeThrows } from "../protocol/throws.ts"
 
 // A live match is private: everything is encrypted to the match key in the link. The names are
 // the ones on the board, which only people holding the link (or seated at the board) can read
-// (docs/protocol/privacy.md, "Privates Spiel").
-export function agreementFor(config: MatchConfig): Agreement {
+// (docs/protocol/privacy.md, "Privates Spiel"). A tournament's match is the exception: it is
+// public, named by the tournament and the slot it decides, so the organizer, the players and a
+// TV find and follow it from the tournament alone (lib/live/follow.ts watchFoundings).
+export function agreementFor(config: MatchConfig, tournament?: { id: string; slot: string }): Agreement {
   return {
     engine: ENGINE_VERSION,
     rules: configToRules(config),
     seats: config.players.map((p, i) => ({ alias: aliasOf(p.name, i) })),
-    visibility: "private",
+    visibility: tournament ? "public" : "private",
+    ...(tournament ? { tournament } : {}),
   }
 }
 

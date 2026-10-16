@@ -16,12 +16,16 @@ import { HEX32, HEX64 } from "./tags.ts"
 //   #watch=W1.<match id>.<match key secret or empty>.<relays>
 //   #club=C1.<club id>.<invite event id>.<invite token>.<relays>   (invite parts may be empty)
 //   #tournament=T1.<tournament id>.<relays>
+//   #tournament=TB1.<tournament id>.<board id>.<board key secret>.<relays>   (board authorization)
 //   #p=U1.<pubkey>.<relays>
 //
 // 32- and 16-byte values are base64url without padding, the expiry is unix seconds in base 36,
 // relays are comma-separated with "wss://" left out. Relays come last because hosts contain dots.
-// The secrets a link may carry (match key of a private match, invite token) are bearer secrets:
-// whoever has the link can watch, or join and read the invite's preview (docs/protocol/privacy.md).
+// The secrets a link may carry (match key of a private match, invite token, a board's key) are
+// bearer secrets: whoever has the link can watch, join and read the invite's preview, or act as
+// that board of the tournament (docs/protocol/privacy.md, families/tournament.md "Boards").
+// Two payload types may share a fragment key (a tournament's link and its board authorization):
+// the prefix tells them apart, so a board code never opens as an ordinary tournament link.
 
 export type LinkPayload =
   | { type: "pair"; pubkey: string; sid: string; expires: number; relays: string[] }
@@ -30,14 +34,17 @@ export type LinkPayload =
   | { type: "watch"; match: string; key?: string; relays: string[] }
   | { type: "club"; club: string; invite?: string; token?: string; relays: string[] }
   | { type: "tournament"; tournament: string; relays: string[] }
+  // The organizer's authorization of one board device: its id and the secret of the key named in
+  // the tournament.board record, shown once as a QR code to the device that becomes the board.
+  | { type: "tournamentBoard"; tournament: string; board: string; key: string; relays: string[] }
   | { type: "profile"; pubkey: string; relays: string[] }
 
 export type LinkType = LinkPayload["type"]
 
-const PREFIX: Record<LinkType, string> = { pair: "P1", board: "B1", handoff: "H1", watch: "W1", club: "C1", tournament: "T1", profile: "U1" }
-const FRAGMENT_KEY: Record<LinkType, string> = { pair: "pair", board: "board", handoff: "handoff", watch: "watch", club: "club", tournament: "tournament", profile: "p" }
+const PREFIX: Record<LinkType, string> = { pair: "P1", board: "B1", handoff: "H1", watch: "W1", club: "C1", tournament: "T1", tournamentBoard: "TB1", profile: "U1" }
+const FRAGMENT_KEY: Record<LinkType, string> = { pair: "pair", board: "board", handoff: "handoff", watch: "watch", club: "club", tournament: "tournament", tournamentBoard: "tournament", profile: "p" }
 // Fields before the relays, per type.
-const FIELDS: Record<LinkType, number> = { pair: 3, board: 3, handoff: 3, watch: 2, club: 3, tournament: 1, profile: 1 }
+const FIELDS: Record<LinkType, number> = { pair: 3, board: 3, handoff: 3, watch: 2, club: 3, tournament: 1, tournamentBoard: 3, profile: 1 }
 
 export const MAX_LINK_RELAYS = 4
 
@@ -109,6 +116,9 @@ export function encodeLinkPayload(p: LinkPayload): string {
     case "tournament":
       fields = [b64(p.tournament, 32)]
       break
+    case "tournamentBoard":
+      fields = [b64(p.tournament, 32), b64(p.board, 16), b64(p.key, 32)]
+      break
     case "profile":
       fields = [b64(p.pubkey, 32)]
       break
@@ -119,12 +129,12 @@ export function encodeLinkPayload(p: LinkPayload): string {
 // Decodes a payload that must be of `expected` type. Anything else, including a valid payload
 // of another type, is refused with "wrong_flow".
 export function decodeLinkPayload<T extends LinkType>(expected: T, text: string): Extract<LinkPayload, { type: T }> {
-  const prefix = text.slice(0, 3)
-  if (prefix !== `${PREFIX[expected]}.`) {
-    const other = (Object.keys(PREFIX) as LinkType[]).find((k) => prefix === `${PREFIX[k]}.`)
+  const own = `${PREFIX[expected]}.`
+  if (!text.startsWith(own)) {
+    const other = (Object.keys(PREFIX) as LinkType[]).find((k) => text.startsWith(`${PREFIX[k]}.`))
     throw new ProtocolError("wrong_flow", other ? `a ${other} code, not a ${expected} code` : "not a BlueLine code")
   }
-  const parts = text.slice(3).split(".")
+  const parts = text.slice(own.length).split(".")
   const n = FIELDS[expected]
   if (parts.length < n + 1) throw bad("fields missing")
   const fields = parts.slice(0, n)
@@ -152,6 +162,9 @@ export function decodeLinkPayload<T extends LinkType>(expected: T, text: string)
     case "tournament":
       payload = { type: "tournament", tournament: unb64(fields[0], 32), relays }
       break
+    case "tournamentBoard":
+      payload = { type: "tournamentBoard", tournament: unb64(fields[0], 32), board: unb64(fields[1], 16), key: unb64(fields[2], 32), relays }
+      break
     default:
       payload = { type: "profile", pubkey: unb64(fields[0], 32), relays }
   }
@@ -165,13 +178,14 @@ export const linkFragment = (p: LinkPayload) => `#${FRAGMENT_KEY[p.type]}=${enco
 export function parseLinkFragment(hash: string): LinkPayload {
   const m = /^#?([a-z]+)=(.+)$/.exec(hash)
   if (!m) throw new ProtocolError("wrong_flow", "not a BlueLine link")
-  const type = (Object.keys(FRAGMENT_KEY) as LinkType[]).find((k) => FRAGMENT_KEY[k] === m[1])
-  if (!type) throw new ProtocolError("wrong_flow", "not a BlueLine link")
+  const types = (Object.keys(FRAGMENT_KEY) as LinkType[]).filter((k) => FRAGMENT_KEY[k] === m[1])
+  if (types.length === 0) throw new ProtocolError("wrong_flow", "not a BlueLine link")
   let value: string
   try {
     value = decodeURIComponent(m[2])
   } catch {
     throw bad("damaged link")
   }
-  return decodeLinkPayload(type, value)
+  // Types sharing the key: the one whose prefix the payload carries, else the first one's refusal.
+  return decodeLinkPayload(types.find((k) => value.startsWith(`${PREFIX[k]}.`)) ?? types[0], value)
 }
