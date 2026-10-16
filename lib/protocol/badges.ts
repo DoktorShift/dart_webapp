@@ -148,9 +148,9 @@ export function checkBadgeDefinition(def: SignedEvent): { ok: true; info: BadgeD
 }
 
 export interface AwardContext {
-  // Whether this key may issue badges for the club or tournament (from club or tournament
-  // state). Without it, club and tournament awards are not accepted.
-  mayIssue?: (scope: "club" | "tournament", scopeId: string, issuer: string) => boolean
+  // Whether this key may issue badges for the club or tournament at `at`, the award's time (from
+  // club or tournament state). Without it, club and tournament awards are not accepted.
+  mayIssue?: (scope: "club" | "tournament", scopeId: string, issuer: string, at: number) => boolean
   // false when the evidence was corrected or voided since; undefined when not known yet.
   evidenceValid?: (eventId: string) => boolean | undefined
 }
@@ -185,7 +185,7 @@ export function checkBadgeAward(award: SignedEvent, definition: SignedEvent, ctx
   const { scope, scopeId } = def.info
   if (scope === "self" && recipient !== award.pubkey) return no("issuer_mismatch", "a self-earned badge is for its issuer only")
   if (scope === "club" || scope === "tournament") {
-    if (!ctx.mayIssue || !ctx.mayIssue(scope, scopeId as string, award.pubkey)) return no("not_authorized", `not an issuer of this ${scope}`)
+    if (!ctx.mayIssue || !ctx.mayIssue(scope, scopeId as string, award.pubkey, award.created_at)) return no("not_authorized", `not an issuer of this ${scope}`)
   }
   if (ctx.evidenceValid?.(evidence[0]) === false) return no("evidence_revoked", "the result it rests on was corrected or voided")
   return {

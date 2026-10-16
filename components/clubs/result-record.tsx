@@ -1,22 +1,26 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Button } from "@/components/ui/button"
-import { InlineStatus } from "@/components/common/inline-status"
+import { Users } from "lucide-react"
 import { useAreaT } from "@/components/i18n-provider"
+import { ResultRow } from "@/components/shell/result-row"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
 import { useChange } from "@/components/clubs/common"
 import { clubAuthor, useClub } from "@/components/clubs/use-clubs"
-import { alreadyRecorded, gameSeats, recordGame, type GameSeat } from "@/lib/clubs/games"
+import { VerdictSheet } from "@/components/clubs/verdict-sheet"
+import { gameSeats, recordGame, recordedGame, type GameSeat } from "@/lib/clubs/games"
 import { useSession } from "@/lib/profile/session"
-import type { FinishedMatch } from "@/lib/shell/registry"
+import type { FinishedMatch, SlotListProps } from "@/lib/shell/registry"
 import { usePlayers } from "@/lib/storage/hooks"
 
 // Records a finished club game for the club: by itself when the profile's key is on this device
-// (nothing to confirm), with one tap when a signer app has to sign. The row says what happened.
-// The club's copy remembers the games of this device (a reload shows the result again), and a
-// game with the same players and throws recorded before counts as this one too.
-export default function ResultRecord({ club, match }: { club: string; match: FinishedMatch }) {
+// (nothing to confirm), with one tap when a signer app has to sign. The result's shared row
+// (components/shell/result-row.tsx) says how it stands: the invitation to record and the
+// recording in the accent tone, recorded in the success tone (it opens the game in the club,
+// where the other players confirm it), and a failure as worth a look, whose tap tries again. The
+// club's copy remembers the games of this device (a reload shows the result again), and a game
+// with the same players and throws recorded before counts as this one too.
+export default function ResultRecord({ club, match, placement }: { club: string; match: FinishedMatch; placement: SlotListProps["result.actions"]["placement"] }) {
   const tx = useAreaT(CLUBS_TEXTS)
   const describe = useChange()
   const session = useSession()
@@ -24,6 +28,7 @@ export default function ResultRecord({ club, match }: { club: string; match: Fin
   const directory = usePlayers()
   const [status, setStatus] = useState<"idle" | "busy" | "done" | "failed">("idle")
   const [problem, setProblem] = useState<string | null>(null)
+  const [shown, setShown] = useState(false)
   const state = view?.state
   const ready = !!state && view.me.status === "member" && !state.info.archived && !!session && directory !== null
 
@@ -33,15 +38,18 @@ export default function ResultRecord({ club, match }: { club: string; match: Fin
       const pubkey = directory?.find((r) => r.id === p.id)?.pubkey
       return { name: p.name, ...(pubkey ? { pubkey } : {}) }
     })
-  const recorded = !!view && (match.id in view.recorded || (!!state && !!session && alreadyRecorded(view.games, session.pubkey, gameSeats(seats(), state.info.visibility, tx.game.guestAlias), match.throws)))
+  const game =
+    view?.games.find((g) => g.match === view.recorded[match.id]) ??
+    (state && session ? recordedGame(view.games, session.pubkey, gameSeats(seats(), state.info.visibility, tx.game.guestAlias), match.throws) : null)
+  const recorded = !!view && (match.id in view.recorded || game !== null)
 
   const record = async () => {
     if (!state) return
     setStatus("busy")
     setProblem(null)
     try {
-      const game = { id: match.id, config: match.config, seats: seats(), winner: match.winner, throws: match.throws }
-      await recordGame(state, game, gameSeats(game.seats, state.info.visibility, tx.game.guestAlias), await clubAuthor())
+      const finished = { id: match.id, config: match.config, seats: seats(), winner: match.winner, throws: match.throws }
+      await recordGame(state, finished, gameSeats(finished.seats, state.info.visibility, tx.game.guestAlias), await clubAuthor())
       setStatus("done")
     } catch (error) {
       setProblem(describe(error))
@@ -56,23 +64,17 @@ export default function ResultRecord({ club, match }: { club: string; match: Fin
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, ready, automatic, recorded])
 
-  if (!view?.state) return null
+  if (!view || !state) return null
   const name = view.info?.name ?? ""
-  if (recorded || status === "done") return <InlineStatus tone="success">{tx.game.recorded(name)}</InlineStatus>
-  if (status === "failed") {
+  if (recorded || status === "done") {
     return (
-      <InlineStatus tone="error">
-        {problem ?? tx.game.recordFailed}{" "}
-        <button type="button" onClick={() => void record()} className="font-semibold underline-offset-2 hover:underline">
-          {tx.retry}
-        </button>
-      </InlineStatus>
+      <>
+        <ResultRow icon={Users} label={tx.game.recorded(name)} tone="success" placement={placement} onClick={() => setShown(true)} trailing={game ? { kind: "chevron" } : undefined} />
+        <VerdictSheet view={view} state={state} game={game} open={shown && game !== null} onOpenChange={setShown} />
+      </>
     )
   }
+  if (status === "failed") return <ResultRow icon={Users} label={tx.game.recordRetry} ariaLabel={`${problem} ${tx.retry}`} tone="warning" placement={placement} onClick={() => void record()} />
   if (!ready) return null
-  return (
-    <Button variant="secondary" disabled={status === "busy"} onClick={() => void record()} className="h-11 w-full whitespace-normal rounded-xl bg-primary/10 text-[1.0625rem] font-semibold text-primary shadow-none hover:bg-primary/15">
-      {status === "busy" ? tx.game.recording : tx.game.record(name)}
-    </Button>
-  )
+  return <ResultRow icon={Users} label={status === "busy" ? tx.game.recording : tx.game.record(name)} tone="accent" placement={placement} onClick={() => status !== "busy" && void record()} />
 }

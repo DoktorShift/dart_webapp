@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, type ReactNode } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 import { RefreshCw } from "lucide-react"
 import {
   AlertDialog,
@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Avatar } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { InlineStatus } from "@/components/common/inline-status"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { signerProblem } from "@/components/profile/signer-status"
 import { CLUBS_TEXTS, type ClubsTexts } from "@/lib/i18n/features/clubs.screens"
@@ -23,14 +22,15 @@ import type { Messages } from "@/lib/i18n"
 import type { ClubTask, ClubView } from "@/lib/clubs/club"
 import type { ClubGame } from "@/lib/clubs/games"
 import { ClubOutdatedError } from "@/lib/clubs/membership"
-import { ClubSignerError, resend } from "@/lib/clubs/send"
+import { ClubSignerError, waitingEvents } from "@/lib/clubs/send"
 import { useClubs } from "@/components/clubs/use-clubs"
 import type { NameInfo } from "@/components/clubs/use-names"
+import { onStorageChange } from "@/lib/storage/db"
 import { cn } from "@/lib/utils"
 
 // Small pieces every club screen shares: how times and people are written, what to say when
-// signing fails, the honest lines about the local copy (when relays last answered, what is not
-// sent yet), the one question before something is removed or given away, and the shape of a
+// signing fails, the honest lines about the local copy (when relays last answered, what is still
+// on its way), the one question before something is removed or given away, and the shape of a
 // club sheet.
 
 export const formatDateTime = (unix: number, t: Messages) =>
@@ -72,13 +72,37 @@ export function useChange() {
   return (error: unknown) => problemText(error, tx, px)
 }
 
-// When relays last answered for the club, and what this device wrote that no relay confirmed
-// yet, with one way to send it again. "Aktualisieren" shows that it is working and, when no
-// relay answers, that the tap changed nothing but the knowledge.
+// How many of the club's events the outbox still sends, read again whenever the outbox or the
+// club's copy changes (in this tab or another).
+function useWaiting(club: string): number {
+  const [count, setCount] = useState(0)
+  useEffect(() => {
+    let current = true
+    const read = () =>
+      void waitingEvents(club).then(
+        (n) => current && setCount(n),
+        () => {},
+      )
+    read()
+    const stop = onStorageChange((message) => {
+      if (message.type === "wipe" || message.stores.includes("outbox") || message.stores.includes("objects")) read()
+    })
+    return () => {
+      current = false
+      stop()
+    }
+  }, [club])
+  return count
+}
+
+// When relays last answered for the club, and what this device wrote that is still on its way
+// (the outbox sends it by itself). "Aktualisieren" shows that it is working and, when no relay
+// answers, that the tap changed nothing but the knowledge.
 export function SyncLine({ view, onRefresh }: { view: ClubView; onRefresh?: () => Promise<unknown> }) {
   const t = useT()
   const tx = useAreaT(CLUBS_TEXTS)
   const { refreshing, online } = useClubs()
+  const waiting = useWaiting(view.id)
   const [busy, setBusy] = useState(false)
   const loading = busy || refreshing
   const refresh = async () => {
@@ -91,24 +115,17 @@ export function SyncLine({ view, onRefresh }: { view: ClubView; onRefresh?: () =
   }
   const when = view.loadedAt === null ? tx.club.neverLoaded : tx.club.loadedAt(formatTime(view.loadedAt, t))
   return (
-    <div className="mt-6 flex flex-col gap-2">
-      {view.unsent.length > 0 && (
-        <InlineStatus tone="info">
-          {tx.club.unsent(view.unsent.length)}{" "}
-          <button type="button" onClick={() => void resend(view.id, view.unsent)} className="font-semibold text-primary underline-offset-2 hover:underline">
-            {tx.club.resend}
-          </button>
-        </InlineStatus>
+    <div className="mt-6 flex items-center justify-between gap-3 px-4 text-[0.8125rem] text-muted-foreground">
+      <p className="[overflow-wrap:anywhere]">
+        {online === false && !loading ? `${tx.club.offline} · ${when}` : when}
+        {waiting > 0 && <span className="block">{tx.club.waiting(waiting)}</span>}
+      </p>
+      {onRefresh && (
+        <Button variant="ghost" disabled={loading} onClick={() => void refresh()} className="h-11 shrink-0 gap-1.5 rounded-xl px-3 text-[0.9375rem] text-primary hover:bg-primary/10 hover:text-primary">
+          <RefreshCw className={cn("h-4 w-4", loading && "motion-safe:animate-spin")} aria-hidden="true" />
+          {loading ? tx.club.refreshing : tx.club.refresh}
+        </Button>
       )}
-      <div className="flex items-center justify-between gap-3 px-4 text-[0.8125rem] text-muted-foreground">
-        <span className="[overflow-wrap:anywhere]">{online === false && !loading ? `${tx.club.offline} · ${when}` : when}</span>
-        {onRefresh && (
-          <Button variant="ghost" disabled={loading} onClick={() => void refresh()} className="h-11 shrink-0 gap-1.5 rounded-xl px-3 text-[0.9375rem] text-primary hover:bg-primary/10 hover:text-primary">
-            <RefreshCw className={cn("h-4 w-4", loading && "motion-safe:animate-spin")} aria-hidden="true" />
-            {loading ? tx.club.refreshing : tx.club.refresh}
-          </Button>
-        )}
-      </div>
     </div>
   )
 }

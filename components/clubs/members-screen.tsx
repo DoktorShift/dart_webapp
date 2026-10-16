@@ -14,7 +14,7 @@ import { MemberSheet } from "@/components/clubs/member-sheet"
 import { RequestList } from "@/components/clubs/request-list"
 import { useClub } from "@/components/clubs/use-clubs"
 import { useNames } from "@/components/clubs/use-names"
-import { isManager } from "@/lib/clubs/club"
+import { isLeader, isManager } from "@/lib/clubs/club"
 import type { ClubRole } from "@/lib/protocol/club"
 import { SCREENS, type ScreenProps } from "@/lib/shell/registry"
 
@@ -36,6 +36,8 @@ export default function MembersScreen({ params }: ScreenProps) {
   if (!view || !state) return null
   const me = view.me.pubkey
   const manager = isManager(view.me.role)
+  // Every leader opens a member's sheet (a recognition); managers also find roles and more there.
+  const leader = isLeader(view.me.role)
   const nameOf = (pubkey: string) => names(pubkey).name ?? tx.unnamed
   const dup = sameNames(
     members.map((m) => m.pubkey),
@@ -67,7 +69,7 @@ export default function MembersScreen({ params }: ScreenProps) {
                 </span>
               }
               subtitle={[tx.roles[m.role], dup.has(m.pubkey) || !info.name ? tx.id(shortId(m.pubkey)) : null, tx.members.since(formatDate(m.since, t))].filter(Boolean).join(" · ")}
-              onClick={() => (manager && m.pubkey !== me ? setManaging(m.pubkey) : nav.push(SCREENS.profilePublic, { pubkey: m.pubkey }))}
+              onClick={() => (leader && m.pubkey !== me ? setManaging(m.pubkey) : nav.push(SCREENS.profilePublic, { pubkey: m.pubkey }))}
             />
           )
         })}

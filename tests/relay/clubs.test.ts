@@ -1,6 +1,7 @@
 // Clubs against real relays (two "nak serve" on 127.0.0.1, P5.01/P5.02): every step is signed by
 // the person's own key and read back by the others from the relays, each on a fresh device (new
-// storage, own key), as if they opened the app on their phone. Nothing touches a public relay.
+// storage, own key), as if they opened the app on their phone. Everything leaves through the
+// outbox of lib/sync, resumed here as the app does at its start. Nothing touches a public relay.
 // Run: npm run test:relay
 import { after, before, test } from "node:test"
 import assert from "node:assert/strict"
@@ -11,7 +12,7 @@ import { loadCore, type Core } from "../../lib/nostr/core.ts"
 import type { Throw } from "../../lib/game/types.ts"
 import { clubTasks } from "../../lib/clubs/club.ts"
 import { answerDate, cancelDate, CALENDAR_TIME_KIND, repeatDates, saveDates } from "../../lib/clubs/dates.ts"
-import { alreadyRecorded, answerGame, correctGame, gameSeats, recordGame, type FinishedGame } from "../../lib/clubs/games.ts"
+import { answerGame, correctGame, gameSeats, recordGame, recordedGame, type FinishedGame } from "../../lib/clubs/games.ts"
 import { acceptInvitation, invitationState, openInvitation } from "../../lib/clubs/invitation.ts"
 import { clubLink, readClubPayload } from "../../lib/clubs/links.ts"
 import { acceptOwnership, acceptRequest, createInvite, foundClub, isConfirmedMember, offerOwnership, openOffer, removeMember, setRole, updateInfo } from "../../lib/clubs/membership.ts"
@@ -22,6 +23,7 @@ import { seasonTable } from "../../lib/clubs/table.ts"
 import { getSigner, importLocalKey, signOut } from "../../lib/profile/session.ts"
 import { parseEnvelope, wrapsFor } from "../../lib/protocol/seal.ts"
 import { readLabels } from "../../lib/protocol/tags.ts"
+import { pendingEvents, resumeOutbox } from "../../lib/sync/outbox.ts"
 
 let core: Core
 let a: NakRelay
@@ -31,11 +33,12 @@ const now = () => Math.floor(Date.now() / 1000)
 
 before(async () => {
   core = await loadCore()
-  // One after the other: a free port is only free until something listens on it. On a shared
-  // machine NAK_PORT_RANGE assigns the range (tests/support/nak.ts).
+  // Free ports, one after the other (a free port is only free until something listens on it),
+  // from NAK_PORT_RANGE on a shared machine (tests/support/nak.ts).
   a = await startRelay()
   b = await startRelay()
   process.env.NEXT_PUBLIC_BLUELINE_RELAYS = `${a.url},${b.url}`
+  await resumeOutbox()
 })
 
 after(async () => {
@@ -50,8 +53,20 @@ const person = () => {
 }
 type Person = ReturnType<typeof person>
 
+// Waits until the outbox has put every change on relays of two operators, as a phone does in the
+// background before it is put away.
+async function sent() {
+  const until = Date.now() + 15_000
+  while ((await pendingEvents(() => true)).length > 0) {
+    if (Date.now() > until) assert.fail("changes still waiting in the outbox")
+    await new Promise((resolve) => setTimeout(resolve, 20))
+  }
+}
+
 // Opens the app on this person's own device: empty storage, their key (which signs by itself).
+// The device before has sent its changes.
 async function device(who: Person): Promise<Reader & { pubkey: string; signer: NonNullable<Reader["signer"]> }> {
+  await sent()
   await signOut({ keepLocalData: true })
   await resetStorage()
   await importLocalKey(who.secret)
@@ -83,11 +98,14 @@ test("a closed club: a member joins through a group link while no leader is onli
   let view = await refreshClub(club, author)
   assert.equal(view.state?.info.name, "Dartfreunde Nord")
   const invite = await createInvite(view.state!, { kind: "group", days: 7, hostName: "Olaf" }, author)
-  assert.ok(invite.sent.published)
   const link = clubLink(SITE, { club, invite: { id: invite.invite, token: invite.token }, relays: [] })
-  // Outsiders see nothing but ids: the founding and the invite are sealed.
-  const raw = await relayClient().query([{ ids: [club, invite.invite] }], [a.url])
-  assert.ok(raw.events.every((e) => !e.content.includes("Dartfreunde")))
+  // Both relays have the founding and the invite; outsiders see nothing but ids: both are sealed.
+  await sent()
+  for (const relay of [a, b]) {
+    const raw = await relayClient().query([{ ids: [club, invite.invite] }], [relay.url])
+    assert.equal(raw.events.length, 2)
+    assert.ok(raw.events.every((e) => !e.content.includes("Dartfreunde")))
+  }
 
   // Ben opens the link: the preview shows before any profile is needed, then he joins.
   const joining = await viaLink(link, ben)
@@ -306,12 +324,13 @@ test("a season table follows the games: a confirmed result counts, a correction 
   const seats = [{ name: "Olaf", pubkey: owner.pubkey }, { name: "Ben", pubkey: ben.pubkey }, { name: "Mia" }]
   const won: FinishedGame = { id: "local-1", config: config(["Olaf", "Ben", "Mia"]), seats, winner: 0, throws: visits(180, 60, 60, 180, 60, 60, 141) }
   const recorded = await recordGame(view.state!, won, gameSeats(seats, "closed", (n) => `Gast ${n}`), author)
+  await sent()
   const raw = await relayClient().query([{ ids: [recorded.match] }], [a.url])
   assert.ok(!raw.events[0].content.includes("Ben"), "the match is private: its agreement is encrypted")
   // The club remembers the game by its local id, and knows it by its throws: never twice.
   assert.equal((await loadStoredClub(club))?.recorded["local-1"], recorded.match)
   view = await refreshClub(club, author)
-  assert.ok(alreadyRecorded(view.games, owner.pubkey, gameSeats(seats, "closed", (n) => `Gast ${n}`), won.throws))
+  assert.equal(recordedGame(view.games, owner.pubkey, gameSeats(seats, "closed", (n) => `Gast ${n}`), won.throws)?.match, recorded.match)
 
   const season = Object.values(view.state!.seasons)[0]
   let table = seasonTable(season, view.games)
@@ -378,6 +397,7 @@ test("a public club's dates are calendar events other apps read; members answer,
   view = await refreshClub(club, author)
   const first = now() + 86400
   await saveDates(view.state!, repeatDates({ title: "Clubabend", starts: first, ends: first + 3 * 3600, place: "Vereinsheim" }, 7, 3), author)
+  await sent()
   const calendar = await relayClient().query([{ kinds: [CALENDAR_TIME_KIND], "#e": [club] }], [a.url])
   assert.equal(calendar.events.length, 3)
   assert.equal(await runNak(["verify"], { input: `${calendar.events.map((e) => JSON.stringify(e)).join("\n")}\n` }), "")

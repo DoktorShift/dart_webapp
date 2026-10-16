@@ -4,6 +4,7 @@ import type { ComponentType, ReactNode } from "react";
 import { lazyScreen } from "@/components/nav/lazy-screen";
 import { featureOn } from "@/lib/shell/features";
 import { CLUB_SCREENS } from "@/components/clubs/screens";
+import { registerIssuerCheck } from "@/lib/badges/issuers";
 import { addDiagnostics } from "@/lib/profile/diagnostics";
 import type { ScreenProps, SlotListProps } from "@/lib/shell/registry";
 import {
@@ -71,17 +72,33 @@ if (featureOn("clubs")) {
     Component: screen(() => import("@/components/clubs/discover-screen")),
   });
 
-  // "Diagnose kopieren" (Profil › Erweitert): how many records each club has here, what is not
-  // sent yet and when relays last answered. Ids are cut short; nothing of the content.
+  // Who may award a club's badges and whether a season's awards still stand: asked by the badges
+  // area while it checks awards, answered from the club's copy here (./awards.ts, loaded then).
+  const awards = () => import("@/components/clubs/awards");
+  registerIssuerCheck("club", {
+    mayIssue: async (club, issuer, at) =>
+      (await awards()).mayAward(club, issuer, at),
+    evidenceValid: async (club, evidence) =>
+      (await awards()).awardsStand(club, evidence),
+  });
+
+  // "Diagnose kopieren" (Profil › Erweitert): how many records each club has here, how many of
+  // them are still on their way and when relays last answered. Ids are cut short; nothing of the
+  // content.
   addDiagnostics(async () => {
-    const { storedClubs } = await import("@/lib/clubs/store");
+    const [{ storedClubs }, { waitingEvents }] = await Promise.all([
+      import("@/lib/clubs/store"),
+      import("@/lib/clubs/send"),
+    ]);
     const clubs = await storedClubs();
     if (clubs.length === 0) return null;
     return {
       title: "Clubs",
-      lines: clubs.map(
-        (c) =>
-          `${c.club.slice(0, 8)}: ${c.events.length} records, ${c.unsent.length} unsent, loaded ${c.loadedAt ? new Date(c.loadedAt).toISOString() : "never"}`,
+      lines: await Promise.all(
+        clubs.map(
+          async (c) =>
+            `${c.club.slice(0, 8)}: ${c.events.length} records, ${await waitingEvents(c.club)} waiting, loaded ${c.loadedAt ? new Date(c.loadedAt).toISOString() : "never"}`,
+        ),
       ),
     };
   });

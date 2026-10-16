@@ -13,7 +13,7 @@ const [ANNA, BEN, CARL, DORA] = ["a", "b", "c", "d"].map((c) => c.repeat(64))
 const NOW = 1_790_000_000
 
 function season(rules: Partial<SeasonRules> = {}, extra: Partial<ClubSeason> = {}): ClubSeason {
-  return { id: "5".repeat(32), name: "Saison", starts: NOW, ended: false, versions: [{ version: 1, rules: { ...DEFAULT_RULES, confirmations: "none", ...rules }, event: "e".repeat(64), at: NOW - 10 }], ...extra }
+  return { id: "5".repeat(32), name: "Saison", starts: NOW, ended: null, versions: [{ version: 1, rules: { ...DEFAULT_RULES, confirmations: "none", ...rules }, event: "e".repeat(64), at: NOW - 10 }], ...extra }
 }
 
 let n = 0
@@ -33,6 +33,7 @@ function game(seats: (string | { guest: string })[], winner: number | null, legs
     },
     authority: opts.by ?? ANNA,
     result: { event: `r${id.slice(1)}`, by: opts.by ?? ANNA, at: opts.at ?? NOW + n, winner, legs, ...(opts.stats ? { stats: opts.stats } : {}) },
+    revisedAt: null,
     confirmations: Object.fromEntries(Object.entries(opts.confirm ?? {}).map(([seat, verdict]) => [seat, { verdict, event: "f".repeat(64), at: NOW + 1000, pubkey: seats[Number(seat)] as string }])),
   }
 }
@@ -54,7 +55,7 @@ test("only the season's modes and period count", () => {
   assert.equal(t.counted.length, 1)
   assert.equal(t.ranked[0].pubkey, BEN)
   // An ended season takes nothing recorded after its end.
-  const ended = seasonTable(season({}, { ended: true, endedAt: NOW + 10 }), [game([ANNA, BEN], 0, [3, 0], { at: NOW + 20 })])
+  const ended = seasonTable(season({}, { ended: { event: "f".repeat(64), by: ANNA, at: NOW + 10 } }), [game([ANNA, BEN], 0, [3, 0], { at: NOW + 20 })])
   assert.equal(ended.counted.length, 0)
 })
 

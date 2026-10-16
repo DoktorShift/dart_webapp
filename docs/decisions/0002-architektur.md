@@ -25,7 +25,7 @@ Dieses Dokument ist der Vertrag für alle Umsetzungsschritte. Abweichungen brauc
 | `lib/devices/` | Gerätekopplung per QR, Link und Code | `lib/nostr`, `lib/profile` |
 | `lib/recovery/` | Sicherungsdatei (NIP-49), Passkey-Paket | `lib/nostr`, `lib/profile`, `lib/storage` |
 | `lib/live/` | Zuschauen, Spieler am Board verbinden, Schreiberwechsel, Ergebnisbestätigung | `lib/nostr`, `lib/protocol`, `lib/game`; seit dem Nachtrag vom 6. Oktober 2026 auch `lib/storage` und `lib/profile/vault.ts`, seit dem 16. Oktober 2026 `lib/sync/outbox.ts` |
-| `lib/clubs/` | Clubs, Rollen, Einladungen, Saisons, Tabellen | `lib/protocol`, `lib/nostr` |
+| `lib/clubs/` | Clubs, Rollen, Einladungen, Saisons, Tabellen | `lib/protocol`, `lib/nostr`; seit dem 16. Oktober 2026 `lib/sync/outbox.ts` (alle Club-Events gehen durch die eine Outbox) |
 | `lib/tournaments/` | `engine.ts` (rein, ohne Netz) und Turnierdaten | `lib/protocol`, `lib/nostr` |
 | `lib/badges/` | Katalog, Meilensteine, NIP-58 lesen und schreiben | `lib/protocol`, `lib/nostr`, `lib/storage` |
 | `lib/payments/` | NWC-Verbindung, Bezahlen, Empfangen, Zaps, Zahlungsjournal | `lib/nostr`, `lib/storage` |
