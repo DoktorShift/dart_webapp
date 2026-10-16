@@ -1,6 +1,6 @@
 # P7b.01–P7b.03 Direkte Zahlungen
 
-**Status:** In Prüfung
+**Status:** Umgesetzt, Nachweis offen: echte Wallets und sats, Wallet-App-Rücksprung, Zap- und LNURL-Dienste mit CORS (E12), Signet mit Screenreader (A28)
 **Paket:** P7b · **Planstelle:** [PLAN.md](../PLAN.md), Zeilen 451–489 (Direkte Zahlungen und vereinbarte Einsätze, Freiwillige Zaps) und 505–523 (Zahlungssignet), Zeilen 720–724
 
 ## Ziel
@@ -55,6 +55,17 @@ Behoben: Die Antwort der Wallet-App kehrt dorthin zurück, wo sie angefragt wurd
 | Nicht ausgeführte Prüfungen | Echte Wallets und echte Beträge (Nutzerfreigabe nötig, OP-19), echter Zap-Empfangsdienst mit CORS (OP-22), Wallet-App-Rücksprung (NWC-07) auf Geräten, Safari/Firefox, VoiceOver |
 | Verbleibende Einschränkungen | Gebühren vor dem Bezahlen sind unbekannt („Je nach Wallet“), da NIP-47 keine Gebührenabfrage kennt. Ein Budget wird nur über Albys `get_budget` angezeigt. Empfang wird nur bei geöffneter App erkannt (F8). Öffnet eine Wallet-App die Antwort in einem anderen Browser als dem, in dem BlueLine läuft (etwa installierte PWA auf iOS), fehlt dort die Anfrage: Die Antwort wird abgelehnt, die Verbindung muss eingefügt werden (auf Geräten nicht geprüft). |
 
+## Stand im Integrationszweig (16. Oktober 2026)
+
+| Punkt | Wert |
+| --- | --- |
+| Zusammengeführt | Spur `wave2/payments`, Endstand `7247f00`, zusammengeführt in `4117c31` (16. Oktober 2026); Zahlungszeile auf `ResultRow` (`057803a`) |
+| Review | Review 1 (2 hoch, 4 mittel, 5 niedrig) → Korrektur `ed5fcf9`; Review 2: beide hohen Befunde halten, 3 mittel, 5 niedrig; HIG 1 (2 hoch, 1 mittel, 9 niedrig) → Korrektur `7247f00`; Koordinator-Review |
+| nostr-core-Version | 1.0.6 (NWC über `lib/nostr`) |
+| Prüfungen der Spur | 16. Oktober 2026 auf `7247f00`: `npm test` 488/488, Relay 31/31, `build` bestanden, Browser [payments-review.mjs](../evidence/P7b/scripts/payments-review.mjs) 48/49 (Fehler im Messhelfer) plus Wiederholung 11/11, 78 Bilder ohne abgeschnittenen Text; jede Einsatzzahlung zahlt genau einmal |
+| Prüfungen auf `nostr-plan` `4c4ce92` | 16. Oktober 2026, Prüfung beim Zusammenführen: `lint` und `typecheck` ohne Meldung, `npm test` 662 von 662, `npm run test:relay` 80 von 80 gegen lokale nak-Relays, `build` bestanden (`/` 71,1 kB, First Load 278 kB). Kein Browserlauf auf genau diesem Stand (P8.01). |
+| Offen für die Abnahme | Echte Wallets und Beträge; Wallet-App-Rücksprung auf Geräten; Zap- und LNURL-Dienste; Safari, VoiceOver; STATUS PY-01 |
+
 ## Nächster Schritt
 
-Nach der Zusammenführung mit der Profilspur: Kontrollierte Praxistests mit freigegebenen Kleinstbeträgen (OP-19) und Upstream-PRs für nostr-core (Verschlüsselungs-Tag, keine Wiederholung bei `pay_invoice`, Rechnungsprüfung bei LNURL, strenge Zap-Belegprüfung).
+E12; danach kontrollierte Praxistests mit Kleinstbeträgen und die Upstream-PRs für nostr-core.

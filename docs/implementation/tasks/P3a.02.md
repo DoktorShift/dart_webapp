@@ -1,6 +1,6 @@
 # P3a.02 Transport und Validierung
 
-**Status:** In Prüfung (Outbox gebaut; Familienprüfung je Event folgt mit den Bereichen)
+**Status:** Umgesetzt, Nachweis offen: echte Signer, öffentliche Relays (E7)
 **Paket:** P3a · **Planstelle:** [PLAN.md](../PLAN.md), Zeile 680
 
 ## Ziel
@@ -55,6 +55,17 @@ Die Fälle des Transports und der Signer stehen in der Karte [P0.03](P0.03.md). 
 | Nicht ausgeführte Prüfungen | Familienprüfung je Eventfamilie (kommt mit den Bereichen Clubs, Turniere, Live); keine öffentlichen Relays (E7) |
 | Verbleibende Einschränkungen | Siehe Tabelle „Umfang und Stand“ |
 
+## Stand im Integrationszweig (16. Oktober 2026)
+
+| Punkt | Wert |
+| --- | --- |
+| Zusammengeführt | Grundlage `bbabb74` (Welle 1); dauerhafte Outbox mit der Spur Abgleich (`f7bb861` → `871e237`); Live-Spiele auf derselben Outbox (`6d08f91` → `7ddc143`), Clubs (`8799d3a` → `c9b5a80`); Turniere senden seit ihrer Korrekturrunde 1 darüber (`4c4ce92`) |
+| Review | Welle 1: zwei Runden; Outbox in zwei Review-Runden der Spur Abgleich (der Fehler „Schleife während des Sendens“ aus Runde 2 ist mit Test behoben); Umzüge vom Koordinator geprüft |
+| nostr-core-Version | 1.0.6 |
+| Prüfungen der Spur | 16. Oktober 2026: Abgleich `f7bb861` 516/516, Relay 31/31; Live-Umzug `6d08f91` 582/582, Relay 51/51; Clubs-Umzug `8799d3a` 629/629, Relay 61/61 |
+| Prüfungen auf `nostr-plan` `4c4ce92` | 16. Oktober 2026, Prüfung beim Zusammenführen: `lint` und `typecheck` ohne Meldung, `npm test` 662 von 662, `npm run test:relay` 80 von 80 gegen lokale nak-Relays, `build` bestanden (`/` 71,1 kB, First Load 278 kB). Kein Browserlauf auf genau diesem Stand (P8.01). |
+| Offen für die Abnahme | Echte Signer (NIP-46, NIP-07, NIP-55); Verhalten der öffentlichen Relays (E7); Einträge der Outbox aus der Zeit vor `after` brauchen keinen Übergang, weil der Zweig nie ausgeliefert wurde |
+
 ## Nächster Schritt
 
-Live-Spiele (`lib/live/board.ts`) auf `enqueue()` der Outbox umstellen (Koordinator nach dem Zusammenführen), dann der Schreibtest auf den öffentlichen Zielen.
+Schreibtest auf den öffentlichen Zielen nach E7.
