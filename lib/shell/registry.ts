@@ -73,7 +73,11 @@
 // Slot items and game menu items return a function that removes them again (e.g. on sign-out).
 //
 // Areas register from components/shell/extensions.ts at module load, before the first render.
-// Registering later (after a lazy import) also works; open screens pick it up.
+// Registering later (after a lazy import) also works; open screens pick it up. Each area's
+// register module wraps all its registrations in `if (featureOn("<area>"))` (lib/shell/features.ts,
+// the build-time switch NEXT_PUBLIC_BLUELINE_FEATURES): switched off, the area registers nothing,
+// so its tab shows the shell's own view, its links "can't be opened yet", and its data on the
+// device stays as it is.
 //
 // Screens and slots stay mounted while hidden (another tab, a screen pushed over them, or setup and
 // the game over all tabs), so they keep their state. Under setup and the game the tabs are frozen:

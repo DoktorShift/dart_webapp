@@ -38,6 +38,10 @@ Jede Lieferung nennt:
 - Bei UI-Änderungen eine startbare Vorschau, nachgestellte Abläufe und Bilder
 - Offene Entscheidungen, Einschränkungen und nächsten Schritt
 
+## Feature-Schalter
+
+Jeder Bereich (`profile`, `payments`, `live`, `sync`, `clubs`, `badges`, `devices`, `tournaments`) steht hinter einem eigenen Schalter (`lib/shell/features.ts`, PLAN.md „Ausrollen“). Die Build-Variable `NEXT_PUBLIC_BLUELINE_FEATURES` nennt die eingeschalteten Bereiche durch Komma getrennt, etwa `NEXT_PUBLIC_BLUELINE_FEATURES=profile,live npm run build`; ohne die Variable sind alle an, mit leerem Wert alle aus. Alles außer `live` und `payments` setzt `profile` voraus: ein Bereich, dessen Voraussetzung aus ist, ist aus. Ein Schalter wirkt nur auf die Registrierung beim Rahmen: `components/<Bereich>/register.ts` umschließt alle seine Registrierungen mit `if (featureOn("<Bereich>"))`. Ein ausgeschalteter Bereich registriert nichts; sein Tab zeigt die Ansicht des Rahmens, seine Links meldet der Rahmen als „noch nicht zu öffnen“, seine Daten auf dem Gerät bleiben unberührt und für den Build lesbar, der ihn wieder einschaltet. Die Gast-App bleibt in jeder Schalterstellung benutzbar.
+
 ## Fortsetzen nach einer Pause
 
 Zuerst [STATUS.md](STATUS.md) lesen, dann die Karte der aktiven Aufgabe, dann die dort verlinkten Planstellen und Entscheidungen. Vor dem Wechsel zum nächsten Punkt wird STATUS.md aktualisiert.

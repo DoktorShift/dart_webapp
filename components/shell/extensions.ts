@@ -9,7 +9,9 @@
 //   registerSlot("profile.root", SignedInProfileOrGuest)
 //
 // Keep these modules small and load real screens with lazyScreen(), so the start page (guest
-// play) never carries an area's code, and nostr-core only ever arrives on demand.
+// play) never carries an area's code, and nostr-core only ever arrives on demand. Each module
+// wraps all its registrations in `if (featureOn("<area>"))` (lib/shell/features.ts), so a build
+// can leave the area out without touching the device's data.
 
 import "@/components/shell/builtin-screens"
 import "@/components/profile/register"
