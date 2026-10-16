@@ -312,6 +312,8 @@ export const de = {
     undoDart: "Rückgängig",
     visits: "Aufnahmen",
     visitsLabel: "Alle Aufnahmen ansehen",
+    // Under the result's small Rangliste button: one short word, it never wraps.
+    leaderboard: "Rangliste",
     share: "Teilen",
     shareText: (line: string) => `${line}. Gezählt mit BlueLine Darts.`,
     imageFooter: "Gezählt mit BlueLine Darts",

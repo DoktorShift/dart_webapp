@@ -287,6 +287,7 @@ export const en: Messages = {
     undoDart: "Undo",
     visits: "Visits",
     visitsLabel: "Review all visits",
+    leaderboard: "Ranking",
     share: "Share",
     shareText: (line) => `${line}. Scored with BlueLine Darts.`,
     imageFooter: "Scored with BlueLine Darts",

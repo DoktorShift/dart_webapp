@@ -259,7 +259,7 @@ export function MatchResult({ state, match, onRematch, onNewGame, onHome, onLead
         <SmallAction icon={Share} label={t.result.share} onClick={share} />
         <SmallAction icon={ChartColumn} label={t.result.allStats} onClick={() => setStatsOpen(true)} />
         <SmallAction icon={History} label={t.result.visits} ariaLabel={t.result.visitsLabel} onClick={onReview} />
-        <SmallAction icon={Trophy} label={t.nav.leaderboard} onClick={onLeaderboard} />
+        <SmallAction icon={Trophy} label={t.result.leaderboard} ariaLabel={t.nav.leaderboard} onClick={onLeaderboard} />
       </div>
     </div>
   )
