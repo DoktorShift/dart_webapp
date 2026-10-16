@@ -3,6 +3,7 @@
 import type { ComponentType, ReactNode } from "react"
 import { Target } from "lucide-react"
 import { lazyScreen } from "@/components/nav/lazy-screen"
+import { TournamentGate, TournamentResultGate } from "@/components/tournaments/gate"
 import { TOURNAMENT_SCREENS } from "@/components/tournaments/screens"
 import { registerIssuerCheck } from "@/lib/badges/issuers"
 import { featureOn } from "@/lib/shell/features"
@@ -11,7 +12,8 @@ import { SCREENS, registerLinkHandler, registerResultPrimary, registerScreen, re
 import { tournamentGame } from "@/lib/tournaments/extra"
 
 // Where the tournaments area plugs into the shell (imported by components/shell/extensions.ts).
-// Every piece loads on demand: the guest path carries this file and nothing of the tournaments.
+// Every piece loads on demand: the guest path carries this file and the game's gate (./gate.tsx),
+// nothing of the tournaments.
 
 const screen = (load: () => Promise<{ default: ComponentType<ScreenProps> }>) => lazyScreen<ScreenProps>(load)
 
@@ -27,9 +29,9 @@ if (featureOn("tournaments")) {
   registerScreen(TOURNAMENT_SCREENS.print, { title: (t) => t.tournaments.titles.print, Component: screen(() => import("@/components/tournaments/print-screen")) })
 
   // A tournament game on the game screen: the result goes to the tournament (game.attachments),
-  // and the result screen says so (result.actions). Both render nothing for any other game.
-  registerSlotItem("game.attachments", "tournament", lazyScreen<SlotListProps["game.attachments"]>(() => import("@/components/tournaments/game-pieces").then((m) => ({ default: m.TournamentGate }))))
-  registerSlotItem("result.actions", "tournament", lazyScreen<SlotListProps["result.actions"]>(() => import("@/components/tournaments/game-pieces").then((m) => ({ default: m.TournamentResultRow }))))
+  // and the result screen says so (result.actions). Both load and render nothing for any other game.
+  registerSlotItem("game.attachments", "tournament", TournamentGate)
+  registerSlotItem("result.actions", "tournament", TournamentResultGate)
 
   // A /#tournament= link is the tournament itself (T1: opens it) or the organizer's code for one
   // of its boards (TB1: makes this device that board). The payload's prefix decides.
