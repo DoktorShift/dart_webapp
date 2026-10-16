@@ -23,7 +23,7 @@ test("kinds.md lists every record type, and every type has its family contract",
   const kinds = read("kinds.md")
   for (const type of Object.keys(RECORD_TYPES)) {
     assert.ok(kinds.includes(`\`${type}\``), `${type} in kinds.md`)
-    const family = type.startsWith("club.") ? "club" : type.startsWith("tournament.") ? "tournament" : type === "match.live" ? "match-live" : type === "match.session" ? "session-authorization" : type === "payment.request" ? "payment-request" : type.startsWith("profile.") ? "profile" : "match-result"
+    const family = type.startsWith("club.") ? "club" : type.startsWith("tournament.") ? "tournament" : type === "match.live" ? "match-live" : type === "match.session" ? "session-authorization" : type === "payment.request" ? "payment-request" : type.startsWith("profile.") ? "profile" : type.startsWith("badge.") ? "badges" : "match-result"
     assert.ok(read(`families/${family}.md`).includes(`\`${type}`), `${type} in families/${family}.md`)
   }
   assert.match(kinds, /\*\*1180\*\*/)

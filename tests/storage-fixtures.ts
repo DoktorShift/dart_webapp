@@ -1,5 +1,6 @@
-import { correctDart, replay, tagThrow, visitBySeq } from "../lib/game/engine.ts"
-import type { MatchConfig, Throw } from "../lib/game/types.ts"
+import { correctDart, ENGINE_VERSION, replay, tagThrow, visitBySeq } from "../lib/game/engine.ts"
+import type { MatchConfig, SavedMatch, Throw } from "../lib/game/types.ts"
+import type { ArchivedMatch } from "../lib/storage/archive.ts"
 import type { V1MatchRecord } from "../lib/storage/v1.ts"
 import { config, dart, play } from "./helpers.ts"
 import { ANNA, BEN, saved } from "./storage-helpers.ts"
@@ -91,3 +92,30 @@ export const matchI = () => saved(H_CONFIG, play(H_CONFIG, [visit(32, 2)]), "mat
 //   40 in 1 dart at a double (asked). The game's darts at a double are not fully known.
 export const J_CONFIG: MatchConfig = config({ modeId: "301", modeName: "301", startScore: 101, players: [players[0]] })
 export const matchJ = () => saved(J_CONFIG, play(J_CONFIG, [visit(61), visit(40, 1, 1)]), "match-j")
+
+// An archive entry as archiveFinished writes it, finished at `finishedAt` (the archive itself is
+// tested in storage-archive.test.ts).
+export function archivedAt(match: SavedMatch, finishedAt: string): ArchivedMatch {
+  const state = replay(match.config, match.throws)
+  return {
+    id: match.id,
+    schemaVersion: 1,
+    source: "local",
+    finishedAt,
+    archivedAt: finishedAt,
+    startedAt: match.startedAt,
+    modeId: match.config.modeId,
+    modeName: match.config.modeName,
+    modeType: match.config.type,
+    config: match.config,
+    throws: match.throws,
+    engineVersion: ENGINE_VERSION,
+    players: match.config.players.map((p, i) => ({
+      playerId: p.id,
+      name: p.name,
+      won: i === state.winner,
+      darts: state.stats[i].darts,
+      points: match.config.type === "x01" ? state.stats[i].points : 0,
+    })),
+  }
+}
