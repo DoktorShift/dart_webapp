@@ -128,7 +128,7 @@ function PlayerRow({
           onClick={onRemove}
           className="flex h-11 w-11 shrink-0 items-center justify-center"
         >
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-danger text-white">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-danger text-danger-foreground">
             <Minus className="h-4 w-4" strokeWidth={3} />
           </span>
         </button>

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { renderResultImage, type ResultImage } from "@/lib/result-image"
 import { saveFile } from "@/lib/save-file"
-import { shareFile } from "@/lib/shell/share"
+import { shareFile } from "@/lib/shell/share-file"
 
 const FILE_NAME = "blueline-darts.png"
 const ICON = "/icon/192"

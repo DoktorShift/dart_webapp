@@ -17,7 +17,7 @@ import { useSession, type Session } from "@/lib/profile/session"
 import type { PreparedBackup } from "@/lib/recovery/backup"
 import { isSecured } from "@/lib/recovery/status"
 import { saveFile } from "@/lib/save-file"
-import { offersFileShare, shareFile } from "@/lib/shell/share"
+import { offersFileShare, shareFile } from "@/lib/shell/share-file"
 import { SITE } from "@/lib/site"
 
 // Profil › Sicherung (P2.04): how the profile stands, the backup file (with its password, shown

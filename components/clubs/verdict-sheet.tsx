@@ -89,7 +89,7 @@ export function VerdictSheet({ view, state, game, open, onOpenChange }: { view: 
                   variant="secondary"
                   onClick={() => (disputing ? void answer("dispute") : setDisputing(true))}
                   disabled={busy}
-                  className={disputing ? "h-12 rounded-xl bg-danger text-[1.0625rem] font-semibold text-white hover:bg-danger/90" : "h-12 rounded-xl text-[1.0625rem] font-semibold"}
+                  className={disputing ? "h-12 rounded-xl bg-danger text-[1.0625rem] font-semibold text-danger-foreground hover:bg-danger/90" : "h-12 rounded-xl text-[1.0625rem] font-semibold"}
                 >
                   {tx.game.dispute}
                 </Button>

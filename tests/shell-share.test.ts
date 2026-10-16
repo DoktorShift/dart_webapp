@@ -1,6 +1,7 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { copyText, shareFile, shareLink, type ShareData } from "../lib/shell/share.ts"
+import { shareFile } from "../lib/shell/share-file.ts"
+import { copyText, shareLink, type ShareData } from "../lib/shell/share.ts"
 
 const link: ShareData = { url: "https://blueline21.netlify.app/#club=c1", title: "Club" }
 

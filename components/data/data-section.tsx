@@ -18,7 +18,7 @@ import { useStorageUnavailable } from "@/lib/storage/hooks"
 import type { Messages } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { saveFile } from "@/lib/save-file"
-import { offersFileShare, shareFile } from "@/lib/shell/share"
+import { offersFileShare, shareFile } from "@/lib/shell/share-file"
 
 // Files bigger than this are not an export of this app (a long history is a few megabytes).
 const MAX_IMPORT_BYTES = 50 * 1024 * 1024

@@ -45,7 +45,7 @@ export function Confirm({
         {children}
         <AlertDialogFooter className="gap-2">
           <AlertDialogCancel className="h-11">{t.common.cancel}</AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm} className={destructive ? "h-11 bg-danger text-white hover:bg-danger/90" : "h-11"}>
+          <AlertDialogAction onClick={onConfirm} className={destructive ? "h-11 bg-danger text-danger-foreground hover:bg-danger/90" : "h-11"}>
             {confirm}
           </AlertDialogAction>
         </AlertDialogFooter>

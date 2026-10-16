@@ -289,7 +289,7 @@ function RelayList({
               {saving === entry.url ? (
                 <LoaderCircle className="h-5 w-5 text-muted-foreground motion-safe:animate-spin" aria-hidden="true" />
               ) : (
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-danger text-white">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-danger text-danger-foreground">
                   <Minus className="h-4 w-4" strokeWidth={3} aria-hidden="true" />
                 </span>
               )}
