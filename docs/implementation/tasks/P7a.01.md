@@ -45,7 +45,7 @@ Importierte Summe mit Schnitt 83,5 ohne Würfe löst keinen Schnitt-Meilenstein 
 | --- | --- |
 | `tests/badges-milestones.test.ts` (Katalogregeln mit von Hand gerechneten Fällen aus `storage-fixtures.ts`, importierte Summen, Korrektur, Neun Marks nach angerechneten Marks) | 8 von 8 |
 | `tests/badges-awards.test.ts` (Berechtigung, Fälschungen, Doppelte, NIP-09, aufgehobener Nachweis, fremde App, bürgende Aussteller, Altformat, Anordnen) | 9 von 9 |
-| `tests/badges-profile.test.ts` (Selbstvergabe über zwei Relays im Speicher: vier Events, nichts über Ben, zweiter Versuch sendet nichts, offline signiert nichts, Korrektur und Löschanfrage, zweites Gerät, korrigiert und erneut erreicht ersetzt die Vergabe, neun auf einmal mit einer Liste seltenste zuerst) | 7 von 7 |
+| `tests/badges-profile.test.ts` (Selbstvergabe über zwei Relays im Speicher: vier Events, nichts über Ben, zweiter Versuch sendet nichts, offline signiert nichts, Korrektur und Löschanfrage, zweites Gerät, höchstens 50 fremde Vergaben mit ihren Definitionen, korrigiert und erneut erreicht ersetzt die Vergabe, neun auf einmal mit einer Liste seltenste zuerst) | 8 von 8 |
 | `tests/badges-organizer.test.ts` (Plan von Hand, keine Doppelvergabe bei wiederholtem Abschluss, nur wer beendet hat, Korrektur mit Rücknahme, Anerkennung) | 5 von 5 |
 | `tests/protocol-vectors.test.ts`, `protocol-records`, `protocol-docs` (Nachweisdatensatz, Vektor `self-earned`) | in `npm test` |
 | `tests/relay/badges.test.ts` gegen zwei `nak serve` (Ports 20685/20686): vier Events, `nak verify`, zweites Gerät liest zurück, Veranstalter je Spieler und Anlass einmal, `nak req` nach Empfänger | 2 von 2 |
@@ -54,7 +54,7 @@ Importierte Summe mit Schnitt 83,5 ohne Würfe löst keinen Schnitt-Meilenstein 
 
 Gemessen (Laborwerte unter Parallellast): „Im Profil zeigen“ für neun Meilensteine mit lokalem Schlüssel 108–120 ms bis zur Bestätigung; der Versand wartet nicht auf Relays. 28 Unterschriften für neun Meilensteine (je Definition, Nachweis, Vergabe, plus eine Liste; vorher 36).
 
-Nicht nachgewiesen: Safari, Firefox, echte Geräte, VoiceOver; externe Signer (jede Selbstvergabe fragt den Signer je Event); Club- und Turniervergaben in der Oberfläche (die Spuren kommen nach dieser); öffentliche Relays; die Obergrenze von 50 fremden Vergaben nur im Code, nicht mit 50 Vergaben im Browser.
+Nicht nachgewiesen: Safari, Firefox, echte Geräte, VoiceOver; externe Signer (jede Selbstvergabe fragt den Signer je Event); Club- und Turniervergaben in der Oberfläche (die Spuren kommen nach dieser); öffentliche Relays; die Obergrenze von 50 fremden Vergaben nur im Test, nicht im Browser.
 
 ## Korrekturrunde 1 (Review und HIG-Review)
 
