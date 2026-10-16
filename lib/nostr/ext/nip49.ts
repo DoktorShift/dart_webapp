@@ -1,5 +1,5 @@
 // NIP-49: a secret key encrypted with a password (ncryptsec). To be upstreamed to nostr-core
-// (gap NC-06): nostr-core 1.0.4 has no NIP-49 but ships the primitives used here, scrypt from
+// (gap NC-06): nostr-core 1.0.6 has no NIP-49 but ships the primitives used here, scrypt from
 // @noble/hashes and XChaCha20-Poly1305 from @noble/ciphers.
 //
 // scrypt at log_n 16 needs 64 MiB and took 0.2 to 0.3 s on a desktop (Node and Chromium,

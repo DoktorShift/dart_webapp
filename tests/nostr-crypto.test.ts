@@ -83,13 +83,13 @@ async function wrapAround(seal: NostrEvent, recipient: string) {
   return core.createWrap(seal, recipient)
 }
 
-test("NIP-59 with signers: a rumor whose id doesn't match its content is refused (nostr-core accepts it)", async () => {
+test("NIP-59 with signers: a rumor whose id doesn't match its content is refused (as nostr-core's raw-key unwrap does since 1.0.6, PR-06)", async () => {
   const bobPub = core.getPublicKey(bobKey)
   const rumor = { ...core.createRumor(request(), core.getPublicKey(aliceKey)), content: '{"amount_msat":1}' }
   const seal = core.finalizeEvent({ kind: 13, tags: [], created_at: 1_790_000_000, content: await alice.nip44!.encrypt(bobPub, JSON.stringify(rumor)) }, aliceKey)
   const wrap = await wrapAround(seal, bobPub)
   assert.equal(await codeOf(unwrapWithSigner(wrap, bob)), "forged")
-  assert.equal(unwrap(wrap, bobKey).content, '{"amount_msat":1}')
+  assert.throws(() => unwrap(wrap, bobKey), /Rumor id/)
 })
 
 test("NIP-59 with signers: a seal claiming another author, broken signatures, foreign wraps are refused", async () => {

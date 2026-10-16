@@ -239,10 +239,11 @@ export function resumeNip46(session: Nip46Session, options: Nip46Options = {}): 
 }
 
 // Connects a bunker:// link pasted by the user. The handshake runs on the resumable signer from
-// ext/nostrconnect.ts, not on nostr-core's NostrConnect (NC-05): that one sends outdated connect
-// parameters, tries one relay at a time and turns an auth_url into an error, so a signer that
-// asks for a confirmation could never be connected. Here the connect request stays pending while
-// the user confirms (onAuthUrl), and the session continues on the same client key.
+// ext/nostrconnect.ts, not on nostr-core's NostrConnect (NC-05): since 1.0.6 that one sends
+// today's connect parameters and waits through auth_url, but it still tries one relay at a time
+// on sockets of its own and can't continue a session without a new connect (the link's secret is
+// single-use). Here the connect request goes to every relay at once, stays pending while the
+// user confirms (onAuthUrl), and the session continues on the same client key.
 export async function connectBunker(uri: string, options: Nip46Options & { perms?: string[]; clientSecretKey?: Uint8Array } = {}): Promise<Nip46Connection> {
   const core = await loadCore()
   if (!uri.trim().startsWith("bunker://")) throw new SignerError("invalid", "not a bunker:// link")

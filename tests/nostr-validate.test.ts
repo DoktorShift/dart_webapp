@@ -37,7 +37,7 @@ test("NIP-58: an award by the badge's author, for this badge, naming the player,
   assert.deepEqual(await validateBadgeAward(award(organizer), definition), { ok: true })
 })
 
-test("NIP-58: an award signed by anyone else is refused (nostr-core 1.0.4 accepts it)", async () => {
+test("NIP-58: an award signed by anyone else is refused (nostr-core 1.0.6 accepts it)", async () => {
   const forged = award(impostor)
   const result = await validateBadgeAward(forged, definition, player)
   assert.equal(result.ok, false)
@@ -125,7 +125,7 @@ test("NIP-57: a receipt from the recipient's Lightning service for the requested
   assert.deepEqual(await validateZapReceipt(receipt, { nostrPubkey: core.getPublicKey(lnurlServer) }), { ok: true })
 })
 
-test("NIP-57: a receipt signed by any other key is refused (nostr-core 1.0.4 accepts it)", async () => {
+test("NIP-57: a receipt signed by any other key is refused (nostr-core 1.0.6 accepts it)", async () => {
   const { receipt } = zap({ signer: impostor })
   assert.equal((await validateZapReceipt(receipt, { nostrPubkey: core.getPublicKey(lnurlServer) })).ok, false)
   // The gap this module closes (NC-14): nostr-core checks only the receipt's own signature.

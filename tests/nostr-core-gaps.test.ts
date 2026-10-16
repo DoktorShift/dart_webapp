@@ -1,4 +1,4 @@
-// Gaps in nostr-core 1.0.4, each as a minimal reproduction against the library itself
+// Gaps in nostr-core 1.0.6, each as a minimal reproduction against the library itself
 // (docs/implementation/evidence/P0.03/CORE.md; NC numbers from the P0.01 research). These tests
 // pin today's behaviour on purpose: when one fails after an upgrade, the gap is fixed upstream
 // and the workaround named in the test can be retired. Gaps already reproduced next to their
@@ -20,7 +20,7 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 test("NC-02: the package declares no sideEffects, so bundlers keep RSS, Markdown and mnemonics (lib/nostr/runtime.ts imports names)", () => {
   const manifest = JSON.parse(readFileSync(join(import.meta.dirname, "../node_modules/nostr-core/package.json"), "utf8"))
-  assert.equal(manifest.version, "1.0.4")
+  assert.equal(manifest.version, "1.0.6")
   assert.equal(manifest.sideEffects, undefined)
 })
 
@@ -32,7 +32,7 @@ test("NC-04: a nostrconnect:// link's host (the client key) is read as the signe
   assert.equal(Object.keys(core).some((name) => /clienturi|nostrconnecturi|waitforsigner/i.test(name)), false)
 })
 
-test("NC-05: NostrConnect sends outdated connect parameters and turns auth_url into an error, so a confirming signer never connects (ext/nostrconnect.ts connectToBunker)", async () => {
+test("NC-05: NostrConnect sends today's connect parameters and waits through auth_url since 1.0.6, but passes any page on and can't continue a session without a new connect (ext/nostrconnect.ts)", async () => {
   const network = new FakeNetwork()
   network.add("wss://bunker.example")
   const bunkerKey = generateSecretKey()
@@ -46,24 +46,34 @@ test("NC-05: NostrConnect sends outdated connect parameters and turns auth_url i
       const request = JSON.parse(nip44.decrypt(event.content, conversation))
       if (request.method !== "connect") return
       connects.push({ client: event.pubkey, params: request.params })
-      const content = nip44.encrypt(JSON.stringify({ id: request.id, result: "auth_url", error: "https://bunker.example/confirm" }), conversation)
-      void service.publish(finalizeEvent({ kind: 24133, content, tags: [["p", event.pubkey]], created_at: Math.floor(Date.now() / 1000) }, bunkerKey), ["wss://bunker.example"])
+      const answer = (response: object) =>
+        service.publish(finalizeEvent({ kind: 24133, content: nip44.encrypt(JSON.stringify({ id: request.id, ...response }), conversation), tags: [["p", event.pubkey]], created_at: Math.floor(Date.now() / 1000) }, bunkerKey), ["wss://bunker.example"])
+      // A confirmation page that is no web page, then the acknowledgement on the same id.
+      void answer({ result: "auth_url", error: "javascript:alert(1)" }).then(() => answer({ result: "ack" }))
     },
   })
   await wait(50)
+  // NostrConnect opens sockets of its own: there is no transport to hand in, only the global.
   const original = globalThis.WebSocket
   globalThis.WebSocket = network.WebSocket
   const clientKey = generateSecretKey()
-  const connection = new NostrConnect({ remotePubkey: bunkerPubkey, relayUrls: ["wss://bunker.example"], secret: "abc123", secretKey: clientKey, encryption: "nip44" })
+  const connection = new NostrConnect({ remotePubkey: bunkerPubkey, relayUrls: ["wss://bunker.example"], secret: "abc123", secretKey: clientKey, perms: "sign_event:1180", encryption: "nip44" })
   connection.handshakeTimeout = 2000
+  const pages: string[] = []
+  connection.onauthurl = (url) => pages.push(url)
   try {
-    await assert.rejects(connection.connect(), /https:\/\/bunker\.example\/confirm/)
+    await connection.connect()
   } finally {
     connection.close()
     globalThis.WebSocket = original
   }
-  // NIP-46 names the remote signer's key first, then the secret and the permissions.
-  assert.deepEqual(connects, [{ client: getPublicKey(clientKey), params: [getPublicKey(clientKey), "abc123"] }])
+  // Closed upstream (PRs #77, #84, #86): the signer's key first, then secret and permissions,
+  // and the handshake stays pending through auth_url.
+  assert.deepEqual(connects, [{ client: getPublicKey(clientKey), params: [bunkerPubkey, "abc123", "sign_event:1180"] }])
+  // Still open: the page is handed on unchecked (Nip46Signer opens https only), and a stored
+  // session can't be continued: every use starts with connect, whose secret is single-use.
+  assert.deepEqual(pages, ["javascript:alert(1)"])
+  await assert.rejects(new NostrConnect({ remotePubkey: bunkerPubkey, relayUrls: ["wss://bunker.example"], secretKey: clientKey }).getPublicKey(), /Not connected/)
 })
 
 test("NC-06, NC-07: no NIP-49 and no NIP-55 (ext/nip49.ts, ext/nip55.ts)", () => {
@@ -77,7 +87,7 @@ test("NC-09: private list items passed without a key are dropped silently (ext/l
   assert.equal(template.content, "")
 })
 
-test("NC-10: RelayPool can't tell 'every relay failed' from 'nothing there', and publish names no relay (client.ts)", async () => {
+test("NC-10: RelayPool can't tell 'every relay failed' from 'nothing there'; publishDetailed names each relay since 1.0.6, but not whether it timed out or was unreachable (client.ts)", async () => {
   const network = new FakeNetwork()
   network.add("wss://up.example")
   network.add("wss://down.example", { mode: "down" })
@@ -85,9 +95,19 @@ test("NC-10: RelayPool can't tell 'every relay failed' from 'nothing there', and
   const allDown = await pool.querySync(["wss://down.example"], { kinds: [1] })
   const empty = await pool.querySync(["wss://up.example"], { kinds: [1] })
   assert.deepEqual([allDown, empty], [[], []])
-  const event = finalizeEvent({ kind: 1, content: "x", tags: [], created_at: 1_790_000_000 }, generateSecretKey())
-  // One relay accepted, one was unreachable: the answer is a bare list of OK messages.
-  assert.deepEqual(await pool.publish(["wss://up.example", "wss://down.example"], event), [""])
+  const sign = (content: string) => finalizeEvent({ kind: 1, content, tags: [], created_at: 1_790_000_000 }, generateSecretKey())
+  // One relay accepted, one was unreachable: publish answers with a bare list of OK messages;
+  // publishDetailed (PR #79, from client.ts) with one result per relay, the failure as the local
+  // error text without a code.
+  assert.deepEqual(await pool.publish(["wss://up.example", "wss://down.example"], sign("x")), [""])
+  const detailed = await pool.publishDetailed(["wss://up.example", "wss://down.example"], sign("y"))
+  assert.deepEqual(
+    detailed.map(({ url, ok, prefix }) => [url, ok, prefix]),
+    [
+      ["wss://up.example/", true, undefined],
+      ["wss://down.example/", false, undefined],
+    ],
+  )
   pool.close()
 })
 
@@ -163,6 +183,6 @@ test("NC-22: Nip07Signer passes through whatever the extension returns, even an 
 // - NC-14 validateZapReceipt accepts any signer: tests/nostr-validate.test.ts
 // - NC-15 validateBadgeAward accepts any issuer: tests/nostr-validate.test.ts
 // - NC-16 parseRelayList throws on one bad URL: tests/nostr-lists.test.ts
-// - PR-06 unwrap doesn't check the rumor id: tests/nostr-crypto.test.ts
-// - NC-05 bunker secret single-use, no resume: tests/relay/nip46.test.ts; the handshake that
-//   stays pending through auth_url: tests/nostr-nip46.test.ts
+// - PR-06 unwrap checks the rumor id since 1.0.6, with a raw key only: tests/nostr-crypto.test.ts
+// - NC-05 bunker secret single-use, no resume: tests/relay/nip46.test.ts; the handshake on every
+//   relay at once, pending through auth_url: tests/nostr-nip46.test.ts

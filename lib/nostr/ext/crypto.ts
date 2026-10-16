@@ -1,9 +1,10 @@
 // Encryption building blocks that work with any Signer (local key, extension, remote signer).
-// To be upstreamed to nostr-core (gaps NC-08, PR-06): its NIP-59 and NIP-51/78 helpers only take a
-// raw secret key, which external signers never hand out.
+// To be upstreamed to nostr-core (gap NC-08): its NIP-59 and NIP-51/78 helpers only take a raw
+// secret key, which external signers never hand out.
 //
 // - NIP-59 seal and gift wrap through signer.nip44 and signer.signEvent; unwrapping checks both
-//   signatures, that the seal's author wrote the rumor, and the rumor's id (nostr-core doesn't).
+//   signatures, that the seal's author wrote the rumor, and the rumor's id. nostr-core 1.0.6
+//   checks the id too (PR-06, taken from here), but only in its raw-key unwrap.
 // - A data-key envelope: private records are encrypted locally with XChaCha20-Poly1305 under a
 //   random 32-byte key, so an external signer is asked to decrypt once per device (to unwrap
 //   that key), not once per record (docs/decisions/0002, section 4).

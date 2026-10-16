@@ -73,7 +73,7 @@ test("NIP-51: a declined or unanswered decryption is \"unavailable\", never \"un
   assert.equal((await parseListSafe(await aliceList("not encrypted at all"), await createLocalSigner(aliceKey))).privateStatus, "undecryptable")
 })
 
-test("NIP-51: nostr-core 1.0.4 shows unreadable private items as an empty list (the gap this closes)", async () => {
+test("NIP-51: nostr-core 1.0.6 shows unreadable private items as an empty list (the gap this closes)", async () => {
   const event = await aliceList()
   const parsed = parseList(event, core.generateSecretKey())
   assert.deepEqual(parsed.privateItems, [])

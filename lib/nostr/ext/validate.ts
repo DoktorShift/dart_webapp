@@ -1,7 +1,7 @@
 // Strict checks for badge awards (NIP-58), zap receipts (NIP-57) and Lightning invoices.
 // To be upstreamed to nostr-core (gaps NC-14, NC-15, OP-23): its validateBadgeAward accepts an
 // award signed by anyone, and validateZapReceipt accepts a receipt signed by any key with any
-// invoice. Both were reproduced with nostr-core 1.0.4 (see the tests).
+// invoice. Both were reproduced with nostr-core 1.0.6 (see the tests).
 //
 // Every check returns { ok: true } or { ok: false, reason } instead of throwing, so a list of
 // received events can be filtered without try/catch. Who may award what is the app's rule,

@@ -1,17 +1,21 @@
-// NIP-46 remote signing: the parts nostr-core 1.0.4 lacks. To be upstreamed to nostr-core
-// (gaps NC-04, NC-05 in docs/implementation/evidence/P0.03/CORE.md).
+// NIP-46 remote signing: the parts nostr-core 1.0.6 lacks. To be upstreamed to nostr-core
+// (gaps NC-04, NC-05 in docs/implementation/evidence/P0.03/CORE.md; 1.0.6 took the connect
+// parameters and the auth_url wait from here, PRs #77, #84, #86).
 //
 // - The client-initiated nostrconnect:// flow: the app shows a QR code, a signer app (Amber,
 //   nsec.app, ...) scans it and answers with the secret; the app learns the signer's key from
 //   that answer, and the signer proves it holds the user key it names by signing a challenge.
 //   A second signer answering the same link means someone else saw the code ("mismatch").
-//   nostr-core only knows bunker:// and misreads the nostrconnect:// host.
-// - The signer-initiated bunker:// handshake with today's connect parameters, on every relay of
-//   the link, staying pending through auth_url (nostr-core sends outdated parameters, tries one
-//   relay at a time and turns auth_url into an error).
-// - A Signer over kind 24133 with NIP-44 that listens on all relays, keeps a request pending
-//   through an auth_url challenge, offers ping, switch_relays and logout, and resumes a stored
-//   session after a reload without sending connect again (a connect secret is single-use).
+//   nostr-core only knows bunker:// and reads a nostrconnect:// link's host (the client key)
+//   as the signer's key.
+// - The signer-initiated bunker:// handshake on every relay of the link at once, staying
+//   pending through auth_url. nostr-core's NostrConnect now sends today's parameters and waits
+//   through auth_url too, but tries one relay at a time on sockets of its own, passes any
+//   auth_url string on, and can't continue a stored session (every use sends connect again,
+//   and a connect secret is single-use), so the handshake runs on the signer below.
+// - A Signer over kind 24133 with NIP-44 that listens on all relays through the app's relay
+//   client, keeps a request pending through an auth_url challenge, offers ping, switch_relays
+//   and logout, and resumes a stored session after a reload without sending connect again.
 //
 // Signed events coming back are not verified here; wrap the signer in verifyingSigner()
 // (../signers.ts). A request that gets no answer fails with code "timeout": the signer may still

@@ -5,7 +5,7 @@
 
 ## Ziel
 
-Die generischen Bausteine, die der Plan braucht und nostr-core 1.0.4 nicht oder fehlerhaft liefert, stehen geprüft zur Verfügung: NIP-49, direkte NIP-55-Anbindung, der nostrconnect://-Ablauf von NIP-46, aktuelle Badge-Formate mit vollständiger Prüfung, sichere private Listen sowie Signer-basierte Verschlüsselung. Sie sind so gebaut, dass sie unverändert in nostr-core übernommen werden können.
+Die generischen Bausteine, die der Plan braucht und nostr-core 1.0.6 nicht oder fehlerhaft liefert, stehen geprüft zur Verfügung: NIP-49, direkte NIP-55-Anbindung, der nostrconnect://-Ablauf von NIP-46, aktuelle Badge-Formate mit vollständiger Prüfung, sichere private Listen sowie Signer-basierte Verschlüsselung. Sie sind so gebaut, dass sie unverändert in nostr-core übernommen werden können.
 
 ## Produktregeln und Abnahmekriterien
 
@@ -15,16 +15,16 @@ Die generischen Bausteine, die der Plan braucht und nostr-core 1.0.4 nicht oder 
 ## Voraussetzungen
 
 - P0.03 (In Prüfung): Lücken mit Beispielen festgehalten.
-- Für den Abschluss: Zusammenführen und Veröffentlichen in nostr-core durch einen Maintainer; danach feste Version eintragen (Nutzerhandlung, NC-23).
+- Für den Abschluss: Zusammenführen und Veröffentlichen in nostr-core durch einen Maintainer; danach feste Version eintragen (Nutzerhandlung, NC-23). Erste Runde erledigt: 1.0.6 seit dem 16. Oktober 2026 fest eingetragen (Abschlussnachweise).
 
 ## Geplante Änderung
 
 | Baustein | Datei | Inhalt |
 | --- | --- | --- |
 | NIP-49 | `lib/nostr/ext/nip49.ts`, `nip49.worker.ts`, `nip49.offthread.ts` | `encrypt`/`decrypt` (scrypt, XChaCha20-Poly1305, NFKC, Schlüsselsicherheits-Byte, log_n 1 bis 20), asynchrone Varianten, Web Worker mit Rückfallweg, `inspect` |
-| NIP-46 nostrconnect:// und bunker:// | `lib/nostr/ext/nostrconnect.ts` | `createClientUri`, `waitForSigner` mit Geheimnisprüfung, Schlüsselnachweis (signierte Challenge, Art 22242), Erkennung eines zweiten Signers (`mismatch`) und Bestätigungsschritt `confirm`, `connectToBunker` mit aktuellen `connect`-Parametern auf allen Relays, `Nip46Signer` über Kind 24133 mit NIP-44 auf allen Relays, `auth_url` hält die Anfrage offen (nur https), ping, switch_relays (nur nutzbare Relays; alte Abos bleiben bis zur Antwort offener Anfragen), logout, `resume` ohne erneutes `connect` |
+| NIP-46 nostrconnect:// und bunker:// | `lib/nostr/ext/nostrconnect.ts` | `createClientUri`, `waitForSigner` mit Geheimnisprüfung, Schlüsselnachweis (signierte Challenge, Art 22242), Erkennung eines zweiten Signers (`mismatch`) und Bestätigungsschritt `confirm`, `connectToBunker` mit aktuellen `connect`-Parametern auf allen Relays, `Nip46Signer` über Kind 24133 mit NIP-44 auf allen Relays, `auth_url` hält die Anfrage offen (nur https), ping, switch_relays (nur nutzbare Relays; alte Abos bleiben bis zur Antwort offener Anfragen), logout, `resume` ohne erneutes `connect`. Seit nostr-core 1.0.6 sendet auch dessen `NostrConnect` die heutigen `connect`-Parameter und wartet bei `auth_url`; alles Übrige bleibt hier |
 | NIP-55 | `lib/nostr/ext/nip55.ts` | `buildSignerUrl` für `get_public_key` und `sign_event`, Rückgabe-URL mit Fragment, `parseCallback` inklusive `Signer1`+gzip über `DecompressionStream`, `matchPending` mit Anfrage-ID und Höchstalter, geprüfte Ergebnisse; keine Entschlüsselung |
-| Signer-basierte Verschlüsselung | `lib/nostr/ext/crypto.ts` | `sealWithSigner`, `giftWrapWithSigner` (1059 und 21059), `unwrapWithSigner` mit Rumor-ID-Prüfung; Datenschlüssel-Umschlag (Version 1); `wrapDataKey`/`unwrapDataKey`; `opaqueDTag` = HMAC-SHA256(Datenschlüssel, Datensatz-ID) |
+| Signer-basierte Verschlüsselung | `lib/nostr/ext/crypto.ts` | `sealWithSigner`, `giftWrapWithSigner` (1059 und 21059), `unwrapWithSigner` mit Rumor-ID-Prüfung (seit nostr-core 1.0.6 auch im dortigen `unwrap` mit Rohschlüssel); Datenschlüssel-Umschlag (Version 1); `wrapDataKey`/`unwrapDataKey`; `opaqueDTag` = HMAC-SHA256(Datenschlüssel, Datensatz-ID) |
 | Prüfung | `lib/nostr/ext/validate.ts` | `validateBadgeAward` (NIP-58 streng), `validateZapReceipt` (NIP-57 Anhang F), `checkInvoice` (BOLT11 über `decodeBolt11`) |
 | Listen | `lib/nostr/ext/lists.ts` | NIP-51 mit `privateStatus`, NIP-04-Altformat und Schreibschutz; NIP-65 ohne Ausfall bei einem fehlerhaften Eintrag; NIP-58-Profilauswahl 10008 lesen und schreiben, 30008 lesen |
 
@@ -62,7 +62,7 @@ Nicht dazu: NWC-Korrekturen (P7b), Relay-Client (P0.03/P3a.02), die eigentlichen
 | --- | --- |
 | Abdeckung, Ersatz, Upstream-Vorschlag je Baustein | [evidence/P0.03/CORE.md](../evidence/P0.03/CORE.md), Abschnitt „Abdeckung nach Bereich“ |
 | Interop mit unabhängiger Implementierung (nak) für NIP-44, NIP-59, NIP-49, NIP-46 | `tests/relay/interop.test.ts`, `tests/relay/nip46.test.ts` |
-| Zusammengeführte Änderungen in nostr-core und feste neue Version | Ausstehend |
+| Zusammengeführte Änderungen in nostr-core und feste neue Version | Teilweise. nostr-core 1.0.6 (veröffentlicht am 13. Oktober 2026, fest eingetragen am 16. Oktober 2026) enthält aus dieser Karte die NIP-46-`connect`-Parameter mit Signer-Schlüssel (#77), das Warten bei `auth_url` (#84), perms und Client-Metadaten beim `connect` (#86) sowie die Rumor-ID-Prüfung in NIP-59 (#78); dazu aus P0.03 `publishDetailed` mit Relay-Gründen (#79) und die NIP-42-Wiederholung (#72). Offen: NIP-49, NIP-55, nostrconnect://-Ablauf und fortsetzbarer Signer auf allen Relays, Signer-basierte NIP-59, NIP-51-Status, NIP-58- und NIP-57-Prüfung, NWC (P7b) |
 
 ## Ergebnis
 
@@ -71,11 +71,11 @@ Nicht dazu: NWC-Korrekturen (P7b), Relay-Client (P0.03/P3a.02), die eigentlichen
 | Branch | `wave1/nostr` |
 | Basiscommit | `fd4e6c51639f1721bd5e1f01619eeaf6f2f22da5` |
 | Prüfcommit | Erste Fassung `623540e`; Prüfrunde 1: `94b9873`, `2e110ce`; Prüfrunde 2: der Commit, der diesen Absatz ändert |
-| nostr-core-Version | 1.0.4; Ergänzungen in `lib/nostr/ext/` |
+| nostr-core-Version | 1.0.6 seit dem 16. Oktober 2026 (Prüfrunden gegen 1.0.4); Ergänzungen in `lib/nostr/ext/` |
 | Ausgeführte Prüfungen | Wie [P0.03](P0.03.md): `npm test` 141 von 141 (die erste Fassung meldete fälschlich 129 von 129), `npm run test:relay` 16 von 16, Browserprüfung von NIP-49 im Worker (Chromium 153, WebKit 26.6) |
 | Nicht ausgeführte Prüfungen | NIP-55 mit echtem Amber (Anhängen an ein Fragment, Rückkehr in die PWA), NIP-46 mit Amber, nsec.app und Clave (darunter: Schlüsselnachweis ohne zusätzliche Rückfrage, `auth_url` beim `connect`), NIP-49-Laufzeit auf Telefonen |
-| Verbleibende Einschränkungen | Noch nicht in nostr-core. Das Planziel „in nostr-core liefern“ ist erst mit Veröffentlichung und fester Version erfüllt. Kontotausch beim nostrconnect://-QR-Code nur mit Bestätigung durch den Nutzer abgewehrt (CORE.md, Restrisiken). |
+| Verbleibende Einschränkungen | Erst zum Teil in nostr-core (Abschlussnachweise). Das Planziel „in nostr-core liefern“ ist für die übrigen Bausteine erst mit Veröffentlichung und fester Version erfüllt. Kontotausch beim nostrconnect://-QR-Code nur mit Bestätigung durch den Nutzer abgewehrt (CORE.md, Restrisiken). |
 
 ## Nächster Schritt
 
-Kleine, getrennte Pull-Requests an nostr-core in der Reihenfolge aus CORE.md vorbereiten; der Nutzer stimmt Review und Veröffentlichung mit dem Co-Maintainer ab.
+Für die offenen Bausteine kleine, getrennte Pull-Requests an nostr-core in der Reihenfolge aus CORE.md vorbereiten; der Nutzer stimmt Review und Veröffentlichung mit dem Co-Maintainer ab.

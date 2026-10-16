@@ -43,7 +43,7 @@ Diese Datei zuerst lesen, wenn die Arbeit fortgesetzt wird. Danach die Karte der
 | NB-24 | Für A16, A21 und die verlustfreie Migration der v1-Daten fehlen noch Klarstellungen. | Abnahme dieser Punkte unklar. | Umsetzer entwirft, Nutzer bestätigt. |
 | W1-01 | `npm audit` meldet 7 hohe Befunde, alle in Entwicklungswerkzeugen (`eslint-config-next`, `tailwindcss` über `braces`/`micromatch`). Ohne Entwicklungspakete: 0. Gleich auf `main` (1.0.0). | Keine für Spieler. | Wartung unabhängig von dieser Erweiterung. |
 | W1-02 | Die dauerhafte Outbox (Teil von P3a.02) fehlt noch. | Ohne sie gibt es noch kein Veröffentlichen aus der App. | In Welle 2 (Spur Abgleich). |
-| W1-03 | Die Ergänzungen in `lib/nostr/ext/` sind noch nicht in nostr-core übernommen. | Laufen lokal und getestet; das Ziel bleibt nostr-core. | Upstream-PRs und Release durch den Maintainer (P3a.01). |
+| W1-03 | Die Ergänzungen in `lib/nostr/ext/` sind erst zum Teil in nostr-core übernommen. nostr-core 1.0.6 (fest eingetragen am 16. Oktober 2026) enthält die `connect`-Parameter und das Warten bei `auth_url` (NIP-46), die Rumor-ID-Prüfung (NIP-59), Ergebnisse je Relay mit Präfix und die NIP-42-Wiederholung. Weiter lokal: nostrconnect://-Ablauf und fortsetzbarer Signer, NIP-49, NIP-55, Signer-basierte NIP-59, private Listen, Badge- und Zap-Prüfung, NWC-Korrekturen. | Laufen lokal und getestet; das Ziel bleibt nostr-core. | Weitere Upstream-PRs und Release durch den Maintainer (P3a.01). |
 
 ## Arbeitspunkte
 

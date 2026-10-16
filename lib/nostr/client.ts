@@ -2,20 +2,27 @@
 // app needs on top (nostr-core gaps NC-10 in docs/implementation/evidence/P0.03/CORE.md):
 //
 // - publish() reports every relay's answer with its machine-readable reason, never throws for a
-//   relay that refused or was unreachable, and leaves no unhandled rejection behind.
+//   relay that refused or was unreachable, and leaves no unhandled rejection behind. nostr-core
+//   1.0.6 has RelayPool.publishDetailed and parseRelayReason for this (taken from here); the
+//   client stays on Relay for the budget and the AUTH rule below, and tells "timeout" from
+//   "unreachable", which the pool doesn't.
 // - query() waits for each relay's real EOSE (nostr-core fakes one after a timeout) and says
 //   which relays answered. "No relay answered" is unknown, never empty.
 // - subscribe() keeps live subscriptions per relay under the public relays' limits by merging
 //   filters, survives reconnects and retries relays that were down at the start.
 // - NIP-42: a relay that answers "auth-required:" gets one AUTH signed by the configured Signer,
-//   then the request is repeated once. No AUTH is sent unless a relay asks for it.
+//   then the request is repeated once. No AUTH is sent unless a relay asks for it. nostr-core
+//   1.0.6's Relay offers the same retry with one authSigner fixed per relay; a call here can
+//   bring its own signer or none (the auth option), so the client keeps its own.
 import type { Filter as CoreFilter, Relay, Subscription } from "nostr-core"
 import { loadCore, type Core } from "./core.ts"
 import { normalizeRelayUrl } from "./relays.ts"
 import { nowSeconds } from "./time.ts"
 import type { Filter, NostrEvent, Signer } from "./types.ts"
 
-// Machine-readable prefixes relays put in OK and CLOSED messages (NIP-01).
+// Machine-readable prefixes relays put in OK and CLOSED messages (NIP-01, NIP-42): the list
+// nostr-core 1.0.6's parseRelayReason knows, kept here because parseRelayMessage is synchronous
+// and the library is only loaded on demand.
 const RELAY_PREFIXES = ["duplicate", "pow", "blocked", "rate-limited", "invalid", "restricted", "mute", "error", "auth-required"] as const
 export type RelayPrefix = (typeof RELAY_PREFIXES)[number]
 // The prefix, or a local code: "timeout" (no answer in time), "unreachable" (no connection, or it
@@ -164,7 +171,6 @@ export function latestEvents(events: Iterable<NostrEvent>): NostrEvent[] {
 interface Connection {
   url: string
   relay: Relay
-  challenge: string | null
   challengeWaiters: Set<(challenge: string) => void>
   authing: Promise<boolean> | null
   slots: Slot[]
@@ -235,7 +241,6 @@ export function createRelayClient(options: RelayClientOptions = {}): RelayClient
     const conn: Connection = {
       url,
       relay,
-      challenge: null,
       challengeWaiters: new Set(),
       authing: null,
       slots: [],
@@ -244,14 +249,11 @@ export function createRelayClient(options: RelayClientOptions = {}): RelayClient
       users: 0,
       idleTimer: null,
     }
+    // nostr-core keeps the latest challenge in relay.challenge and forgets it with the
+    // connection; the waiters are those who asked before it arrived.
     relay.onauth = (challenge) => {
-      conn.challenge = challenge
       for (const waiter of conn.challengeWaiters) waiter(challenge)
       conn.challengeWaiters.clear()
-    }
-    // A new connection gets a new challenge; the old one is worthless.
-    relay.ondisconnect = () => {
-      conn.challenge = null
     }
     // nostr-core replays open REQs after a reconnect; a relay that wants AUTH again gets it.
     relay.onreconnect = () => {
@@ -288,7 +290,7 @@ export function createRelayClient(options: RelayClientOptions = {}): RelayClient
   // --- NIP-42 --------------------------------------------------------------------------------
 
   function waitForChallenge(conn: Connection): Promise<string | null> {
-    if (conn.challenge) return Promise.resolve(conn.challenge)
+    if (conn.relay.challenge) return Promise.resolve(conn.relay.challenge)
     return new Promise((resolve) => {
       const timer = unrefTimer(setTimeout(() => {
         conn.challengeWaiters.delete(waiter)
