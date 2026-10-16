@@ -13,9 +13,17 @@
 //   in registration order; with none registered the place shows nothing at all, so the guest
 //   path looks exactly as before. A piece that throws or fails to load is left out.
 //     "result.actions"  On the result of a finished game, below the result and above its
-//                       buttons. Gets the finished game ({ match: FinishedMatch }). One row each
-//                       (a button or a one-line card, about 44 pt): the result is one fixed
-//                       screen, and on a phone in landscape there is room for about one row.
+//                       buttons. Gets the finished game and where the piece stands
+//                       ({ match: FinishedMatch, placement }). One row each (a button or a
+//                       one-line card, at most 44 pt, one element), or nothing when there is
+//                       nothing to show for this game: the result is one fixed screen. On a
+//                       phone in landscape (heights up to 500 pt, Tailwind's `xshort`) it has
+//                       no row to spare: a single piece sits in the free middle of its top bar
+//                       as a bar button (placement "bar": no border or background, text in the
+//                       primary colour, one short line that shrinks to fit,
+//                       components/fit-text.tsx). Two or more pieces become one button with
+//                       their count there, which opens a sheet with the pieces as their rows
+//                       (placement "row") and closes once one of them is tapped.
 //     "setup.extras"    At the end of game setup's options, before Start. Gets the game as it
 //                       would start now, plus the area's own value and onChange. The value is
 //                       saved with the started game as config.extras[id] (JSON only). Rematch and
@@ -36,6 +44,17 @@
 //                       "Gratulieren". Gets { pubkey, name } (the name as that profile shows it).
 //     "profile.advanced" In Profil › Erweitert, below the technical identity: diagnostics.
 //                        Gets { pubkey }.
+//     "game.attachments" With the running game, from its first dart to its result: pieces that add
+//                       nothing to the screen itself, only sheets and dialogs they open (from
+//                       their game menu item, say) and effects that follow the game (sending it
+//                       to spectators). Gets { match, close }: the game as saved, and a way to
+//                       leave it for good without keeping it here (it went on on another device).
+//     "play.rows"       On the Play tab, between the last game's card and the kinds of game: a
+//                       game that goes on elsewhere and still concerns this device (a seat at a
+//                       board). No props. One Group of rows, or nothing at all; the practice
+//                       board above gives way to it. Nothing here may slow the tab down: read
+//                       the device's database once, and load the rest only when there is
+//                       something to show.
 // - Game menu items: entries at the end of the running game's options menu (the "…" button), each
 //   { id, label, icon?, onSelect }. onSelect gets the running game; the menu closes first.
 //   Nothing else on the game screen can be changed from outside.
@@ -76,6 +95,9 @@ export interface ShellNavigator {
   // Opens game setup for X01, Cricket or Around the Clock on top of everything. Back in setup,
   // and leaving or finishing the game, return to the screen it was opened from.
   openSetup(type: "x01" | "cricket" | "clock"): void
+  // Goes on with a game that arrived from another device, on the game screen. It replaces the
+  // game kept here (a paused one): ask first.
+  resumeMatch(match: SavedMatch): void
 }
 
 export interface ScreenProps {
@@ -109,6 +131,7 @@ export const SCREENS = {
   tournamentView: "tournament.view",
   liveWatch: "live.watch",
   liveBoard: "live.board",
+  liveHandoff: "live.handoff",
 } as const
 
 export type ShellAction =
@@ -142,6 +165,7 @@ export const LINK_ROUTES: Record<LinkKind, { tab: TabId; screen: string } | null
   tournament: { tab: "tournaments", screen: SCREENS.tournamentView },
   pair: { tab: "profile", screen: SCREENS.devicesPair },
   board: { tab: "play", screen: SCREENS.liveBoard },
+  handoff: { tab: "play", screen: SCREENS.liveHandoff },
   "signer-return": null,
 }
 
@@ -265,7 +289,9 @@ export interface SetupPlayersProps {
 }
 
 export interface SlotListProps {
-  "result.actions": { match: FinishedMatch }
+  "result.actions": { match: FinishedMatch; placement: "row" | "bar" }
+  "game.attachments": { match: SavedMatch; close: () => void }
+  "play.rows": Record<string, never>
   "setup.extras": SetupExtraProps
   "setup.players": SetupPlayersProps
   "profile.rows": Record<string, never>
@@ -281,6 +307,8 @@ export interface SlotItem<K extends SlotListId> {
 
 const slotLists: { [K in SlotListId]: Map<string, ComponentType<SlotListProps[K]>> } = {
   "result.actions": new Map(),
+  "game.attachments": new Map(),
+  "play.rows": new Map(),
   "setup.extras": new Map(),
   "setup.players": new Map(),
   "profile.rows": new Map(),

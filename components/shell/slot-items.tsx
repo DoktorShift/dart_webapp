@@ -1,6 +1,6 @@
 "use client"
 
-import { Component, Suspense, type ReactNode } from "react"
+import { Component, Suspense, type ReactNode, type Ref } from "react"
 import { useRegistryVersion } from "@/components/nav/use-registry"
 import { getSlotItems, type SlotListId, type SlotListProps } from "@/lib/shell/registry"
 
@@ -19,16 +19,19 @@ class Fenced extends Component<{ children: ReactNode }, { failed: boolean }> {
 // What areas registered for a slot list (lib/shell/registry.ts), in registration order, inside
 // a wrapper with `className`. Renders nothing, not even the wrapper, while nothing is registered.
 // Without className the pieces go straight into the parent, so rows in a Group get its
-// separators, and a piece that renders nothing leaves no trace.
+// separators, and a piece that renders nothing leaves no trace. `ref` is the wrapper: its
+// children are the pieces that show something for this game.
 export function SlotItems<K extends SlotListId>({
   list,
   props,
   className,
+  ref,
 }: {
   list: K
   // The props for the piece with this id.
   props: (id: string) => SlotListProps[K]
   className?: string
+  ref?: Ref<HTMLDivElement>
 }) {
   useRegistryVersion()
   const items = getSlotItems(list)
@@ -40,5 +43,5 @@ export function SlotItems<K extends SlotListId>({
       </Suspense>
     </Fenced>
   ))
-  return className === undefined ? pieces : <div className={className}>{pieces}</div>
+  return className === undefined ? pieces : <div ref={ref} className={className}>{pieces}</div>
 }

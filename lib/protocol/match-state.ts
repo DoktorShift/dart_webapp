@@ -9,7 +9,8 @@ import { decodeThrows } from "./throws.ts"
 // Match state from its records (docs/protocol/families/session-authorization.md, match-live.md,
 // match-result.md): who may write now, the best live snapshot, the current result and the
 // confirmations that still count. Handover makes earlier sessions worthless from that point;
-// a corrected result drops the confirmations of the one it replaces (A13).
+// a corrected result drops the confirmations of the one it replaces (A13). Who gives a seat's
+// verdict is the founding's seat, or the newest match.seat for it before the verdict.
 
 export interface MatchSession {
   sv: number
@@ -29,13 +30,27 @@ export interface MatchResultEntry {
   status: "finished" | "abandoned" | "void"
   winner: number | null
   legs: number[]
+  finishedAt: number
+  // The throw log, inline or as the head of its pieces in `logs`.
+  throws?: string
+  log?: { head: string; total: number; bytes: number }
   replaces?: string
+}
+
+// Who may give a seat's verdict: the profile named at the founding, or the key the authority
+// connected later (a profile, or a guest's key for this match).
+export interface SeatHolder {
+  pubkey: string
+  profile: boolean
 }
 
 export interface MatchStateP {
   id: string
   authority: string
   agreement: Agreement
+  // Per seat, as of the end of the replay, and since when (the founding or its match.seat): a
+  // verdict is dated after both it and the result it names.
+  seats: ((SeatHolder & { since: number }) | null)[]
   sessions: MatchSession[]
   current: MatchSession
   live: { event: string; sv: number; n: number; at: number; content: BlueLineRecord<"match.live">["content"] } | null
@@ -69,6 +84,7 @@ export function reduceMatch(events: readonly unknown[], matchId: string, opts: M
     id: matchId,
     authority: founding.pubkey,
     agreement: founding.content.agreement,
+    seats: founding.content.agreement.seats.map((seat) => (seat.pubkey ? { pubkey: seat.pubkey, profile: true, since: founding.created_at } : null)),
     sessions: [first],
     current: first,
     live: null,
@@ -191,6 +207,9 @@ function apply(s: MatchStateP, r: AnyRecord, authorities: string[], verdicts: Bl
         status: c.status,
         winner: c.winner,
         legs: c.legs,
+        finishedAt: c.finishedAt,
+        ...(c.throws !== undefined ? { throws: c.throws } : {}),
+        ...(c.log ? { log: c.log } : {}),
         ...(c.replaces ? { replaces: c.replaces } : {}),
       }
       s.results.push(entry)
@@ -205,10 +224,17 @@ function apply(s: MatchStateP, r: AnyRecord, authorities: string[], verdicts: Bl
       return null
     }
 
+    case "match.seat": {
+      if (!isAuthority) return ["not_authorized", "only the match authority connects players"]
+      const c = r.content
+      if (c.seat >= s.seats.length) return ["invalid_content", "no such seat"]
+      s.seats[c.seat] = c.player && { ...c.player, since: r.created_at }
+      return null
+    }
+
     case "match.confirm": {
       const c = r.content
-      const seat = s.agreement.seats[c.seat]
-      if (!seat || seat.pubkey !== r.pubkey) return ["not_a_player", "only the player of that seat confirms"]
+      if (s.seats[c.seat]?.pubkey !== r.pubkey) return ["not_a_player", "only the player of that seat confirms"]
       if (!s.results.some((x) => x.event === c.result)) return ["result_unknown", "no such result"]
       verdicts.push(r)
       return null

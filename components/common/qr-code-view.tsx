@@ -14,6 +14,7 @@ export function QRCodeView({
   caption,
   label,
   share,
+  maxSize = "70dvh",
   className,
 }: {
   // What the code contains, usually an app link.
@@ -24,6 +25,9 @@ export function QRCodeView({
   label?: string
   // Show share and copy actions for this link (often the same as `value`).
   share?: { url: string; title?: string; text?: string }
+  // How large the code may grow (a CSS length), on top of its 18rem: less where buttons below
+  // it must stay in view, as in a sheet.
+  maxSize?: string
   className?: string
 }) {
   const t = useT()
@@ -53,7 +57,7 @@ export function QRCodeView({
 
   return (
     <figure className={cn("flex flex-col items-center", className)}>
-      <div className="aspect-square w-full max-w-[min(18rem,70dvh)] rounded-3xl bg-white p-3 shadow-sm ring-1 ring-black/5">
+      <div style={{ maxWidth: `min(18rem, ${maxSize})` }} className="aspect-square w-full rounded-3xl bg-white p-3 shadow-sm ring-1 ring-black/5">
         {ready ? (
           <svg role="img" aria-label={label ?? t.shell.qr.label} viewBox={`-4 -4 ${box} ${box}`} className="h-full w-full" shapeRendering="crispEdges">
             <path d={qr.path} fill="#020817" />

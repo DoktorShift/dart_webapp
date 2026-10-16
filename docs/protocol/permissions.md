@@ -58,6 +58,7 @@ Ein Turnier zählt als Turnier eines Clubs (`club.verified`), wenn die gründend
 | Handlung | Autorität | Sitzungsschlüssel (Schreiber) | Spieler (Platz mit Profil) | Zuschauer |
 | --- | --- | --- | --- | --- |
 | Match gründen, Schreiber wechseln (`match.session`) | ✓ | – | – | – |
+| Handy eines Spielers mit seinem Platz verbinden oder den Platz freigeben (`match.seat`) | ✓ | – | – | – |
 | Live-Stand (`match.live`) | – | ✓ aktuelle Sitzung, im Fenster | – | lesen (privat: mit Link) |
 | Ergebnis, Korrektur, Aufhebung (`match.result`) | ✓ | ✓ nur letzte Sitzung | – | lesen |
 | Protokollstücke (`match.log`) | ✓ | ✓ | – | lesen |

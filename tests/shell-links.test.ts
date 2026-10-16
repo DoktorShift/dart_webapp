@@ -14,6 +14,7 @@ test("every link kind is read from the page address", () => {
   assert.deepEqual(parseHash("#tournament=t1"), { kind: "tournament", payload: "t1" })
   assert.deepEqual(parseHash("#pair=k.s.1700000000.r"), { kind: "pair", payload: "k.s.1700000000.r" })
   assert.deepEqual(parseHash("#board=b1"), { kind: "board", payload: "b1" })
+  assert.deepEqual(parseHash("#handoff=H1.x"), { kind: "handoff", payload: "H1.x" })
 })
 
 test("the payload is everything after the first '=' and stays as it is", () => {

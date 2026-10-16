@@ -5,6 +5,7 @@ import { Dartboard, GAME_HIGHLIGHTS } from "@/components/dartboard"
 import { HeroBoard } from "@/components/hero-board"
 import { FitText } from "@/components/fit-text"
 import { useT } from "@/components/i18n-provider"
+import { SlotItems } from "@/components/shell/slot-items"
 import { GAME_TYPES } from "@/lib/game/rules"
 import type { GameType } from "@/lib/game/types"
 import { SITE } from "@/lib/site"
@@ -107,6 +108,9 @@ export function PlayScreen({ onSelect, resume, onResume, onDiscardResume, again,
           ) : (
             again && <AgainCard again={again} onPlay={onPlayAgain} onChange={onChangeAgain} />
           )}
+
+          {/* Games that go on elsewhere and concern this device (lib/shell/registry.ts "play.rows"). */}
+          <SlotItems list="play.rows" props={() => ({})} className="contents" />
 
           <section aria-labelledby="new-game">
             <h2 id="new-game" className="sr-only">

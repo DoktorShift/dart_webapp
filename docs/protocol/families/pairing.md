@@ -22,6 +22,7 @@ Alle Links zeigen auf `/` und tragen alles im Fragment (`#…`), das Browser nie
 | --- | --- | --- |
 | `#pair=` | `P1.<einmal-pubkey>.<sitzungs-id>.<ablauf>.<relays>` | Kopplung (dieses Dokument) |
 | `#board=` | `B1.<einmal-pubkey>.<sitzungs-id>.<ablauf>.<relays>` | Platz an einem Board ([board-join.md](board-join.md)) |
+| `#handoff=` | `H1.<einmal-pubkey>.<sitzungs-id>.<ablauf>.<relays>` | Laufendes Spiel auf einem anderen Gerät fortsetzen ([session-authorization.md](session-authorization.md#schreiberwechsel-auf-ein-anderes-gerät)) |
 | `#watch=` | `W1.<match-id>.<spielschlüssel oder leer>.<relays>` | Zuschauen; der Spielschlüssel öffnet private Spiele |
 | `#club=` | `C1.<club-id>.<einladungs-event-id>.<token>.<relays>` (Einladungsteile dürfen fehlen) | Club ansehen oder einladen ([club.md](club.md#einladungen-und-beitritt)) |
 | `#tournament=` | `T1.<turnier-id>.<relays>` | Anmeldung oder Zuschauen |

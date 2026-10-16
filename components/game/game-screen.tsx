@@ -10,6 +10,7 @@ import { CalloutFlash } from "@/components/game/callout"
 import { MatchResult } from "@/components/game/match-result"
 import { CorrectionSheet, HistorySheet, LeaveSheet, OptionsSheet, ThrowerSheet } from "@/components/game/sheets"
 import { useMatchController } from "@/components/game/use-match-controller"
+import { SlotItems } from "@/components/shell/slot-items"
 import { FitText } from "@/components/fit-text"
 import { useT } from "@/components/i18n-provider"
 import { replay, visitBySeq } from "@/lib/game/engine"
@@ -253,6 +254,9 @@ export function GameScreen({
       />
 
       <CorrectionSheet plan={game.plan} state={state} onChoose={game.applyPlan} onCancel={game.dismissPlan} />
+
+      {/* Areas that follow the game add only sheets and dialogs (lib/shell/registry.ts). */}
+      <SlotItems list="game.attachments" props={() => ({ match, close: onHome })} className="contents" />
     </div>
   )
 }

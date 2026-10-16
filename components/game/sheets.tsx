@@ -164,8 +164,12 @@ export function CorrectionSheet({
 
 type OptionsView = "main" | "leaving" | "restart"
 
+const card = "divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card"
+
 // The game's settings while it runs: how scores are entered (X01), sounds, the caller. Also
-// restarting the leg and a player leaving, which are rare enough to sit one level down.
+// restarting the leg and a player leaving, which are rare enough to sit one level down, and
+// what areas add for other devices (lib/shell/registry.ts). The cards scroll on small phones;
+// the tip and Fertig stay put.
 export function OptionsSheet({
   open,
   onOpenChange,
@@ -205,51 +209,60 @@ export function OptionsSheet({
     <Sheet open={open} onOpenChange={change} title={title} description={description}>
       {view === "main" && (
         <>
-          <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
-            {state.config.type === "x01" && (
-              <ChoiceRow
-                title={t.game.entry}
-                options={[
-                  { value: "dart", label: t.game.perDart },
-                  // Totals start with a new visit.
-                  { value: "visit", label: t.game.perVisit, disabled: state.visitDarts.length > 0 },
-                ]}
-                value={settings.entryMode}
-                onChange={(entryMode) => onSettingsChange({ ...settings, entryMode })}
+          <div className="min-h-0 overflow-y-auto overscroll-contain">
+            <div className={card}>
+              {state.config.type === "x01" && (
+                <ChoiceRow
+                  title={t.game.entry}
+                  options={[
+                    { value: "dart", label: t.game.perDart },
+                    // Totals start with a new visit.
+                    { value: "visit", label: t.game.perVisit, disabled: state.visitDarts.length > 0 },
+                  ]}
+                  value={settings.entryMode}
+                  onChange={(entryMode) => onSettingsChange({ ...settings, entryMode })}
+                />
+              )}
+              <GamePreferences
+                settings={settings}
+                onSettingsChange={onSettingsChange}
+                showAskAtDouble={state.config.type === "x01" && state.config.doubleOut && settings.entryMode === "visit"}
               />
-            )}
-            <GamePreferences
-              settings={settings}
-              onSettingsChange={onSettingsChange}
-              showAskAtDouble={state.config.type === "x01" && state.config.doubleOut && settings.entryMode === "visit"}
-            />
-          </div>
-          <div className="mt-3 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
-            <button type="button" onClick={() => setView("restart")} className={cn(rowButton, "text-primary")}>
-              {texts.restartLeg}
-            </button>
-            {state.active.filter(Boolean).length > 1 && (
-              <button type="button" onClick={() => setView("leaving")} className={cn(rowButton, "text-primary")}>
-                {texts.playerLeaves}
+            </div>
+            <div className={cn(card, "mt-3")}>
+              <button type="button" onClick={() => setView("restart")} className={cn(rowButton, "text-primary")}>
+                {texts.restartLeg}
               </button>
+              {state.active.filter(Boolean).length > 1 && (
+                <button type="button" onClick={() => setView("leaving")} className={cn(rowButton, "text-primary")}>
+                  {texts.playerLeaves}
+                </button>
+              )}
+            </div>
+            {extraItems.length > 0 && (
+              <section className="mt-4" aria-label={texts.devices}>
+                <h3 className="mb-1.5 px-1 text-[0.8125rem] text-muted-foreground">{texts.devices}</h3>
+                <div className={card}>
+                  {extraItems.map(({ id, label, icon: Icon, onSelect }) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => {
+                        change(false)
+                        onSelect({ match })
+                      }}
+                      className={cn(rowButton, "gap-3 text-primary")}
+                    >
+                      {Icon && <Icon className="h-5 w-5 shrink-0" aria-hidden />}
+                      {label(t)}
+                    </button>
+                  ))}
+                </div>
+              </section>
             )}
-            {extraItems.map(({ id, label, icon: Icon, onSelect }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => {
-                  change(false)
-                  onSelect({ match })
-                }}
-                className={cn(rowButton, "gap-3 text-primary")}
-              >
-                {Icon && <Icon className="h-5 w-5 shrink-0" aria-hidden />}
-                {label(t)}
-              </button>
-            ))}
           </div>
-          <p className="mt-3 px-1 text-[0.8125rem] text-muted-foreground">{texts.tip}</p>
-          <Button variant="ghost" onClick={() => change(false)} className={cn(secondary, "mt-2 w-full")}>
+          <p className="mt-3 shrink-0 px-1 text-[0.8125rem] text-muted-foreground">{texts.tip}</p>
+          <Button variant="ghost" onClick={() => change(false)} className={cn(secondary, "mt-2 w-full shrink-0")}>
             {t.common.done}
           </Button>
         </>
@@ -274,7 +287,7 @@ export function OptionsSheet({
 
       {view === "leaving" && (
         <Actions>
-          <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
+          <div className={card}>
             {players.map((p, i) =>
               state.active[i] ? (
                 <button

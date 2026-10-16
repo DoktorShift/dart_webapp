@@ -13,3 +13,4 @@
 
 import "@/components/shell/builtin-screens"
 import "@/components/profile/register"
+import "@/components/live/register"

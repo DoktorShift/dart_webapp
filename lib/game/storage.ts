@@ -68,16 +68,13 @@ function validMatch(value: unknown): value is SavedMatch {
   return isObject(value) && typeof value.id === "string" && Array.isArray(value.throws) && validConfig(value.config)
 }
 
-export function loadMatch(): SavedMatch | null {
-  const value = read(MATCH_KEY)
-  if (!validMatch(value)) {
-    if (value !== null) saveMatch(null)
-    return null
-  }
+// A game as stored here or received from another device, or null if it isn't one this version
+// can replay.
+export function parseSavedMatch(value: unknown): SavedMatch | null {
+  if (!validMatch(value)) return null
   try {
     replay(value.config, value.throws)
   } catch {
-    saveMatch(null)
     return null
   }
   return {
@@ -85,6 +82,13 @@ export function loadMatch(): SavedMatch | null {
     acknowledgedLegs: typeof value.acknowledgedLegs === "number" ? value.acknowledgedLegs : 0,
     status: value.status === "paused" ? "paused" : "playing",
   }
+}
+
+export function loadMatch(): SavedMatch | null {
+  const value = read(MATCH_KEY)
+  const match = parseSavedMatch(value)
+  if (!match && value !== null) saveMatch(null)
+  return match
 }
 
 export const saveMatch = (match: SavedMatch | null) => write(MATCH_KEY, match)

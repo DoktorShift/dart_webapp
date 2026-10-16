@@ -292,6 +292,8 @@ export const en: Messages = {
     imageFooter: "Scored with BlueLine Darts",
     allStats: "Stats",
     allStatsDescription: "Every number from this game.",
+    more: "More about the result",
+    moreLabel: (count) => `More about the result, ${count} items`,
   },
 
   sheets: {
@@ -337,6 +339,7 @@ export const en: Messages = {
       restartLeg: "Restart this leg",
       playerLeaves: "A player has to leave",
       restartButton: "Restart leg",
+      devices: "With other devices",
       tip: "Wrong dart? Tap it to fix it. Wrong player? Tap their score.",
     },
   },

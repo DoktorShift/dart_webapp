@@ -20,10 +20,11 @@ import { getEventHash, nip44 } from "nostr-core"
 import { correctDart, replay, visitBySeq } from "../../lib/game/engine.ts"
 import type { Throw } from "../../lib/game/types.ts"
 import { badgeAwardTemplate, badgeD, badgeDefinitionTemplate } from "../../lib/protocol/badges.ts"
-import { BOARD_MESSAGES, boardPlaintext, boardTemplate } from "../../lib/protocol/board.ts"
+import { BOARD_MESSAGES, boardPlaintext, boardTemplate, claimTemplate } from "../../lib/protocol/board.ts"
 import { chunkData } from "../../lib/protocol/chunks.ts"
 import type { InvitePreview } from "../../lib/protocol/invite.ts"
 import { invitePreview, previewKey } from "../../lib/protocol/invite.ts"
+import { HANDOFF_MESSAGES, handoffPlaintext, handoffTemplate } from "../../lib/protocol/handoff.ts"
 import { encodeLinkPayload } from "../../lib/protocol/links.ts"
 import { liveContent } from "../../lib/protocol/live.ts"
 import { ENGINE_VERSION } from "../../lib/protocol/match.ts"
@@ -1797,6 +1798,38 @@ function matchCases() {
     )
   }
   {
+    const c = newCase(
+      "late-seat",
+      "Players connect their phones after the founding: the authority gives each its seat with match.seat, and from then on that key gives the seat's verdict. A verdict before the seat, a seat given by the session key or for a seat that doesn't exist, and a verdict after the seat was freed don't count.",
+    )
+    const seats = [{ alias: "Mia" }, { alias: "Jonas" }]
+    const found = c.put("found", "host", "match.session", session(1, "session1", 0, undefined, { agreement: agreement({ seats }) }), { at: 0 })
+    c.setRoot("found")
+    const root = found.id
+    c.add("result", result("session1", root, 1, 100, { auth: found }).event)
+    c.put("p1-too-early", "p1", "match.confirm", { result: c.id("result"), verdict: "confirm", seat: 0 }, { at: 110, root })
+    c.put("seat-p1", "host", "match.seat", { seat: 0, player: { pubkey: pub("p1"), profile: true } }, { at: 120, root })
+    c.put("seat-by-session", "session1", "match.seat", { seat: 1, player: { pubkey: pub("mallory"), profile: true } }, { at: 121, root })
+    c.put("seat-missing", "host", "match.seat", { seat: 5, player: { pubkey: pub("mallory"), profile: false } }, { at: 122, root })
+    c.put("p1-confirms", "p1", "match.confirm", { result: c.id("result"), verdict: "confirm", seat: 0 }, { at: 130, root })
+    c.put("seat-guest", "host", "match.seat", { seat: 1, player: { pubkey: pub("guest1"), profile: false } }, { at: 140, root })
+    c.put("guest-disputes", "guest1", "match.confirm", { result: c.id("result"), verdict: "dispute", seat: 1 }, { at: 150, root })
+    c.put("seat-freed", "host", "match.seat", { seat: 1, player: null }, { at: 160, root })
+    c.put("guest-confirms", "guest1", "match.confirm", { result: c.id("result"), verdict: "confirm", seat: 1 }, { at: 170, root })
+    cases.push(
+      c.done({
+        applied: ["found", "result", "seat-p1", "p1-confirms", "seat-guest", "guest-disputes", "seat-freed"],
+        rejected: [
+          ["p1-too-early", "not_a_player"],
+          ["seat-by-session", "not_authorized"],
+          ["seat-missing", "invalid_content"],
+          ["guest-confirms", "not_a_player"],
+        ],
+        state: { result: "result", confirmations: { 0: "confirm", 1: "dispute" }, seats: [{ key: "p1", profile: true }, null] },
+      }),
+    )
+  }
+  {
     const c = newCase("public-stake", "A stake is only written into a private, encrypted match; a public founding with a stake is invalid, so no match exists.")
     // buildRecord refuses to write this; a careless or hostile client might.
     const template = buildRecord("match.session", session(1, "session1", 0), { created_at: at(0) })
@@ -1980,17 +2013,44 @@ function boardVectors() {
     const plaintext = JSON.stringify(message)
     return { event: sign(from, boardTemplate({ recipient: pub("board1"), ciphertext: nip44To(from, "board1", plaintext), created_at: at(seconds) })), plaintext }
   }
-  const seatPlain = boardPlaintext({ t: "seat", sid, seat: 0 })
+  const reply = (to: string, message: Parameters<typeof boardPlaintext>[0], seconds: number) => {
+    const plaintext = boardPlaintext(message)
+    return { event: sign("board1", boardTemplate({ recipient: pub(to), ciphertext: nip44To("board1", to, plaintext), created_at: at(seconds) })), plaintext }
+  }
+  // The profile p2 claims the phone key phone2 at this board; the claim travels inside the join.
+  const claim = sign("p2", claimTemplate({ board: pub("board1"), sid, key: pub("phone2"), created_at: at(585) }))
+  const handoff = (from: string, to: string, message: Parameters<typeof handoffPlaintext>[0] | Record<string, unknown>, seconds: number) => {
+    const plaintext = JSON.stringify(message)
+    return { event: sign(from, handoffTemplate({ recipient: pub(to), ciphertext: nip44To(from, to, plaintext), created_at: at(seconds) })), plaintext }
+  }
+  const handoffSid = hex16("handoff-session")
+  const game = { match: hex32("handoff-match"), note: "lib/live defines the package" }
   return {
     now,
     sid,
     expires: now + 1800,
     steps: {
+      look: join("phone2", { t: "look", sid }, 580),
+      table: reply("phone2", { t: "table", sid, match: hex32("board-match"), rules: { ...rules501, legsToWin: 1 }, seats: [{ alias: "Mia", taken: true }, { alias: "Jonas", taken: false }] }, 581),
       join: join("p1", { t: "join", sid, seat: 0, alias: "Mia", confirm: true }, 590),
-      seat: { event: sign("board1", boardTemplate({ recipient: pub("p1"), ciphertext: nip44To("board1", "p1", seatPlain), created_at: at(591) })), plaintext: seatPlain },
+      seat: reply("p1", { t: "seat", sid, seat: 0 }, 591),
       joinTaken: join("p2", { t: "join", sid, seat: 0, confirm: false }, 592),
       smuggled: join("p2", { t: "join", sid, seat: 1, confirm: false, nsec: "nsec1…" }, 593),
       packageToBoard: join("p2", { t: "package", sid, data: { key: "…" } }, 594),
+      claimJoin: join("phone2", { t: "join", sid, seat: 1, confirm: true, profile: claim }, 595),
+      claimForOtherPhone: join("phone3", { t: "join", sid, seat: 1, confirm: true, profile: claim }, 596),
+      seatWithKey: reply("phone2", { t: "seat", sid, seat: 1, match: hex32("board-match"), key: sec("matchkey") }, 597),
+      handoffGameToBoard: join("board2", { t: "game", sid, data: game }, 598),
+      leaveWithClaim: join("phone2", { t: "leave", sid, profile: claim }, 599),
+    },
+    handoff: {
+      sid: handoffSid,
+      link: encodeLinkPayload({ type: "handoff", pubkey: pub("board1"), sid: handoffSid, expires: now + 300, relays: ["wss://nos.lol"] }),
+      checkCode: pairingCheckCode(pub("board2"), pub("board1"), handoffSid),
+      take: handoff("board2", "board1", { t: "take", sid: handoffSid }, 610),
+      game: handoff("board1", "board2", { t: "game", sid: handoffSid, data: game }, 611),
+      done: handoff("board2", "board1", { t: "done", sid: handoffSid, hash: shaHex(JSON.stringify(game)) }, 612),
+      joinAsHandoff: handoff("board2", "board1", { t: "join", sid: handoffSid, seat: 0, confirm: true }, 613),
     },
   }
 }
@@ -2114,7 +2174,7 @@ export function buildVectors(): Record<string, unknown> {
     "payment-request": family("payment-request", "Unwrapped payment request rumors checked by checkPaymentRequest (lib/protocol/payment.ts).", () => ({ cases: paymentCases() })),
     badges: family("badges", "NIP-58 definitions and awards checked by checkBadgeAward (lib/protocol/badges.ts).", badgeCases),
     pairing: family("pairing", "Device pairing: code, check code, links and the message sequence (lib/protocol/pairing.ts).", pairingVectors),
-    "board-join": family("board-join", "Joining a shared board (lib/protocol/board.ts).", boardVectors),
+    "board-join": family("board-join", "Joining a shared board (lib/protocol/board.ts) and handing a match to another device (lib/protocol/handoff.ts).", boardVectors),
     "private-records": family("private-records", "Private record slots, data key slot and envelope (lib/protocol/private.ts).", privateVectors),
     invite: family(
       "invite",
@@ -2143,7 +2203,10 @@ export function buildSchemas(): Record<string, JsonSchema> {
   for (const [family, defs] of Object.entries(families)) out[family] = doc(`BlueLine ${family} record content`, defs)
   const messages = (m: Record<string, Schema<unknown>>) => Object.fromEntries(Object.entries(m).map(([k, s]) => [k, s.json()]))
   out.pairing = doc("BlueLine pairing messages (decrypted content of kind 21180)", messages(PAIRING_MESSAGES))
-  out["board-join"] = doc("BlueLine board join messages (decrypted content of kind 21180)", messages(BOARD_MESSAGES))
+  out["board-join"] = doc("BlueLine board join and handoff messages (decrypted content of kind 21180, labels board and handoff)", {
+    ...messages(BOARD_MESSAGES),
+    ...Object.fromEntries(Object.entries(messages(HANDOFF_MESSAGES)).map(([k, v]) => [`handoff.${k}`, v])),
+  })
   out["private-records"] = doc("BlueLine private record plaintexts (kind 30078)", { record: privateRecord.json(), part: recordPart.json(), dataKey: dataKeyRecord.json() })
   return out
 }

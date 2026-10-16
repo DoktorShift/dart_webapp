@@ -116,6 +116,8 @@ Anmeldeschluss, Kapazität und Warteliste entscheidet der Veranstalter, nicht de
 
 Eine Übergabe macht die alte Sitzung ab dann wertlos; Ergebnisse zählen nur von der letzten Sitzung, auch gegen Rückdatierung (Vektor `match` › `session-handover`). Ein Widerruf wirkt erst, wenn andere Geräte ihn lesen (Entscheidung 0001 Punkt 11).
 
+Zählt ein Gerät offline weiter, nachdem es das Spiel übergeben hat (oder die Übergabe dort nie ankam), entstehen zwei Zweige desselben Spiels. Gültig ist der Zweig der höchsten Sitzung; das alte Gerät erkennt die neuere Sitzung beim nächsten Kontakt, hört auf zu schreiben und zeigt beide Stände zur Klärung ([session-authorization.md](families/session-authorization.md#schreiberwechsel-auf-ein-anderes-gerät)).
+
 ## Ablehnungsgründe
 
 Unter „Erweitert“ sichtbar, nie in normalen Ansichten.

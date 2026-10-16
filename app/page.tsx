@@ -168,8 +168,13 @@ export default function DartScorer() {
       pop: () => dispatchNav({ type: "pop" }),
       popToRoot: (tab) => dispatchNav({ type: "popToRoot", tab }),
       openSetup: (type) => openSetup(type),
+      resumeMatch: (next) => {
+        setEnded(null)
+        setMatch({ ...next, status: "playing" })
+        go("game")
+      },
     }),
-    [openSetup, showTab],
+    [go, openSetup, showTab],
   )
 
   // An app link (/#club=…) opens its screen in its tab. Setup is left; a running game is kept

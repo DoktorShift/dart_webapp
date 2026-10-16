@@ -3,7 +3,7 @@ import type { RecordSpec } from "./common.ts"
 import { embeddedEvent, matchRules, pubkey, seat, shortText, stake } from "./common.ts"
 import { KIND_RECORD } from "./kinds.ts"
 import type { Infer } from "./schema.ts"
-import { arr, hex, int, nullable, obj, oneOf, opt, refine, str, time } from "./schema.ts"
+import { arr, bool, hex, int, nullable, obj, oneOf, opt, refine, str, time } from "./schema.ts"
 import { slot } from "./tournament.ts"
 
 // Match records (docs/protocol/families/session-authorization.md, match-result.md). The match
@@ -11,7 +11,9 @@ import { slot } from "./tournament.ts"
 // host's profile, an organizer-authorized board, or the device key of a guests-only board.
 // That record names the writer: a session key that signs snapshots and the result, so an
 // external signer is not asked for every dart. A handover is a new match.session with sv + 1
-// from the same authority; the old session key is then worthless.
+// from the same authority; the old session key is then worthless. A player who connects a phone
+// after the founding gets their seat through match.seat from the authority: from then on, that
+// key gives the seat's verdict on the result.
 
 // Version of the scoring rules in lib/game/engine.ts that results are computed with. A reader
 // only replays throw logs of engine versions it knows.
@@ -86,6 +88,21 @@ export const MATCH_TYPES = {
     encryption: "link",
     schema: obj({ set: hex(32), seq: int(0, 999), total: int(1, 1000), prev: hex(32), data: str({ min: 1, max: 20000 }) }),
     description: "One piece of a long throw log (chunks.ts)",
+  },
+  "match.seat": {
+    kind: KIND_RECORD,
+    root: "required",
+    encryption: "link",
+    schema: obj({
+      seat: int(0, 5),
+      player: nullable(
+        obj({
+          pubkey: pubkey("The key that confirms for this seat from now on"),
+          profile: bool("The player's profile; false: a key the player's phone made for this match (a guest)"),
+        }),
+      ),
+    }),
+    description: "Connects a player's phone to a seat after the founding, or frees the seat (player null)",
   },
   "match.confirm": {
     kind: KIND_RECORD,
