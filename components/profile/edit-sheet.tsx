@@ -31,29 +31,32 @@ import { submitOwn } from "@/lib/sync/publish"
 // profile (name and picture, which other apps show too). The two are kept apart on purpose: a
 // new board name never changes the public profile on the side; where both were the same, it is
 // asked (PLAN.md "Identitäten und Signer"). The public profile is looked up again when the sheet
-// opens: a change builds on the newest version, and until a version is known (or a relay has
-// said there is none) nothing public is saved (lib/profile/own-events.ts).
+// opens: a change builds on the newest version, and until a version is known (or every relay
+// has said there is none) nothing public is saved (lib/profile/own-events.ts).
 export function EditSheet({ own, open, onOpenChange }: { own: OwnProfile; open: boolean; onOpenChange: (open: boolean) => void }) {
   const t = useT()
   const tx = useAreaT(PROFILE_TEXTS)
   const e = tx.edit
   const { pubkey } = own.session
   const [boardName, setBoardName] = useState(own.player?.name ?? "")
-  const [publicName, setPublicName] = useState(own.metadata.name ?? "")
-  const [picture, setPicture] = useState(own.metadata.picture ?? "")
+  // Until typed into, the public fields show the profile as it is now: a version the lookup
+  // brings while the sheet is open shows up in them.
+  const [typedName, setTypedName] = useState<string | null>(null)
+  const [typedPicture, setTypedPicture] = useState<string | null>(null)
+  const publicName = typedName ?? own.metadata.name ?? ""
+  const picture = typedPicture ?? own.metadata.picture ?? ""
   const [asking, setAsking] = useState(false)
   const [busy, setBusy] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)
 
   useEffect(() => {
-    void lookupOwnEvents(pubkey, { again: true })
-  }, [pubkey])
+    if (open) void lookupOwnEvents(pubkey, { again: true })
+  }, [open, pubkey])
 
   const base = own.events?.get(OWN.metadata) ?? null
-  // Without a version here, the public profile can be changed only once a relay has answered.
-  const answered = own.lookup?.answered ?? null
-  const publicState = base ? "known" : answered === null ? "loading" : answered ? "none" : "failed"
-  const publicKnown = publicState === "known" || publicState === "none"
+  // Without a version here, the public profile can be changed only once every relay has answered.
+  const publicState = base ? "known" : (own.lookup?.state ?? "asking")
+  const publicKnown = publicState === "known" || publicState === "complete"
 
   const boardChanged = seatName(boardName) !== "" && seatName(boardName) !== (own.player?.name ?? "")
   const publicChanged = publicName.trim() !== (own.metadata.name ?? "")
@@ -97,13 +100,13 @@ export function EditSheet({ own, open, onOpenChange }: { own: OwnProfile; open: 
         <form onSubmit={submit} className="flex min-h-0 flex-col overscroll-contain xshort:overflow-y-auto">
           <div className="min-h-0 overflow-y-auto overscroll-contain pb-4 xshort:shrink-0 xshort:overflow-visible">
             {/* What is known of the public profile comes first: it decides what saving does. */}
-            {publicState === "loading" && (
+            {publicState === "asking" && (
               <p role="status" className="mt-2 px-4 text-[0.9375rem] text-muted-foreground">
                 {e.loading}
               </p>
             )}
-            {publicState === "none" && <InlineStatus className="mt-2">{e.notFound}</InlineStatus>}
-            {publicState === "failed" && (
+            {publicState === "complete" && <InlineStatus className="mt-2">{e.notFound}</InlineStatus>}
+            {publicState === "incomplete" && (
               <div className="mt-2">
                 <InlineStatus tone="error">{e.notLoaded}</InlineStatus>
                 <Button variant="secondary" onClick={() => void lookupOwnEvents(pubkey, { again: true })} className="mt-2 h-11 rounded-xl px-5 text-[1.0625rem]">
@@ -122,7 +125,7 @@ export function EditSheet({ own, open, onOpenChange }: { own: OwnProfile; open: 
               enterKeyHint="next"
               hint={e.boardHint(MAX_SEAT_NAME)}
             />
-            <ProfileFields seed={pubkey} name={publicName} nameHint={e.publicHint} onName={setPublicName} picture={picture} onPicture={setPicture} />
+            <ProfileFields seed={pubkey} name={publicName} nameHint={e.publicHint} onName={setTypedName} picture={picture} onPicture={setTypedPicture} />
             <SignerConfirmation />
             {problem && (
               <InlineStatus tone="error" className="mt-4">

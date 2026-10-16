@@ -46,7 +46,7 @@ export function OwnProfileView({ own }: { own: OwnProfile }) {
         seed={session.pubkey}
         name={name}
         // No name here yet: say whether it is still being looked up, not "no name".
-        placeholder={lookup?.answered ? undefined : lookup?.answered === false ? h.nameNotLoaded : h.nameLoading}
+        placeholder={lookup?.state === "complete" ? undefined : lookup?.state === "incomplete" ? h.nameNotLoaded : h.nameLoading}
         picture={metadata.picture}
         subtitle={player && metadata.name && player.name !== metadata.name ? h.boardName(player.name) : undefined}
         slot={{ pubkey: session.pubkey, own: true }}

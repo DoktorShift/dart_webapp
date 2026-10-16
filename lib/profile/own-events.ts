@@ -91,14 +91,18 @@ export async function fetchOwnEvents(pubkey: string): Promise<FetchResult> {
 
 // ---- Looking the profile up ------------------------------------------------------------------
 
-// Whether relays were asked for the profile's events in this page load, and whether any
-// answered. A change of the profile builds on what that found (PLAN.md "Profilbearbeitung": the
-// current version is loaded before a change), so an edit never writes a profile made elsewhere
-// out of existence just because this device hasn't seen it yet.
-export interface OwnLookup {
-  // null while relays are being asked.
-  answered: boolean | null
-}
+// Whether relays were asked for the profile's events in this page load, and what came of it. A
+// change of the profile builds on what that found (PLAN.md "Profilbearbeitung": the current
+// version is loaded before a change), so an edit never writes a profile made elsewhere out of
+// existence just because this device hasn't seen it yet. Only a complete lookup says that what
+// isn't known here isn't there (decision 0002 §5: without a relay's answer, unknown, never empty).
+export type OwnLookup =
+  // Relays are being asked.
+  | { state: "asking" }
+  // Every relay asked answered.
+  | { state: "complete" }
+  // Some or all of the relays asked gave no answer; what isn't known here may be there.
+  | { state: "incomplete"; unanswered: string[] }
 
 interface Lookup {
   running: Promise<FetchResult> | null
@@ -107,6 +111,8 @@ interface Lookup {
   // What the UI sees; one object per state, so useSyncExternalStore sees no change without one.
   state: OwnLookup
 }
+
+const isComplete = (result: FetchResult) => result.answered.length > 0 && result.failed.length === 0
 
 const lookups = new Map<string, Lookup>()
 const lookupListeners = new Set<() => void>()
@@ -121,21 +127,26 @@ export function subscribeOwnLookups(listener: () => void) {
   }
 }
 
+function lookupState({ running, result }: Omit<Lookup, "state">): OwnLookup {
+  if (running || !result) return { state: "asking" }
+  return isComplete(result) ? { state: "complete" } : { state: "incomplete", unanswered: result.failed }
+}
+
 function setLookup(pubkey: string, lookup: Omit<Lookup, "state">) {
-  lookups.set(pubkey, { ...lookup, state: { answered: lookup.running ? null : (lookup.result?.answered.length ?? 0) > 0 } })
+  lookups.set(pubkey, { ...lookup, state: lookupState(lookup) })
   for (const listener of lookupListeners) listener()
 }
 
 // A profile that signs out may sign in again on this page: its lookup starts over.
 onSessionEnd(() => lookups.clear())
 
-// Asks relays for the profile's events once per page load, and again when nothing answered the
-// last time; `again` asks once more even after an answer (before a change). A lookup already
-// running is shared. A lookup that fails on this device counts as nothing answered.
+// Asks relays for the profile's events once per page load, and again while the last lookup was
+// incomplete; `again` asks once more even after a complete one (before a change). A lookup
+// already running is shared. A lookup that fails on this device counts as nothing answered.
 export function lookupOwnEvents(pubkey: string, { again = false } = {}): Promise<FetchResult> {
   const current = lookups.get(pubkey)
   if (current?.running) return current.running
-  if (current?.result && current.result.answered.length > 0 && !again) return Promise.resolve(current.result)
+  if (current?.result && isComplete(current.result) && !again) return Promise.resolve(current.result)
   const running = fetchOwnEvents(pubkey)
     .catch((): FetchResult => ({ answered: [], failed: [] }))
     .then((result) => {
@@ -155,13 +166,26 @@ export class OwnEventsError extends Error {
   }
 }
 
+// How long a change waits for a running lookup when a version is already known here: long
+// enough for a quick relay to bring a newer one, short enough that saving still feels immediate
+// (decision 0002 §1: every change takes effect at once).
+const KNOWN_BASE_WAIT_MS = 1500
+
 // The version a change of one of the profile's events (OWN.*) builds on: the newest known once
-// relays were asked. Null when relays answered and have none. Throws "unreachable" when nothing
-// is known here and no relay answered: then there is nothing to build on, and a profile that may
-// well exist elsewhere is not written over.
+// relays were asked. With a version here, a running lookup gets a moment to bring a newer one
+// (none while offline); without one, the lookup is awaited, and null means the relays have none.
+// Throws "unreachable" when nothing is known here and the lookup was incomplete: then there is
+// nothing to build on, and a profile that may well exist elsewhere is not written over.
 export async function changeBase(pubkey: string, key: string): Promise<NostrEvent | null> {
-  const { answered } = await lookupOwnEvents(pubkey)
+  const lookup = lookupOwnEvents(pubkey)
+  const known = (await ownEvents(pubkey)).get(key) ?? null
+  if (known) {
+    const offline = typeof navigator !== "undefined" && navigator.onLine === false
+    if (!offline) await Promise.race([lookup, new Promise((done) => setTimeout(done, KNOWN_BASE_WAIT_MS))])
+    return (await ownEvents(pubkey)).get(key) ?? known
+  }
+  const result = await lookup
   const base = (await ownEvents(pubkey)).get(key) ?? null
-  if (!base && answered.length === 0) throw new OwnEventsError("the profile could not be loaded from any relay")
+  if (!base && !isComplete(result)) throw new OwnEventsError("the profile could not be loaded from every relay")
   return base
 }
