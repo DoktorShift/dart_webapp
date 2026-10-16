@@ -2,13 +2,17 @@
 //
 // - Pages: network first, so a new version shows as soon as it is online; the last
 //   copy of each page is used when offline.
-// - Build assets (/_next/static, hashed names), icons and the manifest: cache first.
+// - Build assets (/_next/static, hashed names), icons and the manifest: cache first. The asset
+//   cache drops what went unused longest once it holds more than MAX_ASSETS: every use puts an
+//   asset back at the end of the line, so the files of older builds go first, never a file the
+//   app still loads.
 //
 // Bump VERSION to drop everything cached by older versions of this file.
 const VERSION = "v2"
 const SHELL_CACHE = `shell-${VERSION}`
 const ASSET_CACHE = `assets-${VERSION}`
-const MAX_ASSETS = 150
+// Well above one build's static files (about 210 with every area), so the current build always fits.
+const MAX_ASSETS = 400
 const SHELL = ["/", "/about", "/manifest.webmanifest", "/icon/192", "/icon/512", "/apple-icon"]
 
 self.addEventListener("install", (event) => {
@@ -37,7 +41,7 @@ self.addEventListener("fetch", (event) => {
   if (request.mode === "navigate") {
     event.respondWith(networkFirst(request))
   } else if (isStatic(url.pathname)) {
-    event.respondWith(cacheFirst(request))
+    event.respondWith(cacheFirst(event))
   }
 })
 
@@ -58,11 +62,18 @@ async function networkFirst(request) {
   }
 }
 
-async function cacheFirst(request) {
-  // Icons are linked with a version query (?abc123); the files themselves don't change.
-  const cached = await caches.match(request, { ignoreSearch: true })
-  if (cached) return cached
+async function cacheFirst(event) {
+  const request = event.request
   const cache = await caches.open(ASSET_CACHE)
+  // Icons are linked with a version query (?abc123); the files themselves don't change.
+  const asset = await cache.match(request, { ignoreSearch: true })
+  if (asset) {
+    // Used again: to the end of the line (a put replaces the entry and appends it).
+    event.waitUntil(cache.put(request, asset.clone()).catch(() => {}))
+    return asset
+  }
+  const precached = await caches.match(request, { ignoreSearch: true })
+  if (precached) return precached
   const response = await fetch(request)
   if (response.ok) {
     await cache.put(request, response.clone())
@@ -71,7 +82,7 @@ async function cacheFirst(request) {
   return response
 }
 
-// Old build assets pile up across deploys; keep the newest MAX_ASSETS.
+// Old build assets pile up across deploys; keep the MAX_ASSETS used last.
 async function trim(cache) {
   const keys = await cache.keys()
   await Promise.all(keys.slice(0, Math.max(0, keys.length - MAX_ASSETS)).map((key) => cache.delete(key)))
