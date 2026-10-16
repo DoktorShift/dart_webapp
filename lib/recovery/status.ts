@@ -29,12 +29,12 @@ export async function updateBackupStatus(pubkey: string, change: Partial<Omit<Ba
 }
 
 export const isSecured = (status: BackupStatus) => status.file !== null
-export const hasBackupMethod = (status: BackupStatus) => status.file !== null || status.passkey !== null
+const hasBackupMethod = (status: BackupStatus) => status.file !== null || status.passkey !== null
 
 // "Profil sichern" on the own profile shows while no method exists. Put off, it comes back
 // after 30 days or 10 more games, whichever is first (design rules, "Keys and sign-in").
-export const HINT_DAYS = 30
-export const HINT_GAMES = 10
+const HINT_DAYS = 30
+const HINT_GAMES = 10
 
 interface HintDismissal {
   pubkey: string

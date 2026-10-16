@@ -7,8 +7,8 @@ import { ListRow } from "@/components/ui/list-row"
 import { useRegistryVersion } from "@/components/nav/use-registry"
 import { SlotItems } from "@/components/shell/slot-items"
 import { useAreaT, useT } from "@/components/i18n-provider"
+import { formatDateTime } from "@/lib/i18n"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
-import { formatDateTime } from "@/components/clubs/common"
 import { answerCounts } from "@/components/clubs/date-answer"
 import { DateFormSheet, DateSheet } from "@/components/clubs/date-sheets"
 import { useClub } from "@/components/clubs/use-clubs"
@@ -43,7 +43,7 @@ export default function DatesScreen({ params }: ScreenProps) {
     <ListRow
       key={d.id}
       title={d.title}
-      subtitle={[formatDateTime(d.starts, t), d.place].filter(Boolean).join(" · ")}
+      subtitle={[formatDateTime(t, d.starts * 1000), d.place].filter(Boolean).join(" · ")}
       value={d.cancelled ? tx.dates.cancelled : tx.dates.coming(answerCounts(d).yes, answerCounts(d).maybe)}
       onClick={() => setOpen(d)}
     />

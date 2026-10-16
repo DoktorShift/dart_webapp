@@ -40,7 +40,7 @@ export { commitSeed, createDrawSeed, drawOrder, verifySeed } from "./draw.ts"
 // The load the engine is released for (PLAN.md: 128 participants, 16 boards). A round robin, and
 // each group, is limited to 64 (2016 matches in 63 rounds): 128 would be 8128 matches in 127
 // rounds, no playable tournament; large fields play groups first.
-export const MAX_PARTICIPANTS = 128
+const MAX_PARTICIPANTS = 128
 export const MAX_ROUND_ROBIN = 64
 export const MIN_PARTICIPANTS: Record<TournamentFormat, number> = { single: 2, double: 3, roundRobin: 2, groups: 3 }
 const MAX_LEGS = 99

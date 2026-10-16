@@ -2,6 +2,7 @@
 
 import { useMemo } from "react"
 import { useT } from "@/components/i18n-provider"
+import { formatClock } from "@/lib/i18n"
 
 // Amounts and times as people read them: "1.000 sats" in German, "1,000 sats" in English. Fees
 // can be a fraction of a sat (the wallet counts millisats), so up to three decimals show. Only
@@ -23,13 +24,12 @@ export function useFormat(): Format {
     const { intl } = t
     const number = (sats: number) => sats.toLocaleString(intl, { maximumFractionDigits: 3 })
     const sats = (value: number) => t.payments.sats(number(value))
-    const clock = (ms: number) => new Date(ms).toLocaleTimeString(intl, { hour: "2-digit", minute: "2-digit" })
     return {
       number,
       sats,
       msat: (msat) => sats(msat / 1000),
       euros: (value, eurPerBitcoin) => ((value / 100_000_000) * eurPerBitcoin).toLocaleString(intl, { style: "currency", currency: "EUR", minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-      time: (ms) => (new Date(ms).toDateString() === new Date().toDateString() ? clock(ms) : new Date(ms).toLocaleString(intl, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })),
+      time: (ms) => (new Date(ms).toDateString() === new Date().toDateString() ? formatClock(t, ms) : new Date(ms).toLocaleString(intl, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })),
     }
   }, [t])
 }

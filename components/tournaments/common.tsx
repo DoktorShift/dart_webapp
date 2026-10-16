@@ -6,10 +6,10 @@ import { Button } from "@/components/ui/button"
 import { InlineStatus } from "@/components/common/inline-status"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { signerProblem } from "@/components/profile/signer-status"
-import { useProfileNames } from "@/components/profile/use-profile-names"
+import { sameNames, useProfileNames } from "@/components/profile/use-profile-names"
 import { act, type Entry } from "@/components/tournaments/use-tournaments"
 import type { EventTemplate } from "@/lib/nostr/types"
-import type { Messages } from "@/lib/i18n"
+import { formatClock } from "@/lib/i18n"
 import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
 import { TOURNAMENTS_TEXTS } from "@/lib/i18n/features/tournaments.screens"
 import type { Widen } from "@/lib/i18n"
@@ -18,17 +18,14 @@ import type { TournamentState } from "@/lib/protocol/tournament-state"
 import type { MatchView } from "@/lib/tournaments/engine"
 import { roundLabel } from "@/lib/tournaments/labels"
 import type { Reason } from "@/lib/protocol/reasons"
-import { isGuestPlace, shortKey, type TournamentRead } from "@/lib/tournaments/read"
+import { shortKey } from "@/lib/nostr/pointers"
+import { isGuestPlace, type TournamentRead } from "@/lib/tournaments/read"
+import { TournamentError } from "@/lib/tournaments/types"
 
 // Small pieces every tournament screen shares: how times, people and matches are written,
 // what to say when signing fails, and the honest lines about the local copy.
 
 export type TournamentTexts = Widen<typeof tournamentsScreensDe>
-
-export const formatDateTime = (unix: number, t: Messages) =>
-  new Date(unix * 1000).toLocaleString(t.intl, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
-
-export const formatTime = (ms: number, t: Messages) => new Date(ms).toLocaleTimeString(t.intl, { hour: "2-digit", minute: "2-digit" })
 
 export type Names = ReturnType<typeof useParticipantNames>
 
@@ -41,11 +38,10 @@ export function useParticipantNames(read: TournamentRead | undefined): { nameOf:
   const pubkeys = state ? Object.values(state.participants).filter((p) => !isGuestPlace(p)).map((p) => p.id) : []
   const info = useProfileNames(pubkeys)
   const shown = (id: string) => (state?.participants[id] && !isGuestPlace(state.participants[id]) ? info(id).name : null) ?? read?.names[id] ?? tx.unnamed
-  const counts = new Map<string, number>()
-  for (const id of Object.keys(state?.participants ?? {})) counts.set(shown(id), (counts.get(shown(id)) ?? 0) + 1)
+  const twins = sameNames(Object.keys(state?.participants ?? {}).map((id) => ({ pubkey: id, name: shown(id) })))
   return {
     nameOf: (id) => (id ? shown(id) : tx.tournament.tbd),
-    hintOf: (id) => ((counts.get(shown(id)) ?? 0) > 1 ? tx.tournament.sameName(shortKey(id)) : null),
+    hintOf: (id) => (twins.has(id) ? tx.tournament.sameName(shortKey(id)) : null),
     pictureOf: (id) => (state?.participants[id] && !isGuestPlace(state.participants[id]) ? info(id).picture : null),
   }
 }
@@ -73,6 +69,8 @@ export function useProblemText() {
   const px = useAreaT(PROFILE_TEXTS)
   const tx = useAreaT(TOURNAMENTS_TEXTS)
   return (error: unknown) => {
+    // A change the bracket can't take says why; it is no signing problem.
+    if (error instanceof TournamentError) return tx.errors[error.code]
     const code = (error as { code?: unknown } | null)?.code
     return typeof code === "string" ? signerProblem(px, error) : tx.failed
   }
@@ -124,7 +122,7 @@ export function SyncLine({ entry, onRefresh }: { entry: Entry; onRefresh?: () =>
     <div className="mt-6 flex flex-col gap-2">
       {entry.waiting > 0 && <InlineStatus tone="info">{tx.waiting(entry.waiting)}</InlineStatus>}
       <div className="flex items-center justify-between gap-3 px-4 text-[0.8125rem] text-muted-foreground">
-        <span>{read.loadedAt === null ? tx.neverLoaded : tx.loadedAt(formatTime(read.loadedAt, t))}</span>
+        <span>{read.loadedAt === null ? tx.neverLoaded : tx.loadedAt(formatClock(t, read.loadedAt))}</span>
         {onRefresh && (
           <Button variant="ghost" size="sm" onClick={onRefresh} className="h-11 gap-1.5 rounded-xl px-3 text-[0.9375rem] text-primary hover:bg-primary/10 hover:text-primary">
             <RefreshCw className="h-4 w-4" aria-hidden="true" />

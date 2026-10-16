@@ -9,16 +9,7 @@ import { useSeat } from "@/components/live/use-seat"
 import { Waiting } from "@/components/common/waiting"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { LIVE_TEXTS } from "@/lib/i18n/features/live.screens"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+import { Confirm } from "@/components/ui/confirm"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
 import { Group } from "@/components/ui/group"
@@ -194,7 +185,6 @@ function Seated({
 
 // The seat's verdict on the result as it stands: confirm, or dispute after asking once more.
 function Verdict({ joined, followed }: { joined: JoinedMatch; followed: Followed }) {
-  const t = useT()
   const tx = useAreaT(LIVE_TEXTS)
   const r = tx.result
   const session = useSession()
@@ -239,20 +229,15 @@ function Verdict({ joined, followed }: { joined: JoinedMatch; followed: Followed
           {r.dispute}
         </Button>
       )}
-      <AlertDialog open={asking} onOpenChange={setAsking}>
-        <AlertDialogContent className="max-w-[calc(100vw-2rem)] rounded-2xl sm:max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle>{r.disputeTitle}</AlertDialogTitle>
-            <AlertDialogDescription>{r.disputeText}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel className="h-11">{t.common.cancel}</AlertDialogCancel>
-            <AlertDialogAction className="h-11 bg-danger text-white hover:bg-danger/90" onClick={() => void send("dispute")}>
-              {r.dispute}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Confirm
+        open={asking}
+        onOpenChange={setAsking}
+        title={r.disputeTitle}
+        text={r.disputeText}
+        confirm={r.dispute}
+        destructive
+        onConfirm={() => void send("dispute")}
+      />
     </section>
   )
 }

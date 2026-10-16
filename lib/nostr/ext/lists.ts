@@ -187,7 +187,7 @@ export interface ProfileBadges {
   legacy: boolean
 }
 
-export const isProfileBadgesEvent = (event: NostrEvent) =>
+const isProfileBadgesEvent = (event: NostrEvent) =>
   event.kind === 10008 || (event.kind === 30008 && event.tags.some((tag) => tag[0] === "d" && tag[1] === "profile_badges"))
 
 // Reads profile badges: consecutive pairs of an a tag (a badge definition) and an e tag (its

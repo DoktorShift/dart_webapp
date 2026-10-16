@@ -3,8 +3,8 @@
 import { ListRow } from "@/components/ui/list-row"
 import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
+import { formatDateTime } from "@/lib/i18n"
 import { TOURNAMENTS_TEXTS } from "@/lib/i18n/features/tournaments.screens"
-import { formatDateTime } from "@/components/tournaments/common"
 import { useTournaments, type Entry } from "@/components/tournaments/use-tournaments"
 import { freePlaces } from "@/lib/tournaments/read"
 import { SCREENS } from "@/lib/shell/registry"
@@ -25,7 +25,7 @@ export default function ClubTournaments({ club, name, leader, compact }: { club:
   const row = (e: Entry) => {
     const state = e.read.state
     if (!state) return null
-    const when = state.settings.starts !== undefined ? formatDateTime(state.settings.starts, t) : tx.home.noDate
+    const when = state.settings.starts !== undefined ? formatDateTime(t, state.settings.starts * 1000) : tx.home.noDate
     return <ListRow key={e.stored.tournament} title={state.settings.name} subtitle={`${when} · ${state.phase === "registration" ? tx.home.free(freePlaces(state)) : tx.phase[state.phase]}`} onClick={() => nav.push(SCREENS.tournamentView, { tournament: e.stored.tournament, name: state.settings.name }, { tab: "tournaments" })} />
   }
   if (compact) return shown.length > 0 ? <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">{shown.map(row)}</div> : null

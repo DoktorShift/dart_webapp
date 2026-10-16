@@ -28,11 +28,6 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
     order: "Players level on points are separated in this order:",
     walkover: "A match won by walkover counts as a win without legs.",
     inactive: "Anyone who withdraws or is disqualified goes to the bottom of the table and does not go through. Their opponents win the open matches by walkover.",
-    inactiveAfterGroup: "If their group was already finished, they keep their place in the table. Their next opponent then wins by walkover.",
-  },
-  placing: {
-    shared: "Players knocked out in the same round share the place.",
-    disqualified: "Disqualified players get no place; everyone below moves up.",
   },
   tiebreak: {
     points: "Points",
@@ -64,7 +59,6 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
     bye: "Bye",
   },
   affected: "Affected by a correction",
-  affectedHint: "An earlier result was changed. This match stays as entered until the organizer decides.",
   consequence: {
     result: "New result",
     players: "New pairing",
@@ -316,7 +310,6 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
     unreadableText: "It belongs to a club you're not a member of.",
     newer: "This tournament comes from a newer version of BlueLine.",
     loading: "Loading",
-    noMatches: "No matches yet",
     noMatchesText: "Pairings are set at the draw.",
     tbd: "To be decided",
     bye: "Bye",

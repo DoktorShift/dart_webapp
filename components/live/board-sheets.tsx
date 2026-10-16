@@ -6,30 +6,22 @@ import { InlineStatus } from "@/components/common/inline-status"
 import { SheetCode } from "@/components/common/sheet-code"
 import { XSHORT, useMediaQuery } from "@/components/common/use-media-query"
 import { gameHandedOver } from "@/components/live/gate"
-import { sameNamed, shortKey, usePublicNames, type PublicName } from "@/components/live/use-public-names"
 import { Waiting } from "@/components/common/waiting"
 import { useAreaT, useT } from "@/components/i18n-provider"
+import { sameNames, useProfileNames, type NameInfo } from "@/components/profile/use-profile-names"
 import { LIVE_TEXTS } from "@/lib/i18n/features/live.screens"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+import { Confirm } from "@/components/ui/confirm"
 import { Avatar } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
 import { Sheet } from "@/components/ui/sheet"
-import { modeName, type Messages } from "@/lib/i18n"
+import { formatClock, modeName } from "@/lib/i18n"
 import type { SavedMatch } from "@/lib/game/types"
 import { seatPlayer, stopHere, type BoardView } from "@/lib/live/board"
 import { offerHandoff, type HandoffOffer, type HandoffOfferControl } from "@/lib/live/handoff"
 import { openSeating, type Seating } from "@/lib/live/seating"
+import { shortKey } from "@/lib/nostr/pointers"
 import { nowSeconds } from "@/lib/nostr/time"
 import type { SeatHolder } from "@/lib/protocol/match-state"
 import { buildLink } from "@/lib/shell/links"
@@ -51,7 +43,6 @@ export interface SheetProps {
 }
 
 const linkFor = (kind: "watch" | "board" | "handoff", payload: string) => buildLink(window.location.origin, kind, payload)
-const clock = (t: Messages, seconds: number) => new Date(seconds * 1000).toLocaleTimeString(t.intl, { hour: "2-digit", minute: "2-digit" })
 
 // Starts the game live when the sheet opens; says so while it works and when it can't.
 function useStarted(open: boolean, start: () => Promise<unknown>) {
@@ -161,10 +152,12 @@ export function PlayersSheet({ open, onClose, match, view, start }: SheetProps) 
 
   const names = match.config.players.map((p) => p.name)
   const holders = view?.seats.map((seat) => seat.holder) ?? []
-  const profiles = usePublicNames(holders.map((h) => (h?.profile ? h.pubkey : null)))
+  // The public profiles of the players connected with one; guests have none.
+  const info = useProfileNames(holders.flatMap((h) => (h?.profile ? [h.pubkey] : [])))
+  const profileOf = (h: SeatHolder | null) => (h?.profile ? info(h.pubkey) : null)
   // The name each connected phone shows: its profile's, else the seat's.
-  const shown = holders.map((h, i) => (h ? (profiles.get(h.pubkey)?.name ?? names[i]) : null))
-  const twins = sameNamed(holders.flatMap((h, i) => (h ? [{ pubkey: h.pubkey, name: shown[i] as string }] : [])))
+  const shown = holders.map((h, i) => (h ? (profileOf(h)?.name ?? names[i]) : null))
+  const twins = sameNames(holders.flatMap((h, i) => (h ? [{ pubkey: h.pubkey, name: shown[i] as string }] : [])))
   const boardLink = seating ? linkFor("board", seating.code) : null
   // On a phone in landscape the seats stand beside the code, right under the share buttons, so
   // the first of them is in view: the description, the caption and the group's title step aside.
@@ -175,7 +168,7 @@ export function PlayersSheet({ open, onClose, match, view, start }: SheetProps) 
           key={i}
           name={names[i]}
           holder={seat.holder}
-          profile={seat.holder ? (profiles.get(seat.holder.pubkey) ?? null) : null}
+          profile={profileOf(seat.holder)}
           twin={seat.holder !== null && twins.has(seat.holder.pubkey)}
           verdict={seat.verdict}
           onFree={() => setFreeing(i)}
@@ -191,7 +184,7 @@ export function PlayersSheet({ open, onClose, match, view, start }: SheetProps) 
         ) : failed ? (
           <Starting state="failed" retry={() => setRound((n) => n + 1)} />
         ) : boardLink && seating ? (
-          <SheetCode value={boardLink} label={s.qrLabel} caption={s.codeValid(clock(t, seating.expires))} share={{ url: boardLink, title: s.title }}>
+          <SheetCode value={boardLink} label={s.qrLabel} caption={s.codeValid(formatClock(t, seating.expires * 1000))} share={{ url: boardLink, title: s.title }}>
             {seats}
           </SheetCode>
         ) : (
@@ -203,20 +196,15 @@ export function PlayersSheet({ open, onClose, match, view, start }: SheetProps) 
       </div>
       <Done onClose={onClose} />
 
-      <AlertDialog open={freeing !== null} onOpenChange={(next) => !next && setFreeing(null)}>
-        <AlertDialogContent className="max-w-[calc(100vw-2rem)] rounded-2xl sm:max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle>{freeing !== null ? s.disconnectTitle(names[freeing]) : ""}</AlertDialogTitle>
-            <AlertDialogDescription>{s.disconnectText}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel className="h-11">{t.common.cancel}</AlertDialogCancel>
-            <AlertDialogAction className="h-11 bg-danger text-white hover:bg-danger/90" onClick={() => freeing !== null && void seatPlayer(match.id, freeing, null)}>
-              {s.disconnect}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Confirm
+        open={freeing !== null}
+        onOpenChange={(next) => !next && setFreeing(null)}
+        title={freeing !== null ? s.disconnectTitle(names[freeing]) : ""}
+        text={s.disconnectText}
+        confirm={s.disconnect}
+        destructive
+        onConfirm={() => freeing !== null && void seatPlayer(match.id, freeing, null)}
+      />
     </Sheet>
   )
 }
@@ -234,7 +222,7 @@ function SeatRow({
 }: {
   name: string
   holder: SeatHolder | null
-  profile: PublicName | null
+  profile: NameInfo | null
   twin: boolean
   verdict: "confirm" | "dispute" | null
   onFree: () => void

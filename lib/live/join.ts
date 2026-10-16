@@ -251,7 +251,7 @@ export async function loadSeat(match: string): Promise<JoinedMatch | null> {
 }
 
 // The key the seat belongs to on this phone: the profile's, or the guest key's.
-export const seatKey = (joined: JoinedMatch) => joined.profile ?? joined.guest?.pubkey ?? null
+const seatKey = (joined: JoinedMatch) => joined.profile ?? joined.guest?.pubkey ?? null
 
 // Whether the match, as replayed, has this phone's key on the seat.
 export const holdsSeat = (joined: JoinedMatch, state: MatchStateP) => state.seats[joined.seat]?.pubkey === seatKey(joined)

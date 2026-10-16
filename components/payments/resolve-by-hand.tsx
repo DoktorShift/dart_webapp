@@ -1,24 +1,14 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+import { Confirm } from "@/components/ui/confirm"
 import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
 import { InlineStatus } from "@/components/common/inline-status"
-import { useAreaT, useT } from "@/components/i18n-provider"
+import { useAreaT } from "@/components/i18n-provider"
 import { useFormat } from "@/components/payments/format"
 import { PAYMENTS_TEXTS } from "@/lib/i18n/features/payments.screens"
 import { hasExpired, resolveByHand, type PaymentEntry } from "@/lib/payments/journal"
-import { cn } from "@/lib/utils"
 
 // "In deiner Wallet nachgesehen?": an open payment that BlueLine can't ask the wallet about (it
 // went through another connection, the wallet may not look payments up, or it has no answer) is
@@ -43,7 +33,6 @@ export function useHasExpired(entry: PaymentEntry) {
 }
 
 export function ResolveByHand({ entry, hint }: { entry: PaymentEntry; hint?: string }) {
-  const t = useT()
   const tx = useAreaT(PAYMENTS_TEXTS)
   const format = useFormat()
   const expired = useHasExpired(entry)
@@ -68,20 +57,15 @@ export function ResolveByHand({ entry, hint }: { entry: PaymentEntry; hint?: str
         {expired && <ListRow title={texts.notDone} chevron={false} onClick={() => ask("not-done")} className="text-primary" />}
       </Group>
       {busy && <InlineStatus className="mt-3">{tx.pay.busy}</InlineStatus>}
-      <AlertDialog open={asking} onOpenChange={setAsking}>
-        <AlertDialogContent className="max-w-[calc(100vw-2rem)] rounded-2xl sm:max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle>{choice === "done" ? texts.doneTitle : texts.notDoneTitle}</AlertDialogTitle>
-            <AlertDialogDescription>{choice === "done" ? texts.doneText(amount, entry.counterpart.name) : texts.notDoneText}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel className="h-11">{t.common.cancel}</AlertDialogCancel>
-            <AlertDialogAction onClick={() => void note()} className={cn("h-11", choice === "not-done" && "bg-danger text-white hover:bg-danger/90")}>
-              {tx.byHand.confirm}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Confirm
+        open={asking}
+        onOpenChange={setAsking}
+        title={choice === "done" ? texts.doneTitle : texts.notDoneTitle}
+        text={choice === "done" ? texts.doneText(amount, entry.counterpart.name) : texts.notDoneText}
+        confirm={tx.byHand.confirm}
+        destructive={choice === "not-done"}
+        onConfirm={() => void note()}
+      />
     </>
   )
 }

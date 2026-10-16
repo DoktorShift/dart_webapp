@@ -9,16 +9,7 @@ import { Waiting } from "@/components/common/waiting"
 import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { LIVE_TEXTS } from "@/lib/i18n/features/live.screens"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+import { Confirm } from "@/components/ui/confirm"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
 import { loadMatch } from "@/lib/game/storage"
@@ -90,20 +81,15 @@ export default function TakeoverScreen({ params }: ScreenProps) {
       <Button onClick={() => (kept ? setReplacing(true) : control.current?.take())} disabled={take.step !== "ready"} className="h-14 w-full rounded-2xl text-[1.0625rem] font-semibold">
         {s.take}
       </Button>
-      <AlertDialog open={replacing} onOpenChange={setReplacing}>
-        <AlertDialogContent className="max-w-[calc(100vw-2rem)] rounded-2xl sm:max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle>{s.replaceTitle}</AlertDialogTitle>
-            <AlertDialogDescription>{s.replaceText}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel className="h-11">{t.common.cancel}</AlertDialogCancel>
-            <AlertDialogAction className="h-11 bg-danger text-white hover:bg-danger/90" onClick={() => control.current?.take()}>
-              {s.replaceConfirm}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Confirm
+        open={replacing}
+        onOpenChange={setReplacing}
+        title={s.replaceTitle}
+        text={s.replaceText}
+        confirm={s.replaceConfirm}
+        destructive
+        onConfirm={() => control.current?.take()}
+      />
     </div>
   )
 }

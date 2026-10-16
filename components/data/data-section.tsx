@@ -1,23 +1,24 @@
 "use client"
 
 import { useEffect, useRef, useState, type ReactNode } from "react"
-import { Group } from "@/components/ui/group"
 import {
   AlertDialog,
   AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Confirm } from "@/components/ui/confirm"
+import { Group } from "@/components/ui/group"
 import { useT } from "@/components/i18n-provider"
 import type { ImportResult } from "@/lib/storage/data"
 import { useStorageUnavailable } from "@/lib/storage/hooks"
 import type { Messages } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { saveFile } from "@/lib/save-file"
+import { offersFileShare, shareFile } from "@/lib/shell/share-file"
 
 // Files bigger than this are not an export of this app (a long history is a few megabytes).
 const MAX_IMPORT_BYTES = 50 * 1024 * 1024
@@ -55,18 +56,6 @@ function importMessage(result: ImportResult, t: Messages): Message {
   if (result.known > 0 || result.playersKnown > 0)
     return { title: d.importNothingTitle, description: skipped ? join(skipped, d.importRestKnown) : d.importNothing }
   return { title: d.importNoneTitle, description: skipped || d.importEmpty }
-}
-
-// Opens the share sheet. "done": shared or cancelled. "blocked": the browser wants a tap of its
-// own (preparing a long history took longer than a tap allows). "failed": sharing isn't possible.
-async function shareFile(file: File): Promise<"done" | "blocked" | "failed"> {
-  try {
-    await navigator.share({ files: [file] })
-    return "done"
-  } catch (error) {
-    if (error instanceof DOMException && error.name === "AbortError") return "done"
-    return error instanceof DOMException && error.name === "NotAllowedError" ? "blocked" : "failed"
-  }
 }
 
 // A row that does something, like the actions in iOS Settings: tinted text, red when destructive.
@@ -110,9 +99,9 @@ export function DataSection() {
       const { buildExport, exportFileName } = await loadData()
       const name = exportFileName(d.fileName)
       const file = new File([JSON.stringify(await buildExport(), null, 2)], name, { type: "application/json" })
-      // Phones and tablets get the share sheet (save to Files, AirDrop, mail); an installed app
-      // on iOS can't download. Computers download the file.
-      if (window.matchMedia("(pointer: coarse)").matches && navigator.canShare?.({ files: [file] })) {
+      // Phones and tablets get the share sheet; computers download the file. Preparing a long
+      // history can take longer than a tap allows: then a second tap shares it.
+      if (offersFileShare(file)) {
         const shared = await shareFile(file)
         if (shared === "blocked") setPrepared(file)
         if (shared !== "failed") return
@@ -192,45 +181,31 @@ export function DataSection() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={prepared !== null} onOpenChange={(open) => !open && setPrepared(null)}>
-        <AlertDialogContent className="max-w-[calc(100vw-2rem)] rounded-2xl sm:max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle>{d.exportReadyTitle}</AlertDialogTitle>
-            <AlertDialogDescription>{d.exportReady}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel className="h-11">{t.common.cancel}</AlertDialogCancel>
-            <AlertDialogAction
-              className="h-11"
-              onClick={() => {
-                // Right in this tap, which the browser accepts.
-                const file = prepared
-                if (!file) return
-                void shareFile(file).then((shared) => {
-                  if (shared !== "done") saveFile(file, file.name)
-                })
-              }}
-            >
-              {d.shareFile}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Confirm
+        open={prepared !== null}
+        onOpenChange={(open) => !open && setPrepared(null)}
+        title={d.exportReadyTitle}
+        text={d.exportReady}
+        confirm={d.shareFile}
+        onConfirm={() => {
+          // Right in this tap, which the browser accepts.
+          const file = prepared
+          if (!file) return
+          void shareFile(file).then((shared) => {
+            if (shared === "blocked" || shared === "failed") saveFile(file, file.name)
+          })
+        }}
+      />
 
-      <AlertDialog open={confirmWipe} onOpenChange={setConfirmWipe}>
-        <AlertDialogContent className="max-w-[calc(100vw-2rem)] rounded-2xl sm:max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle>{d.wipeTitle}</AlertDialogTitle>
-            <AlertDialogDescription>{d.wipeDescription}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel className="h-11">{t.common.cancel}</AlertDialogCancel>
-            <AlertDialogAction onClick={() => void wipe()} className="h-11 bg-danger text-white hover:bg-danger/90">
-              {d.wipeConfirm}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Confirm
+        open={confirmWipe}
+        onOpenChange={setConfirmWipe}
+        title={d.wipeTitle}
+        text={d.wipeDescription}
+        confirm={d.wipeConfirm}
+        destructive
+        onConfirm={() => void wipe()}
+      />
     </>
   )
 }

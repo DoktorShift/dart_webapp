@@ -1,16 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+import { Confirm } from "@/components/ui/confirm"
 import { Button } from "@/components/ui/button"
 import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
@@ -125,20 +116,15 @@ export default function PaymentsScreen() {
         </Button>
       </Sheet>
 
-      <AlertDialog open={confirmRemove} onOpenChange={setConfirmRemove}>
-        <AlertDialogContent className="max-w-[calc(100vw-2rem)] rounded-2xl sm:max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle>{w.removeTitle}</AlertDialogTitle>
-            <AlertDialogDescription>{w.removeText}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel className="h-11">{t.common.cancel}</AlertDialogCancel>
-            <AlertDialogAction onClick={() => void removeWallet()} className="h-11 bg-danger text-white hover:bg-danger/90">
-              {w.removeConfirm}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Confirm
+        open={confirmRemove}
+        onOpenChange={setConfirmRemove}
+        title={w.removeTitle}
+        text={w.removeText}
+        confirm={w.removeConfirm}
+        destructive
+        onConfirm={() => void removeWallet()}
+      />
     </>
   )
 }

@@ -3,16 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react"
 import { CircleHelp, MonitorSmartphone } from "lucide-react"
 import { InlineStatus } from "@/components/common/inline-status"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+import { Confirm } from "@/components/ui/confirm"
 import { Button } from "@/components/ui/button"
 import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
@@ -22,6 +13,7 @@ import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { DEVICES_SCREENS } from "@/components/devices/screens"
 import { useBackupStatus } from "@/components/devices/use-backup"
+import { formatDate } from "@/lib/i18n"
 import { DEVICES_TEXTS } from "@/lib/i18n/features/devices.screens"
 import { deviceName, MAX_DEVICE_NAME } from "@/lib/devices/device-name"
 import type { DeviceEntry, DeviceList } from "@/lib/devices/list"
@@ -93,7 +85,7 @@ function Devices({ session }: { session: Session }) {
     const timer = setInterval(() => setRound((n) => n + 1), ARRIVING_REFRESH_MS)
     return () => clearInterval(timer)
   }, [arriving])
-  const date = (seconds: number) => new Date(seconds * 1000).toLocaleDateString(t.intl, { day: "numeric", month: "long", year: "numeric" })
+  const date = (seconds: number) => formatDate(t, seconds * 1000, "long")
   const footer = !list ? undefined : !list.available ? l.notYet : list.state === "complete" ? undefined : list.state === "partial" ? l.partial : l.unavailable
 
   return (
@@ -171,7 +163,6 @@ function LostSheet({ session, open, onClose }: { session: Session; open: boolean
 // One device: a new name, or out of the list (with the honest word that the device keeps what
 // it has). The device in hand isn't removed here: it signs out in Profile.
 function EditSheet({ pubkey, device, isThis, onClose, onChanged }: { pubkey: string; device: DeviceEntry; isThis: boolean; onClose: () => void; onChanged: () => void }) {
-  const t = useT()
   const l = useAreaT(DEVICES_TEXTS).list
   const [name, setName] = useState(device.name)
   const [busy, setBusy] = useState(false)
@@ -220,20 +211,15 @@ function EditSheet({ pubkey, device, isThis, onClose, onChanged }: { pubkey: str
         )}
       </SheetBody>
 
-      <AlertDialog open={removing} onOpenChange={setRemoving}>
-        <AlertDialogContent className="max-w-[calc(100vw-2rem)] rounded-2xl sm:max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle>{l.removeTitle(device.name)}</AlertDialogTitle>
-            <AlertDialogDescription>{l.removeText}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel className="h-11">{t.common.cancel}</AlertDialogCancel>
-            <AlertDialogAction className="h-11 bg-danger text-white hover:bg-danger/90" onClick={() => void run(({ removeDevice }) => removeDevice(pubkey, device.id))}>
-              {l.removeConfirm}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Confirm
+        open={removing}
+        onOpenChange={setRemoving}
+        title={l.removeTitle(device.name)}
+        text={l.removeText}
+        confirm={l.removeConfirm}
+        destructive
+        onConfirm={() => void run(({ removeDevice }) => removeDevice(pubkey, device.id))}
+      />
     </Sheet>
   )
 }

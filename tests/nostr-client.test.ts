@@ -1,16 +1,8 @@
 import { before, test } from "node:test"
 import assert from "node:assert/strict"
 import { loadCore, type Core } from "../lib/nostr/core.ts"
-import {
-  adjustClock,
-  coordinateOf,
-  createdAt,
-  createRelayClient,
-  latestEvents,
-  nowSeconds,
-  parseRelayMessage,
-  type RelayClientOptions,
-} from "../lib/nostr/client.ts"
+import { coordinateOf, createRelayClient, latestEvents, parseRelayMessage, type RelayClientOptions } from "../lib/nostr/client.ts"
+import { adjustClock, createdAt, nowSeconds } from "../lib/nostr/time.ts"
 
 import { FakeNetwork } from "./support/fake-relay.ts"
 

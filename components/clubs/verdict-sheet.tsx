@@ -3,12 +3,12 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { ChoiceList } from "@/components/ui/choice-list"
-import { Sheet } from "@/components/ui/sheet"
+import { Sheet, SheetBody } from "@/components/ui/sheet"
 import { TextField } from "@/components/ui/text-field"
 import { InlineStatus } from "@/components/common/inline-status"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
-import { SheetBody, SheetButton, gameLabel, personName, useChange } from "@/components/clubs/common"
+import { SheetButton, gameLabel, personName, useChange } from "@/components/clubs/common"
 import { GameSummary } from "@/components/clubs/game-summary"
 import { clubAuthor } from "@/components/clubs/use-clubs"
 import { useProfileNames } from "@/components/profile/use-profile-names"
@@ -89,7 +89,7 @@ export function VerdictSheet({ view, state, game, open, onOpenChange }: { view: 
                   variant="secondary"
                   onClick={() => (disputing ? void answer("dispute") : setDisputing(true))}
                   disabled={busy}
-                  className={disputing ? "h-12 rounded-xl bg-danger text-[1.0625rem] font-semibold text-white hover:bg-danger/90" : "h-12 rounded-xl text-[1.0625rem] font-semibold"}
+                  className={disputing ? "h-12 rounded-xl bg-danger text-[1.0625rem] font-semibold text-danger-foreground hover:bg-danger/90" : "h-12 rounded-xl text-[1.0625rem] font-semibold"}
                 >
                   {tx.game.dispute}
                 </Button>

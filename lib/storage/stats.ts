@@ -64,7 +64,7 @@ export function matchState(match: ArchivedMatch): MatchState | null {
 // dart. A visit entered as a total only tells when the players were asked, or when it can't
 // have had a dart at a double: no bust, no checkout, and more left than one dart can finish.
 // Otherwise the engine estimates, and an estimate is not a measurement.
-export function doublesMeasured(state: MatchState, throws: Throw[], player: number) {
+function doublesMeasured(state: MatchState, throws: Throw[], player: number) {
   const { config } = state
   if (config.type !== "x01") return false
   const oneDartFinish = config.doubleOut ? 50 : 60

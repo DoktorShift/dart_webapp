@@ -1,22 +1,14 @@
 "use client"
 
 import { lazy, Suspense, useState, type ReactNode } from "react"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+import { Confirm } from "@/components/ui/confirm"
 import { Button } from "@/components/ui/button"
 import { ChoiceList } from "@/components/ui/choice-list"
 import { InlineStatus } from "@/components/common/inline-status"
 import { useAreaT, useT } from "@/components/i18n-provider"
+import { formatDateTime } from "@/lib/i18n"
 import { TOURNAMENTS_TEXTS } from "@/lib/i18n/features/tournaments.screens"
-import { boardName, formatDateTime, PRIMARY, QUIET, refusalText, scoreText, useProblemText, useRoundLabel, type Names } from "@/components/tournaments/common"
+import { boardName, PRIMARY, QUIET, refusalText, scoreText, useProblemText, useRoundLabel, type Names } from "@/components/tournaments/common"
 import { useInlineProfile } from "@/components/profile/inline-profile"
 import { useLiveStanding } from "@/components/tournaments/use-live-matches"
 import { useOwnEvents } from "@/components/profile/use-profile"
@@ -64,20 +56,15 @@ export function PhaseCard({ entry, names }: { entry: Entry; names: Names }) {
       <Button variant="ghost" onClick={() => setWithdrawing(true)} disabled={busy !== null} className={cn(QUIET, "text-danger hover:bg-danger/10 hover:text-danger")}>
         {x.withdraw}
       </Button>
-      <AlertDialog open={withdrawing} onOpenChange={setWithdrawing}>
-        <AlertDialogContent className="max-w-[calc(100vw-2rem)] rounded-2xl sm:max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle>{x.withdrawTitle}</AlertDialogTitle>
-            <AlertDialogDescription>{x.withdrawText}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel className="h-11">{t.common.cancel}</AlertDialogCancel>
-            <AlertDialogAction className="h-11 bg-danger text-white hover:bg-danger/90" onClick={() => void run("withdraw", () => [withdrawTemplate(state)])}>
-              {x.withdraw}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Confirm
+        open={withdrawing}
+        onOpenChange={setWithdrawing}
+        title={x.withdrawTitle}
+        text={x.withdrawText}
+        confirm={x.withdraw}
+        destructive
+        onConfirm={() => void run("withdraw", () => [withdrawTemplate(state)])}
+      />
     </>
   ) : null
 
@@ -171,14 +158,14 @@ export function PhaseCard({ entry, names }: { entry: Entry; names: Names }) {
     if (me.status === "waitlist") return <Card title={x.waitlist(waitingList(state).findIndex((p) => p.id === me.id) + 1)} problem={problem} secondary={withdrawControls} />
     if (state.phase === "checkin" && !me.checkedIn && !isGuestPlace(me)) {
       return (
-        <Card title={x.checkIn} text={state.settings.starts !== undefined ? `${x.checkInUntil(formatDateTime(state.settings.starts, t))} ${x.checkInHint}` : x.checkInHint} problem={problem} secondary={withdrawControls}>
+        <Card title={x.checkIn} text={state.settings.starts !== undefined ? `${x.checkInUntil(formatDateTime(t, state.settings.starts * 1000))} ${x.checkInHint}` : x.checkInHint} problem={problem} secondary={withdrawControls}>
           <Button onClick={() => void run("checkin", () => [checkInTemplate(state)])} disabled={busy !== null} className={PRIMARY}>
             {busy === "checkin" ? x.checkingIn : x.checkIn}
           </Button>
         </Card>
       )
     }
-    return <Card title={me.checkedIn ? x.checkedIn : x.registered} text={state.settings.starts !== undefined ? x.startsAt(formatDateTime(state.settings.starts, t)) : undefined} tone="success" problem={problem} secondary={withdrawControls} />
+    return <Card title={me.checkedIn ? x.checkedIn : x.registered} text={state.settings.starts !== undefined ? x.startsAt(formatDateTime(t, state.settings.starts * 1000)) : undefined} tone="success" problem={problem} secondary={withdrawControls} />
   }
 
   if (state.phase === "paused") return <Card title={x.paused} text={x.pausedText} tone="muted" />

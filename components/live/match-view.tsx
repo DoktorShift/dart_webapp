@@ -16,7 +16,7 @@ import { gameSubtitle, rulesSummary } from "@/lib/game/words"
 import { watchedGame } from "@/lib/live/content"
 import { agreementToConfig } from "@/lib/protocol/match"
 import { followMatch, type Followed, type MatchSource } from "@/lib/live/follow"
-import type { Messages } from "@/lib/i18n"
+import { formatClock } from "@/lib/i18n"
 import type { LiveSnapshot } from "@/lib/protocol/live"
 import { cn } from "@/lib/utils"
 
@@ -63,10 +63,8 @@ export function useFollowed(source: MatchSource | null): Followed {
   )
 }
 
-const clock = (t: Messages, ms: number) => new Date(ms).toLocaleTimeString(t.intl, { hour: "2-digit", minute: "2-digit" })
-
 // Loading, missing and unreadable matches, or null once there is something to show.
-export function MatchProblem({ followed }: { followed: Followed }) {
+function MatchProblem({ followed }: { followed: Followed }) {
   const tx = useAreaT(LIVE_TEXTS)
   const w = tx.watch
   if (followed.state) return null
@@ -153,7 +151,7 @@ function Freshness({ followed, status, large }: { followed: Followed; status: Li
         <Icon className="mr-1.5 inline h-4 w-4 -translate-y-px align-middle" aria-hidden="true" />
         {interrupted ? w.interrupted : status ? w.status[status] : w.connecting}
       </span>
-      {at !== null && ` · ${interrupted ? w.lastUpdated(clock(t, at)) : w.updatedAt(clock(t, at))}`}
+      {at !== null && ` · ${interrupted ? w.lastUpdated(formatClock(t, at)) : w.updatedAt(formatClock(t, at))}`}
     </p>
   )
 }

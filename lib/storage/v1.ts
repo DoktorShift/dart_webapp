@@ -22,7 +22,7 @@ export const V1_KEYS = {
 export const V1_KEY_LIST: string[] = Object.values(V1_KEYS)
 
 // Version 1.0.0 keeps the newest 500 results.
-export const MAX_V1_MATCHES = 500
+const MAX_V1_MATCHES = 500
 
 const GAME_TYPES: GameType[] = ["x01", "cricket", "clock"]
 
@@ -54,7 +54,7 @@ function storage(): Storage | null {
 
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v)
 
-export function readRaw(key: string): string | null {
+function readRaw(key: string): string | null {
   try {
     return storage()?.getItem(key) ?? null
   } catch {

@@ -82,16 +82,25 @@ export const formatNumber = (t: Messages, value: number) => value.toLocaleString
 
 export const formatPercent = (t: Messages, ratio: number) => ratio.toLocaleString(t.intl, { style: "percent", maximumFractionDigits: 0 })
 
+// Times and dates as each language writes them, from milliseconds (Nostr times are seconds:
+// times 1000): "20:15"; "16. Okt. 2026" (`long`: "16. Oktober 2026"); "Fr., 16. Okt., 20:15".
+export const formatClock = (t: Messages, ms: number) => new Date(ms).toLocaleTimeString(t.intl, { hour: "2-digit", minute: "2-digit" })
+
+export const formatDate = (t: Messages, ms: number, month: "short" | "long" = "short") => new Date(ms).toLocaleDateString(t.intl, { day: "numeric", month, year: "numeric" })
+
+export const formatDateTime = (t: Messages, ms: number) =>
+  new Date(ms).toLocaleString(t.intl, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+
 // When something happened, as lists say it: "Heute, 20:15", "Gestern, 18:02", or the date.
 export function formatWhen(iso: string, t: Messages) {
   const date = new Date(iso)
   const now = new Date()
-  const time = date.toLocaleTimeString(t.intl, { hour: "2-digit", minute: "2-digit" })
+  const time = formatClock(t, date.getTime())
   if (date.toDateString() === now.toDateString()) return t.leaderboard.today(time)
   const yesterday = new Date(now)
   yesterday.setDate(now.getDate() - 1)
   if (date.toDateString() === yesterday.toDateString()) return t.leaderboard.yesterday(time)
-  return date.toLocaleDateString(t.intl, { day: "numeric", month: "short", year: "numeric" })
+  return formatDate(t, date.getTime())
 }
 
 // The mode's name in the current language; saved games and results keep their stored name

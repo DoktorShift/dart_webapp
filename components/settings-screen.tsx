@@ -3,20 +3,11 @@
 import { useState } from "react"
 import { useTheme } from "next-themes"
 import { Share, SquarePlus } from "lucide-react"
+import { Confirm } from "@/components/ui/confirm"
 import { Button } from "@/components/ui/button"
 import { ChoiceRow, Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
 import { Segmented } from "@/components/ui/segmented"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 import { GamePreferences } from "@/components/game-preferences"
 import { DataSection } from "@/components/data/data-section"
 import { useI18n, useT } from "@/components/i18n-provider"
@@ -154,20 +145,15 @@ export function SettingsScreen({
         <DataSection />
       </div>
 
-      <AlertDialog open={confirmReset} onOpenChange={setConfirmReset}>
-        <AlertDialogContent className="max-w-[calc(100vw-2rem)] rounded-2xl sm:max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t.settings.resetTitle}</AlertDialogTitle>
-            <AlertDialogDescription>{t.settings.resetDescription(matches.length)}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel className="h-11">{t.common.cancel}</AlertDialogCancel>
-            <AlertDialogAction onClick={clear} className="h-11 bg-danger text-white hover:bg-danger/90">
-              {t.settings.resetConfirm}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Confirm
+        open={confirmReset}
+        onOpenChange={setConfirmReset}
+        title={t.settings.resetTitle}
+        text={t.settings.resetDescription(matches.length)}
+        confirm={t.settings.resetConfirm}
+        destructive
+        onConfirm={clear}
+      />
     </>
   )
 }

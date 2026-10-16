@@ -22,7 +22,7 @@ import { parseProfilePackage, type ProfilePackage } from "./package.ts"
 // The browser's part comes in as `PasskeyEnv`, so the unit tests stand in for it with a
 // simulated authenticator; real passkeys are verified only on real devices.
 
-export const PRF_SALT = utf8ToBytes("blueline-passkey-v1")
+const PRF_SALT = utf8ToBytes("blueline-passkey-v1")
 export const PASSKEY_BACKUP_D = "blueline-backup-v1"
 const CHALLENGE_BYTES = 32
 

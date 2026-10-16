@@ -10,8 +10,8 @@
 // Other tabs hear about every write through BroadcastChannel("blueline"), so open screens stay
 // in step (localStorage's "storage" event doesn't exist for IndexedDB).
 
-export const DB_NAME = "blueline"
-export const DB_VERSION = 1
+const DB_NAME = "blueline"
+const DB_VERSION = 1
 export const STORES = ["matches", "players", "kv", "outbox", "payments", "objects", "pending"] as const
 export type StoreName = (typeof STORES)[number]
 

@@ -1,16 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+import { Confirm } from "@/components/ui/confirm"
 import { Button } from "@/components/ui/button"
 import { ListRow } from "@/components/ui/list-row"
 import { Sheet, SheetBody } from "@/components/ui/sheet"
@@ -144,26 +135,17 @@ function StakeAction({ match, placement, parties, entry }: SlotListProps["result
           </Button>
         )}
       </Sheet>
-      <AlertDialog open={confirmSettled} onOpenChange={setConfirmSettled}>
-        <AlertDialogContent className="max-w-[calc(100vw-2rem)] rounded-2xl sm:max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle>{s.settledHereTitle}</AlertDialogTitle>
-            <AlertDialogDescription>{s.settledHereHint}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel className="h-11">{t.common.cancel}</AlertDialogCancel>
-            <AlertDialogAction
-              className="h-11"
-              onClick={() => {
-                void noteSettled({ action, direction: side === "payee" ? "in" : "out", amountMsat: parties.sats * 1000, counterpart: side === "payee" ? payer : payee })
-                close()
-              }}
-            >
-              {tx.byHand.confirm}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Confirm
+        open={confirmSettled}
+        onOpenChange={setConfirmSettled}
+        title={s.settledHereTitle}
+        text={s.settledHereHint}
+        confirm={tx.byHand.confirm}
+        onConfirm={() => {
+          void noteSettled({ action, direction: side === "payee" ? "in" : "out", amountMsat: parties.sats * 1000, counterpart: side === "payee" ? payer : payee })
+          close()
+        }}
+      />
     </RequestOriginContext.Provider>
   )
 }

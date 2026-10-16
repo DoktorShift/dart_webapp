@@ -406,7 +406,6 @@ export const en: Messages = {
     resetDescription: (n) => `This deletes ${n === 1 ? "the saved leaderboard game" : `all ${n} saved leaderboard games`} on this device and can’t be undone. With a profile, your games stay in your profile and on your other devices.`,
     resetConfirm: "Reset",
     about: "About",
-    aboutApp: (name) => `About ${name}`,
   },
 
   undoBanner: { ended: "Game ended" },

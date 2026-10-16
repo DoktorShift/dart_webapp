@@ -1,4 +1,5 @@
-import { createdAt, latestEvents } from "../nostr/client.ts"
+import { latestEvents } from "../nostr/client.ts"
+import { createdAt } from "../nostr/time.ts"
 import type { EventTemplate, NostrEvent } from "../nostr/types.ts"
 import { KIND_PROFILE_BADGES_LEGACY, otherProfileTags, profileBadgesTemplate, readProfileBadges, type ProfileBadge } from "../protocol/badges.ts"
 import { KIND_PROFILE_BADGES } from "../protocol/kinds.ts"

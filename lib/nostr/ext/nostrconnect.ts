@@ -26,7 +26,7 @@ import { mergeRelays } from "../relays.ts"
 import { nowSeconds } from "../time.ts"
 import type { EventTemplate, Filter, NostrEvent, Signer, VerifiedEvent } from "../types.ts"
 
-export const NIP46_KIND = 24133
+const NIP46_KIND = 24133
 
 // What a stored session needs to come back after a reload. The client key never leaves the
 // device; whoever holds it can ask the signer for signatures until the signer revokes it.
@@ -333,7 +333,7 @@ export function resume(session: Nip46Session, options: Nip46SignerOptions): Nip4
 
 // The challenge a nostrconnect:// signer signs to prove it holds the user key it names: a
 // NIP-42 style event (kind 22242) with a random challenge, never sent to any relay.
-export const KEY_PROOF_KIND = 22242
+const KEY_PROOF_KIND = 22242
 
 export interface ClientUriOptions {
   relays: string[]

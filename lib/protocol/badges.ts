@@ -117,7 +117,7 @@ export interface BadgeDefinitionInfo {
   image?: string
 }
 
-export function checkBadgeDefinition(def: SignedEvent): { ok: true; info: BadgeDefinitionInfo } | { ok: false; reason: Reason; detail: string } {
+function checkBadgeDefinition(def: SignedEvent): { ok: true; info: BadgeDefinitionInfo } | { ok: false; reason: Reason; detail: string } {
   if (def.kind !== KIND_BADGE_DEFINITION) return { ok: false, reason: "wrong_kind", detail: `kind ${def.kind}` }
   const labels = readLabels(def.tags)
   if (!labels || labels.type !== "badge.definition") return { ok: false, reason: "not_blueline", detail: "not a BlueLine badge" }
@@ -201,7 +201,7 @@ export function checkBadgeAward(award: SignedEvent, definition: SignedEvent, ctx
 }
 
 // The same issuer, badge, recipient and occasion count once.
-export const awardKey = (issuer: string, d: string, recipient: string, occasion: string) => `${issuer}|${d}|${recipient}|${occasion}`
+const awardKey = (issuer: string, d: string, recipient: string, occasion: string) => `${issuer}|${d}|${recipient}|${occasion}`
 
 // Keeps the first award per key in replay order (created_at, then id).
 export function dedupeAwards<T extends { award: SignedEvent; key: string }>(awards: readonly T[]): T[] {

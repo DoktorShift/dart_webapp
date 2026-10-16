@@ -434,7 +434,6 @@ export const de = {
       `Das löscht ${n === 1 ? "das gespeicherte Spiel" : `alle ${n} gespeicherten Spiele`} der Rangliste auf diesem Gerät und lässt sich nicht rückgängig machen. Mit Profil bleiben deine Spiele in deinem Profil und auf deinen anderen Geräten.`,
     resetConfirm: "Zurücksetzen",
     about: "Über die App",
-    aboutApp: (name: string) => `Über ${name}`,
   },
 
   undoBanner: { ended: "Spiel beendet" },

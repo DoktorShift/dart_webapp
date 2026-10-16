@@ -15,9 +15,9 @@ import { bech32 } from "@scure/base"
 // 0x01: it is not known to have been. 0x02: the client doesn't track this.
 export type KeySecurity = 0 | 1 | 2
 
-export const DEFAULT_LOG_N = 16
+const DEFAULT_LOG_N = 16
 // Above this, scrypt needs more than 1 GiB; phones can't, and a file asking for it is suspect.
-export const MAX_LOG_N = 20
+const MAX_LOG_N = 20
 const VERSION = 0x02
 const PREFIX = "ncryptsec"
 const PAYLOAD_LENGTH = 91

@@ -15,9 +15,9 @@ export const IMPOSSIBLE_VISITS = new Set([163, 166, 169, 172, 173, 175, 176, 178
 
 const MISS: Dart = { segment: 0, multiplier: 1 }
 
-export const dartValue = (d: Dart) => d.segment * d.multiplier
+const dartValue = (d: Dart) => d.segment * d.multiplier
 
-export const isDoubleDart = (d: Dart) => d.multiplier === 2 && d.segment > 0
+const isDoubleDart = (d: Dart) => d.multiplier === 2 && d.segment > 0
 
 // Remaining scores that one dart at a double (or the bull) can finish.
 export const onADouble = (remaining: number, doubleOut: boolean) =>
@@ -424,15 +424,7 @@ function applyCricketDart(s: MatchState, dart: Dart) {
 
   const closedAll = CRICKET_TARGETS.every((t) => s.marks[p][t] >= 3)
   const ahead = others.every((q) => (s.config.cutThroat ? s.points[p] <= s.points[q] : s.points[p] >= s.points[q]))
-  if (closedAll && ahead) {
-    endVisit(s, visitOf(s, p, { checkout: true }))
-    return
-  }
-  if (s.visitDarts.length === 3) {
-    endVisit(s, visitOf(s, p, {}))
-    return
-  }
-  s.outcome = { type: "dart", player: p }
+  afterDart(s, p, closedAll && ahead)
 }
 
 function applyClockDart(s: MatchState, dart: Dart) {
@@ -446,15 +438,15 @@ function applyClockDart(s: MatchState, dart: Dart) {
     s.progress[p]++
     st.hits++
   }
-  if (s.progress[p] >= s.clockTargets.length) {
-    endVisit(s, visitOf(s, p, { checkout: true }))
-    return
-  }
-  if (s.visitDarts.length === 3) {
-    endVisit(s, visitOf(s, p, {}))
-    return
-  }
-  s.outcome = { type: "dart", player: p }
+  afterDart(s, p, s.progress[p] >= s.clockTargets.length)
+}
+
+// After a cricket or clock dart: a won leg or a third dart ends the visit, otherwise the same
+// player throws again.
+function afterDart(s: MatchState, p: number, legWon: boolean) {
+  if (legWon) endVisit(s, visitOf(s, p, { checkout: true }))
+  else if (s.visitDarts.length === 3) endVisit(s, visitOf(s, p, {}))
+  else s.outcome = { type: "dart", player: p }
 }
 
 function applyDart(s: MatchState, dart: Dart, index: number) {
@@ -564,7 +556,7 @@ export function replay(config: MatchConfig, throws: Throw[]): MatchState {
 
 // Drops entries that replay ignores (darts of a visit or leg that a correction ended
 // earlier), so the saved log only holds darts that count.
-export function cleanLog(config: MatchConfig, throws: Throw[]) {
+function cleanLog(config: MatchConfig, throws: Throw[]) {
   const skipped = new Set(replay(config, throws).skipped)
   return skipped.size === 0 ? throws : throws.filter((_, i) => !skipped.has(i))
 }

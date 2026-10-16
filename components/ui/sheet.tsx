@@ -41,7 +41,8 @@ export function Sheet({
 }
 
 // The sheet's content when it can be longer than the sheet: it scrolls on its own, and buttons
-// placed after it stay in view.
-export function SheetBody({ children }: { children: ReactNode }) {
-  return <div className="min-h-0 overflow-y-auto overscroll-contain pb-1">{children}</div>
+// placed after it stay in view. Room at its end, so a button at the bottom is never cut through
+// its label by a pinned one after it on a small phone.
+export function SheetBody({ className, children }: { className?: string; children: ReactNode }) {
+  return <div className={cn("min-h-0 overflow-y-auto overscroll-contain pb-4", className)}>{children}</div>
 }

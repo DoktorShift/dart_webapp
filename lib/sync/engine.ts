@@ -1,5 +1,5 @@
 import { query, supersedes } from "../nostr/client.ts"
-import { countOperators } from "../nostr/relays.ts"
+import { countOperators, PUBLISHED_MIN_OPERATORS } from "../nostr/relays.ts"
 import { clockOffset, nowSeconds, syncClock } from "../nostr/time.ts"
 import type { Filter, NostrEvent, Signer } from "../nostr/types.ts"
 import { fetchOwnEvents, ownEvents, ownRelaySettings } from "../profile/own-events.ts"
@@ -296,7 +296,7 @@ async function read(sync: Sync): Promise<boolean> {
   sync.answered = await readRelays(sync.targets, { kinds: [KIND_PRIVATE], authors: [sync.pubkey], ...(since ? { since } : {}) })
   if (sync.answered.length === 0) return false
   sync.events = new Map(sync.answered.flatMap((r) => r.events.map((e) => [e.id, e] as const)))
-  sync.conclusive = sync.answered.length === sync.targets.length || countOperators(sync.answered.map((r) => r.url)) >= 2
+  sync.conclusive = sync.answered.length === sync.targets.length || countOperators(sync.answered.map((r) => r.url)) >= PUBLISHED_MIN_OPERATORS
   return true
 }
 

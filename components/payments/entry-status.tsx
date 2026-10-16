@@ -45,7 +45,7 @@ const ICONS: Record<Tone, ComponentType<{ className?: string; "aria-hidden"?: bo
   neutral: Clock,
 }
 
-export const TONE_COLORS: Record<Tone, string> = {
+const TONE_COLORS: Record<Tone, string> = {
   success: "text-success",
   progress: "text-primary",
   warning: "text-warning",
@@ -62,7 +62,7 @@ const CIRCLES: Record<Tone, string> = {
 }
 
 // The small symbol of a status, in its colour, next to text that says it.
-export function StatusIcon({ tone, className }: { tone: Tone; className?: string }) {
+function StatusIcon({ tone, className }: { tone: Tone; className?: string }) {
   const Icon = ICONS[tone]
   return <Icon className={cn("h-3.5 w-3.5 shrink-0", TONE_COLORS[tone], className)} aria-hidden />
 }

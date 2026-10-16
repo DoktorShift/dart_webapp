@@ -8,7 +8,7 @@ import { useAreaT, useT } from "@/components/i18n-provider"
 import { signerProblem } from "@/components/profile/signer-status"
 import { CLUBS_TEXTS, type ClubsTexts } from "@/lib/i18n/features/clubs.screens"
 import { PROFILE_TEXTS, type ProfileTexts } from "@/lib/i18n/features/profile.screens"
-import type { Messages } from "@/lib/i18n"
+import { formatClock, formatDateTime, type Messages } from "@/lib/i18n"
 import type { ClubTask, ClubView } from "@/lib/clubs/club"
 import type { ClubGame } from "@/lib/clubs/games"
 import { ClubOutdatedError } from "@/lib/clubs/membership"
@@ -23,28 +23,11 @@ import { cn } from "@/lib/utils"
 // on its way), the one question before something is removed or given away, and the shape of a
 // club sheet.
 
-export const formatDateTime = (unix: number, t: Messages) =>
-  new Date(unix * 1000).toLocaleString(t.intl, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
-
-export const formatDate = (unix: number, t: Messages) => new Date(unix * 1000).toLocaleDateString(t.intl, { day: "numeric", month: "short", year: "numeric" })
-
-export const formatTime = (ms: number, t: Messages) => new Date(ms).toLocaleTimeString(t.intl, { hour: "2-digit", minute: "2-digit" })
-
-// The start of a key, grouped, to tell two people with the same name apart (design rules).
-export const shortId = (pubkey: string) => `${pubkey.slice(0, 4)} ${pubkey.slice(4, 8)}`
-
 // What a person is called in a club: their public name, or the alias they played under here,
 // or "Ohne Namen". `me` names the signed-in person "Du".
 export function personName(pubkey: string, info: NameInfo, tx: ClubsTexts, options: { me?: string | null; alias?: string } = {}) {
   if (options.me && options.me === pubkey) return tx.you
   return info.name ?? options.alias ?? tx.unnamed
-}
-
-// Keys whose names are shared with another key in the list: they get the id hint.
-export function sameNames(pubkeys: readonly string[], nameOf: (pubkey: string) => string): Set<string> {
-  const byName = new Map<string, string[]>()
-  for (const pubkey of pubkeys) byName.set(nameOf(pubkey), [...(byName.get(nameOf(pubkey)) ?? []), pubkey])
-  return new Set([...byName.values()].filter((keys) => keys.length > 1).flat())
 }
 
 // What to tell the person when a club change couldn't be signed, encrypted or built on what
@@ -103,7 +86,7 @@ export function SyncLine({ view, onRefresh }: { view: ClubView; onRefresh?: () =
       setBusy(false)
     }
   }
-  const when = view.loadedAt === null ? tx.club.neverLoaded : tx.club.loadedAt(formatTime(view.loadedAt, t))
+  const when = view.loadedAt === null ? tx.club.neverLoaded : tx.club.loadedAt(formatClock(t, view.loadedAt))
   return (
     <div className="mt-6 flex items-center justify-between gap-3 px-4 text-[0.8125rem] text-muted-foreground">
       <p className="[overflow-wrap:anywhere]">
@@ -174,19 +157,13 @@ export function taskLabel(task: ClubTask, tx: ClubsTexts, t: Messages): string {
     case "decide":
       return task.why === "disputed" ? tx.tasks.disputed(gameLabel(task.game)) : tx.tasks.decide(gameLabel(task.game))
     case "answer":
-      return tx.tasks.answer(formatDateTime(task.date.starts, t))
+      return tx.tasks.answer(formatDateTime(t, task.date.starts * 1000))
   }
 }
 
 // The task line's way into the club: which task to open there (club-screen.tsx).
 export function taskParams(task: ClubTask): Record<string, string> {
   return { task: task.kind, ...(task.kind === "verdict" || task.kind === "decide" ? { game: task.game.match } : {}) }
-}
-
-// The scrolling part of a club sheet: room at its end, so a button at the bottom is never cut
-// through its label by the pinned one on a small phone.
-export function SheetBody({ className, children }: { className?: string; children: ReactNode }) {
-  return <div className={cn("min-h-0 overflow-y-auto overscroll-contain pb-4", className)}>{children}</div>
 }
 
 // The pinned quiet button at the end of a club sheet ("Abbrechen", "Fertig"), with a fade above

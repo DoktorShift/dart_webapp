@@ -5,7 +5,8 @@ import type { NostrEvent } from "@/lib/nostr/types"
 import { readMetadata } from "@/lib/profile/metadata"
 import { OWN } from "@/lib/profile/own-events"
 import { cachedProfile, loadProfiles } from "@/lib/profile/public-profile"
-import { getSession, OWN_OBJECT_PREFIX } from "@/lib/profile/session"
+import { getSession } from "@/lib/profile/session"
+import { OWN_OBJECT_PREFIX } from "@/lib/profile/storage-keys"
 import { dbGet, type Keyed } from "@/lib/storage/db"
 
 // Names and pictures of people a club or a tournament names only by key, from their public
@@ -84,6 +85,17 @@ function subscribe(listener: () => void) {
   return () => {
     listeners.delete(listener)
   }
+}
+
+// The keys among `people` that share their shown name with another key (letter case and spaces
+// around do not tell them apart): they get the start of the key as a hint (lib/nostr/pointers.ts).
+export function sameNames(people: readonly { pubkey: string; name: string }[]): ReadonlySet<string> {
+  const byName = new Map<string, Set<string>>()
+  for (const { pubkey, name } of people) {
+    const key = name.normalize("NFC").trim().toLowerCase()
+    byName.set(key, (byName.get(key) ?? new Set()).add(pubkey))
+  }
+  return new Set([...byName.values()].filter((keys) => keys.size > 1).flatMap((keys) => [...keys]))
 }
 
 // The name and picture of each key, as far as known.

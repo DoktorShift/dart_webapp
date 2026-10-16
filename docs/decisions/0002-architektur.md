@@ -39,6 +39,16 @@ Dateien unter `lib/`, die in Node getestet werden, verwenden relative Importe mi
 
 **Nachtrag 16. Oktober 2026 (Review P2.03/P2.04 Runde 1):** `lib/devices` importiert `lib/protocol` (Kopplungsprotokoll, Kinds, Links, private Datensätze), `lib/storage` (Store „pending“ für den laufenden Vorgang), `lib/sync` (Datenschlüssel, Geräte-ID des Abgleichs, Outbox, versiegelte Datensätze für die Geräteliste) und `lib/recovery` (das Profilpaket `package.ts`, den Sicherungsstand `status.ts`). `lib/recovery` importiert `lib/protocol` (Tag-Prüfungen, Kinds) und `lib/sync` (Datenschlüssel, Outbox), aber nie `lib/devices`: Die Abhängigkeit geht nur in eine Richtung. Dass eine gespeicherte Sicherungsdatei in der Geräteliste vermerkt wird, verbindet die Oberfläche (`components/devices`), nicht die Module.
 
+**Nachtrag 16. Oktober 2026 (Schlussdurchgang):** Geprüft mit einem Importgraphen über `lib/` und `madge` (ohne reine Typimporte und ohne faule `import()`: keine Zyklen; mit ihnen bleiben nur Typzyklen in `lib/i18n` und die faulen Rückwege der Bereichs-Einstiege in `components/live` und `components/profile`). `nostr-core` wird nur von `lib/nostr/runtime.ts` geladen, über `import()` in `lib/nostr/core.ts`; `lib/` importiert nie `components/`. Zusätzlich zur Tabelle gelten diese Importe als richtig:
+- `lib/game` nutzt seit 1.0.0 `lib/feedback.ts` (Ton, Vibration, Ansage) und `lib/i18n` (gesprochene Wörter).
+- `lib/storage` nennt den Typ `NostrEvent` aus `lib/nostr/types.ts` (Kopien von Events, `record-copy.ts`).
+- `lib/protocol/tournament.ts` nutzt `lib/tournaments/draw.ts` (rein, importiert nichts aus `lib/protocol`): Seed und Auslosungsreihenfolge sind Teil der Regel, die der Prüfer durchsetzt.
+- `lib/profile` nutzt `lib/protocol` (Kinds, Links, Profil- und Badge-Schemas) und `lib/shell/links.ts`; `lib/sync` nutzt `lib/protocol` (private Datensätze, Wurfprotokoll).
+- `lib/clubs` und `lib/tournaments` nutzen `lib/game` (Spiele nachrechnen), `lib/storage` (`db.ts`, `ids.ts`, `lock.ts`, `record-copy.ts`), `lib/shell/links.ts` und `lib/sync/outbox.ts`; `lib/clubs` dazu `lib/profile/storage-keys.ts` (nur Namen), `lib/tournaments` dazu `lib/profile/vault.ts` (Board-Schlüssel) und als Typen `lib/badges/organizer.ts` und die Turniertexte aus `lib/i18n`.
+- `lib/badges` nutzt `lib/game`, `lib/profile` (Sitzung, eigene Events, Relay-Liste, öffentliches Profil, `storage-keys.ts`) und `lib/sync/publish.ts`; `lib/payments` nutzt `lib/game` (Typen) und `lib/profile` (Sitzung, Metadaten, öffentliches Profil, `vault.ts` für die Wallet-Verbindung).
+- `lib/shell` (Navigation, Links, Registry) nutzt `lib/game` und `lib/i18n` nur als Typen.
+- Die NIP-52-Kinds der Club-Termine stehen im Katalog `lib/protocol/kinds.ts`; die Speichernamen des Profils nur in `lib/profile/storage-keys.ts`.
+
 ## 3 Speicherung
 
 - Das **laufende Spiel** bleibt in `localStorage` unter `dart-scorer.current-match.v1` (synchron, klein, kompatibel zu 1.0.0). Schreibfehler werden sichtbar: „Dein Spiel konnte nicht gespeichert werden.“ mit „Erneut versuchen“; die Eingaben bleiben im Speicher der Seite.

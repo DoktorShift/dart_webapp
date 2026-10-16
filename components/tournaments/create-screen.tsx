@@ -2,16 +2,7 @@
 
 import { useEffect, useId, useMemo, useRef, useState, type TextareaHTMLAttributes } from "react"
 import { ChevronDown, Share } from "lucide-react"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+import { Confirm } from "@/components/ui/confirm"
 import { Button } from "@/components/ui/button"
 import { ChoiceList } from "@/components/ui/choice-list"
 import { ChoiceRow, Group, SwitchRow } from "@/components/ui/group"
@@ -20,6 +11,7 @@ import { TextField } from "@/components/ui/text-field"
 import { InlineStatus } from "@/components/common/inline-status"
 import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
+import { formatDateTime } from "@/lib/i18n"
 import { TOURNAMENTS_TEXTS } from "@/lib/i18n/features/tournaments.screens"
 import { PRIMARY, QUIET, useProblemText } from "@/components/tournaments/common"
 import { useInlineProfile } from "@/components/profile/inline-profile"
@@ -82,7 +74,6 @@ export default function CreateScreen({ params }: ScreenProps) {
 }
 
 function CreateFlow({ initial, params }: { initial: TournamentDraft; params: ScreenParams }) {
-  const t = useT()
   const tx = useAreaT(TOURNAMENTS_TEXTS)
   const c = tx.create
   const nav = useNav()
@@ -130,27 +121,19 @@ function CreateFlow({ initial, params }: { initial: TournamentDraft; params: Scr
         )}
       </div>
       <p className="mt-3 text-center text-[0.8125rem] text-muted-foreground">{c.autosaved}</p>
-      <AlertDialog open={discarding} onOpenChange={setDiscarding}>
-        <AlertDialogContent className="max-w-[calc(100vw-2rem)] rounded-2xl sm:max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle>{c.deleteDraftTitle}</AlertDialogTitle>
-            <AlertDialogDescription>{c.autosaved}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel className="h-11">{t.common.cancel}</AlertDialogCancel>
-            <AlertDialogAction
-              className="h-11 bg-danger text-white hover:bg-danger/90"
-              onClick={() => {
-                clearTimeout(timer.current)
-                void deleteDraft(draft.id).catch(() => {})
-                nav.pop()
-              }}
-            >
-              {c.deleteDraft}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Confirm
+        open={discarding}
+        onOpenChange={setDiscarding}
+        title={c.deleteDraftTitle}
+        text={c.autosaved}
+        confirm={c.deleteDraft}
+        destructive
+        onConfirm={() => {
+          clearTimeout(timer.current)
+          void deleteDraft(draft.id).catch(() => {})
+          nav.pop()
+        }}
+      />
       {params.club && <p className="sr-only">{c.club(params.name ?? "")}</p>}
     </div>
   )
@@ -370,7 +353,7 @@ function Preview({ draft, stopSaving, onPublished }: { draft: TournamentDraft; s
     }
   }
 
-  const when = draft.starts ? new Date(draft.starts).toLocaleString(t.intl, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : tx.home.noDate
+  const when = draft.starts ? formatDateTime(t, new Date(draft.starts).getTime()) : tx.home.noDate
   return (
     <>
       <Group title={c.summary}>
@@ -385,7 +368,7 @@ function Preview({ draft, stopSaving, onPublished }: { draft: TournamentDraft; s
             draft.checkIn ? c.withCheckIn : c.noCheckIn,
             draft.admission === "auto" ? c.admissionAuto : c.admissionManual,
             draft.approval === "organizer" ? c.approvalOrganizer : c.approvalBoard,
-            ...(draft.registrationCloses ? [c.closesAt(new Date(draft.registrationCloses).toLocaleString(t.intl, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))] : []),
+            ...(draft.registrationCloses ? [c.closesAt(formatDateTime(t, new Date(draft.registrationCloses).getTime()))] : []),
           ].join(" · ")}
         />
         <ListRow title={c.visibility} subtitle={c.visibilityHint} />

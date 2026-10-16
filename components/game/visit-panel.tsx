@@ -40,7 +40,7 @@ export function visitResult(state: MatchState, visit: Visit, t: Messages) {
 }
 
 // One line about a finished visit: "Mia: 60", "Leo: 2 marks".
-export const visitSummary = (state: MatchState, visit: Visit, t: Messages) =>
+const visitSummary = (state: MatchState, visit: Visit, t: Messages) =>
   t.visit.summary(state.config.players[visit.player].name, visitResult(state, visit, t))
 
 interface VisitPanelProps {

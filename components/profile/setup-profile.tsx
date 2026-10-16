@@ -2,23 +2,14 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react"
 import { Plus, Trash2, UserRoundCheck, Users } from "lucide-react"
+import { Confirm } from "@/components/ui/confirm"
 import { Button } from "@/components/ui/button"
-import { Sheet } from "@/components/ui/sheet"
+import { SheetBody } from "@/components/ui/sheet"
 import { TextField } from "@/components/ui/text-field"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 import { InlineStatus } from "@/components/common/inline-status"
-import { useAreaT, useT } from "@/components/i18n-provider"
+import { useAreaT } from "@/components/i18n-provider"
 import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
-import { setupRowClass } from "@/components/profile/setup-players"
+import { SetupSheetRow } from "@/components/profile/setup-row"
 import { signerProblem } from "@/components/profile/signer-status"
 import { useOwnEvents } from "@/components/profile/use-profile"
 import { profilePlayers } from "@/lib/profile/claim"
@@ -35,13 +26,11 @@ import { submitOwn } from "@/lib/sync/publish"
 // rather than by a name anyone could type), its saved rounds, and "Runde speichern" for the
 // seats as they are.
 export default function ProfileSeats({ session, players, canAdd, addPlayer, replacePlayers }: { session: Session } & SetupPlayersProps) {
-  const t = useT()
   const tx = useAreaT(PROFILE_TEXTS)
   const s = tx.setup
   const events = useOwnEvents(session.pubkey)
   const directory = usePlayers()
   const [rounds, setRounds] = useState<Round[]>([])
-  const [sheet, setSheet] = useState({ open: false, round: 0 })
 
   useEffect(() => {
     if (!events || !directory) return
@@ -82,16 +71,9 @@ export default function ProfileSeats({ session, players, canAdd, addPlayer, repl
           </div>
         </div>
       )}
-      <button type="button" onClick={() => setSheet((v) => ({ open: true, round: v.round + 1 }))} className={setupRowClass}>
-        <Plus className="h-5 w-5 shrink-0" aria-hidden="true" />
-        <span className="min-w-0 flex-1 leading-snug">{s.saveRound}</span>
-      </button>
-      <Sheet open={sheet.open} onOpenChange={(open) => setSheet((v) => ({ ...v, open }))} title={s.saveRound} description={s.saveRoundDescription}>
-        <SaveRound key={sheet.round} session={session} players={players} rounds={rounds} onSaved={() => setSheet((v) => ({ ...v, open: false }))} />
-        <Button variant="ghost" onClick={() => setSheet((v) => ({ ...v, open: false }))} className="mt-2 h-12 w-full shrink-0 rounded-2xl text-[1.0625rem]">
-          {t.common.cancel}
-        </Button>
-      </Sheet>
+      <SetupSheetRow icon={Plus} label={s.saveRound} description={s.saveRoundDescription}>
+        {(opening, close) => <SaveRound key={opening} session={session} players={players} rounds={rounds} onSaved={close} />}
+      </SetupSheetRow>
     </>
   )
 }
@@ -102,7 +84,6 @@ const chipClass = "flex min-h-11 items-center gap-1.5 rounded-full border border
 const roundLabel = (round: Round) => round.title || round.players.map((p) => p.name).filter(Boolean).join(", ")
 
 function SaveRound({ session, players, rounds, onSaved }: { session: Session; players: readonly SetupSeat[]; rounds: Round[]; onSaved: () => void }) {
-  const t = useT()
   const tx = useAreaT(PROFILE_TEXTS)
   const s = tx.setup
   const [title, setTitle] = useState("")
@@ -136,7 +117,7 @@ function SaveRound({ session, players, rounds, onSaved }: { session: Session; pl
   }
 
   return (
-    <div className="min-h-0 overflow-y-auto overscroll-contain pb-1">
+    <SheetBody>
       <form onSubmit={save}>
         <TextField label={s.roundName} value={title} onChange={(e) => setTitle(e.target.value)} placeholder={s.roundPlaceholder} maxLength={60} autoCapitalize="sentences" enterKeyHint="done" />
         <p className="mt-3 px-4 text-[0.9375rem] leading-snug [overflow-wrap:anywhere]">{seats.length > 0 ? seats.map((p) => p.name).join(", ") : s.noNames}</p>
@@ -167,26 +148,18 @@ function SaveRound({ session, players, rounds, onSaved }: { session: Session; pl
         </section>
       )}
 
-      <AlertDialog open={deleting !== null} onOpenChange={(open) => !open && setDeleting(null)}>
-        <AlertDialogContent className="max-w-[calc(100vw-2rem)] rounded-2xl sm:max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle>{s.deleteTitle}</AlertDialogTitle>
-            <AlertDialogDescription>{s.deleteDescription}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel className="h-11">{t.common.cancel}</AlertDialogCancel>
-            <AlertDialogAction
-              className="h-11 bg-danger text-white hover:bg-danger/90"
-              onClick={() => {
-                const round = deleting
-                if (round) void run(async () => submitOwn([await deletedRoundTemplate(round.event, await getSigner())]))
-              }}
-            >
-              {s.deleteConfirm}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+      <Confirm
+        open={deleting !== null}
+        onOpenChange={(open) => !open && setDeleting(null)}
+        title={s.deleteTitle}
+        text={s.deleteDescription}
+        confirm={s.deleteConfirm}
+        destructive
+        onConfirm={() => {
+          const round = deleting
+          if (round) void run(async () => submitOwn([await deletedRoundTemplate(round.event, await getSigner())]))
+        }}
+      />
+    </SheetBody>
   )
 }

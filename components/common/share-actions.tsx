@@ -1,9 +1,10 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import { Check, Copy, Share } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { InlineStatus } from "@/components/common/inline-status"
+import { useCopied } from "@/components/common/use-copied"
 import { useT } from "@/components/i18n-provider"
 import { canShareNatively, shareLink } from "@/lib/shell/share"
 import { cn } from "@/lib/utils"
@@ -16,21 +17,17 @@ import { cn } from "@/lib/utils"
 export function ShareActions({ url, title, text, copyLabel, quiet, className }: { url: string; title?: string; text?: string; copyLabel?: string; quiet?: boolean; className?: string }) {
   const t = useT()
   const [native, setNative] = useState(false)
-  const [copied, setCopied] = useState(false)
+  const { copied, show: showCopied } = useCopied()
   const [failed, setFailed] = useState(false)
-  const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   // Known only in the browser; the first render matches the server's.
   useEffect(() => setNative(canShareNatively()), [])
-  useEffect(() => () => clearTimeout(timer.current), [])
 
   const run = async (copy: boolean) => {
     const outcome = await shareLink({ url, title, text }, { copy })
     if (outcome === "copied") {
       setFailed(false)
-      setCopied(true)
-      clearTimeout(timer.current)
-      timer.current = setTimeout(() => setCopied(false), 2000)
+      showCopied()
     } else if (outcome === "failed") {
       setFailed(true)
     }

@@ -141,7 +141,7 @@ export function doubleElimination(n: number, reset: boolean): MatchSpec[] {
 // Circle method: the first player stays, the others turn one place each round. With an odd
 // number one player rests per round. Pairs list the better seed first; the second cycle of a
 // double round robin swaps them. Members are seed numbers in seed order.
-export function circleRounds(members: number[], double: boolean): { pairs: [number, number][][]; rests: (number | null)[] } {
+function circleRounds(members: number[], double: boolean): { pairs: [number, number][][]; rests: (number | null)[] } {
   let ring: (number | null)[] = members.length % 2 === 0 ? [...members] : [...members, null]
   const size = ring.length
   const pairs: [number, number][][] = []
@@ -193,7 +193,7 @@ const roundRobinMatch = (id: string, group: string | null, round: number, index:
 const restList = (rests: (number | null)[]) => rests.flatMap((seed, r) => (seed === null ? [] : [{ round: r + 1, seed }]))
 
 // Group labels A … Z, then AA, AB, … like spreadsheet columns.
-export function groupLabel(index: number): string {
+function groupLabel(index: number): string {
   let label = ""
   for (let i = index + 1; i > 0; i = Math.floor((i - 1) / 26)) label = String.fromCharCode(65 + ((i - 1) % 26)) + label
   return label
@@ -201,7 +201,7 @@ export function groupLabel(index: number): string {
 
 // Snake seeding: seeds 1 … G go to groups A … G, the next G back from G to A, and so on. Group
 // sizes differ by at most one.
-export function snakeGroups(n: number, count: number): number[][] {
+function snakeGroups(n: number, count: number): number[][] {
   const groups: number[][] = range(count).map(() => [])
   for (let i = 0; i < n; i++) {
     const row = Math.floor(i / count)
@@ -218,7 +218,7 @@ export function snakeGroups(n: number, count: number): number[][] {
 // (A↔B, C↔D, …), then the first group. With two groups going through two each this is the classic
 // cross-over A1–B2, B1–A2; with four groups A1–B2, D1–C2, B1–A2, C1–D2, every runner-up in the
 // other half from its group winner.
-export function crossoverEntrants(labels: string[], advance: number): SlotSource[] {
+function crossoverEntrants(labels: string[], advance: number): SlotSource[] {
   const count = labels.length
   const qualifiers = count * advance
   const size = nextPowerOfTwo(qualifiers)

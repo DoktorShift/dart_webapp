@@ -1,12 +1,11 @@
 "use client"
 
-import { lazy, Suspense, useEffect, useState } from "react"
+import { lazy, Suspense, useEffect } from "react"
 import { QrCode } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Sheet } from "@/components/ui/sheet"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
 import { takeOfferedSeat } from "@/components/profile/seat-handoff"
+import { SetupSheetRow } from "@/components/profile/setup-row"
 import { useSession } from "@/lib/profile/session"
 import type { SetupPlayersProps } from "@/lib/shell/registry"
 
@@ -18,9 +17,6 @@ import type { SetupPlayersProps } from "@/lib/shell/registry"
 
 const ScanSheetContent = lazy(() => import("@/components/profile/setup-scan"))
 const ProfileSeats = lazy(() => import("@/components/profile/setup-profile"))
-
-export const setupRowClass =
-  "flex min-h-12 w-full items-center gap-3 rounded-2xl border border-border bg-card px-4 text-left text-[1.0625rem] text-primary transition-colors active:bg-secondary/60 disabled:opacity-40"
 
 export default function SetupPlayers({ players, canAdd, addPlayer, replacePlayers }: SetupPlayersProps) {
   const session = useSession()
@@ -45,23 +41,14 @@ export default function SetupPlayers({ players, canAdd, addPlayer, replacePlayer
 
 function ScanPlayer({ players, canAdd, addPlayer }: Pick<SetupPlayersProps, "players" | "canAdd" | "addPlayer">) {
   const t = useT()
-  const tx = useAreaT(PROFILE_TEXTS)
-  const s = tx.setup
-  // Each opening starts with the camera, not with the last player.
-  const [sheet, setSheet] = useState({ open: false, round: 0 })
-  const close = () => setSheet((v) => ({ ...v, open: false }))
+  const s = useAreaT(PROFILE_TEXTS).setup
   return (
     <>
-      <button type="button" disabled={!canAdd} onClick={() => setSheet((v) => ({ open: true, round: v.round + 1 }))} className={setupRowClass}>
-        <QrCode className="h-5 w-5 shrink-0" aria-hidden="true" />
-        <span className="min-w-0 flex-1 leading-snug">{s.scan}</span>
-      </button>
-      {!canAdd && <p className="-mt-1 px-1 text-[0.8125rem] text-muted-foreground">{s.full}</p>}
-      <Sheet open={sheet.open} onOpenChange={(open) => setSheet((v) => ({ ...v, open }))} title={s.scan} description={s.scanDescription}>
-        {sheet.round > 0 && (
+      <SetupSheetRow icon={QrCode} label={s.scan} description={s.scanDescription} disabled={!canAdd}>
+        {(opening, close) => (
           <Suspense fallback={<p className="py-12 text-center text-[0.9375rem] text-muted-foreground">{t.shell.loading}</p>}>
             <ScanSheetContent
-              key={sheet.round}
+              key={opening}
               players={players}
               onAdd={(seat) => {
                 addPlayer(seat)
@@ -70,10 +57,8 @@ function ScanPlayer({ players, canAdd, addPlayer }: Pick<SetupPlayersProps, "pla
             />
           </Suspense>
         )}
-        <Button variant="ghost" onClick={close} className="mt-2 h-12 w-full shrink-0 rounded-2xl text-[1.0625rem]">
-          {t.common.cancel}
-        </Button>
-      </Sheet>
+      </SetupSheetRow>
+      {!canAdd && <p className="-mt-1 px-1 text-[0.8125rem] text-muted-foreground">{s.full}</p>}
     </>
   )
 }

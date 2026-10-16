@@ -1,5 +1,5 @@
 import type { NostrEvent } from "../nostr/types.ts"
-import { CLUB_OBJECT_PREFIX } from "../profile/session.ts"
+import { CLUB_OBJECT_PREFIX } from "../profile/storage-keys.ts"
 import type { InvitePreview } from "../protocol/invite.ts"
 import { dbGet, dbKeys, dbWrite, type Keyed } from "../storage/db.ts"
 import { updateStored } from "../storage/lock.ts"

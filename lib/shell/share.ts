@@ -1,6 +1,6 @@
 // Sharing a link: the system share sheet where there is one (phones, tablets, Safari on the Mac),
 // otherwise copying it. The result tells the caller what to confirm in place; there are no toasts.
-// The browser objects are passed in, so the rules run in the Node unit tests.
+// The browser objects are passed in, so the rules run in the Node unit tests. Files: ./share-file.ts.
 
 export type ShareOutcome = "shared" | "copied" | "dismissed" | "failed"
 

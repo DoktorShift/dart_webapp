@@ -3,13 +3,14 @@
 import { useState } from "react"
 import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
-import { Sheet } from "@/components/ui/sheet"
+import { Sheet, SheetBody } from "@/components/ui/sheet"
 import { InlineStatus } from "@/components/common/inline-status"
 import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
+import { formatDate } from "@/lib/i18n"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
 import { seasonOccasion } from "@/components/clubs/awards"
-import { SheetBody, SheetButton, formatDate, useChange } from "@/components/clubs/common"
+import { SheetButton, useChange } from "@/components/clubs/common"
 import { Confirm } from "@/components/ui/confirm"
 import { ScoringText } from "@/components/clubs/scoring"
 import { AwardsRow, useGiveAwards } from "@/components/clubs/season-awards"
@@ -85,14 +86,14 @@ export default function SeasonScreen({ params }: ScreenProps) {
   return (
     <div className="pb-4">
       <Group title={tx.season.current}>
-        <ListRow title={season.name} subtitle={tx.table.period(formatDate(season.starts, t), season.ends !== undefined ? formatDate(season.ends, t) : null)} value={season.ended ? tx.season.ended : undefined} />
+        <ListRow title={season.name} subtitle={tx.table.period(formatDate(t, season.starts * 1000), season.ends !== undefined ? formatDate(t, season.ends * 1000) : null)} value={season.ended ? tx.season.ended : undefined} />
       </Group>
       <Group title={tx.season.rules}>
         <div className="px-4 py-3">
           <ScoringText rules={rulesOf(season)} />
         </div>
         {versions.map((v) => (
-          <ListRow key={v.version} title={tx.table.version(v.version, formatDate(v.at, t))} subtitle={v.reason ? tx.table.reason(v.reason) : undefined} />
+          <ListRow key={v.version} title={tx.table.version(v.version, formatDate(t, v.at * 1000))} subtitle={v.reason ? tx.table.reason(v.reason) : undefined} />
         ))}
       </Group>
       {problem && (

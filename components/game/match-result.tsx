@@ -14,7 +14,7 @@ import { useShareResult } from "@/components/game/use-share-result"
 import { SlotItems } from "@/components/shell/slot-items"
 import { legsWonInGame, perfectLegDarts, playsSets, type MatchState } from "@/lib/game/engine"
 import { legName } from "@/lib/game/words"
-import { modeName, type Messages } from "@/lib/i18n"
+import { modeName, type Messages, formatDate } from "@/lib/i18n"
 import type { SavedMatch } from "@/lib/game/types"
 import { resultPrimaryFor, type FinishedMatch } from "@/lib/shell/registry"
 import type { ResultImage } from "@/lib/result-image"
@@ -51,6 +51,8 @@ function headline(state: MatchState, t: Messages) {
   return { title, subtitle, badges }
 }
 
+// A small action under the main buttons. No side padding: in landscape a column is narrow, and
+// the label must stay one line, never broken inside a word ("Aufnahmen" at 568x320).
 function SmallAction({
   icon: Icon,
   label,
@@ -67,7 +69,7 @@ function SmallAction({
       type="button"
       onClick={onClick}
       aria-label={ariaLabel}
-      className="flex min-h-12 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:bg-secondary xshort:min-h-11"
+      className="flex min-h-12 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:bg-secondary xshort:min-h-11"
     >
       <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
       <FitText minScale={0.75} className="w-full text-center text-[0.75rem] font-medium">
@@ -197,7 +199,7 @@ export function MatchResult({ state, match, onRematch, onNewGame, onHome, onLead
       title,
       subtitle,
       badges,
-      date: new Date().toLocaleDateString(t.intl, { day: "numeric", month: "long", year: "numeric" }),
+      date: formatDate(t, Date.now(), "long"),
       players: state.config.players.map((p) => p.name),
       winner: state.config.players.length > 1 ? state.winner : null,
       rows: keyRows(state, t).map((row) => ({ label: row.label, short: row.short, values: rowValues(state, row, t) })),

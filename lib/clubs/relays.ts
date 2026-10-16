@@ -1,9 +1,8 @@
 import { query, subscribe, type Closer } from "../nostr/client.ts"
 import { generalRelays, mergeRelays } from "../nostr/relays.ts"
 import type { Filter, NostrEvent } from "../nostr/types.ts"
-import { KIND_RECORD } from "../protocol/kinds.ts"
+import { KIND_CALENDAR_RSVP, KIND_CALENDAR_TIME, KIND_RECORD } from "../protocol/kinds.ts"
 import { tagValue } from "../protocol/tags.ts"
-import { CALENDAR_RSVP_KIND, CALENDAR_TIME_KIND } from "./dates.ts"
 
 // What relays hold about clubs. Everything is asked at the general relays (decision 0002 §5)
 // plus the relays an invite link named, the club's relays, which are also where its events are
@@ -23,10 +22,10 @@ function clubFilters(club: string, extras: ClubExtras = { matches: [], dates: []
   const filters: Filter[] = [
     { ids: [club] },
     { kinds: [KIND_RECORD], "#e": [club] },
-    { kinds: [CALENDAR_TIME_KIND], "#e": [club] },
+    { kinds: [KIND_CALENDAR_TIME], "#e": [club] },
   ]
   if (extras.matches.length > 0) filters.push({ ids: [...extras.matches] }, { kinds: [KIND_RECORD], "#e": [...extras.matches] })
-  if (extras.dates.length > 0) filters.push({ kinds: [CALENDAR_RSVP_KIND], "#a": [...extras.dates] })
+  if (extras.dates.length > 0) filters.push({ kinds: [KIND_CALENDAR_RSVP], "#a": [...extras.dates] })
   return filters
 }
 

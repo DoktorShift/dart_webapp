@@ -6,21 +6,22 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
 import { Segmented } from "@/components/ui/segmented"
-import { Sheet } from "@/components/ui/sheet"
+import { Sheet, SheetBody } from "@/components/ui/sheet"
 import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
-import { SheetBody, SheetButton, formatDate, formatDateTime, gameLabel, sameNames, shortId } from "@/components/clubs/common"
+import { SheetButton, gameLabel } from "@/components/clubs/common"
 import { DecideSheet, type Decision } from "@/components/clubs/manage-sheets"
 import { ScoringText } from "@/components/clubs/scoring"
 import { CLUB_SCREENS } from "@/components/clubs/screens"
 import { useClub } from "@/components/clubs/use-clubs"
-import { useProfileNames } from "@/components/profile/use-profile-names"
+import { sameNames, useProfileNames } from "@/components/profile/use-profile-names"
+import { shortKey } from "@/lib/nostr/pointers"
 import { VerdictSheet } from "@/components/clubs/verdict-sheet"
 import { isLeader, isManager } from "@/lib/clubs/club"
 import type { ClubGame } from "@/lib/clubs/games"
 import { currentSeason, seasonTable, type Standing } from "@/lib/clubs/table"
-import { formatNumber } from "@/lib/i18n"
+import { formatNumber, formatDate, formatDateTime } from "@/lib/i18n"
 import { nowSeconds } from "@/lib/nostr/time"
 import type { ScreenProps } from "@/lib/shell/registry"
 import { cn } from "@/lib/utils"
@@ -63,7 +64,7 @@ export default function TableScreen({ params }: ScreenProps) {
           <ListRow
             key={game.match}
             title={gameLabel(game)}
-            subtitle={game.result ? [formatDateTime(game.result.at, t), game.result.replaces ? tx.game.corrected : null].filter(Boolean).join(" · ") : undefined}
+            subtitle={game.result ? [formatDateTime(t, game.result.at * 1000), game.result.replaces ? tx.game.corrected : null].filter(Boolean).join(" · ") : undefined}
             value={legs(game)}
             onClick={() => setShown(game)}
           />
@@ -86,10 +87,7 @@ export default function TableScreen({ params }: ScreenProps) {
     )
   }
   const nameOf = (row: Standing) => names(row.pubkey).name ?? row.alias
-  const dup = sameNames(
-    rows.map((r) => r.pubkey),
-    (p) => names(p).name ?? rows.find((r) => r.pubkey === p)?.alias ?? tx.unnamed,
-  )
+  const dup = sameNames(rows.map((r) => ({ pubkey: r.pubkey, name: names(r.pubkey).name ?? r.alias ?? tx.unnamed })))
   const me = view.me.pubkey
   const latest = season.versions[season.versions.length - 1]
   const cell = "px-3 py-2.5 align-top"
@@ -99,7 +97,7 @@ export default function TableScreen({ params }: ScreenProps) {
     <span className="[overflow-wrap:anywhere]">
       {nameOf(row)}
       {row.pubkey === me && <span className="ml-1.5 rounded-full bg-primary px-2 py-0.5 text-[0.75rem] font-semibold text-primary-foreground">{tx.you}</span>}
-      {dup.has(row.pubkey) && <span className="block text-[0.8125rem] font-normal text-muted-foreground">{tx.id(shortId(row.pubkey))}</span>}
+      {dup.has(row.pubkey) && <span className="block text-[0.8125rem] font-normal text-muted-foreground">{tx.id(shortKey(row.pubkey))}</span>}
     </span>
   )
 
@@ -111,7 +109,7 @@ export default function TableScreen({ params }: ScreenProps) {
         </div>
       )}
       <p className="mt-6 px-4 text-[0.8125rem] text-muted-foreground [overflow-wrap:anywhere]">
-        {season.name} · {tx.table.period(formatDate(season.starts, t), season.ends !== undefined ? formatDate(season.ends, t) : null)}
+        {season.name} · {tx.table.period(formatDate(t, season.starts * 1000), season.ends !== undefined ? formatDate(t, season.ends * 1000) : null)}
         {season.ended && ` · ${tx.table.ended}`}
       </p>
       <div className="mt-2 overflow-hidden rounded-2xl border border-border bg-card">
@@ -195,7 +193,7 @@ export default function TableScreen({ params }: ScreenProps) {
         <SheetBody>
           <ScoringText rules={table.rules} />
           <p className="mt-4 text-[0.8125rem] leading-snug text-muted-foreground">
-            {tx.table.version(latest.version, formatDate(latest.at, t))}
+            {tx.table.version(latest.version, formatDate(t, latest.at * 1000))}
             {latest.reason && ` · ${tx.table.reason(latest.reason)}`}
           </p>
         </SheetBody>

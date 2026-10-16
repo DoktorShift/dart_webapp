@@ -23,7 +23,7 @@ export function createDrawSeed() {
   return bytesToHex(bytes)
 }
 
-export const drawKey = (seed: string, id: string) => hex(`blueline-draw-v1\n${seed}\n${id}`)
+const drawKey = (seed: string, id: string) => hex(`blueline-draw-v1\n${seed}\n${id}`)
 
 // The last tiebreak in tables: a lot that comes from the draw seed, fixed before anyone played.
 export const lotKey = (seed: string, id: string) => hex(`blueline-lot-v1\n${seed}\n${id}`)

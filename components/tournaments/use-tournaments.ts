@@ -1,9 +1,9 @@
 "use client"
 
-import { useEffect, useState, useSyncExternalStore } from "react"
+import { useEffect, useState } from "react"
 import type { EventTemplate } from "@/lib/nostr/types"
 import { nowSeconds } from "@/lib/nostr/time"
-import { followProfile } from "@/components/profile/follow-profile"
+import { profileStore } from "@/components/profile/follow-profile"
 import { getSession, getSigner, loadSession } from "@/lib/profile/session"
 import type { Reason } from "@/lib/protocol/reasons"
 import { onStorageChange } from "@/lib/storage/db"
@@ -43,14 +43,11 @@ const live = new Map<string, LiveInput[]>()
 let waiting = new Map<string, number>()
 let drafts: TournamentDraft[] = []
 let boards: BoardDeviceRecord[] = []
-let snapshot: TournamentsSnapshot = { entries: [], drafts: [], boards: [], loaded: false, refreshing: false }
-const listeners = new Set<() => void>()
 let watching = false
 let reading = 0
 
 function emit(change: Partial<Omit<TournamentsSnapshot, "entries" | "drafts" | "boards">> = {}) {
-  snapshot = { ...snapshot, ...change, entries: [...entries.values()], drafts, boards }
-  for (const listener of listeners) listener()
+  store.set({ ...store.get(), ...change, entries: [...entries.values()], drafts, boards })
 }
 
 const read = (stored: StoredTournament, pubkey: string | null): Entry => ({
@@ -63,14 +60,14 @@ const read = (stored: StoredTournament, pubkey: string | null): Entry => ({
 async function readLocal() {
   const run = ++reading
   const pubkey = (await loadSession())?.pubkey ?? null
-  const [stored, found, devices, unsent] = await Promise.all([
+  const [stored, found, devices, counts] = await Promise.all([
     storedTournaments().catch(() => []),
     listDrafts().catch(() => []),
     listBoardDevices().catch(() => []),
     waitingRecords().catch(() => new Map<string, number>()),
   ])
   if (run !== reading) return
-  waiting = unsent
+  waiting = counts
   entries.clear()
   for (const s of stored) entries.set(s.tournament, read(s, pubkey))
   drafts = found
@@ -80,15 +77,15 @@ async function readLocal() {
 
 // The outbox changed (something was queued or reached relays): only the counts change.
 async function readWaiting() {
-  const unsent = await waitingRecords().catch(() => null)
-  if (!unsent) return
-  waiting = unsent
-  for (const [id, entry] of entries) if (entry.waiting !== (unsent.get(id) ?? 0)) entries.set(id, { ...entry, waiting: unsent.get(id) ?? 0 })
+  const counts = await waitingRecords().catch(() => null)
+  if (!counts) return
+  waiting = counts
+  for (const [id, entry] of entries) if (entry.waiting !== (counts.get(id) ?? 0)) entries.set(id, { ...entry, waiting: counts.get(id) ?? 0 })
   emit()
 }
 
 async function refreshAll() {
-  if (snapshot.refreshing) return
+  if (store.get().refreshing) return
   emit({ refreshing: true })
   const pubkey = (await loadSession())?.pubkey ?? null
   if (pubkey) await discoverTournaments(pubkey).catch(() => false)
@@ -111,26 +108,17 @@ function watch() {
   })
 }
 
-const start = followProfile(async () => {
-  watch()
-  await readLocal()
-}, refreshAll)
-
-function subscribe(listener: () => void) {
-  listeners.add(listener)
-  return () => {
-    listeners.delete(listener)
-  }
-}
-
-const EMPTY: TournamentsSnapshot = { entries: [], drafts: [], boards: [], loaded: false, refreshing: false }
+const store = profileStore<TournamentsSnapshot>(
+  { entries: [], drafts: [], boards: [], loaded: false, refreshing: false },
+  async () => {
+    watch()
+    await readLocal()
+  },
+  refreshAll,
+)
 
 export function useTournaments(): TournamentsSnapshot & { refresh: () => Promise<void> } {
-  useEffect(() => {
-    void start()
-  }, [])
-  const current = useSyncExternalStore(subscribe, () => snapshot, () => EMPTY)
-  return { ...current, refresh: refreshAll }
+  return { ...store.useSnapshot(), refresh: refreshAll }
 }
 
 // Re-reads one tournament's local copy (after a write by this tab, or new live matches).

@@ -10,13 +10,13 @@ export const KIND_STATE = 31180
 export const KIND_EPHEMERAL = 21180
 // NIP-78 private records of a profile, encrypted, one opaque "d" per record.
 export const KIND_PRIVATE = 30078
-// NIP-59 gift wrap (payment requests between players) and its seal.
-export const KIND_GIFT_WRAP = 1059
-export const KIND_SEAL = 13
 // NIP-58 badges.
 export const KIND_BADGE_DEFINITION = 30009
 export const KIND_BADGE_AWARD = 8
 export const KIND_PROFILE_BADGES = 10008
+// NIP-52 time-based calendar events and their RSVPs: a public club's dates (lib/clubs/dates.ts).
+export const KIND_CALENDAR_TIME = 31923
+export const KIND_CALENDAR_RSVP = 31925
 
 // NIP-32 label namespace of every BlueLine record.
 export const LABEL_NAMESPACE = "blueline"

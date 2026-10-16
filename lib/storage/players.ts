@@ -158,7 +158,7 @@ export function parsePlayerRecord(value: unknown): PlayerRecord | null {
 
 export const listPlayers = () => dbGetAll<PlayerRecord>("players")
 
-export const getPlayer = (id: string) => dbGet<PlayerRecord>("players", id)
+const getPlayer = (id: string) => dbGet<PlayerRecord>("players", id)
 
 export const savePlayers = (records: PlayerRecord[]) => dbPut("players", records)
 

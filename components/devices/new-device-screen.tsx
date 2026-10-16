@@ -11,8 +11,9 @@ import { FitText } from "@/components/fit-text"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
 import { useAreaT, useT } from "@/components/i18n-provider"
-import { PairColumns } from "@/components/devices/pair-columns"
+import { CheckWaiting, PairColumns } from "@/components/devices/pair-columns"
 import { ProfileArrived } from "@/components/devices/profile-arrived"
+import { formatClock } from "@/lib/i18n"
 import { DEVICES_TEXTS } from "@/lib/i18n/features/devices.screens"
 import type { NewDeviceControl, NewDevicePairing } from "@/lib/devices/pairing"
 import { buildLink } from "@/lib/shell/links"
@@ -70,7 +71,7 @@ export default function NewDeviceScreen() {
             <FitText minScale={0.7} className="mt-2 font-display text-3xl font-semibold tabular-nums tracking-wider">
               {state.code}
             </FitText>
-            <p className="mt-2 text-[0.8125rem] text-muted-foreground">{s.codeValid(clock(t.intl, state.expires))}</p>
+            <p className="mt-2 text-[0.8125rem] text-muted-foreground">{s.codeValid(formatClock(t, state.expires * 1000))}</p>
           </div>
           <ShareActions url={link} title={t.profile.guest.fromDevice} quiet className="xshort:col-start-2" />
         </div>
@@ -100,25 +101,7 @@ export default function NewDeviceScreen() {
         />
       )
     case "confirming":
-      return (
-        <PairColumns
-          first={
-            <>
-              <p className="text-[1.0625rem] leading-snug text-muted-foreground">{s.confirming}</p>
-              <CheckCode code={state.checkCode} label={s.checkCode} />
-            </>
-          }
-          second={
-            <>
-              <Waiting className="py-1">{s.waiting}</Waiting>
-              {offlineStatus || (state.unanswered && <InlineStatus>{s.unanswered}</InlineStatus>)}
-              <Button variant="ghost" onClick={() => control.current?.decline()} className="h-11 w-full rounded-xl text-[1.0625rem] text-primary hover:bg-primary/10 hover:text-primary">
-                {t.common.cancel}
-              </Button>
-            </>
-          }
-        />
-      )
+      return <CheckWaiting text={s.confirming} code={state.checkCode} texts={s} offline={offlineStatus} unanswered={state.unanswered} onCancel={() => control.current?.decline()} />
     case "receiving":
       return <Waiting>{s.receiving}</Waiting>
     case "done":
@@ -133,5 +116,3 @@ export default function NewDeviceScreen() {
       return <EmptyState icon={Smartphone} title={s.invalid} description={s.invalidText} primary={again} />
   }
 }
-
-const clock = (locale: string, seconds: number) => new Date(seconds * 1000).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })

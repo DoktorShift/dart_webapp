@@ -48,7 +48,7 @@ export default function ReplaceDialog({ existing, onAnswer }: { existing: Sessio
               event.preventDefault()
               onAnswer(true)
             }}
-            className="h-11 bg-danger text-white hover:bg-danger/90"
+            className="h-11 bg-danger text-danger-foreground hover:bg-danger/90"
           >
             {r.confirm}
           </AlertDialogAction>

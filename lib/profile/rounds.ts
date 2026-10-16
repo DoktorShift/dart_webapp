@@ -14,7 +14,7 @@ import { isPubkey } from "../storage/players.ts"
 // can't be read here is never written over (lib/nostr/ext/lists.ts refuses). A round is deleted
 // by an empty version, which relays keep instead of the old one.
 
-export const ROUNDS_KIND = 30000
+const ROUNDS_KIND = 30000
 export const ROUND_D_PREFIX = "blueline-round-"
 const PLAYER_TAG = "player"
 

@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react"
 import { Check, Copy, FileLock2, Fingerprint, ShieldAlert, ShieldCheck } from "lucide-react"
 import { InlineStatus } from "@/components/common/inline-status"
+import { useCopied } from "@/components/common/use-copied"
 import { Waiting } from "@/components/common/waiting"
 import { Button } from "@/components/ui/button"
 import { Group } from "@/components/ui/group"
@@ -10,12 +11,13 @@ import { ListRow } from "@/components/ui/list-row"
 import { Sheet, SheetBody } from "@/components/ui/sheet"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { useBackupStatus } from "@/components/devices/use-backup"
+import { formatDate } from "@/lib/i18n"
 import { BACKUP_TEXTS } from "@/lib/i18n/features/backup.screens"
 import { useSession, type Session } from "@/lib/profile/session"
 import type { PreparedBackup } from "@/lib/recovery/backup"
 import { isSecured } from "@/lib/recovery/status"
 import { saveFile } from "@/lib/save-file"
-import { copyText } from "@/lib/shell/share"
+import { offersFileShare, shareFile } from "@/lib/shell/share-file"
 import { SITE } from "@/lib/site"
 
 // Profil › Sicherung (P2.04): how the profile stands, the backup file (with its password, shown
@@ -58,7 +60,7 @@ function Backup({ session }: { session: Session }) {
   }, [unconfirmed, session.pubkey])
 
   if (!status) return null
-  const date = (ms: number) => new Date(ms).toLocaleDateString(t.intl, { day: "numeric", month: "long", year: "numeric" })
+  const date = (ms: number) => formatDate(t, ms, "long")
   const secured = local && isSecured(status)
   const card = !local
     ? { icon: ShieldCheck, title: s.signerTitle, text: s.signerText }
@@ -113,7 +115,7 @@ function FileSheet({ pubkey, onClose }: { pubkey: string; onClose: () => void })
   const f = useAreaT(BACKUP_TEXTS).fileSheet
   const [state, setState] = useState<FileStep>({ step: "preparing" })
   const [round, setRound] = useState(0)
-  const [copied, setCopied] = useState(false)
+  const { copied, copy: copyPassword } = useCopied()
   const [passwordKept, setPasswordKept] = useState(false)
   const [savedAt, setSavedAt] = useState<number | null>(null)
   const [canShare, setCanShare] = useState(false)
@@ -136,28 +138,21 @@ function FileSheet({ pubkey, onClose }: { pubkey: string; onClose: () => void })
   useEffect(() => {
     if (state.step !== "ready") return
     const file = fileOf(state.backup)
-    setCanShare(window.matchMedia("(pointer: coarse)").matches && navigator.canShare?.({ files: [file] }) === true)
+    setCanShare(offersFileShare(file))
   }, [state])
 
   const fileOf = (backup: PreparedBackup) => new File([backup.text], backup.name, { type: "application/json" })
   const copy = async (password: string) => {
-    if (!(await copyText(password))) return
-    setCopied(true)
-    setPasswordKept(true)
-    setTimeout(() => setCopied(false), 2000)
+    if (await copyPassword(password)) setPasswordKept(true)
   }
   const save = (backup: PreparedBackup) => {
     saveFile(fileOf(backup), backup.name)
     setSavedAt(Date.now())
   }
   const share = async (backup: PreparedBackup) => {
-    try {
-      await navigator.share({ files: [fileOf(backup)] })
-    } catch (error) {
-      if ((error as { name?: string })?.name === "AbortError") return
-      return save(backup)
-    }
-    setSavedAt(Date.now())
+    const outcome = await shareFile(fileOf(backup))
+    if (outcome === "shared") setSavedAt(Date.now())
+    else if (outcome !== "dismissed") save(backup)
   }
   // Saved and the password kept: secured here, and noted for the profile's other devices.
   const secure = async (at: number) => {

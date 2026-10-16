@@ -4,13 +4,14 @@ import { useState } from "react"
 import { Check, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Segmented } from "@/components/ui/segmented"
-import { Sheet } from "@/components/ui/sheet"
+import { Sheet, SheetBody } from "@/components/ui/sheet"
 import { TextField } from "@/components/ui/text-field"
 import { InlineStatus } from "@/components/common/inline-status"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
-import { SheetBody, SheetButton, personName, shortId } from "@/components/clubs/common"
+import { SheetButton, personName } from "@/components/clubs/common"
 import { useProfileNames } from "@/components/profile/use-profile-names"
+import { shortKey } from "@/lib/nostr/pointers"
 import { useOwnProfile } from "@/components/profile/use-profile"
 import type { ClubView } from "@/lib/clubs/club"
 import { CLUB_EXTRA } from "@/lib/clubs/extra"
@@ -77,7 +78,7 @@ export function StartGameSheet({
         <div className="flex flex-wrap gap-2">
           {me && <Chip label={tx.you} chosen={chosen.includes(me)} onClick={() => toggle(me)} />}
           {sorted.map((m) => (
-            <Chip key={m.pubkey} label={personName(m.pubkey, names(m.pubkey), tx)} hint={names(m.pubkey).name ? undefined : shortId(m.pubkey)} chosen={chosen.includes(m.pubkey)} onClick={() => toggle(m.pubkey)} />
+            <Chip key={m.pubkey} label={personName(m.pubkey, names(m.pubkey), tx)} hint={names(m.pubkey).name ? undefined : shortKey(m.pubkey)} chosen={chosen.includes(m.pubkey)} onClick={() => toggle(m.pubkey)} />
           ))}
         </div>
         {guests.length > 0 && (

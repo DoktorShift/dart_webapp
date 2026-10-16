@@ -45,7 +45,7 @@ export function useOwnEvents(pubkey: string | null) {
 // Looked for on relays once per profile and page load: on a new device the profile's name,
 // picture, relays and rounds arrive this way; on a known one, changes made elsewhere. The
 // lookup's state says whether what this device shows was ever confirmed by a relay.
-export function useOwnLookup(pubkey: string | null): OwnLookup | null {
+function useOwnLookup(pubkey: string | null): OwnLookup | null {
   useEffect(() => {
     if (pubkey) void lookupOwnEvents(pubkey)
   }, [pubkey])

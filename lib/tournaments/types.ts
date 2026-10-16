@@ -190,9 +190,6 @@ export const POINTS_PER_WIN = 2
 // Criterion that put a row below the row above it.
 export type Tiebreak = "points" | "sets" | "legDifference" | "legsWon" | "headToHead" | "lot"
 
-// The order tables apply them ("sets" only when the matches are played in sets).
-export const TIEBREAK_ORDER: Tiebreak[] = ["points", "sets", "legDifference", "legsWon", "headToHead", "lot"]
-
 export interface StandingRow {
   participant: string
   rank: number

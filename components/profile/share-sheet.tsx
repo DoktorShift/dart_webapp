@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Sheet } from "@/components/ui/sheet"
+import { Sheet, SheetBody } from "@/components/ui/sheet"
 import { QRCodeView } from "@/components/common/qr-code-view"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
@@ -29,9 +29,9 @@ export function ShareSheet({
   const link = profileLink(SITE.url, pubkey, writeRelays)
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title={s.title} description={s.description}>
-      <div className="min-h-0 overflow-y-auto overscroll-contain pb-1">
+      <SheetBody>
         {open && <QRCodeView value={link} caption={s.caption} label={s.label} share={{ url: link, title: name ?? s.title }} />}
-      </div>
+      </SheetBody>
       <Button variant="ghost" onClick={() => onOpenChange(false)} className="mt-2 h-12 w-full shrink-0 rounded-2xl text-[1.0625rem]">
         {t.common.done}
       </Button>

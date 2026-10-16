@@ -6,8 +6,6 @@ export type TabId = "play" | "leaderboard" | "clubs" | "tournaments" | "profile"
 
 export const TABS: readonly TabId[] = ["play", "leaderboard", "clubs", "tournaments", "profile"]
 
-export const isTabId = (value: unknown): value is TabId => typeof value === "string" && (TABS as readonly string[]).includes(value)
-
 // Screen parameters are short strings (ids, opaque link payloads), so a stack can be compared,
 // logged and kept in history state without surprises.
 export type ScreenParams = Readonly<Record<string, string>>

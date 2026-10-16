@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button"
 import { InlineStatus } from "@/components/common/inline-status"
 import { Waiting } from "@/components/common/waiting"
 import { useAreaT, useT } from "@/components/i18n-provider"
+import { formatDateTime } from "@/lib/i18n"
 import { TOURNAMENTS_TEXTS } from "@/lib/i18n/features/tournaments.screens"
-import { boardName, formatDateTime, rulesLine, scoreText, SECONDARY, useParticipantNames, useRoundLabel } from "@/components/tournaments/common"
+import { boardName, rulesLine, scoreText, SECONDARY, useParticipantNames, useRoundLabel } from "@/components/tournaments/common"
 import { useTournament, type Entry } from "@/components/tournaments/use-tournaments"
 import { saveFile } from "@/lib/save-file"
-import { nowSeconds } from "@/lib/nostr/time"
 import { exportFileName, tournamentCsv, tournamentJson } from "@/lib/tournaments/export"
 import type { ScreenProps } from "@/lib/shell/registry"
 
@@ -52,9 +52,9 @@ function Sheet({ entry }: { entry: Entry }) {
     <article className="mt-6">
       <h2 className="text-2xl font-semibold leading-tight [overflow-wrap:anywhere]">{state.settings.name}</h2>
       <p className="mt-1 text-[0.9375rem] text-muted-foreground">
-        {[rulesLine(state, tx), tx.formats[state.settings.format].name, state.settings.starts !== undefined ? formatDateTime(state.settings.starts, t) : null, state.settings.place].filter(Boolean).join(" · ")}
+        {[rulesLine(state, tx), tx.formats[state.settings.format].name, state.settings.starts !== undefined ? formatDateTime(t, state.settings.starts * 1000) : null, state.settings.place].filter(Boolean).join(" · ")}
       </p>
-      <p className="text-[0.8125rem] text-muted-foreground">{p.generated(formatDateTime(nowSeconds(), t))}</p>
+      <p className="text-[0.8125rem] text-muted-foreground">{p.generated(formatDateTime(t, Date.now()))}</p>
       <table className="mt-4 w-full border-collapse text-[0.9375rem]">
         <thead>
           <tr className="text-left text-[0.8125rem] text-muted-foreground">

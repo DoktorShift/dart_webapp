@@ -22,7 +22,7 @@ const NEXT_TREE = "__PRIVATE_NEXTJS_INTERNALS_TREE"
 
 type HistoryData = Record<string, unknown> & { __NA?: boolean }
 
-export function historyDepth(state: unknown): number {
+function historyDepth(state: unknown): number {
   const mark = (state as Record<string, { depth?: unknown }> | null)?.[KEY]
   const depth = mark?.depth
   return typeof depth === "number" && Number.isInteger(depth) && depth >= 0 ? depth : 0

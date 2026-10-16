@@ -28,7 +28,6 @@ export type RecordType = keyof typeof RECORD_TYPES
 export type ContentOf<T extends RecordType> = Infer<(typeof RECORD_TYPES)[T]["schema"]>
 
 const specOf = (type: string): RecordSpec | undefined => (RECORD_TYPES as Record<string, RecordSpec>)[type]
-export const isRecordType = (type: string): type is RecordType => specOf(type) !== undefined
 
 export interface BlueLineRecord<T extends RecordType = RecordType> {
   type: T
@@ -193,8 +192,6 @@ export function encryptForLinkKey(template: EventTemplate, linkPubkey: string, c
   if (signedEventBytes(encrypted) > MAX_EVENT_BYTES) throw new ProtocolError("too_large", "encrypted event exceeds the budget")
   return encrypted
 }
-
-export const isAlwaysEncrypted = (type: RecordType) => specOf(type)?.encrypted === true
 
 // Parses a signed BlueLine record. `plaintext` is the decrypted content of an encrypted record,
 // when the reader could open it (seal.ts openSealedEvents, or the link key).

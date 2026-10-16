@@ -8,8 +8,9 @@ import { ListRow } from "@/components/ui/list-row"
 import { CardSection } from "@/components/common/card-section"
 import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
+import { formatDateTime } from "@/lib/i18n"
 import { TOURNAMENTS_TEXTS } from "@/lib/i18n/features/tournaments.screens"
-import { formatDateTime, rulesLine, SECONDARY, type TournamentTexts } from "@/components/tournaments/common"
+import { rulesLine, SECONDARY, type TournamentTexts } from "@/components/tournaments/common"
 import { TOURNAMENT_SCREENS } from "@/components/tournaments/screens"
 import { useTournaments, type Entry } from "@/components/tournaments/use-tournaments"
 import { nowSeconds } from "@/lib/nostr/time"
@@ -100,7 +101,7 @@ export function TournamentCard({ entry, status, onOpen }: { entry: Entry; status
   const s = state.settings
   const now = nowSeconds()
   const where = s.online ? tx.home.online : s.place
-  const when = s.starts !== undefined ? formatDateTime(s.starts, t) : tx.home.noDate
+  const when = s.starts !== undefined ? formatDateTime(t, s.starts * 1000) : tx.home.noDate
   const places = registrationOpen(state, now) ? tx.home.free(freePlaces(state)) : tx.phase[state.phase]
   return (
     <button type="button" onClick={onOpen} className="flex w-full items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-left transition-colors active:bg-secondary/70">
