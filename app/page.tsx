@@ -42,7 +42,7 @@ import {
 import type { GameType, MatchConfig, SavedMatch } from "@/lib/game/types"
 import { isAnswerLink, parseHash, type AppLink } from "@/lib/shell/links"
 import { TABS, depthOf, initialNavState, makeEntry, navReducer, type TabId } from "@/lib/shell/nav"
-import { canOpenLink, dispatchLink, getScreen, hasScreen, type ShellNavigator } from "@/lib/shell/registry"
+import { canOpenLink, dispatchLink, getScreen, hasScreen, runStartTasks, type ShellNavigator } from "@/lib/shell/registry"
 
 // "tabs" is the app with its tab bar or sidebar; setup and game are full-screen flows on top.
 type Screen = "tabs" | "setup" | "game"
@@ -287,6 +287,18 @@ export default function DartScorer() {
       if (idle !== undefined) window.cancelIdleCallback(idle)
     }
   }, [hydrated, screen])
+
+  // The areas' start tasks (lib/shell/registry.ts) run once the first screen is up and the browser
+  // is idle, with or without a connection: what they queue waits for one.
+  useEffect(() => {
+    if (!hydrated) return
+    if (typeof window.requestIdleCallback === "function") {
+      const idle = window.requestIdleCallback(runStartTasks, { timeout: 3000 })
+      return () => window.cancelIdleCallback(idle)
+    }
+    const timer = setTimeout(runStartTasks, 1500)
+    return () => clearTimeout(timer)
+  }, [hydrated])
 
   const appSettings = useMemo(() => ({ settings, onSettingsChange: setSettings }), [settings])
 

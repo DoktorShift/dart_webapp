@@ -13,16 +13,37 @@ import { join } from "node:path"
 
 export const NAK = process.env.NAK_BIN ?? "/opt/homebrew/bin/nak"
 
-export function freePort(): Promise<number> {
-  return new Promise((resolve, reject) => {
+// Ports come from NAK_PORT_RANGE ("20040-20049") when set, so several people's test runs on one
+// machine keep to their own ranges (run the files one after another then: --test-concurrency=1).
+const range = /^(\d+)-(\d+)$/.exec(process.env.NAK_PORT_RANGE ?? "")
+const handedOut = new Set<number>()
+
+function listens(port: number): Promise<number | null> {
+  return new Promise((resolve) => {
     const server = createServer()
     server.unref()
-    server.on("error", reject)
-    server.listen(0, "127.0.0.1", () => {
+    server.on("error", () => resolve(null))
+    server.listen(port, "127.0.0.1", () => {
       const address = server.address()
-      server.close(() => (typeof address === "object" && address ? resolve(address.port) : reject(new Error("no port"))))
+      server.close(() => resolve(typeof address === "object" && address ? address.port : null))
     })
   })
+}
+
+export async function freePort(): Promise<number> {
+  if (!range) {
+    const port = await listens(0)
+    if (port === null) throw new Error("no port")
+    return port
+  }
+  for (let port = Number(range[1]); port <= Number(range[2]); port++) {
+    if (handedOut.has(port)) continue
+    if ((await listens(port)) !== null) {
+      handedOut.add(port)
+      return port
+    }
+  }
+  throw new Error(`no free port in ${range[0]}`)
 }
 
 async function waitForPort(port: number, child: ChildProcess, timeoutMs = 10_000) {

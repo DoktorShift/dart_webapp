@@ -5,8 +5,10 @@ import { A_CONFIG, matchA, matchB, matchD, matchE, recordC } from "./storage-fix
 import { dart, play } from "./helpers.ts"
 import { ENGINE_VERSION, replay } from "../lib/game/engine.ts"
 import {
+  applySynced,
   archiveFinished,
   clearLeaderboard,
+  deletedMatches,
   importV1Matches,
   loadArchive,
   unarchive,
@@ -204,6 +206,27 @@ test("everything is shown even before 1.0.0 results are taken over", async () =>
     ["match-d", "local"],
     [recordC().id, "imported-v1"],
   ])
+})
+
+test("a game taken off is marked deleted here until it is archived again; a reset marks nothing", async () => {
+  const match = matchA()
+  await archiveFinished(match)
+  const record = (await stored(match.id))!
+  await unarchive(match.id)
+  assert.deepEqual(await deletedMatches(), [match.id])
+  await archiveFinished(match, undefined, at("2026-10-01T21:00:00.000Z"))
+  assert.deepEqual(await deletedMatches(), [])
+  // A game that arrives from another device loses the mark too.
+  await unarchive(match.id)
+  await applySynced({ put: [record], remove: [], players: [] })
+  assert.deepEqual(await deletedMatches(), [])
+  assert.equal((await stored(match.id))!.finishedAt, record.finishedAt)
+
+  await unarchive(match.id)
+  await archiveFinished(matchB())
+  assert.equal(await clearLeaderboard(), true)
+  assert.deepEqual(await dbGetAll<ArchivedMatch>("matches"), [])
+  assert.deepEqual(await deletedMatches(), [match.id])
 })
 
 test("resetting the Rangliste removes games with two or more players, keeps solo games", async () => {

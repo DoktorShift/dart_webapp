@@ -7,6 +7,7 @@ import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
 import { useNav } from "@/components/nav/nav-context"
 import { SlotItems } from "@/components/shell/slot-items"
+import { useEmptyHistoryLine } from "@/components/sync/history-state"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
 import { EditSheet } from "@/components/profile/edit-sheet"
@@ -46,6 +47,9 @@ function OwnProfileView({ own }: { own: OwnProfile }) {
   const [edit, setEdit] = useState({ open: false, round: 0 })
   const [signingOut, setSigningOut] = useState(false)
   useStatsCardFollowsGames(own)
+  // Until this device has looked for the profile's games from its other devices, "no games" is
+  // not known yet (components/sync/history-state.tsx).
+  const noGames = useEmptyHistoryLine(session.pubkey, h.noGames)
 
   return (
     <>
@@ -61,7 +65,7 @@ function OwnProfileView({ own }: { own: OwnProfile }) {
         {summary?.x01 ? (
           <Figures figures={x01Figures(t, tx, { ...summary, points: summary.x01.points, darts: summary.x01.darts })} caption={tx.figures.allTime} />
         ) : (
-          <p className="mt-4 border-t border-border pt-3 text-[0.9375rem] leading-snug text-muted-foreground">{h.noGames}</p>
+          <p className="mt-4 border-t border-border pt-3 text-[0.9375rem] leading-snug text-muted-foreground">{noGames}</p>
         )}
       </ProfileCard>
 

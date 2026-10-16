@@ -49,6 +49,7 @@ test("a new local profile signs with its own key, checked against the session", 
   const session = await startLocalProfile()
   assert.match(session.pubkey, /^[0-9a-f]{64}$/)
   assert.equal(session.kind, "local")
+  assert.equal(session.madeHere, true)
   assert.deepEqual(getSession(), session)
   const signer = await getSigner()
   assert.equal(await signer.getPublicKey(), session.pubkey)
