@@ -1,7 +1,7 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { ANNA, BEN, saved } from "./storage-helpers.ts"
-import { archivedAt, A_CONFIG, matchA, matchB, matchD, matchE, recordC } from "./storage-fixtures.ts"
+import { archivedAt, A_CONFIG, D_CONFIG, matchA, matchB, matchD, matchE, recordC } from "./storage-fixtures.ts"
 import { dart, play } from "./helpers.ts"
 import { MILESTONES } from "../lib/badges/catalog.ts"
 import { evaluateMilestones, reachedIn, type MilestoneStatus } from "../lib/badges/milestones.ts"
@@ -69,8 +69,8 @@ test("X01: visits, finishes, a perfect leg and averages, each from the game it h
 
 test("Cricket and Around the Clock", () => {
   const statuses = evaluateMilestones([D, E], anna)
-  // Three triples on 20, 19 and 18 in the first visit; 21 × 300 / 8 = 787.5 marks per round.
-  assert.equal(reached(statuses, "cricket-nine-marks")?.matchId, "match-d")
+  // Three triples on open numbers in the first visit are nine marks; 21 × 300 / 8 = 787.5 marks per round.
+  assert.deepEqual(reached(statuses, "cricket-nine-marks"), { matchId: "match-d", finishedAt: day(4), modeId: "cricket", value: 9 })
   assert.equal(reached(statuses, "cricket-mpr-3")?.value, 787)
   assert.deepEqual(reached(statuses, "clock-30"), { matchId: "match-e", finishedAt: day(5), modeId: "clock", value: 24 })
   // Ben threw only misses in D: none of his figures reach anything.
@@ -79,6 +79,18 @@ test("Cricket and Around the Clock", () => {
   assert.equal(progress(benD, "cricket-mpr-3"), 0)
   // X01 milestones know of no X01 game.
   assert.equal(progress(statuses, "first-180"), null)
+})
+
+test("Neun Marks counts the marks the engine credits, not the triples thrown", () => {
+  // K: Anna T20 and two misses (20 closed: 3 marks) · Ben T20 and two misses (closed for him too) ·
+  //    Anna T20 T20 T20: everyone has 20, so none of the nine hits is a mark. Her best visit stays 3.
+  const closed = archivedAt(saved(D_CONFIG, play(D_CONFIG, [dart(20, 3), dart(0), dart(0), dart(20, 3), dart(0), dart(0), dart(20, 3), dart(20, 3), dart(20, 3)]), "match-k"), day(6))
+  const annaK = evaluateMilestones([closed], anna)
+  assert.equal(reached(annaK, "cricket-nine-marks"), null)
+  assert.equal(progress(annaK, "cricket-nine-marks"), 3)
+  // L: the same, but Ben missed everything: Anna's three T20 all score against him, nine marks.
+  const open = archivedAt(saved(D_CONFIG, play(D_CONFIG, [dart(20, 3), dart(0), dart(0), dart(0), dart(0), dart(0), dart(20, 3), dart(20, 3), dart(20, 3)]), "match-l"), day(7))
+  assert.deepEqual(reached(evaluateMilestones([open], anna), "cricket-nine-marks"), { matchId: "match-l", finishedAt: day(7), modeId: "cricket", value: 9 })
 })
 
 test("games count in the order they were finished, practice included; wins only against others", () => {

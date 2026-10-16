@@ -18,16 +18,15 @@ import { InlineStatus } from "@/components/common/inline-status"
 import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { BadgeIcon } from "@/components/badges/badge-icon"
-import { awardTexts, milestoneOf, milestoneTexts, problemText } from "@/components/badges/texts"
-import { selfAwardFor, useMilestones, useOwnBadges } from "@/components/badges/use-badges"
+import { awardTexts, milestoneOf, milestoneTexts, problemText, progressText } from "@/components/badges/texts"
+import { awardVoided, selfAwardFor, useMilestones, useOwnBadges } from "@/components/badges/use-badges"
 import { PROFILE_SCREENS } from "@/components/profile/screens"
 import { useOwnProfile, usePublicProfile, type OwnProfile } from "@/components/profile/use-profile"
 import { hideAwards, requestDeletion, showAward, showMilestone, type Outcome } from "@/lib/badges/actions"
 import type { ValidAward } from "@/lib/badges/awards"
 import { milestoneById } from "@/lib/badges/catalog"
 import type { Achievement } from "@/lib/badges/milestones"
-import { selfAwardHolds } from "@/lib/badges/self-award"
-import { shownElsewhereAward } from "@/lib/badges/store"
+import { shownBadges, shownElsewhereAward } from "@/lib/badges/store"
 import { formatWhen, modeName } from "@/lib/i18n"
 import { BADGES_TEXTS } from "@/lib/i18n/features/badges.screens"
 import { useMatchHistory } from "@/lib/leaderboard"
@@ -39,15 +38,19 @@ import { SCREENS, type ScreenProps } from "@/lib/shell/registry"
 // One badge (PLAN.md "Auszeichnungen": "Bedeutung, Aussteller, erreicht am, zugehöriges Ergebnis
 // und Sichtbarkeit"): an award of the signed-in profile (params.id), a milestone a player
 // reached on this device (params.milestone, params.key), or a badge on someone else's profile
-// (params.id, seen on their card). Showing in the profile and taking out of it are the one
-// action each; a corrected result is said plainly, with the deletion request for one's own award.
+// (params.id and params.pubkey, seen on their card). Showing in the profile and taking out of it
+// are the one action each; a corrected result is said plainly, with the deletion request for
+// one's own award.
 export default function BadgeScreen({ params }: ScreenProps) {
   const session = useSession()
   const own = useOwnProfile()
   if (session === undefined || own === undefined) return null
   if (params.milestone) return <MilestoneView id={params.milestone} playerKey={params.key ?? own?.key ?? ""} own={own} />
-  if (own) return <OwnAwardView id={params.id ?? ""} own={own} />
-  return <ForeignAwardView id={params.id ?? ""} />
+  // Whose award it is decides the view, not who is signed in: a chip on another player's card
+  // names that player.
+  const theirs = !!params.pubkey && params.pubkey !== own?.session.pubkey
+  if (own && !theirs) return <OwnAwardView id={params.id ?? ""} own={own} />
+  return <ForeignAwardView id={params.id ?? ""} pubkey={params.pubkey ?? null} />
 }
 
 // ---- The pieces ---------------------------------------------------------------------------------
@@ -139,12 +142,14 @@ function useFreshList(pubkey: string) {
   }, [pubkey])
 }
 
-function Visibility({ shown, onShow, onHide, busy, problem }: { shown: boolean; onShow: () => void; onHide?: () => void; busy: boolean; problem: string | null }) {
+// The one action with an honest footer: what showing publishes (a milestone's game data), or
+// that an award already published only goes onto the card.
+function Visibility({ shown, published, onShow, onHide, busy, problem }: { shown: boolean; published: boolean; onShow: () => void; onHide?: () => void; busy: boolean; problem: string | null }) {
   const tx = useAreaT(BADGES_TEXTS)
   const d = tx.detail
   return (
     <>
-      <Group footer={shown ? d.hideFooter : d.showFooter}>
+      <Group footer={shown ? d.hideFooter : published ? d.publishedFooter : d.showFooter}>
         <ListRow title={d.visibility} value={shown ? d.inProfile : d.notInProfile} />
       </Group>
       {shown ? (
@@ -214,7 +219,7 @@ function MilestoneView({ id, playerKey, own }: { id: string; playerKey: string; 
   const milestone = milestoneById(id)
   const mine = !!own && playerKey === own.key
   const { statuses, loaded } = useMilestones(playerKey || null, own?.history.aliases, mine ? own?.sameAs : undefined)
-  const badges = useOwnBadges(mine ? own.session.pubkey : "")
+  const badges = useOwnBadges(mine ? own.session.pubkey : null)
   const award = milestone && mine ? selfAwardFor(badges, own.session.pubkey, milestone.id, milestone.version) : undefined
   if (award && own) return <OwnAwardView id={award.award.id} own={own} />
   if (!milestone) return <InlineStatus tone="error" className="mt-6">{d.unavailable}</InlineStatus>
@@ -227,6 +232,7 @@ function MilestoneView({ id, playerKey, own }: { id: string; playerKey: string; 
       <Head name={words.name} description={words.description} status={achieved ? d.onDevice : tx.list.reachable} />
       <Group>
         <ListRow title={d.condition} subtitle={words.condition} />
+        {status && !achieved && <ListRow title={d.progress} value={progressText(t, tx, status)} />}
         {achieved && <ListRow title={d.earnedAt} value={formatWhen(achieved.finishedAt, t)} />}
         {achieved && <ResultRow matchId={achieved.matchId} finishedAt={achieved.finishedAt} modeId={achieved.modeId} />}
       </Group>
@@ -239,7 +245,7 @@ function ShowMilestone({ pubkey, milestone, achieved }: { pubkey: string; milest
   const tx = useAreaT(BADGES_TEXTS)
   const { busy, problem, run } = useChange()
   useFreshList(pubkey)
-  return <Visibility shown={false} busy={busy} problem={problem} onShow={() => void run(() => showMilestone(pubkey, milestone, achieved, milestoneTexts(tx, milestone)))} />
+  return <Visibility shown={false} published={false} busy={busy} problem={problem} onShow={() => void run(() => showMilestone(pubkey, milestone, achieved, milestoneTexts(tx, milestone), tx.detail.voided))} />
 }
 
 // An award of the signed-in profile: self-earned, or given by someone.
@@ -250,19 +256,18 @@ function OwnAwardView({ id, own }: { id: string; own: OwnProfile }) {
   const { pubkey } = own.session
   const badges = useOwnBadges(pubkey)
   const { busy, problem, run } = useChange()
-  const [requested, setRequested] = useState(false)
+  // After a deletion request the award is gone from the lists; the screen keeps what it showed.
+  const [requested, setRequested] = useState<ValidAward | null>(null)
   useFreshList(pubkey)
   if (badges.awards === null) return null
-  const award = badges.awards.find((a) => a.award.id === id)
-  if (!award) return <InlineStatus tone={requested ? "success" : "error"} className="mt-6">{requested ? d.deletionRequested : d.unavailable}</InlineStatus>
+  const award = badges.awards.find((a) => a.award.id === id) ?? requested
+  if (!award) return <InlineStatus tone="error" className="mt-6">{d.unavailable}</InlineStatus>
 
   const words = awardTexts(tx, award)
   const self = award.issuer === pubkey
   const milestone = milestoneOf(award)
-  const evidence = badges.evidence.get(award.blueline?.evidence ?? "") ?? null
-  const result = evidence?.content.result
-  const holds = self ? selfAwardHolds(award, evidence, own.history.all, own.key ?? "", { aliases: own.history.aliases, sameAs: own.sameAs }) : null
-  const voided = award.voided || holds === false
+  const result = badges.evidence.get(award.blueline?.evidence ?? "")?.content.result
+  const voided = requested !== null || awardVoided(own, badges, award)
   const shown = badges.shown.some((a) => a.award.id === id)
   const at = result ? new Date(result.finishedAt * 1000).toISOString() : new Date(award.award.created_at * 1000).toISOString()
 
@@ -280,26 +285,47 @@ function OwnAwardView({ id, own }: { id: string; own: OwnProfile }) {
         {result && <ResultRow matchId={result.game} finishedAt={at} modeId={result.mode} />}
         {self ? <ListRow title={d.issuer} value={`${d.you} · ${d.self}`} /> : <IssuerRow pubkey={award.issuer} />}
       </Group>
-      {!voided && <Visibility shown={shown} busy={busy} problem={problem} onShow={() => void run(() => showAward(pubkey, award))} onHide={() => void run(() => hideAwards(pubkey, [id]))} />}
-      {voided && self && <DeletionRequest pubkey={pubkey} award={award} onDone={() => setRequested(true)} />}
+      {!voided && <Visibility shown={shown} published busy={busy} problem={problem} onShow={() => void run(() => showAward(pubkey, award))} onHide={() => void run(() => hideAwards(pubkey, [id]))} />}
+      {voided && self && requested && (
+        <InlineStatus tone="success" className="mt-4">
+          {d.deletionRequested}
+        </InlineStatus>
+      )}
+      {voided && self && !requested && <DeletionRequest pubkey={pubkey} award={award} onDone={() => setRequested(award)} />}
       <Advanced award={award} />
     </>
   )
 }
 
-// A badge on someone else's profile, as their card showed it.
-function ForeignAwardView({ id }: { id: string }) {
+// A badge on someone else's profile, as their card showed it; after a reload it is looked up
+// from their list again. For a BlueLine milestone the catalog says what it took.
+function ForeignAwardView({ id, pubkey }: { id: string; pubkey: string | null }) {
   const t = useT()
   const tx = useAreaT(BADGES_TEXTS)
   const d = tx.detail
-  const award = shownElsewhereAward(id)
+  // undefined: not known here yet; null: not among the badges that profile shows.
+  const [award, setAward] = useState<ValidAward | null | undefined>(() => shownElsewhereAward(id))
+  useEffect(() => {
+    if (award || !pubkey) return
+    let alive = true
+    shownBadges(pubkey).then(
+      () => alive && setAward(shownElsewhereAward(id) ?? null),
+      () => alive && setAward(null),
+    )
+    return () => {
+      alive = false
+    }
+  }, [award, id, pubkey])
+  if (award === undefined && pubkey) return null
   if (!award) return <InlineStatus tone="error" className="mt-6">{d.unavailable}</InlineStatus>
   const words = awardTexts(tx, award)
   const self = award.issuer === award.recipient
+  const milestone = milestoneOf(award)
   return (
     <>
       <Head image={award.image} name={words.name} description={words.description} status={self ? d.self : d.issuer} />
       <Group>
+        {milestone && <ListRow title={d.condition} subtitle={milestoneTexts(tx, milestone).condition} />}
         <ListRow title={d.givenAt} value={formatWhen(new Date(award.award.created_at * 1000).toISOString(), t)} />
         <IssuerRow pubkey={award.issuer} />
       </Group>

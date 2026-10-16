@@ -45,6 +45,11 @@ export const evidenceFor = (events: readonly NostrEvent[], pubkey: string, m: Mi
     .map(readEvidence)
     .find((r) => r !== null && r.content.badge === milestoneD(m) && r.content.result?.game === matchId) ?? null
 
+// Whether the player's own award rests on this game: its evidence names it. An award resting on
+// another game is replaced when the milestone is shown from this one (./actions.ts).
+export const awardRestsOn = (award: ValidAward, evidence: Evidence | null, matchId: string): boolean =>
+  evidence !== null && evidence.id === award.blueline?.evidence && evidence.content.result?.game === matchId
+
 // Whether the game a shown milestone rests on still meets it after a correction on this device
 // (PLAN.md: "Korrigierte oder aufgehobene Resultate lösen eine erneute fachliche Bewertung aus").
 // null when that can't be said here: the game is on another device, or the rule is not this

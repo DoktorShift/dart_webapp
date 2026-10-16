@@ -6,5 +6,6 @@ export const badgesEn: Messages["badges"] = {
     badges: "Badges",
     badge: "Badge",
     arrange: "Arrange",
+    more: "More badges",
   },
 }

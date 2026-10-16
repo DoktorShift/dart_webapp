@@ -80,28 +80,48 @@ function behind(awards: readonly NostrEvent[]): Filter[] {
 
 const loadStatus = (answered: number, failed: number): LoadStatus => (answered === 0 ? "offline" : failed > 0 ? "partial" : "complete")
 
+// Awards from others kept on this device: the newest this many. Anyone can send anyone a kind 8,
+// so only awards that check out (./awards.ts) are kept at all, and never without bound.
+export const FOREIGN_AWARDS_KEPT = 50
+
+// Keeps the newest FOREIGN_AWARDS_KEPT awards from others, and others' definitions only while an
+// award points at them.
+async function pruneForeign(pubkey: string) {
+  const foreign = (await dbGetAll<StoredEvent>("objects")).filter((s) => s.id.startsWith(PREFIX) && s.event.pubkey !== pubkey)
+  const awards = foreign.filter((s) => s.event.kind === KIND_BADGE_AWARD).sort((a, b) => b.event.created_at - a.event.created_at)
+  const kept = awards.slice(0, FOREIGN_AWARDS_KEPT)
+  const pointedAt = new Set(kept.map((s) => tagValue(s.event.tags, "a")))
+  const orphans = foreign.filter((s) => s.event.kind === KIND_BADGE_DEFINITION && !pointedAt.has(`${KIND_BADGE_DEFINITION}:${s.event.pubkey}:${tagValue(s.event.tags, "d")}`))
+  const gone = [...awards.slice(FOREIGN_AWARDS_KEPT), ...orphans]
+  if (gone.length > 0) await dbWrite(gone.map((s) => ({ store: "objects", delete: s.id })))
+}
+
 // Looks for the profile's badges on relays and keeps what it finds: on a new device this is how
 // they arrive, on a known one what changed elsewhere (a badge given). The list of shown badges
-// comes with the profile's own events (own-events.ts lookupOwnEvents). Deletion requests are
-// kept only for badge events.
+// comes with the profile's own events (own-events.ts lookupOwnEvents). Of what others sent, only
+// awards that check out are kept, with their definitions; deletion requests only for badge
+// events that were seen.
 export async function fetchBadges(pubkey: string): Promise<LoadStatus> {
   const relays = await relaysOf(pubkey)
   const first = await query(
     [
       { authors: [pubkey], kinds: [KIND_BADGE_AWARD, KIND_BADGE_DEFINITION, KIND_DELETION] },
       { authors: [pubkey], kinds: [KIND_RECORD], "#l": ["badge.evidence"] },
-      { kinds: [KIND_BADGE_AWARD], "#p": [pubkey] },
+      { kinds: [KIND_BADGE_AWARD], "#p": [pubkey], limit: FOREIGN_AWARDS_KEPT * 2 },
     ],
     relays,
   )
   const received = first.events.filter((e) => e.kind === KIND_BADGE_AWARD && e.pubkey !== pubkey)
   const second = received.length > 0 ? await query(behind(received), relays) : null
   const found = [...first.events, ...(second?.events ?? [])]
-  const badgeIds = new Set(found.filter((e) => e.kind !== KIND_DELETION).map((e) => e.id))
-  await keepBadgeEvents(
-    pubkey,
-    found.filter((e) => e.kind !== KIND_DELETION || tagValues(e.tags, "e").some((id) => badgeIds.has(id))),
-  )
+  const valid = second ? await validAwards([...received, ...second.events], pubkey) : []
+  const seen = new Set(found.filter((e) => e.kind !== KIND_DELETION).map((e) => e.id))
+  await keepBadgeEvents(pubkey, [
+    ...found.filter((e) => e.pubkey === pubkey && e.kind !== KIND_DELETION),
+    ...valid.flatMap((a) => [a.award, a.definition]),
+    ...found.filter((e) => e.kind === KIND_DELETION && tagValues(e.tags, "e").some((id) => seen.has(id))),
+  ])
+  await pruneForeign(pubkey)
   return loadStatus(first.answered.length, first.failed.length + (second?.failed.length ?? 0))
 }
 
@@ -110,6 +130,8 @@ export async function fetchBadges(pubkey: string): Promise<LoadStatus> {
 const fetched = new Map<string, Promise<LoadStatus>>()
 onSessionEnd(() => fetched.clear())
 export function lookupBadges(pubkey: string, { again = false } = {}): Promise<LoadStatus> {
+  // Without a profile there is nothing to look for, and no connection to open (decision 0002 §1).
+  if (!pubkey) return Promise.resolve("offline")
   const running = fetched.get(pubkey)
   if (running && !again) return running
   const next = fetchBadges(pubkey).then(

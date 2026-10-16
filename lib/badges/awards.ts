@@ -146,3 +146,15 @@ export async function validAwards(events: readonly NostrEvent[], recipient?: str
   // One per key: the first given, in replay order, which is also the order returned.
   return dedupeAwards(checked)
 }
+
+// The awards from others, split by whether the profile vouches for the issuer: itself, a club
+// or tournament that let the issuer award (registerIssuerCheck said so, or the award wouldn't
+// be valid), and whoever gave a badge the profile already shows. Anyone can send anyone a
+// kind 8, so only `received` reaches the person on its own ("Erhalten", "n neu"); the rest waits
+// behind one quiet row until the person looks (PLAN.md: "Unbekannte Aussteller erzeugen keine
+// aufdringlichen Benachrichtigungen").
+export function splitReceived(awards: readonly ValidAward[], pubkey: string, shown: readonly ValidAward[]): { received: ValidAward[]; unvouched: ValidAward[] } {
+  const vouched = new Set([pubkey, ...shown.map((a) => a.issuer), ...awards.flatMap((a) => (a.blueline?.scope === "club" || a.blueline?.scope === "tournament" ? [a.issuer] : []))])
+  const others = awards.filter((a) => a.issuer !== pubkey)
+  return { received: others.filter((a) => vouched.has(a.issuer)), unvouched: others.filter((a) => !vouched.has(a.issuer)) }
+}

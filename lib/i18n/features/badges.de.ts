@@ -6,5 +6,6 @@ export const badgesDe = {
     badges: "Auszeichnungen",
     badge: "Auszeichnung",
     arrange: "Anordnen",
+    more: "Weitere Auszeichnungen",
   },
 }

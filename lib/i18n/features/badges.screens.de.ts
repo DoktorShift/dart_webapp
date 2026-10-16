@@ -18,7 +18,7 @@ export const badgesScreensDe = {
     "average-60": { name: "Schnitt 60", description: "Ein Spiel mit mindestens 60 Punkten pro drei Darts.", condition: "Ein X01-Spiel mit einem Schnitt von 60 oder mehr beenden." },
     "average-80": { name: "Schnitt 80", description: "Ein Spiel mit mindestens 80 Punkten pro drei Darts.", condition: "Ein X01-Spiel mit einem Schnitt von 80 oder mehr beenden." },
     "cricket-mpr-3": { name: "3 Marks pro Runde", description: "Ein Cricket-Spiel mit mindestens drei Marks pro Runde.", condition: "Ein Cricket-Spiel mit drei oder mehr Marks pro drei Darts beenden." },
-    "cricket-nine-marks": { name: "Neun Marks", description: "Drei Triple in einer Aufnahme beim Cricket.", condition: "In einem Cricket-Spiel drei Triple auf 15 bis 20 in einer Aufnahme werfen." },
+    "cricket-nine-marks": { name: "Neun Marks", description: "Neun Marks in einer Aufnahme beim Cricket.", condition: "In einem Cricket-Spiel mit drei Darts neun Marks erzielen; Treffer auf eine Zahl, die alle schon geschlossen haben, zählen nicht." },
     "clock-30": { name: "Clock in 30", description: "Around the Clock in höchstens 30 Darts.", condition: "Ein Around-the-Clock-Spiel in 30 Darts oder weniger gewinnen." },
   },
   // Badges an organizer gives (lib/badges/organizer.ts), as the definitions are published.
@@ -39,7 +39,7 @@ export const badgesScreensDe = {
     perfectLeg: "Noch nicht geschafft",
     average: (best: string | null) => (best === null ? "Noch kein Spiel" : `Bester Schnitt bisher: ${best}`),
     marksPerRound: (best: string | null) => (best === null ? "Noch kein Spiel" : `Beste Marks pro Runde bisher: ${best}`),
-    triplesInVisit: (best: number | null) => (best === null ? "Noch kein Spiel" : `Bisher höchstens ${best} Triple in einer Aufnahme`),
+    marksInVisit: (best: number | null) => (best === null ? "Noch kein Spiel" : `Bisher höchstens ${best} Marks in einer Aufnahme`),
     clockDarts: (best: number | null) => (best === null ? "Noch keine Runde" : `Bisher ${best} Darts`),
   },
 
@@ -54,6 +54,7 @@ export const badgesScreensDe = {
     showAll: "Im Profil zeigen",
     showing: "Wird veröffentlicht",
     shown: "Jetzt in deinem Profil.",
+    already: "Schon in deinem Profil.",
   },
 
   // The badges screen.
@@ -72,14 +73,16 @@ export const badgesScreensDe = {
     noneText: "Spiel weiter: deine erste Auszeichnung wartet auf dem Ergebnisbildschirm.",
     guestFooter: "Mit einem Profil kannst du Auszeichnungen in deinem Profil zeigen.",
     arrange: "Anordnen",
+    more: "Weitere erhaltene Auszeichnungen",
+    moreFooter: "Von Ausstellern, die dein Profil noch nicht kennt.",
   },
 
   // One badge.
   detail: {
     self: "Selbst erreicht",
     onDevice: "Auf diesem Gerät erreicht",
-    meaning: "Bedeutung",
     condition: "Bedingung",
+    progress: "Fortschritt",
     earnedAt: "Erreicht am",
     givenAt: "Vergeben am",
     issuer: "Aussteller",
@@ -89,10 +92,10 @@ export const badgesScreensDe = {
     resultElsewhere: "Spiel auf einem anderen Gerät",
     visibility: "Sichtbarkeit",
     inProfile: "Im Profil",
-    onlyHere: "Nur auf diesem Gerät",
     notInProfile: "Nicht im Profil",
     show: "Im Profil zeigen",
-    showFooter: "Veröffentlicht werden Name der Auszeichnung, Datum und Spielart des Spiels. Deine anderen Spiele bleiben privat.",
+    showFooter: "Veröffentlicht werden Name der Auszeichnung, Datum und Spielart des Spiels und die erreichte Zahl (etwa dein Schnitt in diesem Spiel). Deine anderen Spiele bleiben privat.",
+    publishedFooter: "Die Auszeichnung ist schon veröffentlicht; sie kommt auf deine Profilkarte.",
     hide: "Aus dem Profil nehmen",
     hideFooter: "Die Auszeichnung bleibt veröffentlicht, nur nicht mehr auf deiner Karte.",
     voided: "Das Spiel wurde korrigiert; die Bedingung ist damit nicht mehr erfüllt.",
@@ -126,6 +129,5 @@ export const badgesScreensDe = {
     offline: "Dein Profil ist gerade nicht erreichbar. Versuch es später noch einmal.",
     rejected: "Die Unterschrift wurde abgelehnt. Es wurde nichts geändert.",
     failed: "Das hat nicht geklappt. Versuch es noch einmal.",
-    retry: "Erneut versuchen",
   },
 }

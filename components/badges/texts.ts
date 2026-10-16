@@ -44,8 +44,8 @@ export function progressText(t: Messages, tx: BadgesTexts, { milestone, progress
       return p.average(hundredths(progress))
     case "marksPerRound":
       return p.marksPerRound(hundredths(progress))
-    case "triplesInVisit":
-      return p.triplesInVisit(progress)
+    case "marksInVisit":
+      return p.marksInVisit(progress)
     case "clockDarts":
       return p.clockDarts(progress)
   }

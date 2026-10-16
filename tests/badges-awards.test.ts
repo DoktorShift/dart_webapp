@@ -2,7 +2,7 @@ import { after, test } from "node:test"
 import assert from "node:assert/strict"
 import { finalizeEvent, generateSecretKey, getPublicKey } from "nostr-core"
 import type { EventTemplate, NostrEvent } from "../lib/nostr/types.ts"
-import { registerIssuerCheck, validAwards } from "../lib/badges/awards.ts"
+import { registerIssuerCheck, splitReceived, validAwards } from "../lib/badges/awards.ts"
 import { currentSelection, reordered, selectionTemplate, withBadge, withoutBadges } from "../lib/badges/selection.ts"
 import { deletionTemplate } from "../lib/badges/store.ts"
 import { badgeAwardTemplate, badgeD, badgeDefinitionTemplate, readProfileBadges } from "../lib/protocol/badges.ts"
@@ -84,6 +84,28 @@ test("another app's badge passes the generic checks and is shown as theirs", asy
   assert.equal(shown.name, "Early Adopter")
   assert.equal(shown.image, "https://img.example/badge.png")
   assert.equal(shown.issuer, pub(otherApp))
+})
+
+test("only issuers the profile vouches for reach the person by themselves", async () => {
+  stopCheck()
+  stopCheck = registerIssuerCheck("tournament", { mayIssue: async () => true })
+  const fromOrganizer = award(organizer)
+  const theirs = sign({ kind: 30009, created_at: T, content: "", tags: [["d", "early-adopter"], ["name", "Early Adopter"]] }, otherApp)
+  const fromOtherApp = sign({ kind: 8, created_at: T + 1, content: "", tags: [["a", `30009:${pub(otherApp)}:early-adopter`], ["p", pub(player)]] }, otherApp)
+  const bait = sign({ kind: 30009, created_at: T, content: "", tags: [["d", "free-money"], ["name", "Free money"], ["image", "https://mallory.example/bait.png"]] }, mallory)
+  const fromMallory = sign({ kind: 8, created_at: T + 2, content: "", tags: [["a", `30009:${pub(mallory)}:free-money`], ["p", pub(player)]] }, mallory)
+  const awards = await validAwards([definition, fromOrganizer, theirs, fromOtherApp, bait, fromMallory], pub(player))
+  assert.equal(awards.length, 3)
+  const ids = (list: { award: NostrEvent }[]) => list.map((a) => a.award.id).sort()
+
+  // The tournament confirmed its organizer; the other app and Mallory are strangers for now.
+  const before = splitReceived(awards, pub(player), [])
+  assert.deepEqual(ids(before.received), [fromOrganizer.id])
+  assert.deepEqual(ids(before.unvouched), ids([{ award: fromOtherApp }, { award: fromMallory }]))
+  // Once the player shows the other app's badge, that issuer is vouched for; Mallory still isn't.
+  const after = splitReceived(awards, pub(player), awards.filter((a) => a.award.id === fromOtherApp.id))
+  assert.deepEqual(ids(after.received), ids([{ award: fromOrganizer }, { award: fromOtherApp }]))
+  assert.deepEqual(ids(after.unvouched), [fromMallory.id])
 })
 
 test("the former profile list is read and written as the current one, keeping what other apps put there", () => {

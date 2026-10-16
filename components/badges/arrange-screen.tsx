@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { ChevronDown, ChevronUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { InlineStatus } from "@/components/common/inline-status"
+import { FitText } from "@/components/fit-text"
 import { useNav } from "@/components/nav/nav-context"
 import { useAreaT } from "@/components/i18n-provider"
 import { BadgeIcon } from "@/components/badges/badge-icon"
@@ -20,7 +21,7 @@ export default function ArrangeScreen() {
   const tx = useAreaT(BADGES_TEXTS)
   const nav = useNav()
   const own = useOwnProfile()
-  const pubkey = own?.session.pubkey ?? ""
+  const pubkey = own?.session.pubkey ?? null
   const { shown } = useOwnBadges(pubkey)
   const [order, setOrder] = useState<string[] | null>(null)
   const [busy, setBusy] = useState(false)
@@ -32,7 +33,7 @@ export default function ArrangeScreen() {
   // The order starts from the list as it is; a badge arriving meanwhile is appended.
   const ids = shown.map((a) => a.award.id)
   const current = order ? [...order.filter((id) => ids.includes(id)), ...ids.filter((id) => !order.includes(id))] : ids
-  if (!own || shown.length === 0) return null
+  if (!pubkey || shown.length === 0) return null
   const byId = new Map(shown.map((a) => [a.award.id, a]))
   const changed = current.some((id, i) => id !== ids[i])
 
@@ -64,11 +65,15 @@ export default function ArrangeScreen() {
           const award = byId.get(id)
           if (!award) return null
           const { name } = awardTexts(tx, award)
+          // The name shrinks before it wraps; on the narrowest phones the position number goes,
+          // the order itself says it.
           return (
             <li key={id} className="flex min-h-14 items-center gap-3 py-1 pl-4 pr-2">
-              <span className="w-5 shrink-0 text-[0.9375rem] tabular-nums text-muted-foreground">{index + 1}</span>
+              <span className="w-5 shrink-0 text-[0.9375rem] tabular-nums text-muted-foreground [@media(max-width:359px)]:hidden">{index + 1}</span>
               <BadgeIcon image={award.image} size={32} />
-              <span className="min-w-0 flex-1 text-[1.0625rem] leading-snug [overflow-wrap:anywhere]">{name}</span>
+              <FitText minScale={0.75} className="flex-1 text-[1.0625rem] leading-snug">
+                {name}
+              </FitText>
               <Button variant="ghost" size="icon" disabled={index === 0 || busy} aria-label={tx.arrange.up(name)} onClick={() => move(index, -1)} className="h-11 w-11 rounded-xl text-primary">
                 <ChevronUp className="h-6 w-6" aria-hidden="true" />
               </Button>

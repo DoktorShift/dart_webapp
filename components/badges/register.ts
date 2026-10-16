@@ -19,6 +19,7 @@ registerSlotItem("profile.card", "badges.line", lazyScreen<{ pubkey: string; own
 registerScreen(BADGE_SCREENS.list, { title: (t) => t.badges.titles.badges, Component: screen(() => import("@/components/badges/badges-screen")) })
 registerScreen(BADGE_SCREENS.badge, { title: (t, params) => params.name || t.badges.titles.badge, largeTitle: false, Component: screen(() => import("@/components/badges/badge-screen")) })
 registerScreen(BADGE_SCREENS.arrange, { title: (t) => t.badges.titles.arrange, Component: screen(() => import("@/components/badges/arrange-screen")) })
+registerScreen(BADGE_SCREENS.more, { title: (t) => t.badges.titles.more, Component: screen(() => import("@/components/badges/more-screen")) })
 
 // The badges in the device's data file (lib/badges/export.ts).
 const badgeExport = () => import("@/lib/badges/export")

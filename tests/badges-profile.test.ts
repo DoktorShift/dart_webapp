@@ -7,7 +7,7 @@ import { FakeNetwork } from "./support/fake-relay.ts"
 import { finalizeEvent, generateSecretKey, getPublicKey } from "nostr-core"
 import { relayClient } from "../lib/nostr/client.ts"
 import type { NostrEvent } from "../lib/nostr/types.ts"
-import { requestDeletion, showMilestone } from "../lib/badges/actions.ts"
+import { requestDeletion, showMilestone, showMilestones } from "../lib/badges/actions.ts"
 import { validAwards } from "../lib/badges/awards.ts"
 import { milestoneById } from "../lib/badges/catalog.ts"
 import { evaluateMilestones } from "../lib/badges/milestones.ts"
@@ -32,6 +32,7 @@ const secret = generateSecretKey()
 const pubkey = getPublicKey(secret)
 const anna = `id:${ANNA}`
 const TEXTS = { name: "Erste 180", description: "Selbst erreicht: drei Triple-20 in einer Aufnahme." }
+const REASON = "Das Spiel wurde korrigiert."
 const kinds = () => relays[0].events.map((e) => e.kind).sort((a, b) => a - b)
 const published = (kind: number) => relays[0].events.filter((e) => e.kind === kind)
 
@@ -58,7 +59,7 @@ after(() => relayClient().close())
 test("showing a milestone: definition, evidence, award and the list, signed by the profile; once only", async () => {
   await device()
   const milestone = milestoneById("first-180")!
-  assert.equal(await showMilestone(pubkey, milestone, await first180(), TEXTS), "done")
+  assert.equal(await showMilestone(pubkey, milestone, await first180(), TEXTS, REASON), "done")
   assert.deepEqual(kinds(), [8, 1180, 10008, 30009])
   assert.ok(relays[0].events.every((e) => e.pubkey === pubkey))
 
@@ -76,7 +77,7 @@ test("showing a milestone: definition, evidence, award and the list, signed by t
   assert.equal(shown.blueline?.scope, "self")
 
   // Again (another tap, a second try): nothing new is signed or sent.
-  assert.equal(await showMilestone(pubkey, milestone, await first180(), TEXTS), "done")
+  assert.equal(await showMilestone(pubkey, milestone, await first180(), TEXTS, REASON), "done")
   assert.deepEqual(kinds(), [8, 1180, 10008, 30009])
 })
 
@@ -86,7 +87,7 @@ test("the former list is taken over with everything another app put in it", asyn
   const foreign = ["a", `30009:${getPublicKey(otherApp)}:early-adopter`]
   const legacy = finalizeEvent({ kind: 30008, created_at: 1_790_000_000, content: "", tags: [["d", "profile_badges"], foreign, ["e", "5".repeat(64)], ["client", "other"]] }, secret) as NostrEvent
   relays[0].events.push(legacy)
-  assert.equal(await showMilestone(pubkey, milestoneById("first-180")!, await first180(), TEXTS), "done")
+  assert.equal(await showMilestone(pubkey, milestoneById("first-180")!, await first180(), TEXTS, REASON), "done")
   const [list] = published(10008)
   const [award] = published(8)
   assert.deepEqual(list.tags, [["a", `30009:${pubkey}:blueline:self:first-180:v1`], ["e", award.id], foreign, ["e", "5".repeat(64)], ["client", "other"]])
@@ -100,14 +101,14 @@ test("without any relay answering nothing is signed, kept or sent", async () => 
     relay.options.mode = "down"
     relay.dropAll()
   }
-  assert.equal(await showMilestone(pubkey, milestoneById("first-180")!, await first180(), TEXTS), "offline")
+  assert.equal(await showMilestone(pubkey, milestoneById("first-180")!, await first180(), TEXTS, REASON), "offline")
   assert.deepEqual(await storedBadgeEvents(pubkey), [])
   assert.deepEqual(relays.flatMap((r) => r.events), [])
 })
 
 test("a correction takes the evidence away; the deletion request takes the award back", async () => {
   await device()
-  await showMilestone(pubkey, milestoneById("first-180")!, await first180(), TEXTS)
+  await showMilestone(pubkey, milestoneById("first-180")!, await first180(), TEXTS, REASON)
   const events = await storedBadgeEvents(pubkey)
   const [award] = await validAwards(events, pubkey)
   const evidence = readEvidence(events.find((e) => e.id === award.blueline?.evidence)!)
@@ -129,7 +130,7 @@ test("a correction takes the evidence away; the deletion request takes the award
 
 test("a second device finds the badges on relays, each once however often it is fetched", async () => {
   await device()
-  await showMilestone(pubkey, milestoneById("first-180")!, await first180(), TEXTS)
+  await showMilestone(pubkey, milestoneById("first-180")!, await first180(), TEXTS, REASON)
   // Another app gave the player a badge, sent to both relays.
   const otherApp = generateSecretKey()
   const definition = finalizeEvent({ kind: 30009, created_at: 1_790_000_000, content: "", tags: [["d", "darts-fan"], ["name", "Darts-Fan"]] }, otherApp) as NostrEvent
@@ -150,4 +151,49 @@ test("a second device finds the badges on relays, each once however often it is 
   const awards = await validAwards(stored, pubkey)
   assert.deepEqual(awards.map((a) => a.name).sort(), ["Darts-Fan", "Erste 180"])
   assert.equal(currentSelection(stored, pubkey).badges.length, 1)
+})
+
+test("corrected, then reached again: the old award is taken back, the new game is the evidence, the list names the new one", async () => {
+  await device()
+  const milestone = milestoneById("first-180")!
+  await showMilestone(pubkey, milestone, await first180(), TEXTS, REASON)
+  const [old] = await validAwards(await storedBadgeEvents(pubkey), pubkey)
+
+  // A corrected to 177; a later game C has the real 180.
+  await archiveFinished(saved(A_CONFIG, play(A_CONFIG, [dart(19, 3), dart(20, 3), dart(20, 3), dart(20), dart(20), dart(20), dart(20, 3), dart(14, 3), dart(11, 2)]), "match-a"), undefined, at("2026-10-02T20:00:00.000Z"))
+  await archiveFinished(saved(A_CONFIG, play(A_CONFIG, [dart(20, 3), dart(20, 3), dart(20, 3), dart(20), dart(20), dart(20), dart(20, 3), dart(15, 3), dart(8, 2)]), "match-c"), undefined, at("2026-10-04T20:00:00.000Z"))
+  const achieved = await first180()
+  assert.equal(achieved.matchId, "match-c")
+  assert.equal(await showMilestone(pubkey, milestone, achieved, TEXTS, REASON), "done")
+
+  // One deletion request for the old award and its evidence, saying why; the definition stays.
+  const [deletion] = published(5)
+  assert.deepEqual(deletion.tags.filter((t) => t[0] === "e").map((t) => t[1]).sort(), [old.award.id, old.blueline!.evidence].sort())
+  assert.equal(deletion.content, REASON)
+  assert.equal(published(30009).length, 1)
+  assert.equal(published(1180).length, 2)
+  // The one award that counts now rests on C, and holds.
+  const stored = await storedBadgeEvents(pubkey)
+  const awards = await validAwards(stored, pubkey)
+  assert.equal(awards.length, 1)
+  const [award] = awards
+  assert.notEqual(award.award.id, old.award.id)
+  const evidence = readEvidence(stored.find((e) => e.id === award.blueline?.evidence)!)
+  assert.equal(evidence?.content.result?.game, "match-c")
+  assert.equal(selfAwardHolds(award, evidence, await loadArchive(), anna), true)
+  assert.deepEqual(currentSelection(relays[0].events, pubkey).badges.map((b) => b.award), [award.award.id])
+})
+
+test("showing several at once writes the list once, the rarest first", async () => {
+  await device()
+  const statuses = evaluateMilestones(await loadArchive(), anna).filter((s) => s.achieved?.matchId === "match-a")
+  assert.equal(statuses.length, 9)
+  const items = statuses.map(({ milestone, achieved }) => ({ milestone, achieved: achieved!, texts: { name: milestone.id, description: "" } }))
+  assert.equal(await showMilestones(pubkey, items, REASON), "done")
+  assert.equal(published(10008).length, 1)
+  assert.equal(published(8).length, 9)
+  assert.equal(published(30009).length, 9)
+  assert.equal(published(1180).length, 9)
+  const listed = published(10008)[0].tags.filter((t) => t[0] === "a").map((t) => t[1].split(":")[4])
+  assert.deepEqual(listed, ["perfect-leg", "first-180", "checkout-100", "average-80", "average-60", "first-140", "average-40", "first-100", "first-win"])
 })

@@ -17,7 +17,7 @@ export const badgesScreensEn: Widen<typeof badgesScreensDe> = {
     "average-60": { name: "60 Average", description: "A game with at least 60 points per three darts.", condition: "Finish an X01 game with an average of 60 or more." },
     "average-80": { name: "80 Average", description: "A game with at least 80 points per three darts.", condition: "Finish an X01 game with an average of 80 or more." },
     "cricket-mpr-3": { name: "3 Marks per Round", description: "A Cricket game with at least three marks per round.", condition: "Finish a Cricket game with three or more marks per three darts." },
-    "cricket-nine-marks": { name: "Nine Marks", description: "Three triples in one visit at Cricket.", condition: "Throw three triples on 15 to 20 in one visit of a Cricket game." },
+    "cricket-nine-marks": { name: "Nine Marks", description: "Nine marks in one visit at Cricket.", condition: "Score nine marks with three darts in a Cricket game; hits on a number everyone has closed don't count." },
     "clock-30": { name: "Clock in 30", description: "Around the Clock in 30 darts or fewer.", condition: "Win an Around the Clock game in 30 darts or fewer." },
   },
   organizer: {
@@ -36,7 +36,7 @@ export const badgesScreensEn: Widen<typeof badgesScreensDe> = {
     perfectLeg: "Not yet",
     average: (best: string | null) => (best === null ? "No game yet" : `Best average so far: ${best}`),
     marksPerRound: (best: string | null) => (best === null ? "No game yet" : `Best marks per round so far: ${best}`),
-    triplesInVisit: (best: number | null) => (best === null ? "No game yet" : `At most ${best} triples in one visit so far`),
+    marksInVisit: (best: number | null) => (best === null ? "No game yet" : `At most ${best} marks in one visit so far`),
     clockDarts: (best: number | null) => (best === null ? "No round yet" : `${best} darts so far`),
   },
 
@@ -50,6 +50,7 @@ export const badgesScreensEn: Widen<typeof badgesScreensDe> = {
     showAll: "Show in profile",
     showing: "Publishing",
     shown: "Now in your profile.",
+    already: "Already in your profile.",
   },
 
   list: {
@@ -67,13 +68,15 @@ export const badgesScreensEn: Widen<typeof badgesScreensDe> = {
     noneText: "Keep playing: your first badge is waiting on the result screen.",
     guestFooter: "With a profile you can show badges in your profile.",
     arrange: "Arrange",
+    more: "More badges received",
+    moreFooter: "From issuers your profile doesn't know yet.",
   },
 
   detail: {
     self: "Self-earned",
     onDevice: "Reached on this device",
-    meaning: "Meaning",
     condition: "Condition",
+    progress: "Progress",
     earnedAt: "Reached on",
     givenAt: "Given on",
     issuer: "Issuer",
@@ -83,10 +86,10 @@ export const badgesScreensEn: Widen<typeof badgesScreensDe> = {
     resultElsewhere: "Game on another device",
     visibility: "Visibility",
     inProfile: "In your profile",
-    onlyHere: "Only on this device",
     notInProfile: "Not in your profile",
     show: "Show in profile",
-    showFooter: "Published: the badge's name, the date and the mode of the game. Your other games stay private.",
+    showFooter: "Published: the badge's name, the date and mode of the game, and the figure you reached (such as your average in that game). Your other games stay private.",
+    publishedFooter: "The badge is already published; it goes on your profile card.",
     hide: "Remove from profile",
     hideFooter: "The badge stays published, just no longer on your card.",
     voided: "The game was corrected; the condition is no longer met.",
@@ -117,6 +120,5 @@ export const badgesScreensEn: Widen<typeof badgesScreensDe> = {
     offline: "Your profile can't be reached right now. Try again later.",
     rejected: "The signature was declined. Nothing was changed.",
     failed: "That didn't work. Try again.",
-    retry: "Try again",
   },
 }

@@ -34,11 +34,11 @@ function Row({ value }: { value?: string }) {
 function OwnRow() {
   const tx = useAreaT(BADGES_TEXTS)
   const own = useOwnProfile()
-  const pubkey = own?.session.pubkey ?? ""
-  const badges = useOwnBadges(pubkey)
+  const badges = useOwnBadges(own?.session.pubkey ?? null)
   const { statuses } = useMilestones(own?.key ?? null, own?.history.aliases, own?.sameAs)
   const seen = useSeenAwardIds()
   if (!own || badges.awards === null || seen === null) return <Row />
+  // New: awards from issuers the profile vouches for that it hasn't looked at; strangers' never.
   const unseen = badges.received.filter((a) => !seen.includes(a.award.id)).length
   // Milestones reached here (published as the profile's own awards or not) plus awards from others.
   const reached = statuses.filter((s) => s.achieved).length + badges.received.length

@@ -7,13 +7,13 @@ import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
 import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
+import { AwardRow, MilestoneRow } from "@/components/badges/rows"
 import { BADGE_SCREENS } from "@/components/badges/screens"
-import { awardTexts, milestoneTexts, progressText } from "@/components/badges/texts"
-import { selfAwardFor, useMilestones, useOwnBadges, type OwnBadges } from "@/components/badges/use-badges"
+import { progressText } from "@/components/badges/texts"
+import { awardVoided, selfAwardFor, useMilestones, useOwnBadges, type OwnBadges } from "@/components/badges/use-badges"
 import { useOwnProfile, type OwnProfile } from "@/components/profile/use-profile"
 import type { ValidAward } from "@/lib/badges/awards"
 import { evaluateMilestones, type MilestoneStatus } from "@/lib/badges/milestones"
-import { selfAwardHolds } from "@/lib/badges/self-award"
 import { lookupBadges, markAwardsSeen } from "@/lib/badges/store"
 import { BADGES_TEXTS, type BadgesTexts } from "@/lib/i18n/features/badges.screens"
 import { useMatchHistory } from "@/lib/leaderboard"
@@ -27,28 +27,6 @@ export default function BadgesScreen() {
   const session = useSession()
   if (session === undefined) return null
   return session ? <OwnBadgesScreen /> : <GuestBadgesScreen />
-}
-
-function AwardRow({ award, subtitle }: { award: ValidAward; subtitle?: string }) {
-  const tx = useAreaT(BADGES_TEXTS)
-  const nav = useNav()
-  const { name } = awardTexts(tx, award)
-  return <ListRow icon={Award} iconTone="orange" title={name} subtitle={subtitle} onClick={() => nav.push(BADGE_SCREENS.badge, { id: award.award.id, name })} />
-}
-
-function MilestoneRow({ status, playerKey, subtitle, reached }: { status: MilestoneStatus; playerKey: string; subtitle?: string; reached: boolean }) {
-  const tx = useAreaT(BADGES_TEXTS)
-  const nav = useNav()
-  const { name } = milestoneTexts(tx, status.milestone)
-  return (
-    <ListRow
-      icon={Award}
-      iconTone={reached ? "orange" : "gray"}
-      title={name}
-      subtitle={subtitle}
-      onClick={() => nav.push(BADGE_SCREENS.badge, { milestone: status.milestone.id, key: playerKey, name })}
-    />
-  )
 }
 
 function Reachable({ statuses, playerKey }: { statuses: MilestoneStatus[]; playerKey: string }) {
@@ -66,19 +44,18 @@ function Reachable({ statuses, playerKey }: { statuses: MilestoneStatus[]; playe
 }
 
 // What the profile reached and was given, apart from what it shows: milestones reached here
-// (with their self-earned award, if published), and awards from others.
+// (with their self-earned award, if published), and awards from issuers it vouches for.
 function earned(own: OwnProfile, badges: OwnBadges, statuses: MilestoneStatus[], tx: BadgesTexts) {
   const { pubkey } = own.session
   const shownIds = new Set(badges.shown.map((a) => a.award.id))
-  const rows: { key: string; award?: ValidAward; status?: MilestoneStatus; subtitle: string }[] = []
+  const rows: { key: string; award?: ValidAward; status?: MilestoneStatus; subtitle: string; voided: boolean }[] = []
   for (const status of statuses) {
     if (!status.achieved) continue
     const award = selfAwardFor(badges, pubkey, status.milestone.id, status.milestone.version)
     if (award && shownIds.has(award.award.id)) continue
-    const holds = award ? selfAwardHolds(award, badges.evidence.get(award.blueline?.evidence ?? "") ?? null, own.history.all, own.key ?? "", { aliases: own.history.aliases, sameAs: own.sameAs }) : null
-    rows.push({ key: status.milestone.id, award, status, subtitle: holds === false ? tx.list.corrected : award ? tx.detail.notInProfile : tx.list.onDevice })
+    rows.push({ key: status.milestone.id, award, status, subtitle: award ? tx.detail.notInProfile : tx.list.onDevice, voided: award ? awardVoided(own, badges, award) : false })
   }
-  for (const award of badges.received) if (!shownIds.has(award.award.id)) rows.push({ key: award.award.id, award, subtitle: award.voided ? tx.list.corrected : tx.list.received })
+  for (const award of badges.received) if (!shownIds.has(award.award.id)) rows.push({ key: award.award.id, award, subtitle: tx.list.received, voided: awardVoided(own, badges, award) })
   return rows
 }
 
@@ -86,15 +63,15 @@ function OwnBadgesScreen() {
   const tx = useAreaT(BADGES_TEXTS)
   const nav = useNav()
   const own = useOwnProfile()
-  const pubkey = own?.session.pubkey ?? ""
-  const badges = useOwnBadges(pubkey)
+  const badges = useOwnBadges(own?.session.pubkey ?? null)
   const { statuses, loaded } = useMilestones(own?.key ?? null, own?.history.aliases, own?.sameAs)
 
   // Opening the badges looks for new ones, and counts the ones from others as seen.
+  const pubkey = own?.session.pubkey
   useEffect(() => {
     if (pubkey) void lookupBadges(pubkey, { again: true })
   }, [pubkey])
-  const receivedIds = badges.received.map((a) => a.award.id).join(",")
+  const receivedIds = [...badges.received, ...badges.unvouched].map((a) => a.award.id).join(",")
   useEffect(() => {
     if (badges.awards !== null) void markAwardsSeen(receivedIds ? receivedIds.split(",") : []).catch(() => {})
   }, [badges.awards, receivedIds])
@@ -110,7 +87,7 @@ function OwnBadgesScreen() {
       {badges.shown.length > 0 && (
         <Group title={tx.list.shown} footer={tx.list.shownFooter}>
           {badges.shown.map((award) => (
-            <AwardRow key={award.award.id} award={award} />
+            <AwardRow key={award.award.id} award={award} voided={awardVoided(own, badges, award)} />
           ))}
           {badges.shown.length > 1 && <ListRow icon={ArrowUpDown} iconTone="gray" title={tx.list.arrange} onClick={() => nav.push(BADGE_SCREENS.arrange)} />}
         </Group>
@@ -118,25 +95,36 @@ function OwnBadgesScreen() {
       {rows.length > 0 && (
         <Group title={tx.list.earned}>
           {rows.map((row) =>
-            row.award ? <AwardRow key={row.key} award={row.award} subtitle={row.subtitle} /> : <MilestoneRow key={row.key} status={row.status as MilestoneStatus} playerKey={playerKey} subtitle={row.subtitle} reached />,
+            row.award ? (
+              <AwardRow key={row.key} award={row.award} subtitle={row.subtitle} voided={row.voided} />
+            ) : (
+              <MilestoneRow key={row.key} status={row.status as MilestoneStatus} playerKey={playerKey} subtitle={row.subtitle} reached />
+            ),
           )}
         </Group>
       )}
       <Reachable statuses={statuses} playerKey={playerKey} />
+      {badges.unvouched.length > 0 && (
+        <Group footer={tx.list.moreFooter}>
+          <ListRow icon={Award} iconTone="gray" title={tx.list.more} value={String(badges.unvouched.length)} onClick={() => nav.push(BADGE_SCREENS.more)} />
+        </Group>
+      )}
     </>
   )
 }
 
 // This device's players and what each reached here (most games first); a profile would let
-// them show badges in it (the offer is in the Profile tab itself, never here as a gate).
+// them show badges in it (the offer is in the Profile tab itself, never here as a gate). A
+// player known only from imported 1.0.0 results is marked so, as the Rangliste marks them.
 function GuestBadgesScreen() {
+  const t = useT()
   const tx = useAreaT(BADGES_TEXTS)
   const { all, aliases, loaded } = useMatchHistory()
   const players = useMemo(
     () =>
       summarizePlayers(all, { aliases })
         .filter((s) => !s.unnamed)
-        .map((s) => ({ key: s.key, name: s.name, statuses: evaluateMilestones(all, s.key, { aliases }) }))
+        .map((s) => ({ key: s.key, name: s.name, imported: s.imported, statuses: evaluateMilestones(all, s.key, { aliases }) }))
         .filter((p) => p.statuses.some((m) => m.achieved)),
     [all, aliases],
   )
@@ -145,7 +133,7 @@ function GuestBadgesScreen() {
   return (
     <>
       {players.map((player, i) => (
-        <Group key={player.key} title={player.name} footer={i === players.length - 1 ? tx.list.guestFooter : undefined}>
+        <Group key={player.key} title={player.imported ? `${player.name} · ${t.data.importedTag}` : player.name} footer={i === players.length - 1 ? tx.list.guestFooter : undefined}>
           {player.statuses
             .filter((s) => s.achieved)
             .map((status) => (

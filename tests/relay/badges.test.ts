@@ -31,8 +31,8 @@ const verifies = async (list: unknown[]) => (await runNak(["verify"], { input: `
 
 before(async () => {
   core = await loadCore()
-  // The wave 3 badges track's relay ports (20080-20089): two relays of different "operators".
-  ;[a, b] = await Promise.all([startRelay({ port: 20085 }), startRelay({ port: 20086 })])
+  // The badges track's relay ports (20680-20689): two relays of different "operators".
+  ;[a, b] = await Promise.all([startRelay({ port: 20685 }), startRelay({ port: 20686 })])
   process.env.NEXT_PUBLIC_BLUELINE_RELAYS = `${a.url},${b.url}`
 })
 
@@ -63,7 +63,7 @@ async function annaWithGame() {
 test("a self-earned milestone reaches both relays as four events nak verifies, and a second device reads them back", async () => {
   const { secret, pubkey } = await annaWithGame()
   const achieved = evaluateMilestones([archivedAt(matchA(), "2026-10-02T20:00:00.000Z")], `id:${ANNA}`).find((s) => s.milestone.id === "first-180")!.achieved!
-  assert.equal(await showMilestone(pubkey, milestoneById("first-180")!, achieved, TEXTS), "done")
+  assert.equal(await showMilestone(pubkey, milestoneById("first-180")!, achieved, TEXTS, "Das Spiel wurde korrigiert."), "done")
   const published = await events(["-a", pubkey, "-k", "8", "-k", "30009", "-k", "1180", "-k", "10008"])
   assert.deepEqual(published.map((e: { kind: number }) => e.kind).sort((x: number, y: number) => x - y), [8, 1180, 10008, 30009])
   assert.ok(await verifies(published))

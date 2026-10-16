@@ -4,4 +4,5 @@ export const BADGE_SCREENS = {
   list: "badges.list",
   badge: "badges.badge",
   arrange: "badges.arrange",
+  more: "badges.more",
 } as const

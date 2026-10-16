@@ -35,8 +35,11 @@ export async function buildBadgeSection(): Promise<NostrEvent[]> {
 
 export async function applyBadgeSection(value: unknown) {
   if (!Array.isArray(value)) return
+  // Every data file carries this section, mostly empty: nostr-core is loaded only to check something.
+  const shaped = value.filter((e): e is NostrEvent => isSignedEventShape(e))
+  if (shaped.length === 0) return
   const core = await loadCore()
-  const events = value.filter((e): e is NostrEvent => isSignedEventShape(e) && core.verifyEventSignature(e))
+  const events = shaped.filter((e) => core.verifyEventSignature(e))
   const own = getSession()?.pubkey
   const isOwn = (e: NostrEvent) => e.pubkey === own && (isReplaceableKind(e.kind) || isAddressableKind(e.kind))
   if (own) await rememberOwn(own, events.filter(isOwn))

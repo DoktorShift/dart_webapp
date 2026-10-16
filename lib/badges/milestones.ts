@@ -1,4 +1,4 @@
-import { perfectLegDarts, type MatchState } from "../game/engine.ts"
+import { applyThrow, newMatchState, perfectLegDarts, type MatchState } from "../game/engine.ts"
 import type { ArchivedMatch } from "../storage/archive.ts"
 import { matchState, playerKey, type StatsOptions } from "../storage/stats.ts"
 import { lowerIsBetter, MILESTONES, type Measure, type Milestone } from "./catalog.ts"
@@ -37,13 +37,29 @@ interface PlayedGame {
   state: MatchState | null
 }
 
-// The player's visits in a scored game (the last leg's are still open when the game ends).
-const visitsOf = (state: MatchState, seat: number) => [...state.pastLegs.flat(), ...state.legVisits].filter((v) => v.player === seat)
+// The marks the engine credited in the player's best visit. A game's figures keep only the
+// total, so the darts are replayed once more and every visit's marks are read off as they are
+// credited (lib/game/engine.ts applyCricketDart: a hit on a number everyone closed scores none).
+function bestVisitMarks(match: ArchivedMatch, seat: number): number | null {
+  if (!match.config || !match.throws) return null
+  const s = newMatchState(match.config)
+  const perVisit = new Map<number, number>()
+  let best = 0
+  for (const t of match.throws) {
+    const before = s.stats[seat].marks
+    applyThrow(s, t)
+    const visit = s.throwVisit[s.throwCount - 1]
+    const marks = (perVisit.get(visit) ?? 0) + s.stats[seat].marks - before
+    perVisit.set(visit, marks)
+    best = Math.max(best, marks)
+  }
+  return s.stats[seat].darts > 0 ? best : null
+}
 
 type GameMeasure = Exclude<Measure, "games" | "wins">
 
 // One game's figure; null when the game has none.
-function figureOf(measure: GameMeasure, seat: number, state: MatchState): number | null {
+function figureOf(measure: GameMeasure, seat: number, match: ArchivedMatch, state: MatchState): number | null {
   const st = state.stats[seat]
   const legsWon = state.legResults.filter((r) => r.winner === seat)
   switch (measure) {
@@ -57,8 +73,8 @@ function figureOf(measure: GameMeasure, seat: number, state: MatchState): number
       return st.darts > 0 ? Math.floor((st.points * 300) / st.darts) : null
     case "marksPerRound":
       return st.darts > 0 ? Math.floor((st.marks * 300) / st.darts) : null
-    case "triplesInVisit":
-      return Math.max(0, ...visitsOf(state, seat).map((v) => v.darts.filter((d) => d.multiplier === 3 && d.segment >= 15 && d.segment <= 20).length))
+    case "marksInVisit":
+      return bestVisitMarks(match, seat)
     case "clockDarts":
       return legsWon.length > 0 ? Math.min(...legsWon.map((r) => r.dartsUsed)) : null
   }
@@ -78,7 +94,7 @@ function evaluate(milestone: Milestone, games: readonly PlayedGame[]): Milestone
       progress = figure
     } else {
       // Only games with their full throw log have these figures.
-      figure = state ? figureOf(measure, seat, state) : null
+      figure = state ? figureOf(measure, seat, match, state) : null
       if (figure === null) continue
       progress = progress === null ? figure : lower ? Math.min(progress, figure) : Math.max(progress, figure)
     }

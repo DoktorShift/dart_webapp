@@ -10,8 +10,9 @@ import { FitText } from "@/components/fit-text"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { BadgeIcon } from "@/components/badges/badge-icon"
 import { milestoneTexts, problemText } from "@/components/badges/texts"
+import { notShownFrom, useOwnBadges } from "@/components/badges/use-badges"
 import { useOwnProfile } from "@/components/profile/use-profile"
-import { showMilestone } from "@/lib/badges/actions"
+import { showMilestones } from "@/lib/badges/actions"
 import { evaluateMilestones, reachedIn, type MilestoneStatus } from "@/lib/badges/milestones"
 import { BADGES_TEXTS } from "@/lib/i18n/features/badges.screens"
 import { useMatchHistory } from "@/lib/leaderboard"
@@ -26,6 +27,10 @@ import { playerKey } from "@/lib/storage/stats"
 // (PLAN.md "Auszeichnungen": a small card that can be put away, never interrupting the game).
 // A tap shows the badges; a signed-in player can show their own in their profile from there.
 // Nothing is published on its own, and a guest's milestones stay "Auf diesem Gerät erreicht".
+//
+// The row keeps to what the result asks of its pieces: 48 pt at most; 44 pt without the icon on
+// short screens (`short`); in a phone's landscape (`xshort`) one short line that shrinks to fit,
+// without background, icon or dismiss button, so it can stand in the result's top bar.
 
 // Games whose card was put away; device-wide, not part of any profile.
 const DISMISSED_KEY = "badges.dismissed"
@@ -45,6 +50,7 @@ export default function EarnedCard({ match }: { match: FinishedMatch }) {
   const reduceMotion = useReducedMotion()
   const { all, aliases } = useMatchHistory()
   const own = useOwnProfile()
+  const badges = useOwnBadges(own?.session.pubkey ?? null)
   const [dismissed, setDismissed] = useState<boolean | null>(null)
   const [open, setOpen] = useState(false)
 
@@ -62,6 +68,14 @@ export default function EarnedCard({ match }: { match: FinishedMatch }) {
       return statuses.length > 0 ? [{ seat, name: player.name.trim(), own: mine, statuses }] : []
     })
   }, [all, aliases, match.id, own])
+
+  // Of the profile's own, what "Im Profil zeigen" still has to publish; null while the
+  // profile's badges are being read.
+  const missing = useMemo<MilestoneStatus[] | null>(() => {
+    const mine = reached.find((r) => r.own)
+    if (!own || !mine) return []
+    return badges.awards ? notShownFrom(badges, own.session.pubkey, mine.statuses, match.id) : null
+  }, [reached, own, badges, match.id])
 
   useEffect(() => {
     let alive = true
@@ -94,15 +108,15 @@ export default function EarnedCard({ match }: { match: FinishedMatch }) {
         initial={reduceMotion ? false : { opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: [0.2, 0.8, 0.3, 1] }}
-        className="flex min-h-12 items-stretch overflow-hidden rounded-2xl bg-amber-500/10 ring-1 ring-inset ring-amber-500/30 xshort:min-h-11"
+        className="flex min-h-12 items-stretch overflow-hidden rounded-2xl bg-amber-500/10 ring-1 ring-inset ring-amber-500/30 short:min-h-11 xshort:rounded-xl xshort:bg-transparent xshort:ring-0"
       >
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="flex min-w-0 flex-1 items-center gap-3 py-1 pl-4 pr-2 text-left text-[1.0625rem] font-medium transition-colors focus-visible:bg-amber-500/15 focus-visible:outline-none active:bg-amber-500/20 xshort:pl-3 xshort:text-[0.9375rem]"
+          className="flex min-w-0 flex-1 items-center gap-3 py-1 pl-4 pr-2 text-left text-[1.0625rem] font-medium transition-colors focus-visible:bg-amber-500/15 focus-visible:outline-none active:bg-amber-500/20 xshort:px-2 xshort:text-[0.9375rem] xshort:text-primary xshort:active:bg-secondary/70"
         >
-          <Award className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400 xshort:hidden" aria-hidden="true" />
-          <FitText minScale={0.7} className="flex-1 leading-snug">
+          <Award className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400 short:hidden" aria-hidden="true" />
+          <FitText minScale={0.6} className="min-w-0 flex-1 leading-snug">
             {label}
           </FitText>
         </button>
@@ -110,48 +124,79 @@ export default function EarnedCard({ match }: { match: FinishedMatch }) {
           type="button"
           onClick={() => void dismiss()}
           aria-label={e.dismiss}
-          className="flex min-w-11 shrink-0 items-center justify-center border-l border-amber-500/30 px-3 text-muted-foreground transition-colors focus-visible:bg-amber-500/15 focus-visible:outline-none active:bg-amber-500/20"
+          className="flex min-w-11 shrink-0 items-center justify-center border-l border-amber-500/30 px-3 text-muted-foreground transition-colors focus-visible:bg-amber-500/15 focus-visible:outline-none active:bg-amber-500/20 xshort:hidden"
         >
           <X className="h-5 w-5" aria-hidden="true" />
         </button>
       </motion.div>
-      <EarnedSheet open={open} onOpenChange={setOpen} reached={reached} pubkey={own?.session.pubkey ?? null} />
+      <EarnedSheet open={open} onOpenChange={setOpen} reached={reached} pubkey={own?.session.pubkey ?? null} missing={missing} />
     </>
   )
 }
 
-function EarnedSheet({ open, onOpenChange, reached, pubkey }: { open: boolean; onOpenChange: (open: boolean) => void; reached: Reached[]; pubkey: string | null }) {
+function EarnedSheet({
+  open,
+  onOpenChange,
+  reached,
+  pubkey,
+  missing,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  reached: Reached[]
+  pubkey: string | null
+  missing: MilestoneStatus[] | null
+}) {
   const t = useT()
   const tx = useAreaT(BADGES_TEXTS)
   const e = tx.earned
-  const mine = pubkey ? reached.find((r) => r.own)?.statuses ?? [] : []
+  const ownSeat = reached.some((r) => r.own)
   const [state, setState] = useState<"idle" | "showing" | "shown">("idle")
   const [problem, setProblem] = useState<string | null>(null)
 
   // Before a change, the profile's list is looked up again (like editing the profile).
+  const toShow = missing?.length ?? 0
   useEffect(() => {
-    if (open && pubkey && mine.length > 0) void lookupOwnEvents(pubkey, { again: true })
-  }, [open, pubkey, mine.length])
+    if (open && pubkey && toShow > 0) void lookupOwnEvents(pubkey, { again: true })
+  }, [open, pubkey, toShow])
 
+  // All of them in one go: one list, one confirmation (lib/badges/actions.ts showMilestones).
   const show = async () => {
-    if (!pubkey) return
+    if (!pubkey || !missing) return
     setState("showing")
     setProblem(null)
     try {
-      for (const { milestone, achieved } of mine) {
-        if (!achieved) continue
-        if ((await showMilestone(pubkey, milestone, achieved, milestoneTexts(tx, milestone))) === "offline") {
-          setProblem(problemText(tx, "offline"))
-          setState("idle")
-          return
-        }
-      }
-      setState("shown")
+      const items = missing.flatMap(({ milestone, achieved }) => (achieved ? [{ milestone, achieved, texts: milestoneTexts(tx, milestone) }] : []))
+      if ((await showMilestones(pubkey, items, tx.detail.voided)) === "offline") {
+        setProblem(problemText(tx, "offline"))
+        setState("idle")
+      } else setState("shown")
     } catch (error) {
       setProblem(problemText(tx, error))
       setState("idle")
     }
   }
+
+  // The list may be longer than the screen; the status never is, it stands in the button's
+  // place: the confirmation once published, the word that they are in the profile already, else
+  // the button, with a problem right above it.
+  const slot = "mt-3 min-h-14 shrink-0 items-center xshort:min-h-12"
+  const action =
+    pubkey && ownSeat ? (
+      state === "shown" ? (
+        <InlineStatus tone="success" className={slot}>
+          {e.shown}
+        </InlineStatus>
+      ) : missing?.length === 0 ? (
+        <InlineStatus tone="info" className={slot}>
+          {e.already}
+        </InlineStatus>
+      ) : (
+        <Button onClick={() => void show()} disabled={!missing || state === "showing"} className="mt-3 h-14 w-full shrink-0 rounded-2xl text-[1.0625rem] font-semibold xshort:h-12">
+          {state === "showing" ? e.showing : e.showAll}
+        </Button>
+      )
+    ) : null
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title={e.title} description={e.description}>
@@ -175,22 +220,13 @@ function EarnedSheet({ open, onOpenChange, reached, pubkey }: { open: boolean; o
             </ul>
           </section>
         ))}
-        {problem && (
-          <InlineStatus tone="error" className="mt-3">
-            {problem}
-          </InlineStatus>
-        )}
-        {state === "shown" && (
-          <InlineStatus tone="success" className="mt-3">
-            {e.shown}
-          </InlineStatus>
-        )}
       </div>
-      {mine.length > 0 && state !== "shown" && (
-        <Button onClick={() => void show()} disabled={state === "showing"} className="mt-3 h-14 w-full shrink-0 rounded-2xl text-[1.0625rem] font-semibold xshort:h-12">
-          {state === "showing" ? e.showing : e.showAll}
-        </Button>
+      {problem && (
+        <InlineStatus tone="error" className="mt-3 shrink-0">
+          {problem}
+        </InlineStatus>
       )}
+      {action}
       <Button variant="ghost" onClick={() => onOpenChange(false)} className="mt-2 h-12 w-full shrink-0 rounded-2xl text-[1.0625rem] xshort:h-11">
         {t.common.done}
       </Button>

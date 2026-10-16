@@ -28,7 +28,7 @@ export type Measure =
   | "perfectLeg" // X01: darts of a leg won in the fewest darts possible (9 in 501), else none
   | "average" // X01: points per three darts across the game, × 100
   | "marksPerRound" // Cricket: marks per three darts across the game, × 100
-  | "triplesInVisit" // Cricket: triples on 15 to 20 in one visit (three are nine marks)
+  | "marksInVisit" // Cricket: marks the engine credited in one visit (a number everyone closed scores none)
   | "clockDarts" // Around the Clock: darts for a whole round, in the fewest leg won
 
 export interface Milestone {
@@ -41,27 +41,30 @@ export interface Milestone {
   // Reached when a figure is at least the target (counts: when the count gets there). Figures
   // where fewer is better ("clockDarts") are reached at or below it.
   target: number
+  // How rare it is, 1 the rarest: when several are shown at once, the rarest goes first in the
+  // profile's list (and so on the card). The list above is the order of the catalog itself.
+  rank: number
 }
 
-const milestone = (id: string, group: Milestone["group"], basis: DataBasis, measure: Measure, target: number): Milestone => ({ id, version: 1, group, basis, measure, target })
+const milestone = (id: string, rank: number, group: Milestone["group"], basis: DataBasis, measure: Measure, target: number): Milestone => ({ id, version: 1, group, basis, measure, target, rank })
 
 export const MILESTONES: readonly Milestone[] = [
-  milestone("first-win", "games", "results", "wins", 1),
-  milestone("games-10", "games", "results", "games", 10),
-  milestone("games-50", "games", "results", "games", 50),
-  milestone("games-100", "games", "results", "games", 100),
-  milestone("first-100", "x01", "throws", "highestVisit", 100),
-  milestone("first-140", "x01", "throws", "highestVisit", 140),
-  milestone("first-180", "x01", "throws", "highestVisit", 180),
-  milestone("checkout-100", "x01", "throws", "highestCheckout", 100),
+  milestone("first-win", 15, "games", "results", "wins", 1),
+  milestone("games-10", 14, "games", "results", "games", 10),
+  milestone("games-50", 10, "games", "results", "games", 50),
+  milestone("games-100", 5, "games", "results", "games", 100),
+  milestone("first-100", 13, "x01", "throws", "highestVisit", 100),
+  milestone("first-140", 9, "x01", "throws", "highestVisit", 140),
+  milestone("first-180", 2, "x01", "throws", "highestVisit", 180),
+  milestone("checkout-100", 3, "x01", "throws", "highestCheckout", 100),
   // Reached with any perfect leg; its figure is the darts it took (perfectLegDarts in the engine).
-  milestone("perfect-leg", "x01", "throws", "perfectLeg", 1),
-  milestone("average-40", "x01", "throws", "average", 4000),
-  milestone("average-60", "x01", "throws", "average", 6000),
-  milestone("average-80", "x01", "throws", "average", 8000),
-  milestone("cricket-mpr-3", "cricket", "throws", "marksPerRound", 300),
-  milestone("cricket-nine-marks", "cricket", "throws", "triplesInVisit", 3),
-  milestone("clock-30", "clock", "throws", "clockDarts", 30),
+  milestone("perfect-leg", 1, "x01", "throws", "perfectLeg", 1),
+  milestone("average-40", 12, "x01", "throws", "average", 4000),
+  milestone("average-60", 8, "x01", "throws", "average", 6000),
+  milestone("average-80", 4, "x01", "throws", "average", 8000),
+  milestone("cricket-mpr-3", 11, "cricket", "throws", "marksPerRound", 300),
+  milestone("cricket-nine-marks", 7, "cricket", "throws", "marksInVisit", 9),
+  milestone("clock-30", 6, "clock", "throws", "clockDarts", 30),
 ]
 
 // Fewer is better for these figures.
