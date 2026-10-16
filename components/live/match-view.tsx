@@ -1,9 +1,10 @@
 "use client"
 
-import { useEffect, useState, type ReactNode } from "react"
+import { useCallback, useEffect, useState, useSyncExternalStore, type ReactNode } from "react"
 import { CircleDot, Hourglass, Maximize2, Pause, Trophy, WifiOff, X } from "lucide-react"
 import { ClockScoreboard, CricketScoreboard, X01Scoreboard } from "@/components/game/scoreboards"
 import { slotLabel } from "@/components/game/visit-panel"
+import { Waiting } from "@/components/live/waiting"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { LIVE_TEXTS } from "@/lib/i18n/features/live.screens"
 import { Group } from "@/components/ui/group"
@@ -23,17 +24,43 @@ import { cn } from "@/lib/utils"
 // by the engine from the latest snapshot, with its status, the time of that snapshot, and a
 // clear "Verbindung unterbrochen" when the relays stop answering. Read-only throughout.
 
+const NOT_FOLLOWED: Followed = { state: null, problem: null, connection: "connecting", heardAt: null, settled: false }
+
+// One follow per match on this device, shared by whatever shows the match at the same time (a
+// seat's row on the Play tab and the seat's screen) and closed once the last of them is gone.
+const follows = new Map<string, { followed: Followed; listeners: Set<() => void>; close: () => void }>()
+
+function subscribeTo(source: MatchSource, listener: () => void) {
+  let follow = follows.get(source.match)
+  if (!follow) {
+    const made = { followed: NOT_FOLLOWED, listeners: new Set<() => void>(), close: () => {} }
+    follows.set(source.match, made)
+    made.close = followMatch(source, (followed) => {
+      made.followed = followed
+      for (const tell of made.listeners) tell()
+    }).close
+    follow = made
+  }
+  const shared = follow
+  shared.listeners.add(listener)
+  return () => {
+    shared.listeners.delete(listener)
+    if (shared.listeners.size > 0) return
+    shared.close()
+    if (follows.get(source.match) === shared) follows.delete(source.match)
+  }
+}
+
 export function useFollowed(source: MatchSource | null): Followed {
-  const [followed, setFollowed] = useState<Followed>({ state: null, problem: null, connection: "connecting", heardAt: null, settled: false })
-  const match = source?.match
-  useEffect(() => {
-    if (!source) return
-    const follow = followMatch(source, setFollowed)
-    return follow.close
-    // The source is fixed per match; a new object for the same match changes nothing.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [match])
-  return followed
+  const match = source?.match ?? null
+  // The source is fixed per match; a new object for the same match changes nothing.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const subscribe = useCallback((listener: () => void) => (source ? subscribeTo(source, listener) : () => {}), [match])
+  return useSyncExternalStore(
+    subscribe,
+    () => (match && follows.get(match)?.followed) || NOT_FOLLOWED,
+    () => NOT_FOLLOWED,
+  )
 }
 
 const clock = (t: Messages, ms: number) => new Date(ms).toLocaleTimeString(t.intl, { hour: "2-digit", minute: "2-digit" })
@@ -46,11 +73,7 @@ export function MatchProblem({ followed }: { followed: Followed }) {
   if (followed.problem === "missing") return <EmptyState icon={CircleDot} title={w.notFound} description={w.notFoundText} />
   if (followed.problem) return <EmptyState icon={CircleDot} title={w.unreadable} description={w.unreadableText} />
   if (followed.connection === "interrupted") return <EmptyState icon={WifiOff} title={w.offline} description={w.offlineText} />
-  return (
-    <p role="status" className="py-12 text-center text-[0.9375rem] text-muted-foreground">
-      {w.connecting}
-    </p>
-  )
+  return <Waiting>{w.connecting}</Waiting>
 }
 
 // `compact`: a smaller board, so the actions below it (a verdict) stay in view.
@@ -89,7 +112,8 @@ export function MatchView({ followed, actions, compact }: { followed: Followed; 
       {!live ? (
         <p className="mt-6 text-[0.9375rem] text-muted-foreground">{tx.watch.waiting}</p>
       ) : game?.state ? (
-        !fullScreen && <Board state={game.state} stale={stale} className={cn("mt-4", compact ? "h-[clamp(11rem,34dvh,20rem)]" : "h-[clamp(13rem,52dvh,30rem)]")} />
+        // On a phone in landscape (xshort) a lower board keeps the current visit above the tab bar.
+        !fullScreen && <Board state={game.state} stale={stale} className={cn("mt-4", compact ? "h-[clamp(11rem,34dvh,20rem)]" : "h-[clamp(13rem,52dvh,30rem)] xshort:h-[clamp(8rem,45dvh,30rem)]")} />
       ) : (
         <div className={cn("transition-opacity", stale && "opacity-50")}>
           <Standing config={config} snapshot={live.content} />

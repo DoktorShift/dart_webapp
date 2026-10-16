@@ -3,7 +3,11 @@
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import { QRCodeView } from "@/components/common/qr-code-view"
 import { InlineStatus } from "@/components/common/inline-status"
+import { ShareActions } from "@/components/common/share-actions"
+import { XSHORT, useMediaQuery } from "@/components/common/use-media-query"
+import { gameHandedOver } from "@/components/live/gate"
 import { sameNamed, shortKey, usePublicNames, type PublicName } from "@/components/live/use-public-names"
+import { Waiting } from "@/components/live/waiting"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { LIVE_TEXTS } from "@/lib/i18n/features/live.screens"
 import {
@@ -75,7 +79,7 @@ function useStarted(open: boolean, start: () => Promise<unknown>) {
 
 function Starting({ state, retry }: { state: "starting" | "failed"; retry: () => void }) {
   const tx = useAreaT(LIVE_TEXTS)
-  if (state === "starting") return <p role="status" className="py-10 text-center text-[0.9375rem] text-muted-foreground">{tx.preparing}</p>
+  if (state === "starting") return <Waiting className="py-10">{tx.preparing}</Waiting>
   return (
     <div className="grid gap-3 pb-2">
       <InlineStatus tone="error">{tx.startFailed}</InlineStatus>
@@ -95,26 +99,67 @@ function Done({ onClose }: { onClose: () => void }) {
   )
 }
 
+// The code with what goes with it. On a phone in landscape (xshort) a sheet has about 140 pt
+// for its body: the code sits on the left, smaller, and on the right what must stay in view
+// without a scroll: the description (`description`, shown in the sheet's header elsewhere),
+// the share buttons, and `children` (the seats); the caption gives way. Elsewhere everything
+// stands below the code.
+function CodeWithActions({
+  value,
+  label,
+  caption,
+  description,
+  share,
+  children,
+}: {
+  value: string
+  label: string
+  caption?: string
+  description?: string
+  share: { url: string; title?: string; text?: string }
+  children?: ReactNode
+}) {
+  const xshort = useMediaQuery(XSHORT)
+  if (!xshort)
+    return (
+      <>
+        <QRCodeView value={value} label={label} caption={caption} share={share} maxSize={QR_IN_SHEET} />
+        {children}
+      </>
+    )
+  return (
+    <div className="flex items-start gap-4">
+      {/* The code's size is set here, not by the figure's own cap, so the column beside it keeps its room. */}
+      <div className="w-[45dvh] shrink-0">
+        <QRCodeView value={value} label={label} className="w-full" />
+      </div>
+      <div className="min-w-0 flex-1">
+        {description && <p className="mb-3 text-[0.9375rem] leading-snug text-muted-foreground">{description}</p>}
+        <ShareActions url={share.url} title={share.title} text={share.text} />
+        {children}
+      </div>
+    </div>
+  )
+}
+
 // ---- Zuschauen lassen ------------------------------------------------------------------------
 
 export function WatchSheet({ open, onClose, match, view, start }: SheetProps) {
   const t = useT()
   const tx = useAreaT(LIVE_TEXTS)
+  const xshort = useMediaQuery(XSHORT)
   const started = useStarted(open, start)
   const game = `${modeName(t, match.config.modeId, match.config.modeName)}, ${match.config.players.map((p) => p.name).join(" – ")}`
   return (
-    <Sheet open={open} onOpenChange={(next) => !next && onClose()} title={tx.watchSheet.title} description={tx.watchSheet.description}>
+    <Sheet open={open} onOpenChange={(next) => !next && onClose()} title={tx.watchSheet.title} description={xshort ? undefined : tx.watchSheet.description}>
       <div className="min-h-0 overflow-y-auto overscroll-contain">
         {view && started.state === "ready" ? (
-          <>
-            <QRCodeView
-              value={linkFor("watch", view.watch)}
-              label={tx.watchSheet.qrLabel}
-              share={{ url: linkFor("watch", view.watch), title: tx.watchSheet.shareTitle, text: tx.watchSheet.shareText(game) }}
-              maxSize={QR_IN_SHEET}
-            />
-            <p className="mt-4 px-1 text-[0.8125rem] text-muted-foreground">{tx.watchSheet.footnote}</p>
-          </>
+          <CodeWithActions
+            value={linkFor("watch", view.watch)}
+            label={tx.watchSheet.qrLabel}
+            description={tx.watchSheet.description}
+            share={{ url: linkFor("watch", view.watch), title: tx.watchSheet.shareTitle, text: tx.watchSheet.shareText(game) }}
+          />
         ) : (
           <Starting state={started.state === "failed" ? "failed" : "starting"} retry={started.retry} />
         )}
@@ -130,6 +175,7 @@ export function PlayersSheet({ open, onClose, match, view, start }: SheetProps) 
   const t = useT()
   const tx = useAreaT(LIVE_TEXTS)
   const s = tx.playersSheet
+  const xshort = useMediaQuery(XSHORT)
   const started = useStarted(open, start)
   const [seating, setSeating] = useState<Seating | null>(null)
   const [failed, setFailed] = useState(false)
@@ -166,32 +212,39 @@ export function PlayersSheet({ open, onClose, match, view, start }: SheetProps) 
   const shown = holders.map((h, i) => (h ? (profiles.get(h.pubkey)?.name ?? names[i]) : null))
   const twins = sameNamed(holders.flatMap((h, i) => (h ? [{ pubkey: h.pubkey, name: shown[i] as string }] : [])))
   const boardLink = seating ? linkFor("board", seating.code) : null
+  // On a phone in landscape the seats stand beside the code, right under the share buttons, so
+  // the first of them is in view: the description, the caption and the group's title step aside.
+  const seats = ready && (
+    <Group title={xshort ? undefined : s.seats} className={cn("mt-6 first:mt-6", xshort && "mt-3 first:mt-0")}>
+      {view.seats.map((seat, i) => (
+        <SeatRow
+          key={i}
+          name={names[i]}
+          holder={seat.holder}
+          profile={seat.holder ? (profiles.get(seat.holder.pubkey) ?? null) : null}
+          twin={seat.holder !== null && twins.has(seat.holder.pubkey)}
+          verdict={seat.verdict}
+          onFree={() => setFreeing(i)}
+        />
+      ))}
+    </Group>
+  )
   return (
-    <Sheet open={open} onOpenChange={(next) => !next && onClose()} title={s.title} description={s.description}>
+    <Sheet open={open} onOpenChange={(next) => !next && onClose()} title={s.title} description={xshort ? undefined : s.description}>
       <div className="min-h-0 overflow-y-auto overscroll-contain">
         {!ready ? (
           <Starting state={started.state === "failed" ? "failed" : "starting"} retry={started.retry} />
         ) : failed ? (
           <Starting state="failed" retry={() => setRound((n) => n + 1)} />
         ) : boardLink && seating ? (
-          <QRCodeView value={boardLink} label={s.qrLabel} caption={s.codeValid(clock(t, seating.expires))} share={{ url: boardLink, title: s.title }} maxSize={QR_IN_SHEET} />
+          <CodeWithActions value={boardLink} label={s.qrLabel} caption={s.codeValid(clock(t, seating.expires))} share={{ url: boardLink, title: s.title }}>
+            {seats}
+          </CodeWithActions>
         ) : (
-          <Starting state="starting" retry={started.retry} />
-        )}
-        {ready && (
-          <Group title={s.seats} className="mt-6 first:mt-6">
-            {view.seats.map((seat, i) => (
-              <SeatRow
-                key={i}
-                name={names[i]}
-                holder={seat.holder}
-                profile={seat.holder ? (profiles.get(seat.holder.pubkey) ?? null) : null}
-                twin={seat.holder !== null && twins.has(seat.holder.pubkey)}
-                verdict={seat.verdict}
-                onFree={() => setFreeing(i)}
-              />
-            ))}
-          </Group>
+          <>
+            <Starting state="starting" retry={started.retry} />
+            {seats}
+          </>
         )}
       </div>
       <Done onClose={onClose} />
@@ -265,6 +318,7 @@ function SeatRow({
 export function HandoffSheet({ open, onClose, match, start, closeGame }: SheetProps & { closeGame: () => void }) {
   const tx = useAreaT(LIVE_TEXTS)
   const s = tx.handoffSheet
+  const xshort = useMediaQuery(XSHORT)
   const started = useStarted(open, start)
   const [offer, setOffer] = useState<HandoffOffer | null>(null)
   const [round, setRound] = useState(0)
@@ -289,44 +343,40 @@ export function HandoffSheet({ open, onClose, match, start, closeGame }: SheetPr
     }
   }, [open, ready, round, match.id])
 
-  const done = offer?.step === "done"
+  // The other device has the game: this one leaves it at once, so nothing here can keep or
+  // save it any more, and says so on the Play tab (components/live/joined-rows.tsx).
+  useEffect(() => {
+    if (offer?.step !== "done") return
+    gameHandedOver()
+    closeGame()
+  }, [offer, closeGame])
+
   // From "Übergeben" on, the other device may have the game at any moment: the sheet stays until
-  // it says so (then only "Spiel hier schließen" leads on) or the wait for it runs out.
-  const locked = offer?.step === "sending" || done
-  const title = offer?.step === "asked" ? s.askedTitle : done ? s.doneTitle : s.title
-  const description = offer?.step === "waiting" ? s.description : offer?.step === "asked" ? s.asked : undefined
+  // it says so or the wait for it runs out.
+  const locked = offer?.step === "sending" || offer?.step === "done"
+  const title = offer?.step === "asked" ? s.askedTitle : s.title
+  const description = offer?.step === "waiting" ? (xshort ? undefined : s.description) : offer?.step === "asked" ? s.asked : undefined
 
   let body: ReactNode
   if (!ready || !offer) body = <Starting state={started.state === "failed" ? "failed" : "starting"} retry={started.retry} />
   else if (offer.step === "waiting")
-    body = (
-      <>
-        <QRCodeView value={linkFor("handoff", offer.code)} label={s.qrLabel} share={{ url: linkFor("handoff", offer.code), title: s.title }} maxSize={QR_IN_SHEET} />
-        <p className="mt-4 px-1 text-[0.8125rem] text-muted-foreground">{s.footnote}</p>
-      </>
-    )
+    body = <CodeWithActions value={linkFor("handoff", offer.code)} label={s.qrLabel} description={s.description} share={{ url: linkFor("handoff", offer.code), title: s.title }} />
   else if (offer.step === "asked")
+    // Side by side on a phone in landscape, so both buttons stay in view with the code.
     body = (
-      <div className="grid gap-2 pb-1">
+      <div className="grid gap-4 pb-1 xshort:grid-cols-2 xshort:items-center">
         <CheckCode code={offer.checkCode} />
-        <Button onClick={() => control.current?.give()} className={cn(primary, "mt-4")}>
-          {s.give}
-        </Button>
-        <Button variant="secondary" onClick={() => control.current?.decline()} className={secondary}>
-          {s.decline}
-        </Button>
+        <div className="grid gap-2">
+          <Button onClick={() => control.current?.give()} className={primary}>
+            {s.give}
+          </Button>
+          <Button variant="secondary" onClick={() => control.current?.decline()} className={secondary}>
+            {s.decline}
+          </Button>
+        </div>
       </div>
     )
-  else if (offer.step === "sending") body = <p role="status" className="py-10 text-center text-[0.9375rem] text-muted-foreground">{s.sending}</p>
-  else if (offer.step === "done")
-    body = (
-      <div className="grid gap-4 pb-1">
-        <InlineStatus tone="success">{s.done}</InlineStatus>
-        <Button onClick={closeGame} className={primary}>
-          {s.close}
-        </Button>
-      </div>
-    )
+  else if (locked) body = <Waiting className="py-10">{s.sending}</Waiting>
   else
     body = (
       <div className="grid gap-4 pb-1">

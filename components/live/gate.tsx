@@ -11,27 +11,38 @@ import { onStorageChange } from "@/lib/storage/db"
 // game, costs one small read from the device's database and nothing else: no live code, no
 // connection. The same for a device that never joined a board.
 
+// A value the live screens share while the app runs, read by React through useSyncExternalStore.
+function shared<T>(initial: T) {
+  let value = initial
+  const listeners = new Set<() => void>()
+  return {
+    get: () => value,
+    set(next: T) {
+      value = next
+      for (const listener of listeners) listener()
+    },
+    subscribe(listener: () => void) {
+      listeners.add(listener)
+      return () => {
+        listeners.delete(listener)
+      }
+    },
+  }
+}
+
 export type LiveSheet = "watch" | "players" | "handoff"
 
 // Which live sheet the game menu asked for, by game.
-let requested: { match: string; sheet: LiveSheet } | null = null
-const listeners = new Set<() => void>()
-function setRequested(next: typeof requested) {
-  requested = next
-  for (const listener of listeners) listener()
-}
+const sheetRequest = shared<{ match: string; sheet: LiveSheet } | null>(null)
+export const openLiveSheet = (match: string, sheet: LiveSheet) => sheetRequest.set({ match, sheet })
 
-export const openLiveSheet = (match: string, sheet: LiveSheet) => setRequested({ match, sheet })
+// A game left this device for another one (lib/live/handoff.ts): the Play tab says so until the
+// next game here, or until the word is put away.
+const handedOver = shared(false)
+export const gameHandedOver = () => handedOver.set(true)
 
 function useRequestedSheet(match: string): LiveSheet | null {
-  const current = useSyncExternalStore(
-    (listener) => {
-      listeners.add(listener)
-      return () => listeners.delete(listener)
-    },
-    () => requested,
-    () => null,
-  )
+  const current = useSyncExternalStore(sheetRequest.subscribe, sheetRequest.get, () => null)
   return current?.match === match ? current.sheet : null
 }
 
@@ -91,18 +102,23 @@ export function LiveGate({ match, close }: { match: SavedMatch; close: () => voi
   const sheet = useRequestedSheet(match.id)
   const [live, wentLive] = useLiveHere(match.id)
   useLeftoverBoards(match.id)
+  // A game on the screen again: whatever went to another device before is old news.
+  useEffect(() => handedOver.set(false), [match.id])
   if (!live && !sheet) return null
-  return <LiveGame match={match} close={close} sheet={sheet} onSheetClose={() => setRequested(null)} onLive={wentLive} />
+  return <LiveGame match={match} close={close} sheet={sheet} onSheetClose={() => sheetRequest.set(null)} onLive={wentLive} />
 }
 
 // "result.actions": the players' verdicts on a live game's result.
-export function LiveResultGate({ match }: { match: FinishedMatch }) {
+export function LiveResultGate({ match, placement }: { match: FinishedMatch; placement: "row" | "bar" }) {
   const [live] = useLiveHere(match.id)
-  return live ? <Confirmations match={match} /> : null
+  return live ? <Confirmations match={match} placement={placement} /> : null
 }
 
-// "play.rows": the way back to a seat at a board, once this phone holds one.
+// "play.rows": the way back to a seat at a board, once this phone holds one, and the word that
+// a game went on elsewhere.
 export function JoinedGate() {
   const records = useJoinedSeats()
-  return records.length > 0 ? <JoinedRows records={records} /> : null
+  const left = useSyncExternalStore(handedOver.subscribe, handedOver.get, () => false)
+  if (records.length === 0 && !left) return null
+  return <JoinedRows records={records} handedOver={left} onDismissHandedOver={() => handedOver.set(false)} />
 }

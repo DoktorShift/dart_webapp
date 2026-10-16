@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useFollowed } from "@/components/live/match-view"
-import { holdsSeat, keepConfirmed, type JoinedMatch } from "@/lib/live/join"
-import { toHex } from "@/lib/live/keys"
+import { holdsSeat, keepConfirmed, seatSource, type JoinedMatch } from "@/lib/live/join"
 
 // A seat this phone holds, followed from the relays: the player's own games follow the result
 // they confirmed (lib/live/join.ts keepConfirmed), and `lost` says the seat is no longer this
@@ -13,7 +12,7 @@ import { toHex } from "@/lib/live/keys"
 // the relays have told everything and the key on it is not this phone's.
 export function useSeat(initial: JoinedMatch, restored: boolean) {
   const [joined, setJoined] = useState(initial)
-  const followed = useFollowed({ match: joined.match, key: joined.key ? toHex(joined.key.secret) : null, relays: joined.relays })
+  const followed = useFollowed(seatSource(joined))
   const state = followed.state
 
   useEffect(() => {

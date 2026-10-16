@@ -8,11 +8,10 @@ export const liveScreensDe = {
 
   watchSheet: {
     title: "Zuschauen lassen",
-    description: "Wer diesen Code scannt oder den Link öffnet, sieht das Spiel live mit. Nur ansehen, nichts eintragen.",
+    description: "Wer diesen Code scannt oder den Link öffnet, sieht das Spiel bis zum Ende live mit, nur ansehen. Einen geteilten Link kann man nicht zurücknehmen.",
     qrLabel: "QR-Code zum Zuschauen",
     shareTitle: "Live-Spiel",
     shareText: (game: string) => `Schau unser Spiel live: ${game}`,
-    footnote: "Wer den Link hat, kann bis zum Spielende zusehen. Einen geteilten Link kann man nicht zurücknehmen.",
   },
 
   playersSheet: {
@@ -36,17 +35,13 @@ export const liveScreensDe = {
 
   handoffSheet: {
     title: "Auf anderem Gerät fortsetzen",
-    description: "Öffne diesen Code auf dem Gerät, das weiterzählen soll.",
+    description: "Öffne diesen Code auf dem Gerät, das weiterzählen soll. Das Spiel zieht mit allen Würfen um; dieses Gerät hört danach auf zu zählen.",
     qrLabel: "QR-Code für die Übergabe",
-    footnote: "Das Spiel zieht mit allen Würfen um. Dieses Gerät hört danach auf zu zählen.",
     askedTitle: "Spiel übergeben?",
     asked: "Ein anderes Gerät möchte das Spiel übernehmen. Übergib es nur, wenn dort derselbe Code steht.",
     give: "Übergeben",
     decline: "Ablehnen",
     sending: "Wird übergeben",
-    doneTitle: "Übergeben",
-    done: "Das Spiel läuft jetzt auf dem anderen Gerät weiter.",
-    close: "Spiel hier schließen",
     expired: "Der Code ist abgelaufen. Das Spiel bleibt hier.",
     silent: "Das andere Gerät hat die Übergabe nicht bestätigt. Das Spiel bleibt hier.",
     tooLong: "Dieses Spiel ist zu lang für eine Übergabe. Es bleibt hier.",
@@ -63,14 +58,20 @@ export const liveScreensDe = {
     keep: "Hier ohne Übertragung weiterzählen",
   },
 
-  // On the result: "1 von 2 bestätigt · 1 Widerspruch".
+  // On the result: "1 von 2 bestätigt · 1 Widerspruch"; in the top bar of a phone in landscape
+  // the short form, "1/2 bestätigt".
   confirmations: (confirmed: number, connected: number) => `${confirmed} von ${connected} bestätigt`,
+  confirmationsShort: (confirmed: number, connected: number) => `${confirmed}/${connected} bestätigt`,
   disputes: (count: number) => (count === 1 ? "1 Widerspruch" : `${count} Widersprüche`),
 
-  // The Play tab's row for a seat at a board: "Am Board: 301, Double Out" with the seat's state.
+  // The Play tab's rows: a seat at a board ("Am Board: 301, Double Out" with the seat's state),
+  // and the game that went on to another device.
   joined: {
     title: (game: string) => `Am Board: ${game}`,
     confirmed: "Ergebnis bestätigt",
+    handedOver: "Übergeben",
+    handedOverText: "Das Spiel läuft jetzt auf dem anderen Gerät weiter.",
+    dismiss: "Hinweis ausblenden",
   },
 
   watch: {
@@ -149,9 +150,15 @@ export const liveScreensDe = {
     replaceConfirm: "Ersetzen und übernehmen",
     asking: "Bestätige die Übergabe auf dem anderen Gerät. Dort steht derselbe Code.",
     checkCode: "Prüfcode",
-    declined: "Das andere Gerät hat die Übergabe abgelehnt.",
-    expired: "Dieser Code ist abgelaufen. Lass dir auf dem anderen Gerät einen neuen zeigen.",
-    invalid: "Das Spiel konnte nicht übernommen werden.",
+    waiting: "Wartet auf das andere Gerät",
+    unanswered: "Noch keine Antwort. Steht auf dem anderen Gerät „Spiel übergeben?“, tippe dort auf Übergeben. Sonst lass dir dort einen neuen Code zeigen.",
+    declined: "Übergabe abgelehnt",
+    declinedText: "Das andere Gerät hat die Übergabe abgelehnt.",
+    again: "Noch einmal anfragen",
+    expired: "Dieser Code ist abgelaufen",
+    expiredText: "Lass dir auf dem anderen Gerät einen neuen zeigen.",
+    invalid: "Das Spiel konnte nicht übernommen werden",
+    invalidText: "Aktualisiere die App auf beiden Geräten und versuche es noch einmal.",
     notHandoff: "Das ist kein Code zum Übernehmen eines Spiels.",
   },
 }

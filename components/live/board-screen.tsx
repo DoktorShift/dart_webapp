@@ -6,6 +6,7 @@ import { InlineStatus } from "@/components/common/inline-status"
 import { readPayload } from "@/components/live/link-payload"
 import { MatchView } from "@/components/live/match-view"
 import { useSeat } from "@/components/live/use-seat"
+import { Waiting } from "@/components/live/waiting"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { LIVE_TEXTS } from "@/lib/i18n/features/live.screens"
 import {
@@ -24,7 +25,7 @@ import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
 import { rulesSummary } from "@/lib/game/words"
 import { offeredGame } from "@/lib/live/content"
-import { forgetSeat, giveVerdict, loadSeat, seatKey, visitBoard, type BoardSeats, type BoardVisit, type BoardVisitControl, type JoinedMatch } from "@/lib/live/join"
+import { forgetSeat, giveVerdict, loadSeat, ownVerdict, visitBoard, type BoardSeats, type BoardVisit, type BoardVisitControl, type JoinedMatch } from "@/lib/live/join"
 import type { Followed } from "@/lib/live/follow"
 import type { Signer } from "@/lib/nostr/types"
 import { getSigner, useSession } from "@/lib/profile/session"
@@ -64,11 +65,7 @@ function VisitScreen({ link }: { link: BoardLink }) {
 
   switch (visit.step) {
     case "looking":
-      return (
-        <p role="status" className="py-12 text-center text-[0.9375rem] text-muted-foreground">
-          {b.looking}
-        </p>
-      )
+      return <Waiting>{b.looking}</Waiting>
     case "silent":
       return <EmptyState icon={WifiOff} title={b.silent} description={b.silentText} primary={{ label: tx.retry, onClick: () => setAttempt((n) => n + 1) }} />
     case "expired":
@@ -100,12 +97,7 @@ function StoredSeatScreen({ match }: { match: string }) {
     setJoined(null)
   }, [match])
 
-  if (joined === undefined)
-    return (
-      <p role="status" className="py-12 text-center text-[0.9375rem] text-muted-foreground">
-        {tx.watch.connecting}
-      </p>
-    )
+  if (joined === undefined) return <Waiting>{tx.watch.connecting}</Waiting>
   if (joined === null) return <EmptyState icon={Smartphone} title={tx.board.lost} description={tx.board.lostText} />
   return <Seated joined={joined} restored onLost={lost} />
 }
@@ -216,9 +208,7 @@ function Verdict({ joined, followed }: { joined: JoinedMatch; followed: Followed
   if (!result) return last?.status === "void" ? <InlineStatus className="mt-4">{r.withdrawn}</InlineStatus> : null
   if (joined.profile && session !== undefined && session?.pubkey !== joined.profile) return <InlineStatus className="mt-4">{tx.board.otherProfile}</InlineStatus>
 
-  // The seat's verdict counts as this phone's only from its own key (an earlier holder's doesn't).
-  const given = state.confirmations[joined.seat]
-  const mine = given?.pubkey === seatKey(joined) ? given : undefined
+  const mine = ownVerdict(joined, state)
   const corrected = !mine && state.stale.some((v) => v.seat === joined.seat)
   const send = async (verdict: "confirm" | "dispute") => {
     setSending(true)

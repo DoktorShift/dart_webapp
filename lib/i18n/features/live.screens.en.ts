@@ -9,11 +9,10 @@ export const liveScreensEn: Widen<typeof liveScreensDe> = {
 
   watchSheet: {
     title: "Let others watch",
-    description: "Anyone who scans this code or opens the link can follow the game live. Watching only, no scoring.",
+    description: "Anyone who scans this code or opens the link can follow the game live until it ends, watching only. A shared link can't be taken back.",
     qrLabel: "QR code for watching",
     shareTitle: "Live game",
     shareText: (game) => `Watch our game live: ${game}`,
-    footnote: "Anyone with the link can watch until the game ends. A shared link can't be taken back.",
   },
 
   playersSheet: {
@@ -37,17 +36,13 @@ export const liveScreensEn: Widen<typeof liveScreensDe> = {
 
   handoffSheet: {
     title: "Continue on another device",
-    description: "Open this code on the device that should keep score.",
+    description: "Open this code on the device that should keep score. The game moves over with every throw; this device stops keeping score afterwards.",
     qrLabel: "QR code for the handover",
-    footnote: "The game moves over with every throw. This device stops keeping score afterwards.",
     askedTitle: "Hand over the game?",
     asked: "Another device wants to take over the game. Only hand it over if it shows the same code.",
     give: "Hand over",
     decline: "Decline",
     sending: "Handing over",
-    doneTitle: "Handed over",
-    done: "The game now continues on the other device.",
-    close: "Close the game here",
     expired: "The code has expired. The game stays here.",
     silent: "The other device didn't confirm the handover. The game stays here.",
     tooLong: "This game is too long to hand over. It stays here.",
@@ -65,11 +60,15 @@ export const liveScreensEn: Widen<typeof liveScreensDe> = {
   },
 
   confirmations: (confirmed, connected) => `${confirmed} of ${connected} confirmed`,
+  confirmationsShort: (confirmed, connected) => `${confirmed}/${connected} confirmed`,
   disputes: (count) => (count === 1 ? "1 dispute" : `${count} disputes`),
 
   joined: {
     title: (game) => `At the board: ${game}`,
     confirmed: "Result confirmed",
+    handedOver: "Handed over",
+    handedOverText: "The game now continues on the other device.",
+    dismiss: "Hide this note",
   },
 
   watch: {
@@ -148,9 +147,15 @@ export const liveScreensEn: Widen<typeof liveScreensDe> = {
     replaceConfirm: "Replace and take over",
     asking: "Confirm the handover on the other device. It shows the same code.",
     checkCode: "Check code",
-    declined: "The other device declined the handover.",
-    expired: "This code has expired. Ask the other device for a new one.",
-    invalid: "The game couldn't be taken over.",
+    waiting: "Waiting for the other device",
+    unanswered: "No answer yet. If the other device shows “Hand over the game?”, tap Hand over there. Otherwise ask it for a new code.",
+    declined: "Handover declined",
+    declinedText: "The other device declined the handover.",
+    again: "Ask again",
+    expired: "This code has expired",
+    expiredText: "Ask the other device for a new one.",
+    invalid: "The game couldn't be taken over",
+    invalidText: "Update the app on both devices and try again.",
     notHandoff: "This isn't a code for taking over a game.",
   },
 }
