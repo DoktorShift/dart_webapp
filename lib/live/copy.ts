@@ -52,12 +52,14 @@ export function resultPlayed(state: MatchStateP, seat: number, profile: string |
 }
 
 // Brings the copy of `wanted.match` in line with what it should rest on, from the record it rests
-// on now (`kept`, null: there is none); resolves with the record it rests on afterwards.
-export async function keepCopy(kept: string | null, wanted: Wanted): Promise<string | null> {
+// on now (`kept`, null: there is none); resolves with the record it rests on afterwards. `owner`
+// is the profile the copy belongs to (null: a guest's), so taking it out reaches that profile's
+// other devices and no one else's.
+export async function keepCopy(kept: string | null, wanted: Wanted, owner: string | null): Promise<string | null> {
   if (wanted.record === kept) return kept
   const played = wanted.record ? await wanted.played() : null
   if (wanted.record && !played) return kept
-  if (kept) await unarchive(wanted.match)
+  if (kept) await unarchive(wanted.match, { by: owner })
   if (played) await archiveFinished(resultGame(played.agreement, played, { id: wanted.match, own: await ownSeat(played) }), undefined, new Date(played.finishedAt * 1000))
   return wanted.record
 }
@@ -73,7 +75,7 @@ export function keepCopies(profile: string, wanted: readonly Wanted[]): Promise<
     const kept = (await kvGet<Record<string, string>>(copiesKey(profile))) ?? {}
     const next = { ...kept }
     for (const w of wanted) {
-      const record = await keepCopy(kept[w.match] ?? null, w)
+      const record = await keepCopy(kept[w.match] ?? null, w, profile)
       if (record) next[w.match] = record
       else delete next[w.match]
     }

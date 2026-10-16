@@ -31,7 +31,7 @@ test("a confirmed game is kept once, as the profile's player's game, and the pri
   await keepCopies(BEN, [wanted("r1")])
   await keepCopies(BEN, [wanted("r1")])
   // A second device of the profile, or a copy taken over from it: still the same one game.
-  assert.equal(await keepCopy(null, wanted("r1")), "r1")
+  assert.equal(await keepCopy(null, wanted("r1"), BEN), "r1")
   const games = await loadArchive()
   assert.equal(games.length, 1)
   assert.equal(games[0].id, MATCH)
@@ -54,7 +54,7 @@ test("a correction replaces the copy, a withdrawal takes it out, and an unreadab
 
   await keepCopies(BEN, [wanted(null)])
   assert.deepEqual(await loadArchive(), [])
-  assert.deepEqual(await deletedMatches(), [MATCH], "a deletion the profile's other devices follow")
+  assert.deepEqual(await deletedMatches(), [{ id: MATCH, by: BEN }], "a deletion the profile's other devices follow")
 
   // Matches not named keep their copies.
   await keepCopies(BEN, [wanted("r1")])

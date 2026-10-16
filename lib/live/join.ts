@@ -289,7 +289,7 @@ export async function giveVerdict(joined: JoinedMatch, state: MatchStateP, verdi
 // again when that result is corrected or withdrawn, until they confirm the new one.
 export async function keepConfirmed(joined: JoinedMatch, state: MatchStateP): Promise<JoinedMatch> {
   const record = state.result && ownVerdict(joined, state)?.verdict === "confirm" ? state.result.event : null
-  const archived = await keepCopy(joined.archived, { match: joined.match, record, played: () => resultPlayed(state, joined.seat, joined.profile) })
+  const archived = await keepCopy(joined.archived, { match: joined.match, record, played: () => resultPlayed(state, joined.seat, joined.profile) }, joined.profile)
   if (archived === joined.archived) return joined
   const stored = await loadJoined(joined.match).catch(() => null)
   if (stored) await saveJoined({ ...stored, archived } satisfies Omit<JoinedRecord, "id">).catch(() => {})

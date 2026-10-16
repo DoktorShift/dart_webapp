@@ -227,12 +227,13 @@ export function archiveFinished(match: SavedMatch, state: MatchState = replay(ma
 }
 
 // Takes a game off again when its winning dart is undone (or a correction reopens it), and marks
-// it deleted here by whoever is signed in.
-export function unarchive(id: string, now = new Date()) {
+// it deleted here: by `by`, the profile whose game it is, when the caller knows it (a profile's
+// copy of a confirmed game), else by whoever is signed in.
+export function unarchive(id: string, { by }: { by?: string | null } = {}) {
   return serial(async () => {
     let ok = removeV1Record(id)
     try {
-      if (await dbGet("matches", id)) await dbWrite([{ store: "matches", delete: id }, deletedMark(id, await signedIn(), now)])
+      if (await dbGet("matches", id)) await dbWrite([{ store: "matches", delete: id }, deletedMark(id, by === undefined ? await signedIn() : by, new Date())])
     } catch {
       ok = false
     }
