@@ -3,7 +3,7 @@ import { nowSeconds } from "../nostr/time.ts"
 import { ownEvents, ownRelaySettings } from "../profile/own-events.ts"
 import { publishTargets } from "../profile/relay-list.ts"
 import { getSigner } from "../profile/session.ts"
-import { KIND_PRIVATE } from "../protocol/kinds.ts"
+import { KIND_PRIVATE, MAX_HANDSHAKE_SECONDS } from "../protocol/kinds.ts"
 import { recordSlot } from "../protocol/private.ts"
 import { backupStatus, updateBackupStatus, type BackupStatus } from "../recovery/status.ts"
 import { kvGet, kvSet } from "../storage/db.ts"
@@ -16,11 +16,11 @@ import { MAX_DEVICE_NAME } from "./device-name.ts"
 // Profil › Geräte: the profile's devices, as a private record on its relays
 // (docs/protocol/families/private-records.md, type "devices"). It is a list the person keeps,
 // nothing more (decision 0002 §10): a device that has the key keeps the key, whatever the list
-// says. Each device writes itself in once it has the profile and synced once (after a pairing or
-// a restore, the first device when it first opens the list), under the id it syncs with
-// (lib/sync/engine.ts), so "this device" is the same device the sync knows. The newest version
-// wins, so every change is made on the version the relays hold now; this device keeps its last
-// copy in kv "profile.devices", which goes with the profile.
+// says. Each device writes itself in once it has the profile and synced (after any sync,
+// components/devices/register.ts; with a signer app, when Profil › Geräte opens), under the id
+// it syncs with (lib/sync/engine.ts), so "this device" is the same device the sync knows. The
+// newest version wins, so every change is made on the version the relays hold now; this device
+// keeps its last copy in kv "profile.devices", which goes with the profile.
 //
 // The record also notes when a backup file of the profile was last saved, on whatever device:
 // a device that gets the profile learns so (lib/recovery/status.ts) instead of asking for a
@@ -61,8 +61,8 @@ export interface DeviceList {
   // False while the list can't be kept on relays: the profile has no data key here yet, or this
   // device hasn't synced once (nothing was synced so far, or the signer can't decrypt).
   available: boolean
-  // Devices this one just gave the profile to that aren't in the list yet (their names).
-  arriving: string[]
+  // Devices this one just gave the profile to that aren't in the list yet.
+  arriving: Pick<DeviceEntry, "id" | "name">[]
 }
 
 // "offline": no relay answered, so the list can't be read before it is changed.
@@ -198,15 +198,14 @@ export async function removeDevice(pubkey: string, id: string) {
 // ---- Devices on their way ----------------------------------------------------------------------
 
 // A device this one just gave the profile to (./pairing.ts) writes itself into the list once the
-// profile arrived there and it synced, which takes a moment. Until its entry shows, the list
-// names it from here. Kept in memory only: the list on the relays is what lasts.
-const arriving: { pubkey: string; name: string; at: number }[] = []
+// profile arrived there and it synced, which takes a moment, under the id the pairing gave it.
+// Until that entry shows, the list names it from here, for as long as a pairing may take. Kept in
+// memory only: the list on the relays is what lasts.
+const arriving: { pubkey: string; id: string; name: string; at: number }[] = []
 const arrivalListeners = new Set<() => void>()
-// How much earlier than the pairing's end the new device's clock may date its entry.
-const CLOCK_SLACK = 300
 
-export function deviceAdded(pubkey: string, name: string) {
-  arriving.push({ pubkey, name, at: nowSeconds() })
+export function deviceAdded(pubkey: string, id: string, name: string) {
+  arriving.push({ pubkey, id, name, at: nowSeconds() })
   for (const listener of arrivalListeners) listener()
 }
 
@@ -215,9 +214,10 @@ export function onDeviceAdded(listener: () => void): () => void {
   return () => arrivalListeners.delete(listener)
 }
 
-// The arriving devices of this profile not in `entries` yet; the ones that are, are forgotten.
-function stillArriving(pubkey: string, entries: readonly DeviceEntry[]): string[] {
-  const listed = (a: (typeof arriving)[number]) => entries.some((d) => d.name === a.name && d.added >= a.at - CLOCK_SLACK)
-  for (let i = arriving.length - 1; i >= 0; i--) if (arriving[i].pubkey === pubkey && listed(arriving[i])) arriving.splice(i, 1)
-  return arriving.filter((a) => a.pubkey === pubkey).map((a) => a.name)
+// The arriving devices of this profile not in `entries` yet; the ones that are, or that took
+// longer than a pairing may, are forgotten.
+function stillArriving(pubkey: string, entries: readonly DeviceEntry[]): DeviceList["arriving"] {
+  const gone = (a: (typeof arriving)[number]) => entries.some((d) => d.id === a.id) || a.at + MAX_HANDSHAKE_SECONDS < nowSeconds()
+  for (let i = arriving.length - 1; i >= 0; i--) if (arriving[i].pubkey === pubkey && gone(arriving[i])) arriving.splice(i, 1)
+  return arriving.filter((a) => a.pubkey === pubkey).map(({ id, name }) => ({ id, name }))
 }

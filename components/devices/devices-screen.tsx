@@ -40,6 +40,8 @@ export default function DevicesScreen() {
 }
 
 const loadList = () => import("@/lib/devices/list")
+// How often the list is read again while a device given the profile here hasn't put itself in.
+const ARRIVING_REFRESH_MS = 10_000
 
 function Devices({ session }: { session: Session }) {
   const t = useT()
@@ -51,9 +53,11 @@ function Devices({ session }: { session: Session }) {
   const [editing, setEditing] = useState<DeviceEntry | null>(null)
   const [lostOpen, setLostOpen] = useState(false)
 
-  // The first device of a profile puts itself in when the list first opens; then the list as
-  // the relays have it. Again after each sync here (the first one brings the data key and this
-  // device's id, lib/devices/list.ts), and whenever this device gave the profile to another one.
+  // This device puts itself in, if it isn't yet (lib/devices/list-self.ts does so after syncs,
+  // but not for a profile in a signer app); then the list as the relays have it. Again after
+  // each sync here (the first one brings the data key and this device's id, lib/devices/list.ts),
+  // whenever this device gave the profile to another one, and now and again until that one's own
+  // entry replaces "Wird hinzugefügt".
   const synced = useSyncStatus().endedAt
   useEffect(() => {
     let alive = true
@@ -83,6 +87,12 @@ function Devices({ session }: { session: Session }) {
   }, [])
 
   const reload = () => setRound((n) => n + 1)
+  const arriving = (list?.arriving.length ?? 0) > 0
+  useEffect(() => {
+    if (!arriving) return
+    const timer = setInterval(() => setRound((n) => n + 1), ARRIVING_REFRESH_MS)
+    return () => clearInterval(timer)
+  }, [arriving])
   const date = (seconds: number) => new Date(seconds * 1000).toLocaleDateString(t.intl, { day: "numeric", month: "long", year: "numeric" })
   const footer = !list ? undefined : !list.available ? l.notYet : list.state === "complete" ? undefined : list.state === "partial" ? l.partial : l.unavailable
 
@@ -96,8 +106,8 @@ function Devices({ session }: { session: Session }) {
             {list.entries.map((device) => (
               <ListRow key={device.id} title={device.name} subtitle={device.id === list.thisDevice ? l.thisDevice : l.since(date(device.added))} onClick={() => setEditing(device)} />
             ))}
-            {list.arriving.map((name, i) => (
-              <ListRow key={`arriving:${i}`} title={name} subtitle={l.arriving} />
+            {list.arriving.map((device) => (
+              <ListRow key={device.id} title={device.name} subtitle={l.arriving} />
             ))}
           </>
         )}

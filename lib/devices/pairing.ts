@@ -1,6 +1,6 @@
 import { bytesToHex, hexToBytes } from "@noble/hashes/utils.js"
-import { openChannel, reached, repeat, type ChannelFlow } from "../nostr/channel.ts"
-import { publish, subscribe } from "../nostr/client.ts"
+import { openChannel, outcomeOf, repeat, REPEAT_MS, type ChannelFlow, type SendOutcome } from "../nostr/channel.ts"
+import { publish, query, subscribe } from "../nostr/client.ts"
 import { generalRelays } from "../nostr/relays.ts"
 import { localKeyOf, newLocalKey, type LocalKey } from "../nostr/signers.ts"
 import { nowSeconds } from "../nostr/time.ts"
@@ -34,6 +34,7 @@ import { utf8Length } from "../protocol/schema.ts"
 import { applyProfilePackage, buildProfilePackage, parseProfilePackage, type Applied } from "../recovery/package.ts"
 import { dbDelete, dbGetAll, dbPut, type Keyed } from "../storage/db.ts"
 import { randomHex } from "../storage/ids.ts"
+import { adoptDeviceId } from "../sync/engine.ts"
 import { deviceName } from "./device-name.ts"
 import { deviceAdded } from "./list.ts"
 import { PAIRING_PENDING_PREFIX } from "./storage-keys.ts"
@@ -66,6 +67,9 @@ const UNANSWERED_MS = 20_000
 // How long the device that sent the profile waits for the new device's acknowledgement, once a
 // relay took the package, before it says the profile most likely arrived.
 const ACK_WINDOW_MS = 30_000
+// The new device asks for the package every REPEAT_MS until it comes: no ask for this long means
+// it stopped asking.
+const ASK_GAP_MS = 2 * REPEAT_MS
 // The package fits the message schema with room for the message's own fields.
 const PACKAGE_BUDGET = MAX_PACKAGE_BYTES - 200
 
@@ -126,39 +130,94 @@ export async function purgeExpiredPairings(now = nowSeconds()) {
   for (const record of await stored()) if (record.expires <= now) await drop(record.id)
 }
 
-// A timer until the session runs out.
-const untilExpiry = (expires: number, then: () => void) => setTimeout(then, Math.max(0, expires - nowSeconds()) * 1000)
+// How long until the session runs out.
+const msUntil = (expires: number) => Math.max(0, expires - nowSeconds()) * 1000
 
-// ---- What the screen hears --------------------------------------------------------------------
+// The device id a new device takes into the profile's device list (./list.ts): one both devices
+// know from the pairing, the first half of its session id, so the device that gave the profile
+// names it until the new device's own entry shows.
+const pairedDeviceId = (sid: string) => sid.slice(0, 16)
+
+// ---- One pairing as it runs ------------------------------------------------------------------
 
 // Each change of step, and whether this device reaches the relays: `offline` while the last
 // message sent reached none (the pairing keeps sending all the same).
 export type PairingListener<S> = (state: S, offline: boolean) => void
 
-// The screen's side of a running pairing: the last step, told again when the connection
-// changes; nothing once the screen closed.
-function screenOf<S>(onChange: PairingListener<S>) {
+const UNSENT: SendOutcome = { reached: false, delivered: false }
+
+// A pairing running on this device: what its screen hears, and the repeats, timers and
+// subscriptions that keep it going. The one place that knows the pairing is over: it ended
+// (`end`, with the last step the screen shows) or its screen closed (`close`, the pairing stays
+// stored to resume). Then everything running stops, the screen hears no other step, and a repeat
+// or timer asked for later (by a step that went on after an await) never starts, so nothing is
+// sent after the end.
+function pairingRun<S>(onChange: PairingListener<S>) {
   let shown: S | null = null
   let offline = false
+  let over = false
   let closed = false
-  const reach = (ok: boolean) => {
-    if (offline !== ok) return
-    offline = !ok
+  const running = new Set<() => void>()
+  const tell = () => {
     if (shown && !closed) onChange(shown, offline)
   }
+  const stopAll = () => {
+    over = true
+    for (const stop of running) stop()
+    running.clear()
+  }
+  // Keeps `stop` until the end; at once when it is over already. Returns what stops it earlier.
+  const hold = (stop: () => void) => {
+    if (over) {
+      stop()
+      return () => {}
+    }
+    running.add(stop)
+    return () => {
+      running.delete(stop)
+      stop()
+    }
+  }
+  const reach = (ok: boolean) => {
+    if (over || offline !== ok) return
+    offline = !ok
+    tell()
+  }
   return {
-    set(state: S) {
+    get over() {
+      return over
+    },
+    show(state: S) {
+      if (over) return
       shown = state
-      if (!closed) onChange(state, offline)
+      tell()
     },
     reach,
-    // A send that settles tells whether a relay took it.
-    track: (sending: Promise<boolean>) =>
+    // A send that settles tells whether this device reaches a relay.
+    track: (sending: Promise<SendOutcome>) =>
       sending.then(
-        (ok) => (reach(ok), ok),
-        () => (reach(false), false),
+        (outcome) => (reach(outcome.reached), outcome),
+        () => (reach(false), UNSENT),
       ),
+    hold,
+    repeat: (send: () => Promise<unknown>) => (over ? () => {} : hold(repeat(send))),
+    after(ms: number, then: () => void) {
+      if (over) return () => {}
+      const stop = () => clearTimeout(timer)
+      const timer = setTimeout(() => {
+        running.delete(stop)
+        then()
+      }, ms)
+      return hold(stop)
+    },
+    end(last: S) {
+      if (over) return
+      stopAll()
+      shown = last
+      tell()
+    },
     close() {
+      stopAll()
       closed = true
     },
   }
@@ -223,47 +282,36 @@ export async function pairNewDevice(onChange: PairingListener<NewDevicePairing>,
   const codeSession = () => record.sessions.find((s) => s.sid === record.codeSid)
   const chosen = () => (record.sessions.length === 1 ? record.sessions[0] : null)
 
-  const view = screenOf(onChange)
-  let finished = false
+  const run = pairingRun(onChange)
   let stopAnnouncing: (() => void) | null = null
   let stopAccepting: (() => void) | null = null
-  let unanswered: ReturnType<typeof setTimeout> | undefined
+  let stopUnanswered: (() => void) | null = null
   let applied: Applied | null = null
   let applying: Promise<void> | null = null
 
-  const stopAll = () => {
-    stopAnnouncing?.()
-    stopAnnouncing = null
-    stopAccepting?.()
-    stopAccepting = null
-    clearTimeout(unanswered)
-  }
   // Every end but "done" forgets the pairing at once; "done" keeps answering the other device's
   // repeats until the screen closes.
   const end = async (state: Exclude<NewDevicePairing, { step: "done" }>) => {
-    finished = true
-    stopAll()
-    clearTimeout(expiry)
+    run.end(state)
     await drop(record.id)
-    view.set(state)
   }
-  const expiry = untilExpiry(record.expires, () => void end({ step: "expired" }))
+  run.after(msUntil(record.expires), () => void end({ step: "expired" }))
 
   const channel = openChannel(PAIRING_FLOW, key, record.relays, (message, from) => void handle(message, from))
   const checkCodeOf = (s: PairingSession) => pairingCheckCode(key.pubkey, s.peer!, s.sid)
-  const ack = (to: string, s: PairingSession) => channel.send(to, { t: "ack", sid: s.sid, hash: s.packageHash! }).catch(() => false)
-  const abort = (to: string, s: PairingSession, reason: AbortReason) => channel.send(to, { t: "abort", sid: s.sid, reason }).catch(() => false)
+  const ack = (to: string, s: PairingSession) => channel.send(to, { t: "ack", sid: s.sid, hash: s.packageHash! }).catch(() => UNSENT)
+  const abort = (to: string, s: PairingSession, reason: AbortReason) => channel.send(to, { t: "abort", sid: s.sid, reason }).catch(() => UNSENT)
 
   // The announce of the typed code, plaintext under the code's lookup tag.
   const announce = async () => {
     const s = codeSession()
-    if (!s || !code) return false
+    if (!s || !code) return UNSENT
     const message: PairingMessage = { t: "announce", sid: s.sid, exp: s.expires, mac: announceMac(code.auth, key.pubkey, s.sid, s.expires) }
-    return reached(await publish(await key.signer.signEvent(pairingTemplate({ message, created_at: nowSeconds(), lookup: code.lookup })), record.relays))
+    return outcomeOf(await publish(await key.signer.signEvent(pairingTemplate({ message, created_at: nowSeconds(), lookup: code.lookup })), record.relays))
   }
 
   async function handle(message: PairingMessage, from: string) {
-    if (message.t === "announce" || finished) return
+    if (message.t === "announce" || run.over) return
     const current = record.sessions.find((s) => s.sid === message.sid)
     if (!current) return
     // The package may come again (the acknowledgement got lost on the way): taken once,
@@ -283,58 +331,61 @@ export async function pairNewDevice(onChange: PairingListener<NewDevicePairing>,
     record.sessions = [next]
     if (message.t === "hello") record.peer = message.device
     await keep(record)
+    if (run.over) return
     if (message.t === "abort") {
       const why = abortedAs(message.reason)
       return end(why === "error" ? { step: "failed", reason: "other-device" } : { step: why })
     }
     if (message.t === "hello") {
       stopAnnouncing?.()
-      stopAnnouncing = null
-      view.set({ step: "found", checkCode: checkCodeOf(next), device: message.device })
+      run.show({ step: "found", checkCode: checkCodeOf(next), device: message.device })
     } else if (message.t === "package") {
       stopAccepting?.()
-      stopAccepting = null
-      clearTimeout(unanswered)
-      view.set({ step: "receiving" })
+      stopUnanswered?.()
+      run.show({ step: "receiving" })
       await (applying ??= take(message.data, next, from))
     }
   }
 
-  // Takes the package: the profile is signed in here, then the other device hears so.
+  // Takes the package: the profile is signed in here, then the other device hears so. This
+  // device goes into the profile's device list under the id the other device knows it by, kept
+  // before the profile signs in, so the first sync here already runs under it.
   async function take(data: Record<string, unknown>, current: PairingSession, from: string) {
     try {
-      applied = await apply(parseProfilePackage(data), {})
+      const pkg = parseProfilePackage(data)
+      await adoptDeviceId(pkg.pubkey, pairedDeviceId(current.sid))
+      applied = await apply(pkg, {})
     } catch (error) {
       void abort(from, current, "error")
       return end({ step: "failed", reason: error instanceof SessionError && error.code === "occupied" ? "occupied" : "invalid" })
     }
     await ack(from, current)
-    view.set({ step: "done", applied })
+    run.show({ step: "done", applied })
   }
 
   const accept = (s: PairingSession) => {
     const checkCode = checkCodeOf(s)
     const device = record.peer ?? ""
-    view.set({ step: "confirming", checkCode, device, unanswered: false })
-    stopAccepting = repeat(() => view.track(channel.send(s.peer!, { t: "accept", sid: s.sid, device: deviceName() })))
-    unanswered = setTimeout(() => view.set({ step: "confirming", checkCode, device, unanswered: true }), UNANSWERED_MS)
+    run.show({ step: "confirming", checkCode, device, unanswered: false })
+    stopAccepting = run.repeat(() => run.track(channel.send(s.peer!, { t: "accept", sid: s.sid, device: deviceName() })))
+    stopUnanswered = run.after(UNANSWERED_MS, () => run.show({ step: "confirming", checkCode, device, unanswered: true }))
   }
 
   // Where the pairing stands now (a fresh one waits; a resumed one may be further).
   const current = chosen()
   if (!current) {
-    stopAnnouncing = repeat(() => view.track(announce()))
-    view.set({ step: "waiting", link: encodePairingLink({ pubkey: key.pubkey, sid: record.sessions[0].sid, expires: record.expires, relays: record.relays }), code: encodePairingCode(hexToBytes(secrets.code!)), expires: record.expires })
-  } else if (current.step === "confirm" && !current.confirmedHere) view.set({ step: "found", checkCode: checkCodeOf(current), device: record.peer ?? "" })
+    stopAnnouncing = run.repeat(() => run.track(announce()))
+    run.show({ step: "waiting", link: encodePairingLink({ pubkey: key.pubkey, sid: record.sessions[0].sid, expires: record.expires, relays: record.relays }), code: encodePairingCode(hexToBytes(secrets.code!)), expires: record.expires })
+  } else if (current.step === "confirm" && !current.confirmedHere) run.show({ step: "found", checkCode: checkCodeOf(current), device: record.peer ?? "" })
   else if (current.step === "confirm") accept(current)
   // The package came before the reload and may not have been taken: it comes again.
-  else if (current.step === "done") view.set({ step: "receiving" })
+  else if (current.step === "done") run.show({ step: "receiving" })
   else void end({ step: "failed", reason: "invalid" })
 
   return {
     confirm() {
       const s = chosen()
-      if (!s || s.step !== "confirm" || s.confirmedHere) return
+      if (!s || s.step !== "confirm" || s.confirmedHere || run.over) return
       const { session: next, error } = confirmPairingHere(s, nowSeconds())
       if (error) return
       if (next.step === "expired") return void end({ step: "expired" })
@@ -344,18 +395,16 @@ export async function pairNewDevice(onChange: PairingListener<NewDevicePairing>,
     },
     decline() {
       const s = chosen()
-      if (!s?.peer || finished) return
+      if (!s?.peer || run.over) return
       void abort(s.peer, s, "declined")
       void end({ step: "declined" })
     },
     close() {
-      view.close()
-      stopAll()
-      clearTimeout(expiry)
+      run.close()
       // One more acknowledgement on the way out, in case the last one got lost: the other
       // device then knows the profile arrived.
       const s = chosen()
-      const last = applied && s?.peer ? ack(s.peer, s) : Promise.resolve(false)
+      const last = applied && s?.peer ? ack(s.peer, s) : Promise.resolve(UNSENT)
       void last.finally(() => channel.close())
       if (applied) void drop(record.id)
     },
@@ -373,10 +422,12 @@ export type AddDevicePairing =
   | { step: "found"; checkCode: string; device: string | null }
   // Confirmed here; waiting for the new device's confirmation.
   | { step: "confirmed"; checkCode: string; device: string | null; unanswered: boolean }
-  | { step: "sending" }
-  // The profile went out, but the new device's acknowledgement didn't come back within
-  // ACK_WINDOW_MS: it most likely arrived (the answer got lost, or the screen there closed at
-  // once). Sending goes on until the pairing runs out, so a late answer still makes it "done".
+  // The profile goes out until the new device acknowledges it. `unanswered`: nothing came back
+  // within UNANSWERED_MS (the new device closed its code, or is offline).
+  | { step: "sending"; unanswered: boolean }
+  // The new device's acknowledgement didn't come back, but its own signals say the profile most
+  // likely arrived (the answer got lost, or the screen there closed at once). Sending goes on
+  // while this shows, so a late answer still makes it "done"; leaving it ends the pairing.
   | { step: "sent" }
   | { step: "done" }
   | { step: "declined" }
@@ -439,109 +490,114 @@ async function begin(start: Pick<StoredPairing, "id" | "relays" | "sessions" | "
 async function runExisting(record: StoredPairing, onChange: PairingListener<AddDevicePairing>): Promise<AddDeviceControl> {
   const { key, code } = await unseal(record)
 
-  const view = screenOf(onChange)
-  let finished = false
+  const run = pairingRun(onChange)
   let stopLooking: (() => void) | null = null
   let stopHello: (() => void) | null = null
-  let stopSending: (() => void) | null = null
-  let unanswered: ReturnType<typeof setTimeout> | undefined
-  let expiry: ReturnType<typeof setTimeout> | undefined
-  // Whether a relay took the package: from then on, no answer most likely means a lost one.
-  let delivered = false
+  let stopUnanswered: (() => void) | null = null
+  let stopExpiry: (() => void) | null = null
+  // While the package goes out: when the new device last asked for it (its repeated accept), when
+  // a relay first took it, and whether it most likely arrived (see sending below).
+  let askedAt = 0
+  let takenAt = 0
+  let arrived = false
 
-  const stopAll = () => {
-    stopLooking?.()
-    stopLooking = null
-    stopHello?.()
-    stopHello = null
-    stopSending?.()
-    stopSending = null
-    clearTimeout(unanswered)
-    clearTimeout(expiry)
-  }
   const end = async (state: AddDevicePairing) => {
-    finished = true
-    stopAll()
+    run.end(state)
     await drop(record.id)
-    view.set(state)
   }
   const armExpiry = () => {
-    clearTimeout(expiry)
-    expiry = untilExpiry(record.expires, () => void end(delivered ? { step: "sent" } : { step: "expired" }))
+    stopExpiry?.()
+    stopExpiry = run.after(msUntil(record.expires), () => void end(arrived ? { step: "sent" } : { step: "expired" }))
   }
   armExpiry()
   // Shows `later` once UNANSWERED_MS pass without a change.
   const waitFor = (later: AddDevicePairing) => {
-    clearTimeout(unanswered)
-    unanswered = setTimeout(() => view.set(later), UNANSWERED_MS)
+    stopUnanswered?.()
+    stopUnanswered = run.after(UNANSWERED_MS, () => run.show(later))
   }
 
   const channel = openChannel(PAIRING_FLOW, key, record.relays, (message, from) => void handle(message, from))
+  run.hold(() => channel.close())
   const checkCodeOf = (s: PairingSession) => pairingCheckCode(s.peer!, key.pubkey, s.sid)
-  const abort = (s: PairingSession, reason: AbortReason) => channel.send(s.peer!, { t: "abort", sid: s.sid, reason }).catch(() => false)
+  const abort = (s: PairingSession, reason: AbortReason) => channel.send(s.peer!, { t: "abort", sid: s.sid, reason }).catch(() => UNSENT)
   const hello = (s: PairingSession): PairingMessage => ({ t: "hello", sid: s.sid, device: deviceName(), ...(s.auth ? { mac: helloMac(s.auth, key.pubkey, s.peer!, s.sid) } : {}) })
 
+  // Keeps the next step, unless the pairing is over by now: an end dropped the record, and
+  // keeping it would bring it back. Whether the pairing goes on.
   const update = async (next: PairingSession) => {
+    if (run.over) return false
     record.sessions = [next]
     await keep(record)
+    return !run.over
   }
 
   async function handle(message: PairingMessage, from: string) {
     const current = record.sessions[0]
-    if (!current || finished || message.t === "announce" || message.sid !== current.sid) return
-    // The new device repeats its confirmation until the package comes: once is enough.
+    if (!current || run.over || message.t === "announce" || message.sid !== current.sid) return
+    // The new device repeats its confirmation until the package comes: once is enough, and
+    // each repeat says it is still waiting.
+    if (message.t === "accept" && from === current.peer) askedAt = Date.now()
     if (message.t === "accept" && current.confirmedThere) return
     const { session: next, error } = applyPairingMessage(current, from, message, nowSeconds())
     if (error) return
     if (next.step === "expired") return end({ step: "expired" })
     if (message.t === "accept") record.peer = message.device
-    await update(next)
+    if (!(await update(next))) return
     if (message.t === "abort") {
       const why = abortedAs(message.reason)
       return end(why === "error" ? { step: "failed", reason: "not-taken" } : { step: why })
     }
     if (next.step === "done") {
-      if (record.peer) deviceAdded(record.pubkey!, record.peer)
+      if (record.peer) deviceAdded(record.pubkey!, pairedDeviceId(next.sid), record.peer)
       return end({ step: "done" })
     }
     if (message.t === "accept") {
       if (next.step === "transfer") await send(next)
-      else view.set({ step: "found", checkCode: checkCodeOf(next), device: record.peer })
+      else run.show({ step: "found", checkCode: checkCodeOf(next), device: record.peer })
     }
   }
+
+  // The package most likely arrived when a relay took it (an OK, not "nobody listens") while the
+  // new device still asked for it, and the asking stopped since, with no acknowledgement within
+  // ACK_WINDOW_MS. Asks that go on say it didn't arrive; none at all, that the new device left.
+  const likelyArrived = (now: number) => takenAt > 0 && now - takenAt >= ACK_WINDOW_MS && askedAt >= takenAt - ASK_GAP_MS && now - askedAt >= ASK_GAP_MS
 
   // Both confirmed: the package goes out until the new device acknowledges it.
   async function send(s: PairingSession) {
     stopHello?.()
-    stopHello = null
-    clearTimeout(unanswered)
-    view.set({ step: "sending" })
+    run.show({ step: "sending", unanswered: false })
+    waitFor({ step: "sending", unanswered: true })
     if (getSession()?.pubkey !== record.pubkey) {
       void abort(s, "error")
       return end({ step: "failed", reason: "wrong-profile" })
     }
     const data = await packageData()
+    if (run.over) return
     if (!data) {
       void abort(s, "error")
       return end({ step: "failed", reason: "too-long" })
     }
     const next = packageSent(s, data)
-    await update(next)
-    stopSending = repeat(() =>
-      view.track(channel.send(next.peer!, { t: "package", sid: next.sid, data })).then((ok) => {
-        if (!ok || delivered) return
-        delivered = true
-        unanswered = setTimeout(() => view.set({ step: "sent" }), ACK_WINDOW_MS)
-      }),
-    )
+    if (!(await update(next))) return
+    run.repeat(async () => {
+      const { delivered } = await run.track(channel.send(next.peer!, { t: "package", sid: next.sid, data }))
+      const now = Date.now()
+      if (delivered && takenAt === 0) takenAt = now
+      if (arrived || !likelyArrived(now)) return
+      arrived = true
+      stopUnanswered?.()
+      run.show({ step: "sent" })
+    })
   }
 
-  // Typed code: the announce under the code's lookup tag, genuine only with the code's MAC. No
-  // relay answering the search says this device is offline.
+  // Typed code: the announce under the code's lookup tag, genuine only with the code's MAC.
+  // Looking sends nothing, so a search for the code, now and again, says whether this device
+  // reaches the relays.
   const look = () => {
-    view.set({ step: "looking", unanswered: false })
+    run.show({ step: "looking", unanswered: false })
     waitFor({ step: "looking", unanswered: true })
-    const sub = subscribe([{ kinds: [KIND_EPHEMERAL], "#x": [code!.lookup], since: nowSeconds() - 60 }], record.relays, {
+    const filter = { kinds: [KIND_EPHEMERAL], "#x": [code!.lookup], since: nowSeconds() - 60 }
+    const sub = subscribe([filter], record.relays, {
       onevent: (event) => {
         const now = nowSeconds()
         const parsed = parsePairingEvent(event, { now })
@@ -551,27 +607,30 @@ async function runExisting(record: StoredPairing, onChange: PairingListener<AddD
         const next = newPairingSession({ role: "existing", sid: found.sid, self: key.pubkey, peer: parsed.from, expires: found.expires, now, auth: code!.auth })
         record.expires = found.expires
         record.codeSid = found.sid
-        void update(next).then(() => {
+        void update(next).then((going) => {
+          if (!going) return
           stopLooking?.()
-          stopLooking = null
           armExpiry()
           greet(next)
         })
       },
-      oneose: ({ answered }) => view.reach(answered.length > 0),
     })
-    stopLooking = () => sub.close()
+    const stopProbing = run.repeat(async () => run.reach((await query([filter], record.relays, { timeoutMs: REPEAT_MS })).answered.length > 0))
+    stopLooking = run.hold(() => {
+      sub.close()
+      stopProbing()
+    })
   }
 
   const greet = (s: PairingSession) => {
-    clearTimeout(unanswered)
-    stopHello = repeat(() => view.track(channel.send(s.peer!, hello(s))))
-    view.set({ step: "found", checkCode: checkCodeOf(s), device: record.peer })
+    stopUnanswered?.()
+    stopHello = run.repeat(() => run.track(channel.send(s.peer!, hello(s))))
+    run.show({ step: "found", checkCode: checkCodeOf(s), device: record.peer })
   }
 
   const confirmed = (s: PairingSession) => {
     const state = { step: "confirmed", checkCode: checkCodeOf(s), device: record.peer, unanswered: false } as const
-    view.set(state)
+    run.show(state)
     waitFor({ ...state, unanswered: true })
   }
 
@@ -587,22 +646,22 @@ async function runExisting(record: StoredPairing, onChange: PairingListener<AddD
   return {
     give() {
       const s = record.sessions[0]
-      if (!s || s.step !== "confirm" || s.confirmedHere || finished) return
+      if (!s || s.step !== "confirm" || s.confirmedHere || run.over) return
       const { session: next, error } = confirmPairingHere(s, nowSeconds())
       if (error) return
       if (next.step === "expired") return void end({ step: "expired" })
-      void update(next).then(() => (next.step === "transfer" ? send(next) : confirmed(next)))
+      void update(next).then((going) => going && (next.step === "transfer" ? send(next) : confirmed(next)))
     },
     decline() {
       const s = record.sessions[0]
-      if (finished) return
+      if (run.over) return
       if (s?.peer) void abort(s, "declined")
       void end({ step: "declined" })
     },
+    // Leaving "Wahrscheinlich angekommen" ends the pairing; any other step resumes next time.
     close() {
-      view.close()
-      stopAll()
-      channel.close()
+      run.close()
+      if (arrived) void drop(record.id)
     },
   }
 }

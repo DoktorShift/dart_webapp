@@ -4,9 +4,10 @@ import { lazy } from "react"
 import { lazyScreen } from "@/components/nav/lazy-screen"
 import { DEVICES_SCREENS } from "@/components/devices/screens"
 import { PAIRING_PENDING_PREFIX } from "@/lib/devices/storage-keys"
+import { SESSION_KEY } from "@/lib/profile/storage-keys"
 import { featureOn } from "@/lib/shell/features"
 import { SCREENS, registerScreen, registerSlotItem, registerStartTask } from "@/lib/shell/registry"
-import { dbKeys } from "@/lib/storage/db"
+import { dbGet, dbKeys, onStorageChange } from "@/lib/storage/db"
 
 // Where the devices area (P2.03 pairing and the device list, P2.04 backup and restore) plugs
 // into the shell (components/shell/extensions.ts): two rows and the backup hint in Profile, the
@@ -34,5 +35,23 @@ if (featureOn("devices")) {
         if (keys.some((key) => key.startsWith(PAIRING_PENDING_PREFIX))) return import("@/lib/devices/pairing").then(({ purgeExpiredPairings }) => purgeExpiredPairings())
       })
       .catch(() => {})
+  })
+
+  // Once a profile is stored here (at start, or when one signs in or arrives), this device
+  // writes itself into the profile's device list after its syncs (lib/devices/list-self.ts). A
+  // guest loads nothing for it.
+  registerStartTask(() => {
+    let started = false
+    const look = () =>
+      void dbGet("kv", SESSION_KEY).then((session) => {
+        if (!session || started) return
+        started = true
+        stop()
+        void import("@/lib/devices/list-self").then(({ listSelfAfterSyncs }) => listSelfAfterSyncs())
+      }, () => {})
+    const stop = onStorageChange((message) => {
+      if (message.type === "change" && message.stores.includes("kv")) look()
+    })
+    look()
   })
 }

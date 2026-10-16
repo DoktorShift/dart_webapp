@@ -160,17 +160,26 @@ function FileSheet({ pubkey, onClose }: { pubkey: string; onClose: () => void })
     setSavedAt(Date.now())
   }
   // Saved and the password kept: secured here, and noted for the profile's other devices.
+  const secure = async (at: number) => {
+    await loadBackup().then(({ markBackupFileSaved }) => markBackupFileSaved(pubkey, at))
+    void import("@/lib/devices/list").then(({ noteBackupFile }) => noteBackupFile(pubkey)).catch(() => {})
+  }
   const finish = async (event: FormEvent) => {
     event.preventDefault()
     if (savedAt === null) return
-    await loadBackup().then(({ markBackupFileSaved }) => markBackupFileSaved(pubkey, savedAt))
-    void import("@/lib/devices/list").then(({ noteBackupFile }) => noteBackupFile(pubkey)).catch(() => {})
+    await secure(savedAt)
+    onClose()
+  }
+  // Swiping the sheet away once the file is saved and the password copied is a
+  // "Fertig" too; before that, nothing counts as secured.
+  const dismiss = () => {
+    if (savedAt !== null && passwordKept) void secure(savedAt)
     onClose()
   }
 
   // Ready, the password scrolls if it must and the buttons stay at the bottom of the sheet.
   return (
-    <Sheet open onOpenChange={(open) => !open && onClose()} title={f.title}>
+    <Sheet open onOpenChange={(open) => !open && dismiss()} title={f.title}>
       {state.step !== "ready" ? (
         <SheetBody>
           {state.step === "preparing" ? (

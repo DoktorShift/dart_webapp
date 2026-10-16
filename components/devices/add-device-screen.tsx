@@ -34,6 +34,8 @@ export default function AddDeviceScreen({ params }: ScreenProps) {
   // null: the scanner (or the held link).
   const [view, setView] = useState<{ state: AddDevicePairing; offline: boolean } | null>(null)
   const [held, setHeld] = useState<HeldLink | "expired" | null>(null)
+  // Back at the scanner to type the code again: the field first.
+  const [retyping, setRetyping] = useState(false)
   const control = useRef<AddDeviceControl | null>(null)
   const payload = params.payload
   const signedIn = !!session
@@ -102,36 +104,49 @@ export default function AddDeviceScreen({ params }: ScreenProps) {
   }
 
   // Back to the scanner: the new device hears that nothing comes.
-  const startOver = () => {
+  const startOver = (retype = false) => {
     control.current?.decline()
     control.current?.close()
     control.current = null
+    setRetyping(retype)
     setView(null)
   }
-  const again = { label: s.again, onClick: startOver }
+  const again = { label: s.again, onClick: () => startOver() }
   const cancel = (
-    <Button variant="ghost" onClick={startOver} className="h-11 w-full rounded-xl text-[1.0625rem] text-primary hover:bg-primary/10 hover:text-primary">
+    <Button variant="ghost" onClick={() => startOver()} className="h-11 w-full rounded-xl text-[1.0625rem] text-primary hover:bg-primary/10 hover:text-primary">
       {t.common.cancel}
     </Button>
   )
 
   if (session === undefined) return null
-  if (session === null) return <EmptyState icon={UserRound} title={s.noProfile} description={s.noProfileText} primary={{ label: s.createProfile, onClick: () => runAction("profile.create", nav) }} />
+  // A pairing link opened where no profile is (the camera app opened the browser instead of the
+  // app on the Home Screen): the way to the profile, and a new profile only as the quiet choice.
+  if (session === null)
+    return (
+      <EmptyState
+        icon={UserRound}
+        title={s.noProfile}
+        description={s.noProfileText}
+        primary={{ label: s.toProfile, onClick: () => nav.popToRoot("profile") }}
+        secondary={{ label: s.createProfile, onClick: () => runAction("profile.create", nav) }}
+      />
+    )
   if (held === "expired") return <EmptyState icon={Clock} title={s.expired} description={s.expiredText} primary={{ label: s.again, onClick: () => setHeld(null) }} />
   if (held)
     return (
       <PairColumns
         first={
           <>
-            <h2 className="text-xl font-semibold leading-tight">{s.heldTitle}</h2>
-            {/* In landscape the check code goes first, beside the buttons; the sentence follows. */}
-            <p className="text-[1.0625rem] leading-snug text-muted-foreground xshort:order-last">{s.heldText}</p>
+            {/* Short screens keep only the screen's title, so "Verbinden" and the sentence
+                above it stay in view. */}
+            <h2 className="text-xl font-semibold leading-tight short:hidden">{s.heldTitle}</h2>
             <CheckCode code={held.checkCode} label={s.checkCode} />
+            <p className="text-[1.0625rem] font-semibold leading-snug">{s.warning}</p>
           </>
         }
         second={
           <>
-            <p className="text-[1.0625rem] font-semibold leading-snug">{s.warning}</p>
+            <p className="text-[1.0625rem] leading-snug text-muted-foreground">{s.heldText}</p>
             <Button onClick={() => connect(held)} className="h-14 w-full rounded-2xl text-[1.0625rem] font-semibold">
               {s.connect}
             </Button>
@@ -146,7 +161,7 @@ export default function AddDeviceScreen({ params }: ScreenProps) {
     return (
       <>
         <p className="mt-2 text-[1.0625rem] leading-snug text-muted-foreground">{s.intro}</p>
-        <QRScanner className="mt-6" onResult={onResult} manualLabel={s.manualLabel} manualPlaceholder={s.manualPlaceholder} inputMode="text" />
+        <QRScanner className="mt-6" onResult={onResult} manualLabel={s.manualLabel} manualPlaceholder={s.manualPlaceholder} inputMode="text" typeFirst={retyping} />
       </>
     )
 
@@ -156,11 +171,13 @@ export default function AddDeviceScreen({ params }: ScreenProps) {
     case "looking":
       return (
         <div className="mt-2 grid gap-4">
-          <Waiting className="py-6">{s.looking}</Waiting>
-          <p className="text-center text-[0.9375rem] leading-snug text-muted-foreground">{s.lookingHint}</p>
-          {offlineStatus || (state.unanswered && <InlineStatus>{s.notFound}</InlineStatus>)}
+          <Waiting className="py-6 xshort:py-2">{s.looking}</Waiting>
+          {/* Once nothing was found, the hint asks the same with the next step. */}
+          {!state.unanswered && <p className="text-center text-[0.9375rem] leading-snug text-muted-foreground">{s.lookingHint}</p>}
+          {offlineStatus}
+          {state.unanswered && <InlineStatus>{s.notFound}</InlineStatus>}
           {state.unanswered ? (
-            <Button variant="secondary" onClick={startOver} className="h-12 w-full rounded-2xl text-[1.0625rem] text-primary">
+            <Button variant="secondary" onClick={() => startOver(true)} className="h-12 w-full rounded-2xl text-[1.0625rem] text-primary">
               {s.retype}
             </Button>
           ) : (
@@ -173,7 +190,7 @@ export default function AddDeviceScreen({ params }: ScreenProps) {
         <PairColumns
           first={
             <>
-              <p className="text-[1.0625rem] font-semibold leading-snug">{s.warning}</p>
+              <p className="text-[1.0625rem] font-semibold leading-snug">{state.device ? s.warningDevice(state.device) : s.warning}</p>
               <CheckCode code={state.checkCode} label={s.checkCode} />
             </>
           }
@@ -184,7 +201,7 @@ export default function AddDeviceScreen({ params }: ScreenProps) {
               <Button onClick={() => control.current?.give()} className="h-14 w-full rounded-2xl text-[1.0625rem] font-semibold">
                 {s.give}
               </Button>
-              <Button variant="secondary" onClick={startOver} className="h-12 w-full rounded-2xl text-[1.0625rem]">
+              <Button variant="secondary" onClick={() => startOver()} className="h-12 w-full rounded-2xl text-[1.0625rem]">
                 {s.decline}
               </Button>
             </>
@@ -212,8 +229,9 @@ export default function AddDeviceScreen({ params }: ScreenProps) {
     case "sending":
       return (
         <div className="mt-2 grid gap-4">
-          <Waiting>{s.sending}</Waiting>
-          {offlineStatus}
+          <Waiting className="xshort:py-6">{s.sending}</Waiting>
+          {offlineStatus || (state.unanswered && <InlineStatus>{s.sendingUnanswered}</InlineStatus>)}
+          {cancel}
         </div>
       )
     case "sent":

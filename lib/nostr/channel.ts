@@ -20,8 +20,7 @@ export interface ChannelFlow<M> {
 
 export interface Channel<M> {
   key: LocalKey
-  // Resolves whether a relay took the message: false says this device reaches none just now.
-  send: (to: string, message: M) => Promise<boolean>
+  send: (to: string, message: M) => Promise<SendOutcome>
   close: () => void
 }
 
@@ -44,15 +43,24 @@ export function openChannel<M>(flow: ChannelFlow<M>, key: LocalKey, relays: read
     key,
     async send(to, message) {
       const ciphertext = await key.signer.nip44!.encrypt(to, flow.plaintext(message))
-      return reached(await publish(await key.signer.signEvent(flow.template({ message, recipient: to, ciphertext, created_at: nowSeconds() })), relays))
+      return outcomeOf(await publish(await key.signer.signEvent(flow.template({ message, recipient: to, ciphertext, created_at: nowSeconds() })), relays))
     },
     close: () => sub.close(),
   }
 }
 
-// Whether a publish reached a relay: one that answered OK (also "duplicate:") has the message,
-// and "mute:" is how a relay says that nobody listens for an ephemeral message just now.
-export const reached = (results: readonly PublishResult[]) => results.some((result) => result.ok || result.code === "mute")
+// What became of a message sent. `reached`: some relay answered, so this device is online; that
+// includes "mute:", how a relay says that nobody listens for an ephemeral message just now.
+// `delivered`: some relay took it (OK, also "duplicate:"). Neither says the other side read it.
+export interface SendOutcome {
+  reached: boolean
+  delivered: boolean
+}
+
+export const outcomeOf = (results: readonly PublishResult[]): SendOutcome => ({
+  reached: results.some((result) => result.ok || result.code === "mute"),
+  delivered: results.some((result) => result.ok),
+})
 
 // How often an unanswered message goes out again.
 export const REPEAT_MS = 3000

@@ -17,7 +17,7 @@ import { newRelayList, relayListTemplate } from "../../lib/profile/relay-list.ts
 import { getSigner, importLocalKey, signOut } from "../../lib/profile/session.ts"
 import { rememberOwn } from "../../lib/profile/own-events.ts"
 import { MAX_HANDSHAKE_SECONDS } from "../../lib/protocol/kinds.ts"
-import { decodePairingCode, decodePairingLink, pairingTemplate } from "../../lib/protocol/pairing.ts"
+import { decodePairingCode, decodePairingLink, newPairingSecret, pairingTemplate } from "../../lib/protocol/pairing.ts"
 import { dbGetAll } from "../../lib/storage/db.ts"
 import { randomHex } from "../../lib/storage/ids.ts"
 import { newPlayerRecord, savePlayers } from "../../lib/storage/players.ts"
@@ -80,15 +80,16 @@ interface NewDevice {
   // Whether its last message reached no relay.
   offline: () => boolean
   latest: () => NewDevicePairing | undefined
-  send: (command: { type: "start" | "confirm" | "decline" | "reload" | "close" }) => void
+  send: (command: { type: "start" | "confirm" | "decline" | "reload" | "close" | "sync" }) => void
   session: () => Promise<{ pubkey: string; kind: string } | null>
   // The ids in its "pending" store: the pairing's one-time keys, while it has them.
   pending: () => Promise<string[]>
   close: () => Promise<number>
 }
 
-async function newDeviceThread(relayUrl = relay.url): Promise<NewDevice> {
-  const worker = new Worker(new URL("./pairing-device.ts", import.meta.url), { workerData: { relay: relayUrl } })
+// `stall`: it takes the package but never gets done with it (closed meanwhile).
+async function newDeviceThread(relayUrl = relay.url, options: { stall?: boolean } = {}): Promise<NewDevice> {
+  const worker = new Worker(new URL("./pairing-device.ts", import.meta.url), { workerData: { relay: relayUrl, ...options } })
   const states: NewDevicePairing[] = []
   let ready = false
   let offline = false
@@ -130,7 +131,7 @@ function existing() {
   const here = {
     states,
     latest: () => states[states.length - 1],
-    at: <S extends AddDevicePairing["step"]>(s: S) => until(`this device at "${s}"`, () => (here.latest()?.step === s ? (here.latest() as Extract<AddDevicePairing, { step: S }>) : null)),
+    at: <S extends AddDevicePairing["step"]>(s: S, ms?: number) => until(`this device at "${s}"`, () => (here.latest()?.step === s ? (here.latest() as Extract<AddDevicePairing, { step: S }>) : null), ms),
     // A state that may already have passed (the transfer takes a moment at most).
     saw: <S extends AddDevicePairing["step"]>(s: S) => until(`this device at "${s}"`, () => states.find((x): x is Extract<AddDevicePairing, { step: S }> => x.step === s)),
     start: async (input: Parameters<typeof pairing.addDevice>[0]) => {
@@ -316,7 +317,7 @@ test("a check code that doesn't match: declining on either side ends the pairing
   assert.equal(await device.session(), null)
 })
 
-test("an expired code is refused; everything replayed to the new device, still listening on its key, takes nothing a second time", async () => {
+test("an expired code is refused; messages replayed to the new device on a fresh subscription change nothing there", async () => {
   const { pubkey } = await profileHere()
   const seen = spy()
   const device = await newDeviceThread()
@@ -334,20 +335,30 @@ test("an expired code is refused; everything replayed to the new device, still l
   await here.at("found")
   await step(device, "found")
   device.send({ type: "confirm" })
-  here.control().give()
-  await step(device, "done")
-  await here.at("done")
-  const steps = device.states.length
+  await step(device, "confirming")
+  await until("the new device's name here", () => {
+    const latest = here.latest()
+    return latest?.step === "found" && latest.device ? latest : null
+  })
 
-  // The new device's screen is still open: it listens on the same one-time key and answers the
-  // package's repeats. The whole conversation, played to it again, changes nothing there.
-  const messages = seen.filter((event) => event.tags.some((t) => t[0] === "p" && t[1] === link.pubkey))
-  assert.ok(messages.some((event) => event.pubkey !== link.pubkey), "the existing device's messages were captured")
-  for (const event of messages) await relayClient().publish(event, [relay.url])
+  // The new device reloads: the same one-time key on a new subscription, which hasn't seen any
+  // event yet (a subscription drops one it has seen). Everything this device sent it so far,
+  // played to it again, reaches the pairing itself, and changes nothing there: no step back to
+  // "found", no profile before this device gives it.
+  device.send({ type: "reload" })
+  await until("confirming again", () => device.states.filter((s) => s.step === "confirming").length >= 2)
+  const steps = device.states.length
+  const captured = seen.filter((event) => event.tags.some((t) => t[0] === "p" && t[1] === link.pubkey))
+  assert.ok(captured.length > 0, "this device's messages were captured")
+  for (const event of captured) await relayClient().publish(event, [relay.url])
   await pause(2000)
-  assert.equal(device.states.length, steps, "no step again")
-  assert.equal(device.latest()?.step, "done")
-  assert.equal((await device.session())?.pubkey, pubkey)
+  assert.deepEqual(device.states.slice(steps).map((s) => s.step), [], "no step again")
+  assert.equal(await device.session(), null)
+
+  here.control().give()
+  const done = await step(device, "done")
+  assert.equal(done.applied.access === "local" && done.applied.session.pubkey, pubkey)
+  await here.at("done")
 })
 
 test("a reload on either side resumes the pairing where it was", async () => {
@@ -389,6 +400,137 @@ test("a reload on either side resumes the pairing where it was", async () => {
   assert.equal(done.applied.access === "local" && done.applied.session.pubkey, pubkey)
   await resumed.at("done")
   assert.equal(await pairing.resumeAddDevice(() => {}), null, "nothing left to resume")
+})
+
+// Both devices at "found", the new one confirmed there, and this device knows its name.
+async function bothConfirmedThere(options: { stall?: boolean } = {}) {
+  await profileHere()
+  const device = await newDeviceThread(relay.url, options)
+  device.send({ type: "start" })
+  const link = decodePairingLink((await step(device, "waiting")).link)
+  const here = existing()
+  await here.start({ link })
+  await here.at("found")
+  await step(device, "found")
+  device.send({ type: "confirm" })
+  await step(device, "confirming")
+  await until("the new device's name here", () => {
+    const latest = here.latest()
+    return latest?.step === "found" && latest.device ? latest : null
+  })
+  return { device, here, newKey: link.pubkey }
+}
+
+// How many of the events seen went to `key`.
+const sentTo = (seen: readonly NostrEvent[], key: string) => seen.filter((event) => event.tags.some((t) => t[0] === "p" && t[1] === key)).length
+
+test("closing while the profile goes out, also right after a resume, stops sending: nothing more goes out", async () => {
+  const seen = spy()
+  const { device, here, newKey } = await bothConfirmedThere()
+  // The new device goes away (phone locked, tab killed) right after confirming.
+  await device.close()
+  here.control().give()
+  await here.at("sending")
+  await pause(500)
+  here.close()
+  // The screen opens again, resumes the transfer, and is left at once, while the package is
+  // still being made.
+  ;(await pairing.resumeAddDevice(() => {}))!.close()
+  await pause(1000)
+  const before = sentTo(seen, newKey)
+  await pause(7000)
+  assert.equal(sentTo(seen, newKey) - before, 0, "nothing goes out after both screens closed")
+})
+
+test("a new device that went away: no relay answer counts as arrived, and Abbrechen leaves nothing to resume", async () => {
+  const { device, here } = await bothConfirmedThere()
+  await device.close()
+  here.control().give()
+  await here.at("sending")
+  // Nobody listens on the new device's key any more, and the relay says so ("mute:"): that is no
+  // delivery, however soon after the new device's last word it came. After a while this device
+  // says the new device doesn't answer, and never that the profile probably arrived.
+  const unanswered = await until("no answer", () => here.states.find((s) => s.step === "sending" && s.unanswered))
+  assert.ok(unanswered)
+  await pause(18_000)
+  assert.ok(!here.states.some((s) => s.step === "sent"), "not 'Wahrscheinlich angekommen'")
+  assert.deepEqual(here.latest(), { step: "sending", unanswered: true })
+
+  here.control().decline()
+  await here.at("declined")
+  here.close()
+  assert.equal(await pairing.resumeAddDevice(() => {}), null, "nothing left to resume")
+})
+
+test("the package arrived but no acknowledgement came: 'probably arrived' once the new device stopped asking for it, and leaving that ends the pairing", async () => {
+  const seen = spy()
+  const { device, here, newKey } = await bothConfirmedThere({ stall: true })
+  here.control().give()
+  await step(device, "receiving")
+  await here.at("sent", 45_000)
+  // Sending goes on while it shows, so a late acknowledgement still makes it "done"; "Fertig"
+  // (the screen closes) ends it.
+  here.close()
+  await pause(1000)
+  const before = sentTo(seen, newKey)
+  await pause(4000)
+  assert.equal(sentTo(seen, newKey) - before, 0, "nothing goes out after Fertig")
+  assert.equal(await pairing.resumeAddDevice(() => {}), null, "nothing left to resume")
+})
+
+test("looking for a typed code without a relay to reach: says so, and stops saying so once the relay is back", async () => {
+  await profileHere()
+  const port = await freePort()
+  const states: { step: string; unanswered?: boolean; offline: boolean }[] = []
+  process.env.NEXT_PUBLIC_BLUELINE_RELAYS = `ws://127.0.0.1:${port}`
+  try {
+    keep(await pairing.addDevice({ code: newPairingSecret() }, (state, offline) => states.push({ ...state, offline })))
+  } finally {
+    process.env.NEXT_PUBLIC_BLUELINE_RELAYS = relay.url
+  }
+  await until("offline", () => states.at(-1)?.offline, 15_000)
+  const late = await startRelay({ port })
+  try {
+    await until("online again", () => states.at(-1)?.offline === false, 15_000)
+    assert.equal(states.at(-1)?.step, "looking")
+  } finally {
+    await late.stop()
+  }
+})
+
+test("the new device lists itself after its first sync, under the id this device names it by until then", async () => {
+  const secret = randomBytes(32)
+  const { pubkey } = await importLocalKey(secret)
+  // A profile that synced once has its data key, which the package takes along.
+  await savePlayers([{ ...newPlayerRecord("Anna", "2026-09-01T10:00:00.000Z", ANNA), pubkey }])
+  assert.equal((await syncHistory(pubkey, { full: true }))?.state, "complete")
+  await deliverNow((await outboxStatus()).map((s) => s.id))
+  await list.addThisDevice(pubkey, "iPhone · Safari")
+
+  const device = await newDeviceThread()
+  device.send({ type: "start" })
+  const here = existing()
+  await here.start({ link: decodePairingLink((await step(device, "waiting")).link) })
+  await here.at("found")
+  await step(device, "found")
+  device.send({ type: "confirm" })
+  here.control().give()
+  await step(device, "done")
+  await here.at("done")
+  const arriving = (await list.loadDeviceList(pubkey)).arriving
+  assert.equal(arriving.length, 1)
+  assert.equal(arriving[0].name, "Computer")
+
+  // The screen there closes at once; once the device synced, it lists itself all the same.
+  device.send({ type: "close" })
+  device.send({ type: "sync" })
+  const listed = await until("the new device's own entry", async () => {
+    const current = await list.loadDeviceList(pubkey)
+    return current.entries.length === 2 ? current : null
+  })
+  assert.deepEqual(listed.arriving, [], "no longer on its way")
+  assert.deepEqual(listed.entries.map((d) => [d.id === listed.thisDevice, d.name]), [[true, "iPhone · Safari"], [false, "Computer"]])
+  assert.equal(listed.entries[1].id, arriving[0].id, "under the id it was named by")
 })
 
 test("the device list: each device writes itself in; renaming and removing from another device show up", async () => {
