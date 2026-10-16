@@ -13,12 +13,17 @@
 //   in registration order; with none registered the place shows nothing at all, so the guest
 //   path looks exactly as before. A piece that throws or fails to load is left out.
 //     "result.actions"  On the result of a finished game, below the result and above its
-//                       buttons. Gets the finished game ({ match: FinishedMatch }). One row each
-//                       (a button or a one-line card, at most 44 pt): the result is one fixed
-//                       screen. On a phone in landscape (heights up to 500 pt, Tailwind's
-//                       `xshort`) it has no row to spare, and the pieces sit side by side in the
-//                       free middle of its top bar: keep to one short line that shrinks to fit
-//                       (components/fit-text.tsx), with no border or background there.
+//                       buttons. Gets the finished game and where the piece stands
+//                       ({ match: FinishedMatch, placement }). One row each (a button or a
+//                       one-line card, at most 44 pt, one element), or nothing when there is
+//                       nothing to show for this game: the result is one fixed screen. On a
+//                       phone in landscape (heights up to 500 pt, Tailwind's `xshort`) it has
+//                       no row to spare: a single piece sits in the free middle of its top bar
+//                       as a bar button (placement "bar": no border or background, text in the
+//                       primary colour, one short line that shrinks to fit,
+//                       components/fit-text.tsx). Two or more pieces become one button with
+//                       their count there, which opens a sheet with the pieces as their rows
+//                       (placement "row") and closes once one of them is tapped.
 //     "setup.extras"    At the end of game setup's options, before Start. Gets the game as it
 //                       would start now, plus the area's own value and onChange. The value is
 //                       saved with the started game as config.extras[id] (JSON only). Rematch and
@@ -281,7 +286,7 @@ export interface SetupPlayersProps {
 }
 
 export interface SlotListProps {
-  "result.actions": { match: FinishedMatch }
+  "result.actions": { match: FinishedMatch; placement: "row" | "bar" }
   "game.attachments": { match: SavedMatch; close: () => void }
   "play.rows": Record<string, never>
   "setup.extras": SetupExtraProps

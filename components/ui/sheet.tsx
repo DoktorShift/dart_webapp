@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 // A bottom sheet for a focused task that can be dismissed (HIG: sheets). Used during a game
 // and for the install guide. Content that can be long brings its own scroll area. While a task
 // must not be left half-way (a game moving to another device), `dismissible` false keeps the
-// sheet until its own buttons close it.
+// sheet until its own buttons close it, without the grabber that would invite a swipe.
 export function Sheet({
   open,
   onOpenChange,
@@ -27,7 +27,7 @@ export function Sheet({
 }) {
   return (
     <Drawer open={open} onOpenChange={onOpenChange} dismissible={dismissible} shouldScaleBackground={false}>
-      <DrawerContent className={cn("mx-auto max-h-[92dvh] max-w-lg border-border", className)}>
+      <DrawerContent handle={dismissible} className={cn("mx-auto max-h-[92dvh] max-w-lg border-border", className)}>
         <div className="flex min-h-0 flex-col px-4 pb-[max(env(safe-area-inset-bottom),1rem)]">
           <DrawerHeader className="px-0 text-left">
             <DrawerTitle className="text-xl">{title}</DrawerTitle>

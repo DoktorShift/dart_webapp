@@ -317,6 +317,9 @@ export const de = {
     imageFooter: "Gezählt mit BlueLine Darts",
     allStats: "Statistik",
     allStatsDescription: "Alle Werte dieses Spiels.",
+    // The sheet with the areas' pieces, and its button in the top bar on a phone in landscape.
+    more: "Mehr zum Ergebnis",
+    moreLabel: (count: number) => `Mehr zum Ergebnis, ${count} Einträge`,
   },
 
   sheets: {
@@ -362,6 +365,8 @@ export const de = {
       restartLeg: "Dieses Leg neu starten",
       playerLeaves: "Ein Spieler hört auf",
       restartButton: "Leg neu starten",
+      // Over the entries areas add (lib/shell/registry.ts): other devices joining the game.
+      devices: "Mit anderen Geräten",
       tip: "Falscher Dart? Antippen und korrigieren. Falscher Spieler? Seinen Spielstand antippen.",
     },
   },
