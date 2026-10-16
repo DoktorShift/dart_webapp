@@ -7,7 +7,8 @@ import { getSyncStatus, setSyncStatus, type SyncStatus } from "./status.ts"
 // The sync in the background (started by components/sync/register.ts once the app is up with a
 // profile, or as soon as one signs in):
 //
-// - The outbox sends for everyone, guests' live games included (./outbox.ts).
+// - The outbox sends (./outbox.ts); the shell starts it for everyone, guests' live games
+//   included (components/shell/outbox-start.ts), and so does this service.
 // - With a profile, its private history follows (./engine.ts, loaded only then): on start, when
 //   the app is shown again and when the device is back online (a full sync with read-back and
 //   healing at most once a day, otherwise what changed since), a little after games or players

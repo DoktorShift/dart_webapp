@@ -3,7 +3,7 @@ import { bytesToHex, utf8ToBytes } from "@noble/hashes/utils.js"
 import { profilePlayers } from "../profile/claim.ts"
 import { gamesOf } from "../profile/history.ts"
 import { decodeThrows, encodeThrows } from "../protocol/throws.ts"
-import type { ArchivedMatch } from "../storage/archive.ts"
+import type { ArchivedMatch, DeletedMark } from "../storage/archive.ts"
 import { parseArchivedMatch } from "../storage/data.ts"
 import { importedAliases, nameKey, parsePlayerRecord, type PlayerRecord } from "../storage/players.ts"
 import { compareVersions } from "./records.ts"
@@ -94,11 +94,13 @@ export function playersFromData(data: Record<string, unknown>): PlayerRecord[] {
 
 // ---- The profile's records on this device -----------------------------------------------------
 
-// `deleted` are the ids of games deleted here (lib/storage/archive.ts deletedMatches): a deletion
-// of a game that was never the profile's changes nothing (decideMatch), so they all go in.
-export function profileRecords(pubkey: string, matches: readonly ArchivedMatch[], directory: readonly PlayerRecord[], deleted: readonly string[] = []): Map<string, LocalRecord> {
+// `deleted` are the games deleted here (lib/storage/archive.ts deletedMatches). Only the
+// profile's own deletions go in: one by a guest or another profile on this device is not the
+// profile's intent. A deletion of a game that was never the profile's changes nothing
+// (decideMatch).
+export function profileRecords(pubkey: string, matches: readonly ArchivedMatch[], directory: readonly PlayerRecord[], deleted: readonly DeletedMark[] = []): Map<string, LocalRecord> {
   const records = new Map<string, LocalRecord>()
-  for (const id of deleted) records.set(matchRecordId(id), "deleted")
+  for (const { id, by } of deleted) if (by === pubkey) records.set(matchRecordId(id), "deleted")
   const { key, sameAs } = profilePlayers(pubkey, directory, matches)
   if (!key) return records
   const aliases = importedAliases([...directory])

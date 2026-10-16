@@ -35,6 +35,9 @@ function emit(change: Partial<Omit<ClubsSnapshot, "views">> = {}) {
   store.set({ ...store.get(), ...change, views: [...views.values()].sort(byName) })
 }
 
+// The profile the clubs are read as (null: a guest), for a write that needs no signer.
+export const readerKey = async () => (await loadSession())?.pubkey ?? null
+
 // The signed-in profile (or the guest) as the clubs' reader. Only a key kept on this device
 // signs without asking, so only then may a club's upkeep run by itself (lib/clubs/sync.ts).
 export async function clubReader(): Promise<Reader> {

@@ -10,7 +10,7 @@ import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
 import { ClubHeader, useChange } from "@/components/clubs/common"
 import { useInlineProfile } from "@/components/profile/inline-profile"
 import { CLUB_SCREENS } from "@/components/clubs/screens"
-import { clubAuthor, useClub } from "@/components/clubs/use-clubs"
+import { clubAuthor, readerKey, useClub } from "@/components/clubs/use-clubs"
 import { useProfileNames } from "@/components/profile/use-profile-names"
 import { nextDate, type ClubView } from "@/lib/clubs/club"
 import { acceptInvitation, invitationState, openInvitation, type InvitationProblem } from "@/lib/clubs/invitation"
@@ -36,10 +36,12 @@ export default function InviteScreen({ params }: ScreenProps) {
     if (!address || !invite) return
     let alive = true
     setOpening("loading")
-    void openInvitation({ ...address, invite }).then(
-      (problem) => alive && setOpening(problem),
-      () => alive && setOpening("offline"),
-    )
+    void readerKey()
+      .then((reader) => openInvitation({ ...address, invite }, reader))
+      .then(
+        (problem) => alive && setOpening(problem),
+        () => alive && setOpening("offline"),
+      )
     return () => {
       alive = false
     }

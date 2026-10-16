@@ -6,7 +6,7 @@ import { encryptForLinkKey, sealRecord } from "../protocol/records.ts"
 import { contentKeyText, newContentKey, newSealNonce } from "../protocol/seal.ts"
 import type { InvitePreview } from "../protocol/invite.ts"
 import { createdAtAfter } from "../protocol/tags.ts"
-import { enqueue, pendingEvents } from "../sync/outbox.ts"
+import { enqueue, pendingEvents, refusedEvents } from "../sync/outbox.ts"
 import { clubRelays } from "./relays.ts"
 import { loadStoredClub, updateClub, type ClubChange, type StoredClub } from "./store.ts"
 
@@ -15,7 +15,7 @@ import { loadStoredClub, updateClub, type ClubChange, type StoredClub } from "./
 // copy first, then handed to the persistent outbox of lib/sync (decision 0002 §2) for the club's
 // relays. A change counts as made once it is signed and kept; the outbox sends it until relays
 // of two operators have it (rule "published"), across reloads and without anyone waiting, and
-// the club says how many of its events still wait (waitingEvents).
+// the club says how many of its events still wait or were refused (unsentEvents).
 //
 // Order: every record is written on top of the club as this device saw it (afterState), so a
 // change's events go out one after another, the first after the club's newest event still
@@ -94,11 +94,12 @@ const ofClub = (stored: StoredClub) => {
   return (event: NostrEvent) => ids.has(event.id)
 }
 
-// Keeps signed events in the club's copy, together with whatever else belongs to the same
-// change, and queues them for the club's relays in their order. A newer version of a date or an
-// answer replaces one still waiting (coalesce).
-export async function keep(club: string, signed: Signed, change: Omit<ClubChange, "events" | "keys"> = {}): Promise<Sent> {
-  const stored = await updateClub(club, { ...change, events: signed.events, keys: signed.keys })
+// Keeps the events `author` signed in the club's copy, together with whatever else belongs to the
+// same change, and queues them for the club's relays in their order. A newer version of a date or
+// an answer replaces one still waiting (coalesce). Nothing is kept or sent once another profile
+// signed in while the signer was asked (ClubReaderError, lib/clubs/store.ts).
+export async function keep(club: string, author: string, signed: Signed, change: Omit<ClubChange, "events" | "keys"> = {}): Promise<Sent> {
+  const stored = await updateClub(club, { ...change, events: signed.events, keys: signed.keys }, author)
   const last = (await pendingEvents(ofClub(stored))).at(-1)
   const relays = clubRelays(stored.relays)
   const deliveries = signed.events.map((event, i) => ({ event, relays, after: i > 0 ? [signed.events[i - 1].id] : last ? [last.id] : [] }))
@@ -107,13 +108,21 @@ export async function keep(club: string, signed: Signed, change: Omit<ClubChange
 }
 
 // `club` null: the first event founds the club, and its id is the club's.
-export async function send(club: string | null, outgoing: readonly Outgoing[], { signer }: Author): Promise<Sent> {
+export async function send(club: string | null, outgoing: readonly Outgoing[], { pubkey, signer }: Author): Promise<Sent> {
   const signed = await sign(outgoing, signer)
-  return keep(club ?? signed.events[0].id, signed)
+  return keep(club ?? signed.events[0].id, pubkey, signed)
 }
 
-// How many of the club's events relays of two operators don't have yet.
-export async function waitingEvents(club: string): Promise<number> {
+export interface Unsent {
+  // Events relays of two operators don't have yet, still sent.
+  waiting: number
+  // Events every relay refused for good, kept in the outbox for their week.
+  refused: number
+}
+
+export async function unsentEvents(club: string): Promise<Unsent> {
   const stored = await loadStoredClub(club)
-  return stored ? (await pendingEvents(ofClub(stored))).length : 0
+  if (!stored) return { waiting: 0, refused: 0 }
+  const [waiting, refused] = await Promise.all([pendingEvents(ofClub(stored)), refusedEvents(ofClub(stored))])
+  return { waiting: waiting.length, refused: refused.length }
 }

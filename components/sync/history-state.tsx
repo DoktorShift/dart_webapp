@@ -5,6 +5,7 @@ import { CircleAlert, CloudOff, LoaderCircle } from "lucide-react"
 import { EmptyState } from "@/components/ui/empty-state"
 import { useAreaT } from "@/components/i18n-provider"
 import { SYNC_TEXTS, type SyncTexts } from "@/lib/i18n/features/sync.screens"
+import { featureOn } from "@/lib/shell/features"
 import { useSyncStatus, type SyncStatus } from "@/lib/sync/status"
 
 // What the profile's list of games can honestly say while it is empty (decision 0002 §1: not
@@ -26,7 +27,9 @@ function kindOf(status: SyncStatus, pubkey: string): EmptyHistoryKind {
 }
 
 function useEmptyHistory(pubkey: string): EmptyHistoryKind {
-  const kind = kindOf(useSyncStatus(), pubkey)
+  const status = useSyncStatus()
+  // A build without the sync (lib/shell/features.ts) never loads them: the games here are all.
+  const kind = featureOn("sync") ? kindOf(status, pubkey) : "none"
   const [waited, setWaited] = useState(false)
   useEffect(() => {
     if (kind !== "loading") return

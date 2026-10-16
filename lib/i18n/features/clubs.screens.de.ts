@@ -142,6 +142,8 @@ export const clubsScreensDe = {
     refresh: "Aktualisieren",
     refreshing: "Wird geladen",
     waiting: (n: number) => (n === 1 ? "1 Änderung wird noch übertragen" : `${n} Änderungen werden noch übertragen`),
+    refused: (n: number) =>
+      n === 1 ? "1 Änderung haben die Server des Clubs abgelehnt. Sag der Leitung Bescheid." : `${n} Änderungen haben die Server des Clubs abgelehnt. Sag der Leitung Bescheid.`,
     noEncryption: "Mit deiner Signer-App geht das in einem geschlossenen Club nicht.",
     outdated: "Dein Gerät hat noch nicht alles aus dem Club geladen. Aktualisiere und versuch es dann noch einmal.",
   },

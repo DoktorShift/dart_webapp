@@ -1,4 +1,5 @@
 import type { NostrEvent } from "../nostr/types.ts"
+import { TOURNAMENT_DRAFT_PREFIX } from "../profile/storage-keys.ts"
 import type { SealedSecret } from "../profile/vault.ts"
 import { dbDelete, dbGet, dbKeys, kvGet, kvSet, type Keyed } from "../storage/db.ts"
 import { updateStored } from "../storage/lock.ts"
@@ -12,7 +13,9 @@ import type { TournamentDraft } from "./draft.ts"
 //
 // - "objects" tournament:<id>: the tournament as this device knows it. Not tied to the profile:
 //   a guest looks at a tournament, a board device scores for one, so signing out keeps it.
-// - "kv" tournament-draft:<id>: a tournament being created, saved as it is typed.
+// - "kv" profile.tournament-draft:<id>: a tournament being created, saved as it is typed. The
+//   profile's (lib/profile/storage-keys.ts): it goes when the profile signs out or another one
+//   signs in, with the name of a closed club and guests' names in it.
 // - "pending" tournament-board:<tournament id>: this device as a board of a tournament, with the
 //   board key sealed by the device's vault key (lib/profile/vault.ts) and the games it started.
 //
@@ -20,7 +23,6 @@ import type { TournamentDraft } from "./draft.ts"
 // it; nothing here keeps a second list of it (send.ts).
 
 const TOURNAMENT_OBJECT_PREFIX = "tournament:"
-const DRAFT_PREFIX = "tournament-draft:"
 const BOARD_PREFIX = "tournament-board:"
 
 export interface StoredTournament extends Keyed {
@@ -89,13 +91,13 @@ function merge(stored: StoredTournament, change: TournamentChange): StoredTourna
 
 // ---- Drafts ----------------------------------------------------------------------------------
 
-export const loadDraft = async (id: string) => (await kvGet<TournamentDraft>(`${DRAFT_PREFIX}${id}`)) ?? null
-export const saveDraft = (draft: TournamentDraft) => kvSet(`${DRAFT_PREFIX}${draft.id}`, draft)
-export const deleteDraft = (id: string) => dbDelete("kv", `${DRAFT_PREFIX}${id}`)
+export const loadDraft = async (id: string) => (await kvGet<TournamentDraft>(`${TOURNAMENT_DRAFT_PREFIX}${id}`)) ?? null
+export const saveDraft = (draft: TournamentDraft) => kvSet(`${TOURNAMENT_DRAFT_PREFIX}${draft.id}`, draft)
+export const deleteDraft = (id: string) => dbDelete("kv", `${TOURNAMENT_DRAFT_PREFIX}${id}`)
 
 // Newest first.
 export async function listDrafts(): Promise<TournamentDraft[]> {
-  const ids = (await dbKeys("kv")).filter((id) => id.startsWith(DRAFT_PREFIX))
+  const ids = (await dbKeys("kv")).filter((id) => id.startsWith(TOURNAMENT_DRAFT_PREFIX))
   const drafts = await Promise.all(ids.map((id) => kvGet<TournamentDraft>(id)))
   return drafts.filter((d): d is TournamentDraft => d !== undefined).sort((a, b) => b.updatedAt - a.updatedAt)
 }

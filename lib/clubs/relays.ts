@@ -1,5 +1,6 @@
 import { query, subscribe, type Closer } from "../nostr/client.ts"
 import { generalRelays, mergeRelays } from "../nostr/relays.ts"
+import { nowSeconds } from "../nostr/time.ts"
 import type { Filter, NostrEvent } from "../nostr/types.ts"
 import { KIND_CALENDAR_RSVP, KIND_CALENDAR_TIME, KIND_RECORD } from "../protocol/kinds.ts"
 import { tagValue } from "../protocol/tags.ts"
@@ -42,7 +43,7 @@ export async function fetchClub(club: string, hints: readonly string[], extras?:
 
 // New events of a club while its screen is open (a member joins, someone answers a date).
 export function watchClub(club: string, hints: readonly string[], extras: ClubExtras, onEvent: (event: NostrEvent) => void): Closer {
-  const since = Math.floor(Date.now() / 1000) - 60
+  const since = nowSeconds() - 60
   return subscribe(
     clubFilters(club, extras).map((filter) => ("ids" in filter ? filter : { ...filter, since })),
     clubRelays(hints),

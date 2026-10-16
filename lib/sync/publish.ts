@@ -1,4 +1,5 @@
 import type { PublishResult } from "../nostr/client.ts"
+import { isPublished } from "../nostr/relays.ts"
 import type { EventTemplate, NostrEvent } from "../nostr/types.ts"
 import { ownEvents, ownRelaySettings, rememberOwn } from "../profile/own-events.ts"
 import { publishTargets } from "../profile/relay-list.ts"
@@ -34,7 +35,7 @@ export async function publish(events: readonly NostrEvent[]): Promise<PublishRep
   const sent = new Map((await deliverNow(events.map((e) => e.id))).map((s) => [s.id, s]))
   return deliveries.map(({ event, relays }) => {
     const status = sent.get(event.id)
-    return { event, relays, results: status?.results ?? [], published: status?.state === "delivered" }
+    return { event, relays, results: status?.results ?? [], published: !!status && isPublished(status.confirmed) }
   })
 }
 
@@ -47,13 +48,15 @@ export interface Submitted {
 // Signs changes of the profile (one after another: a signer app asks for each), keeps them as
 // the profile's current version on this device, and sends them on without waiting: a change
 // counts as made once it is signed and kept (decision 0002 §1), and relays that can't be
-// reached don't undo or delay it. Erweitert shows how the relays are doing.
+// reached don't undo or delay it. Erweitert shows how the relays are doing. A signer app may take
+// a while: if another profile signed in meanwhile, nothing is kept or sent for either.
 export async function submitOwn(templates: readonly EventTemplate[]): Promise<Submitted> {
   const session = getSession()
   if (!session) throw new Error("nothing is published without a profile")
   const signer = await getSigner()
   const events: NostrEvent[] = []
   for (const template of templates) events.push(await signer.signEvent(template))
+  if (getSession()?.pubkey !== session.pubkey || events.some((event) => event.pubkey !== session.pubkey)) throw new Error("another profile signed in while the change was signed")
   await rememberOwn(session.pubkey, events)
   return { events, published: publish(events).catch((): PublishReport[] => []) }
 }

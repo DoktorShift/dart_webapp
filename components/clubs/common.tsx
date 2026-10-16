@@ -12,7 +12,7 @@ import { formatClock, formatDateTime, type Messages } from "@/lib/i18n"
 import type { ClubTask, ClubView } from "@/lib/clubs/club"
 import type { ClubGame } from "@/lib/clubs/games"
 import { ClubOutdatedError } from "@/lib/clubs/membership"
-import { ClubSignerError, waitingEvents } from "@/lib/clubs/send"
+import { ClubSignerError, unsentEvents, type Unsent } from "@/lib/clubs/send"
 import { useClubs } from "@/components/clubs/use-clubs"
 import type { NameInfo } from "@/components/profile/use-profile-names"
 import { onStorageChange } from "@/lib/storage/db"
@@ -45,14 +45,14 @@ export function useChange() {
   return (error: unknown) => problemText(error, tx, px)
 }
 
-// How many of the club's events the outbox still sends, read again whenever the outbox or the
-// club's copy changes (in this tab or another).
-function useWaiting(club: string): number {
-  const [count, setCount] = useState(0)
+// How many of the club's events the outbox still sends, or holds as refused, read again
+// whenever the outbox or the club's copy changes (in this tab or another).
+function useUnsent(club: string): Unsent {
+  const [count, setCount] = useState<Unsent>({ waiting: 0, refused: 0 })
   useEffect(() => {
     let current = true
     const read = () =>
-      void waitingEvents(club).then(
+      void unsentEvents(club).then(
         (n) => current && setCount(n),
         () => {},
       )
@@ -69,13 +69,13 @@ function useWaiting(club: string): number {
 }
 
 // When relays last answered for the club, and what this device wrote that is still on its way
-// (the outbox sends it by itself). "Aktualisieren" shows that it is working and, when no relay
-// answers, that the tap changed nothing but the knowledge.
+// (the outbox sends it by itself) or that the relays refused. "Aktualisieren" shows that it is
+// working and, when no relay answers, that the tap changed nothing but the knowledge.
 export function SyncLine({ view, onRefresh }: { view: ClubView; onRefresh?: () => Promise<unknown> }) {
   const t = useT()
   const tx = useAreaT(CLUBS_TEXTS)
   const { refreshing, online } = useClubs()
-  const waiting = useWaiting(view.id)
+  const unsent = useUnsent(view.id)
   const [busy, setBusy] = useState(false)
   const loading = busy || refreshing
   const refresh = async () => {
@@ -91,7 +91,8 @@ export function SyncLine({ view, onRefresh }: { view: ClubView; onRefresh?: () =
     <div className="mt-6 flex items-center justify-between gap-3 px-4 text-[0.8125rem] text-muted-foreground">
       <p className="[overflow-wrap:anywhere]">
         {online === false && !loading ? `${tx.club.offline} · ${when}` : when}
-        {waiting > 0 && <span className="block">{tx.club.waiting(waiting)}</span>}
+        {unsent.waiting > 0 && <span className="block">{tx.club.waiting(unsent.waiting)}</span>}
+        {unsent.refused > 0 && <span className="block text-warning">{tx.club.refused(unsent.refused)}</span>}
       </p>
       {onRefresh && (
         <Button variant="ghost" disabled={loading} onClick={() => void refresh()} className="h-11 shrink-0 gap-1.5 rounded-xl px-3 text-[0.9375rem] text-primary hover:bg-primary/10 hover:text-primary">

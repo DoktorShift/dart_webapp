@@ -16,7 +16,7 @@ import {
   type ArchivedMatch,
   type V1Snapshot,
 } from "../lib/storage/archive.ts"
-import { closeDatabase, dbGet, dbGetAll, kvGet, onStorageChange } from "../lib/storage/db.ts"
+import { closeDatabase, dbGet, dbGetAll, kvGet, kvSet, onStorageChange } from "../lib/storage/db.ts"
 import { archiveSaveKind, getSaveState, retrySaves, trackSave } from "../lib/storage/save-status.ts"
 import { listPlayers, newPlayerRecord, savePlayers } from "../lib/storage/players.ts"
 import { V1_KEYS } from "../lib/storage/v1.ts"
@@ -213,7 +213,7 @@ test("a game taken off is marked deleted here until it is archived again; a rese
   await archiveFinished(match)
   const record = (await stored(match.id))!
   await unarchive(match.id)
-  assert.deepEqual(await deletedMatches(), [match.id])
+  assert.deepEqual(await deletedMatches(), [{ id: match.id, by: null }])
   await archiveFinished(match, undefined, at("2026-10-01T21:00:00.000Z"))
   assert.deepEqual(await deletedMatches(), [])
   // A game that arrives from another device loses the mark too.
@@ -226,7 +226,12 @@ test("a game taken off is marked deleted here until it is archived again; a rese
   await archiveFinished(matchB())
   assert.equal(await clearLeaderboard(), true)
   assert.deepEqual(await dbGetAll<ArchivedMatch>("matches"), [])
-  assert.deepEqual(await deletedMatches(), [match.id])
+  assert.deepEqual(await deletedMatches(), [{ id: match.id, by: null }])
+})
+
+test("a deletion mark from before marks named anyone counts as a guest's", async () => {
+  await kvSet("deleted:old-game", "2026-09-01T10:00:00.000Z")
+  assert.deepEqual(await deletedMatches(), [{ id: "old-game", by: null }])
 })
 
 test("resetting the Rangliste removes games with two or more players, keeps solo games", async () => {

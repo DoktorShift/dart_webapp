@@ -2,7 +2,7 @@ import { query } from "../nostr/client.ts"
 import { nowSeconds } from "../nostr/time.ts"
 import { ownEvents, ownRelaySettings } from "../profile/own-events.ts"
 import { publishTargets } from "../profile/relay-list.ts"
-import { getSigner } from "../profile/session.ts"
+import { getSession, getSigner } from "../profile/session.ts"
 import { KIND_PRIVATE, MAX_HANDSHAKE_SECONDS } from "../protocol/kinds.ts"
 import { recordSlot } from "../protocol/private.ts"
 import { backupStatus, updateBackupStatus, type BackupStatus } from "../recovery/status.ts"
@@ -65,8 +65,10 @@ export interface DeviceList {
   arriving: Pick<DeviceEntry, "id" | "name">[]
 }
 
-// "offline": no relay answered, so the list can't be read before it is changed.
-export type DeviceListProblem = "no-key" | "offline" | "clock" | "signer"
+// "offline": no relay answered, so the list can't be read before it is changed. "switched": the
+// profile signed out, or another one signed in, while the change was made. "refused": every relay
+// refused the new version for good.
+export type DeviceListProblem = "no-key" | "offline" | "clock" | "signer" | "switched" | "refused"
 
 export class DeviceListError extends Error {
   problem: DeviceListProblem
@@ -143,7 +145,9 @@ interface Entries {
 // version, signed by the profile and handed to the outbox (lib/sync/outbox.ts), sent now and
 // again until relays have it. Nothing is written while no relay answers: a list made from this
 // device's copy alone would replace a newer one, and a device added elsewhere would drop out.
-// The newest backup mark known here goes along.
+// The newest backup mark known here goes along. Only for the profile still signed in, with its
+// own signature: the relays answer slowly, and another profile signing in meanwhile must neither
+// sign at this profile's slot (that would link the two) nor get its copy back.
 async function change(pubkey: string, edit: (list: Entries & { thisDevice: string }) => Entries) {
   const here = await ready(pubkey)
   if (!here) throw new DeviceListError("no-key", "the profile has no data key or no device id here yet")
@@ -164,9 +168,12 @@ async function change(pubkey: string, edit: (list: Entries & { thisDevice: strin
     throw new DeviceListError("signer", error instanceof Error ? error.message : String(error))
   }
   const targets = await targetsOf(pubkey)
-  await kvSet(KEY, { pubkey, rev, device: here.device, entries, backup, createdAt: created_at, listed } satisfies StoredList)
+  const signedIn = () => getSession()?.pubkey === pubkey
+  if (!signedIn() || events.some((event) => event.pubkey !== pubkey)) throw new DeviceListError("switched", "the profile signed out, or another one signed in, while the list was changed")
   await enqueue(events.map((event) => ({ event, relays: targets })), { coalesce: true })
-  await deliverNow(events.map((event) => event.id))
+  const sent = await deliverNow(events.map((event) => event.id))
+  if (sent.some((status) => status.state === "refused")) throw new DeviceListError("refused", "every relay refused the list")
+  if (signedIn()) await kvSet(KEY, { pubkey, rev, device: here.device, entries, backup, createdAt: created_at, listed } satisfies StoredList)
 }
 
 // Puts this device into the list, once: after it got the profile, or when the first device

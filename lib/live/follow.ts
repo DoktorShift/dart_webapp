@@ -1,4 +1,5 @@
 import { query, subscribe } from "../nostr/client.ts"
+import { syncClock } from "../nostr/time.ts"
 import type { Filter } from "../nostr/types.ts"
 import { KIND_RECORD, KIND_STATE } from "../protocol/kinds.ts"
 import type { Agreement } from "../protocol/match.ts"
@@ -98,6 +99,10 @@ export function followMatch(source: MatchSource, onChange: (followed: Followed) 
       emit(result.state ? { state: result.state, problem: null } : { state: null, problem: current.settled ? result.problem : null })
     })
   }
+  // Records are read against the app's clock (one further than 15 minutes ahead waits): set it by
+  // the app's server, as the board that signs them did, so a device whose clock runs behind still
+  // sees the match, and read again once it is set.
+  void syncClock().then((set) => set && replay())
 
   const add = (event: SignedEvent) => (taking = taking.then(() => take(event)).catch(() => {}))
 

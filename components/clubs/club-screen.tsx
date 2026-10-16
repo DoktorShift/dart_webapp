@@ -69,8 +69,12 @@ function useWatch(view: ClubView | undefined) {
   useEffect(() => {
     if (!id || !ready) return
     const watcher = watchClub(id, relays ? relays.split(",") : [], { matches: [], dates: [] }, (event) => {
-      void updateClub(id, { events: [event] }).then(async () => {
-        if (changesMembers(event)) await maintainClub(id, await clubReader())
+      void (async () => {
+        const reader = await clubReader()
+        await updateClub(id, { events: [event] }, reader.pubkey)
+        if (changesMembers(event)) await maintainClub(id, reader)
+      })().catch(() => {
+        // Signed out meanwhile, or the copy can't be written now: the next refresh brings it.
       })
     })
     return () => watcher.close()

@@ -4,19 +4,21 @@ import { useEffect } from "react"
 import { useFollowed } from "@/components/live/match-view"
 import { setLive } from "@/components/tournaments/use-tournaments"
 import { watchFoundings, type Founding } from "@/lib/live/follow"
+import { featureOn } from "@/lib/shell/features"
 import type { TournamentRead } from "@/lib/tournaments/read"
 import { tournamentRelays } from "@/lib/tournaments/send"
 
 // The matches a tournament's boards are playing, found by the boards' keys (lib/live
 // watchFoundings): each founding names the tournament and the slot it decides. Reported to the
 // tournaments store, which starts those matches in the bracket. Followed while a screen that
-// shows the tournament is mounted; the store keeps the last report when none is.
+// shows the tournament is mounted; the store keeps the last report when none is. A build without
+// live games (lib/shell/features.ts) has none: its tournaments run on reported results alone.
 export function useLiveMatches(read: TournamentRead | undefined) {
   const id = read?.id
   const keys = read?.state ? Object.values(read.state.boards).filter((b) => b.active).map((b) => b.key).sort().join(",") : ""
   const relayKey = read?.relays.join(",") ?? ""
   useEffect(() => {
-    if (!id || !keys) return
+    if (!featureOn("live") || !id || !keys) return
     const found = new Map<string, Founding>()
     const report = () =>
       setLive(

@@ -85,7 +85,7 @@ export async function recordGame(state: ClubState, game: FinishedGame, seats: Ag
   const named = buildRecord("club.game", { match, ...(key ? { key: bytesToHex(key.secretKey) } : {}) }, { created_at: now, root: state.id })
   const rest = await sign([{ template: result, link }, { template: named, ...(closed ? { seal: { readers: Object.keys(state.members) } } : {}) }], author.signer)
   const events = [...session.events, ...rest.events]
-  return { match, ...(await keep(state.id, { events, keys: { ...session.keys, ...rest.keys } }, { recorded: { [game.id]: match } })) }
+  return { match, ...(await keep(state.id, author.pubkey, { events, keys: { ...session.keys, ...rest.keys } }, { recorded: { [game.id]: match } })) }
 }
 
 // The game with these players and exactly these throws this profile recorded for the club

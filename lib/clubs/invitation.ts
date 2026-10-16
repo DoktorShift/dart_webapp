@@ -21,7 +21,7 @@ export type InvitationProblem =
   // The link doesn't open the invite (a damaged or changed token).
   | "damaged"
 
-export async function openInvitation(address: ClubAddress & { invite: { id: string; token: string } }): Promise<InvitationProblem | null> {
+export async function openInvitation(address: ClubAddress & { invite: { id: string; token: string } }, reader: string | null): Promise<InvitationProblem | null> {
   const { club, invite, relays } = address
   const fetched = await fetchInvite(club, invite.id, relays)
   const record = fetched.events.find((e) => e.id === invite.id)
@@ -34,7 +34,7 @@ export async function openInvitation(address: ClubAddress & { invite: { id: stri
       return "damaged"
     }
   }
-  await updateClub(club, { events: fetched.events, relays, invite: { invite: invite.id, token: invite.token, ...(preview ? { preview } : {}), openedAt: Date.now() }, loadedAt: Date.now() })
+  await updateClub(club, { events: fetched.events, relays, invite: { invite: invite.id, token: invite.token, ...(preview ? { preview } : {}), openedAt: Date.now() }, loadedAt: Date.now() }, reader)
   return null
 }
 

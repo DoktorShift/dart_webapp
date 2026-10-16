@@ -3,6 +3,7 @@
 import { useState } from "react"
 import {
   AlertDialog,
+  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -18,25 +19,46 @@ import { signOut, type SessionKind } from "@/lib/profile/session"
 // "Abmelden": ends the session on this device and removes its keys and connections (session.ts).
 // On a device others use too, the games here can go with it. A key that only this device has is
 // lost with it, and that is the first thing the dialog says. Both ways out are destructive and
-// look it; Abbrechen is the safe default (HIG).
-export function SignOutDialog({ open, onOpenChange, kind }: { open: boolean; onOpenChange: (open: boolean) => void; kind: SessionKind }) {
+// look it; Abbrechen is the safe default (HIG). When deleting everything couldn't delete
+// everything, the dialog says so instead of closing, with the same words as Daten › Löschen: the
+// person must not leave a shared device believing it is empty. It lives in ./profile-root.tsx,
+// which stays while the signed-in view goes with the session.
+export default function SignOutDialog({ onClose, kind }: { onClose: () => void; kind: SessionKind }) {
   const t = useT()
   const tx = useAreaT(PROFILE_TEXTS)
   const s = tx.signOut
   const [busy, setBusy] = useState(false)
+  const [wipeFailed, setWipeFailed] = useState(false)
 
   const leave = async (keepLocalData: boolean) => {
     setBusy(true)
+    let complete = true
     try {
-      await signOut({ keepLocalData })
+      complete = await signOut({ keepLocalData })
     } finally {
       setBusy(false)
-      onOpenChange(false)
+      if (complete) onClose()
+      else setWipeFailed(true)
     }
   }
 
+  if (wipeFailed)
+    return (
+      <AlertDialog open onOpenChange={(open) => !open && onClose()}>
+        <AlertDialogContent className="max-w-[calc(100vw-2rem)] rounded-2xl sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t.data.wipeFailedTitle}</AlertDialogTitle>
+            <AlertDialogDescription>{t.data.wipeFailed}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction className="h-11">{t.data.ok}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    )
+
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <AlertDialog open onOpenChange={(open) => !open && onClose()}>
       <AlertDialogContent className="max-w-[calc(100vw-2rem)] rounded-2xl sm:max-w-md">
         <AlertDialogHeader>
           <AlertDialogTitle>{kind === "local" ? s.localTitle : s.title}</AlertDialogTitle>

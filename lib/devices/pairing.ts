@@ -3,7 +3,7 @@ import { openChannel, outcomeOf, repeat, REPEAT_MS, type ChannelFlow, type SendO
 import { publish, query, subscribe } from "../nostr/client.ts"
 import { generalRelays } from "../nostr/relays.ts"
 import { localKeyOf, newLocalKey, type LocalKey } from "../nostr/signers.ts"
-import { nowSeconds } from "../nostr/time.ts"
+import { nowSeconds, syncClock } from "../nostr/time.ts"
 import { getSession, SessionError } from "../profile/session.ts"
 import { openSecret, sealSecret, type SealedSecret } from "../profile/vault.ts"
 import { KIND_EPHEMERAL, MAX_HANDSHAKE_SECONDS } from "../protocol/kinds.ts"
@@ -274,6 +274,9 @@ async function newRecord(): Promise<StoredPairing> {
 // before the reload goes on where it was; otherwise a fresh one starts. `apply` stands in for
 // applyProfilePackage in the tests.
 export async function pairNewDevice(onChange: PairingListener<NewDevicePairing>, options: { apply?: typeof applyProfilePackage } = {}): Promise<NewDeviceControl> {
+  // Messages older than the pairing window are refused, measured by the app's clock: set it by
+  // the app's server, as the other device does, so two devices whose clocks differ still pair.
+  void syncClock()
   await purgeExpiredPairings()
   const record = (await stored()).find((r) => r.role === "new") ?? (await newRecord())
   const { key, code, secrets } = await unseal(record)
@@ -488,6 +491,8 @@ async function begin(start: Pick<StoredPairing, "id" | "relays" | "sessions" | "
 }
 
 async function runExisting(record: StoredPairing, onChange: PairingListener<AddDevicePairing>): Promise<AddDeviceControl> {
+  // The app's clock, as in pairNewDevice.
+  void syncClock()
   const { key, code } = await unseal(record)
 
   const run = pairingRun(onChange)

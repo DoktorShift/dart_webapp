@@ -137,6 +137,7 @@ export const liveScreensEn: Widen<typeof liveScreensDe> = {
     withdrawn: "The result was withdrawn; the game goes on.",
     sending: "Sending",
     failed: "Your answer didn't get through. Check the connection and try again.",
+    refused: "The servers refused your answer. Settle the result directly at the board.",
   },
 
   takeover: {

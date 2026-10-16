@@ -84,7 +84,7 @@ async function viaLink(link: string, who: Person) {
   const author = await device(who)
   const address = readClubPayload(link.split("#club=")[1])
   assert.ok(address?.invite)
-  assert.equal(await openInvitation({ ...address, invite: address.invite }), null)
+  assert.equal(await openInvitation({ ...address, invite: address.invite }, author.pubkey), null)
   return { address, author }
 }
 

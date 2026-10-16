@@ -17,6 +17,7 @@ import { useTournament, type Entry } from "@/components/tournaments/use-tourname
 import { loadMatch } from "@/lib/game/storage"
 import { modeName } from "@/lib/i18n"
 import { goLive } from "@/lib/live/board"
+import { featureOn } from "@/lib/shell/features"
 import { decodeLinkPayload } from "@/lib/protocol/links"
 import { onStorageChange } from "@/lib/storage/db"
 import type { LinkPayload } from "@/lib/protocol/links"
@@ -197,13 +198,16 @@ function CurrentMatch({ entry, record, boardKey, onTournament }: { entry: Entry;
       const next = boardGame(state, m, shown, record.board, modeName(t, state.settings.rules.modeId, state.settings.rules.modeId))
       const game: BoardGame = { local: next.id, match: null, players, reported: null }
       await rememberGame(state.id, m.id, () => game)
-      try {
-        const live = await goLive(next, { tournament: { id: state.id, slot: m.id, authority: boardKey.secret, relays: read.relays } })
-        await rememberGame(state.id, m.id, (before) => ({ ...(before ?? game), match: decodeLinkPayload("watch", live.watch).match }))
-      } catch {
-        // Not live (no connection to set the clock, say): the game is scored here all the same
-        // and its result reported; the organizer sees it when it comes.
-      }
+      // Live for the organizer and spectators, unless the build has no live games
+      // (lib/shell/features.ts): then nobody would see its scores move.
+      if (featureOn("live"))
+        try {
+          const live = await goLive(next, { tournament: { id: state.id, slot: m.id, authority: boardKey.secret, relays: read.relays } })
+          await rememberGame(state.id, m.id, (before) => ({ ...(before ?? game), match: decodeLinkPayload("watch", live.watch).match }))
+        } catch {
+          // Not live (no connection to set the clock, say): the game is scored here all the same
+          // and its result reported; the organizer sees it when it comes.
+        }
       nav.resumeMatch(next)
     } catch {
       setFailed(true)
@@ -250,7 +254,9 @@ function CurrentMatch({ entry, record, boardKey, onTournament }: { entry: Entry;
                 {state.settings.approval === "organizer" && b.reportedText}
               </InlineStatus>
             ) : (
-              <InlineStatus className="mt-4">{tx.game[report]}</InlineStatus>
+              <InlineStatus tone={report === "refused" ? "error" : undefined} className="mt-4">
+                {tx.game[report]}
+              </InlineStatus>
             )
           ) : (
             <div className="mt-4 grid gap-2">

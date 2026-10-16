@@ -8,6 +8,8 @@ import { dbGet, dbGetAll, dbKeys, dbPut, kvSet } from "../lib/storage/db.ts"
 import { connectExternal, getSession, getSigner, importLocalKey, loadSession, onSessionEnd, signOut, startLocalProfile } from "../lib/profile/session.ts"
 import { SESSION_KEY } from "../lib/profile/storage-keys.ts"
 import { openSecret, sealSecret } from "../lib/profile/vault.ts"
+import { newDraft } from "../lib/tournaments/draft.ts"
+import { listDrafts, saveDraft } from "../lib/tournaments/store.ts"
 
 // The session contract of decision 0002 §4: one current session, every signer checked, the local
 // key only ever stored encrypted, and nothing of a profile left behind when it signs out or
@@ -106,6 +108,24 @@ test("signing out without keeping local data deletes everything on the device", 
   assert.deepEqual(await dbKeys("kv"), [])
 })
 
+test("signing out says when deleting everything couldn't delete everything; the session ends either way", async () => {
+  await startLocalProfile()
+  await dbPut("matches", { id: "m1" })
+  const transaction = IDBDatabase.prototype.transaction
+  IDBDatabase.prototype.transaction = function (this: IDBDatabase, names: string | string[], mode?: IDBTransactionMode, ...rest: [IDBTransactionOptions?]) {
+    if (mode === "readwrite" && [names].flat().includes("matches")) throw new DOMException("the disk is full", "QuotaExceededError")
+    return transaction.call(this, names, mode, ...rest)
+  }
+  try {
+    assert.equal(await signOut({ keepLocalData: false }), false)
+  } finally {
+    IDBDatabase.prototype.transaction = transaction
+  }
+  assert.equal(getSession(), null)
+  assert.deepEqual(await dbKeys("matches"), ["m1"])
+  assert.equal(await signOut({ keepLocalData: false }), true)
+})
+
 test("another profile signing in clears the previous one's data, but not the device's", async () => {
   const first = await startLocalProfile()
   await kvSet("profile.settings", { card: true })
@@ -125,6 +145,18 @@ test("another profile signing in clears the previous one's data, but not the dev
   assert.deepEqual(await dbKeys("objects"), [])
   assert.deepEqual((await dbKeys("kv")).sort(), [SESSION_KEY, "profile.vault-key"].sort())
   assert.deepEqual(await dbKeys("matches"), ["m1"])
+})
+
+test("a tournament being created is the profile's: the next profile doesn't see it, a sign-out takes it", async () => {
+  const core = await loadCore()
+  await importLocalKey(core.generateSecretKey())
+  // The draft names a closed club and a guest.
+  await saveDraft({ ...newDraft("d1", "Europe/Berlin"), club: "c".repeat(64), clubName: "Geheimer Club", name: "Vereinsmeisterschaft", guests: ["Mia Muster"] })
+  await importLocalKey(core.generateSecretKey(), { replace: true })
+  assert.deepEqual(await listDrafts(), [])
+  await saveDraft({ ...newDraft("d2", "Europe/Berlin"), name: "Sommercup" })
+  await signOut({ keepLocalData: true })
+  assert.deepEqual(await listDrafts(), [])
 })
 
 test("another profile signs in only with replace: without it, nothing changes and the key stays", async () => {

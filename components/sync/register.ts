@@ -4,14 +4,15 @@ import { lazyScreen } from "@/components/nav/lazy-screen";
 import { featureOn } from "@/lib/shell/features";
 import { SESSION_KEY } from "@/lib/profile/storage-keys";
 import { registerSlotItem, registerStartTask } from "@/lib/shell/registry";
-import { dbGet, dbKeys, onStorageChange } from "@/lib/storage/db";
+import { dbGet, onStorageChange } from "@/lib/storage/db";
 
 // Where the sync area plugs into the shell (imported by components/shell/extensions.ts): its part
 // of Profil › Erweitert, and the background service (outbox, private history). Everything loads
 // on demand: the start page carries these lines and nothing of lib/sync or lib/profile, and a
-// guest with nothing to send never loads the service (decision 0002 §1). Off by the feature
-// switch (lib/shell/features.ts), nothing here is registered. It starts once a
-// profile is stored (now, or when one signs in later) or the outbox holds something from before.
+// guest never loads the service (decision 0002 §1); what a guest queued is sent by the shell's
+// own start task (components/shell/outbox-start.ts). Off by the feature switch
+// (lib/shell/features.ts), nothing here is registered. It starts once a profile is stored (now,
+// or when one signs in later).
 
 if (featureOn("sync")) {
   registerSlotItem(
@@ -22,9 +23,7 @@ if (featureOn("sync")) {
     ),
   );
 
-  const wanted = async () =>
-    (await dbGet("kv", SESSION_KEY)) !== undefined ||
-    (await dbKeys("outbox")).length > 0;
+  const wanted = async () => (await dbGet("kv", SESSION_KEY)) !== undefined;
 
   registerStartTask(() => {
     let started = false;
@@ -39,13 +38,10 @@ if (featureOn("sync")) {
         (yes) => yes && !started && start(),
         () => {},
       );
-    // A sign-in writes the session; a guest feature that queues something writes the outbox.
+    // A sign-in writes the session.
     const stop = onStorageChange((message) => {
       if (started) stop();
-      else if (
-        message.type === "change" &&
-        message.stores.some((store) => store === "kv" || store === "outbox")
-      )
+      else if (message.type === "change" && message.stores.includes("kv"))
         look();
     });
     look();

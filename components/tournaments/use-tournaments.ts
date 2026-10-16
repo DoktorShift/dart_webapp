@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react"
 import type { EventTemplate } from "@/lib/nostr/types"
-import { nowSeconds } from "@/lib/nostr/time"
 import { profileStore } from "@/components/profile/follow-profile"
 import { getSession, getSigner, loadSession } from "@/lib/profile/session"
 import type { Reason } from "@/lib/protocol/reasons"
@@ -52,7 +51,7 @@ function emit(change: Partial<Omit<TournamentsSnapshot, "entries" | "drafts" | "
 
 const read = (stored: StoredTournament, pubkey: string | null): Entry => ({
   stored,
-  read: readTournament(stored, { pubkey, now: nowSeconds(), live: live.get(stored.tournament) ?? [] }),
+  read: readTournament(stored, { pubkey, live: live.get(stored.tournament) ?? [] }),
   waiting: waiting.get(stored.tournament) ?? 0,
 })
 

@@ -107,6 +107,7 @@ export const devicesScreensDe = {
     removeConfirm: "Entfernen",
     failed: "Das konnte nicht gespeichert werden. Versuch es noch einmal.",
     offline: "Keine Verbindung. Die Liste lässt sich gerade nicht ändern; versuch es gleich noch einmal.",
+    refused: "Die Server deines Profils haben die Änderung abgelehnt. Prüfe sie unter Profil › Erweitert.",
     thisDeviceNote: "Dieses Gerät meldest du im Profil mit „Abmelden“ ab.",
     lostTitle: "Gerät verloren?",
     // "Gerät verloren?": the one honest fact first, then only the steps that apply.
