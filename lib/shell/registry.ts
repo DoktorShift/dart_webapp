@@ -14,16 +14,23 @@
 //   path looks exactly as before. A piece that throws or fails to load is left out.
 //     "result.actions"  On the result of a finished game, below the result and above its
 //                       buttons. Gets the finished game and where the piece stands
-//                       ({ match: FinishedMatch, placement }). One row each (a button or a
-//                       one-line card, at most 44 pt, one element), or nothing when there is
-//                       nothing to show for this game: the result is one fixed screen. On a
-//                       phone in landscape (heights up to 500 pt, Tailwind's `xshort`) it has
-//                       no row to spare: a single piece sits in the free middle of its top bar
-//                       as a bar button (placement "bar": no border or background, text in the
-//                       primary colour, one short line that shrinks to fit,
-//                       components/fit-text.tsx). Two or more pieces become one button with
-//                       their count there, which opens a sheet with the pieces as their rows
-//                       (placement "row") and closes once one of them is tapped.
+//                       ({ match: FinishedMatch, placement }). One row each (one element, 48 pt,
+//                       44 pt on short screens), or nothing when there is nothing to show for
+//                       this game: the result is one fixed screen. The row is a ResultRow
+//                       (components/shell/result-row.tsx: icon, one line that shrinks to fit,
+//                       tone, a trailing "Später", X or chevron), which carries the look and the
+//                       placements; a row put away per game remembers that with useDismissedFor
+//                       (components/shell/use-dismissed-for.ts). On a short phone in portrait
+//                       (heights up to 740 pt, Tailwind's `short`) the key numbers can spare one
+//                       row: the first piece shows as its row, and with more a count ("+1") at
+//                       its end opens a sheet with every piece as its row (placement "row"). On a
+//                       phone in landscape (heights up to 500 pt, `xshort`) there is no row to
+//                       spare: a single piece sits in the free middle of the top bar as a bar
+//                       button (placement "bar": no border or background, no icon or trailing
+//                       part, text in the primary colour, one short line that shrinks to fit);
+//                       two or more become one button with their count there, which opens the
+//                       same sheet. The pieces live in that sheet while it is open, so it stays
+//                       under whatever a piece opens from it (its own sheet) until Fertig.
 //     "setup.extras"    At the end of game setup's options, before Start. Gets the game as it
 //                       would start now, plus the area's own value and onChange. The value is
 //                       saved with the started game as config.extras[id] (JSON only). Rematch and
