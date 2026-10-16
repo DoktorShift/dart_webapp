@@ -10,7 +10,8 @@ import { cn } from "@/lib/utils"
 // a way to put the row away ("Später", an X) or the chevron of a row that leads on; a row that
 // leads nowhere only says how things stand (a status, without onClick). The result is
 // one fixed screen, so the row is 48 pt, and 44 pt without the icon on short screens (`short`).
-// The row keeps the placement contract itself: in the result's top bar ("bar", a phone in
+// The icon slot sets the height only, so an icon of two marks (the payment signet) keeps its own
+// width beside the label. The row keeps the placement contract itself: in the result's top bar ("bar", a phone in
 // landscape) it is one short line in the bar's colour, without box, icon or trailing part.
 
 export type ResultRowTone = "neutral" | "accent" | "success" | "warning"
@@ -69,7 +70,7 @@ export function ResultRow({ icon: Icon, label, tone = "neutral", onClick, placem
         aria-label={ariaLabel}
         className={cn("flex min-w-0 flex-1 items-center gap-3 py-1 pl-4 pr-3 text-left text-[1.0625rem] font-medium transition-colors focus-visible:outline-none", onClick && pressed)}
       >
-        <Icon className="h-5 w-5 shrink-0 short:hidden" aria-hidden />
+        <Icon className="h-5 w-auto shrink-0 short:hidden" aria-hidden />
         <FitText minScale={0.7} className="flex-1 leading-snug">
           {label}
         </FitText>
