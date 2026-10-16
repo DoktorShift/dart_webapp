@@ -32,7 +32,7 @@ Der Bestand eines Profils ist nicht an ein Gerät oder ein Relay gebunden: ein s
 | Fall | Verhalten |
 | --- | --- |
 | Alle Relays verloren, kein anderes Gerät | Bestand nur noch lokal beziehungsweise im Export; Erweitert zeigt „Nicht verfügbar“; keine falsche Leere |
-| Ein Relay nimmt 30078 nicht an (`invalid:`, `blocked:`) | Endgültig für dieses Event; die Outbox zählt es nicht als Kopie; sichtbar unter Erweitert („weniger als zwei bestätigte Kopien“) und in der Diagnose |
+| Ein Relay nimmt 30078 nicht an (`invalid:`, `blocked:`) | Endgültig für dieses Event; die Outbox zählt es nicht als Kopie; unter Erweitert als „Noch nicht gesendet“, solange die Regel nicht erfüllt ist, und in der Diagnose („fewer than 2 confirmed copies“) |
 | Neues Relay antwortet nicht auf NIP-11 | wird nicht aufgenommen („Unter dieser Adresse antwortet kein Relay.“) |
 
 ## Abschlussnachweise

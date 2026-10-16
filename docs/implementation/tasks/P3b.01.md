@@ -1,6 +1,6 @@
 # P3b.01 Private Daten
 
-**Status:** In Prüfung (Schreib- und Aufbewahrungstest auf öffentlichen Relays offen, Nutzerfreigabe E7)
+**Status:** In Prüfung (Fix-Runde 1 eingearbeitet; Schreib- und Aufbewahrungstest auf öffentlichen Relays offen, Nutzerfreigabe E7)
 **Paket:** P3b · **Planstelle:** [PLAN.md](../PLAN.md), Zeile 692; Zeilen 181–199 (Speicherung), 299–316 (Historie)
 
 ## Ziel
@@ -26,10 +26,10 @@ Die Spiele eines Profils liegen zusätzlich zur lokalen Kopie verschlüsselt auf
 | Datenschlüssel: beim ersten Schreiben erzeugt, NIP-44 an sich selbst als 30078 unter `dataKeySlot(pubkey)`, je Gerät einmal entpackt und wie der Profilschlüssel versiegelt (`SecretPurpose "data-key"`); zwei getrennt erzeugte Schlüssel: der früher erzeugte gewinnt, das andere Gerät versiegelt seine Datensätze neu | Erledigt | `lib/sync/data-key.ts`, `lib/profile/vault.ts` |
 | Datensätze: XChaCha20-Poly1305 unter dem Datenschlüssel, `aad` = Slot, Kopf plus verkettete Teile über 20 000 Byte, nur das Neueste je (rev, Gerät) | Erledigt | `lib/sync/records.ts` |
 | Was ein Datensatz ist: je Spiel des Profils (Würfe kompakt kodiert; übernommene 1.0.0-Summen als `imported-v1` gekennzeichnet) und eine Spielerliste der Personen aus diesen Spielen; Löschungen als Tombstone-Version | Erledigt | `lib/sync/history.ts` |
-| Abgleich: alle 30078 des Profils seitenweise von jedem Relay lesen (kein Relay = unbekannt), Fremdes übernehmen, Eigenes als neue Version schreiben, Kopien prüfen und fehlende erneut senden | Erledigt | `lib/sync/engine.ts` |
-| Hintergrund: beim Start, beim Zeigen der App, wenn das Gerät wieder online ist, kurz nach Änderungen, auf Wunsch; einer je Browser | Erledigt | `lib/sync/service.ts`, `components/sync/register.ts`, Registry `registerStartTask` |
-| Profil und Profil › Spiele: „Deine Spiele werden geladen“ beziehungsweise „konnten noch nicht geladen werden“ mit „Erneut versuchen“, solange dieses Gerät nicht nachgesehen hat; erst dann „Noch keine Spiele“ | Erledigt | `components/sync/history-state.tsx`, Einbau in `own-profile.tsx`, `games-screen.tsx` |
-| Profil › Erweitert: Zuletzt abgeglichen (Zustand), Kopien zuletzt geprüft, wartende Übertragungen, Events mit weniger als zwei bestätigten Kopien, „Jetzt abgleichen“; Abschnitt „Sync“ in „Diagnose kopieren“ | Erledigt | `components/sync/advanced-section.tsx`, `lib/sync/service.ts` (`addDiagnostics`) |
+| Abgleich: alle 30078 des Profils seitenweise von jedem Relay lesen (kein Relay = unbekannt), Fremdes übernehmen, Eigenes als neue Version schreiben, Kopien prüfen und fehlende erneut senden; in Schritten (lesen, Schlüssel klären, übernehmen, schreiben, heilen, merken), jede Schreibung nur, solange die Sitzung noch die ist, für die der Abgleich begann (Abmelden, Profilwechsel, „alles löschen“ lassen nichts zurück); sobald Relays geantwortet haben, wird die Uhr korrigiert (`syncClock`), und `created_at` einer neuen Version liegt immer über der Version der Relays (`nextCreatedAt`), sonst wartet die Änderung („clock“) | Erledigt | `lib/sync/engine.ts`, `lib/sync/records.ts` |
+| Hintergrund: beim Start, beim Zeigen der App, wenn das Gerät wieder online ist, kurz nach Änderungen, auf Wunsch; einer je Browser; ein Gast ohne Profil und ohne wartende Events lädt den Dienst nie (die Startaufgabe sieht nur im kv-Store nach); ein Profil in Signer-App oder Erweiterung schreibt nur beim Start, auf Wunsch und beim Verlassen der App (ein Moment für die Nachfragen), dazwischen wird nur gelesen; nach einem teilweisen „Jetzt abgleichen“ folgt fünf Sekunden später ein zweiter vollständiger Abgleich | Erledigt | `lib/sync/service.ts`, `components/sync/register.ts`, `lib/profile/storage-keys.ts`, Registry `registerStartTask` |
+| Profil und Profil › Spiele: „Deine Spiele werden geladen“ beziehungsweise „konnten noch nicht geladen werden“ mit „Erneut versuchen“ (gefüllte Hauptaktion, der Ladezustand bleibt mindestens 0,7 s sichtbar), solange dieses Gerät nicht nachgesehen hat; erst dann „Noch keine Spiele“. Ein hier angelegtes Profil (`Session.madeHere`) gilt ab seiner Geburt als abgeglichen und verspricht nichts von anderen Geräten. Ein Profil, das sich nicht öffnen ließ (Signer, Datenschlüssel), bekommt seinen eigenen Text statt „sobald eine Verbindung besteht“. Das Laden ist begrenzt: nach 20 s ohne Ergebnis „konnten noch nicht geladen werden“ | Erledigt | `components/sync/history-state.tsx`, `lib/sync/engine.ts` (`markSyncedAtBirth`), Einbau in `own-profile.tsx`, `games-screen.tsx` |
+| Profil › Erweitert: „Zuletzt abgeglichen“ mit Zustand und Grund in derselben Zeile, „Noch nicht gesendet“ nur, wenn etwas wartet (Änderungen, die der letzte Abgleich nicht schrieb, weil er nur las oder nicht schreiben konnte, plus Events, die noch nicht alle Relays haben; mit dem nächsten Schritt), „Jetzt abgleichen“ (läuft sichtbar mit drehendem Symbol, nicht abgedunkelt); die Relay-Zeilen werden nach jedem Abgleich neu geprüft, damit Liste und Abgleich nie widersprechen. Prüfzeit der Kopien, die Zahl der Events mit weniger als zwei Kopien und der ungeschriebenen Änderungen stehen in „Diagnose kopieren“ (Abschnitt „Sync“) | Erledigt | `components/sync/advanced-section.tsx`, `components/profile/advanced-screen.tsx` (`useRelayStatus`), `lib/sync/service.ts` (`addDiagnostics`) |
 | Signer-App: `sign_event:30078` wird beim Verbinden mit erbeten, damit die App nicht je Datensatz fragt | Erledigt | `components/profile/connect-screen.tsx` |
 
 Nicht dazu gehören: Sicherungsdatei und Passkey (P2.04, Spur Sicherung), Gerätekopplung (Spur Geräte), Clubdaten, Zahlungsjournal.
@@ -39,11 +39,15 @@ Nicht dazu gehören: Sicherungsdatei und Passkey (P2.04, Spur Sicherung), Gerät
 | Fall | Verhalten | Prüfung |
 | --- | --- | --- |
 | Kein Relay antwortet | „Nicht verfügbar“, kein Zeitstempel; Profil sagt „konnten noch nicht geladen werden“ | `tests/sync-history.test.ts`, Browserlauf Gerät C |
-| Ein Teil der Relays antwortet nicht | „Teilweise · Kein Relay hat geantwortet.“, Spiele trotzdem übernommen | `tests/sync-history.test.ts`, `tests/relay/sync.test.ts` |
-| Datensatz unlesbar oder Teil fehlt | zählt als unlesbar, „Teilweise“, nichts wird überschrieben | `tests/sync-records.test.ts` |
+| Ein Teil der Relays antwortet nicht | „Teilweise · Nicht jedes Relay hat geantwortet.“, Spiele trotzdem übernommen | `tests/sync-history.test.ts`, `tests/relay/sync.test.ts` |
+| Datensatz unlesbar oder Teil fehlt | zählt als unlesbar, „Teilweise · Einige Spiele konnten nicht gelesen werden …“, nichts wird überschrieben | `tests/sync-records.test.ts` |
 | Signer lehnt ab oder antwortet nicht | „Nicht verfügbar“ mit Grund; Datenschlüssel wird nie ersetzt | `lib/sync/data-key.ts` (`DataKeyError`), `isSignerFailure` |
 | Signer ohne NIP-44 (Android Signer) | „Dein Signer kann nicht ver- und entschlüsseln. Deine Spiele bleiben auf diesem Gerät.“; die Spieleliste sagt ehrlich „Noch keine Spiele“ | Texte `sync.screens.*`, `useEmptyHistory` |
-| Datenschlüssel öffnet nicht | „unreadable“, kein neuer Schlüssel | `unwrapDataKey` |
+| Datenschlüssel öffnet nicht | „key“ („Der Datenschlüssel deines Profils lässt sich mit diesem Signer nicht öffnen …“), kein neuer Schlüssel | `unwrapDataKey` |
+| Datenschlüssel-Event eines fremden Autors am Slot des Profils (bösartiges Relay) | wird nie geöffnet oder übernommen (`isDataKeyEvent` prüft Autor, Kind und Slot) | `tests/sync-history.test.ts` „only ever taken from the profile's own record“ |
+| Uhr des Geräts geht nach | Versionen werden knapp über der Version der Relays signiert, bis zu 15 Minuten vor der korrigierten Zeit; darüber hinaus wartet die Änderung, „Teilweise · Die Uhr dieses Geräts geht nach …“ | `tests/sync-history.test.ts`, `tests/relay/sync.test.ts` „clock runs behind“ |
+| Abmelden („alles löschen“) oder Profilwechsel während eines Abgleichs | der Abgleich endet ohne Spur (kein kv, kein Archiv, keine Outbox, keine eigenen Events), nichts wird später als Löschung gewertet | `tests/sync-history.test.ts` „signing out … during a sync“ |
+| „Rangliste zurücksetzen“ | bleibt auf diesem Gerät: keine Löschmarke, keine Tombstones, die Spiele kommen hier nicht zurück und bleiben im Profil und auf den anderen Geräten | `tests/sync-history.test.ts`, `tests/storage-archive.test.ts` |
 | Zwei Datenschlüssel | der früher erzeugte bleibt, jedes Spiel lesbar | `tests/sync-history.test.ts` „two data keys“ |
 | Fremde 30078 anderer Apps | öffnen nicht mit dem Datenschlüssel, werden übergangen | `openRecords` |
 
@@ -51,9 +55,9 @@ Nicht dazu gehören: Sicherungsdatei und Passkey (P2.04, Spur Sicherung), Gerät
 
 | Nachweis | Ergebnis |
 | --- | --- |
-| `tests/sync-records.test.ts` (9), `tests/sync-history.test.ts` (7), `tests/sync-outbox.test.ts` (9) | bestanden |
-| `tests/relay/sync.test.ts` gegen `nak serve` und `nak bunker` (6): Datensätze von nak geprüft, nicht lesbar, Datenschlüssel mit `nak decrypt` geöffnet; neues Gerät liest zurück; Signer-App-Profil über nostrconnect | bestanden |
-| Browserlauf [evidence/P3b/scripts/sync-checks.mjs](../evidence/P3b/scripts/sync-checks.mjs) (Produktionsbuild, zwei lokale Relays, nak bunker): Gerät A beansprucht ein Spiel, Datensätze erreichen beide Relays von selbst, Gerät B findet das Spiel ohne Zuordnung, Gerät C ohne Relay zeigt die ehrlichen Zustände | siehe [evidence/P3b/README.md](../evidence/P3b/README.md) |
+| `tests/sync-records.test.ts` (11), `tests/sync-history.test.ts` (12), `tests/sync-outbox.test.ts` (12), `tests/storage-archive.test.ts` (Löschmarken) | bestanden |
+| `tests/relay/sync.test.ts` gegen `nak serve` und `nak bunker` (7): Datensätze von nak geprüft, nicht lesbar, Datenschlüssel mit `nak decrypt` geöffnet; neues Gerät liest zurück; Signer-App-Profil über nostrconnect | bestanden |
+| Browserlauf [evidence/P3b/scripts/sync-checks.mjs](../evidence/P3b/scripts/sync-checks.mjs) (Produktionsbuild, zwei lokale Relays, nak bunker): Gerät A beansprucht ein Spiel, Datensätze erreichen beide Relays von selbst, ein gestopptes Relay macht den Abgleich „Teilweise“ mit Grund in der Zeile, nach dem Neustart ist es wieder gefüllt; Gerät B findet das Spiel ohne Zuordnung; Gerät C (hier angelegt, ohne Relay) verspricht nichts; Gerät E (Profil von anderswo, ohne Relay) zeigt die ehrlichen Zustände mit „Erneut versuchen“ | siehe [evidence/P3b/README.md](../evidence/P3b/README.md) |
 | Bilder | [evidence/P3b/screens](../evidence/P3b/screens) |
 
 ## Ergebnis
@@ -64,9 +68,9 @@ Nicht dazu gehören: Sicherungsdatei und Passkey (P2.04, Spur Sicherung), Gerät
 | Basiscommit | `a56d8ed` |
 | Prüfcommit | Der Commit, der diese Karte einführt |
 | nostr-core-Version | 1.0.4 |
-| Ausgeführte Prüfungen | `npm run lint`, `npm run typecheck`, `npm test`, `npm run test:relay`, `npm run build`, Browserlauf; 6. Oktober 2026; Ergebnisse in [evidence/P3b/README.md](../evidence/P3b/README.md) |
+| Ausgeführte Prüfungen | `npm run lint`, `npm run typecheck`, `npm test`, `npm run test:relay`, `npm run build`, Browserlauf; 16. Oktober 2026 (Fix-Runde 1); Ergebnisse in [evidence/P3b/README.md](../evidence/P3b/README.md) |
 | Nicht ausgeführte Prüfungen | Öffentliche Relays (E7); echte Signer-Apps (Amber, nsec.app) und Geräte; Safari, Firefox, installierte PWA; VoiceOver |
-| Verbleibende Einschränkungen | Keine Vorwärtssicherheit (Bedrohungsmodell 0002 §10); NIP-55-Profile ohne private Historie; Abgleich schreibt automatisch, eine Signer-App ohne gemerkte Erlaubnis fragt je Datensatz; „gesichert“ heißt: bei einem vollständigen Abgleich wieder gelesen |
+| Verbleibende Einschränkungen | Keine Vorwärtssicherheit (Bedrohungsmodell 0002 §10); NIP-55-Profile ohne private Historie; eine Signer-App ohne gemerkte Erlaubnis fragt je Datensatz, aber nur beim Start, auf Wunsch und beim Verlassen der App; „gesichert“ heißt: bei einem vollständigen Abgleich wieder gelesen; ein hier angelegtes Profil zeigt unter Erweitert seine Geburt als „Zuletzt abgeglichen“, auch wenn noch kein Relay antwortete (zu dem Zeitpunkt war sein Bestand sicher leer) |
 
 ## Nächster Schritt
 
