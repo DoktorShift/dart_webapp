@@ -111,7 +111,7 @@ export async function createInvite(state: ClubState, input: InviteInput, author:
   }
   const sent = await send(state.id, [item], author)
   const invite = sent.events[0].id
-  await updateClub(state.id, { token: { invite, token } })
+  await updateClub(state.id, { token: { invite, token } }, author.pubkey)
   return { invite, token, sent }
 }
 

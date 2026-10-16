@@ -8,8 +8,9 @@ import { relayClient } from "../lib/nostr/client.ts"
 import { loadCore, type Core } from "../lib/nostr/core.ts"
 import { createLocalSigner } from "../lib/nostr/signers.ts"
 import { adjustClock } from "../lib/nostr/time.ts"
+import { addThisDevice, DEVICES_RECORD } from "../lib/devices/list.ts"
 import { importLocalKey, signOut } from "../lib/profile/session.ts"
-import { dataKeySlot } from "../lib/protocol/private.ts"
+import { dataKeySlot, recordSlot } from "../lib/protocol/private.ts"
 import { archiveFinished, clearLeaderboard, deletedMatches, unarchive, type ArchivedMatch } from "../lib/storage/archive.ts"
 import { closeDatabase, dbGetAll, dbKeys, kvGet } from "../lib/storage/db.ts"
 import { newPlayerRecord, savePlayers, type PlayerRecord } from "../lib/storage/players.ts"
@@ -493,4 +494,24 @@ test("without `write` a sync only reads: nothing is signed, nothing is sent", as
   await on(newDevice())
   await sync()
   assert.deepEqual(await ids(), ["game-1"])
+})
+
+test("a device-list change made for a profile is neither signed nor kept by one that signs in meanwhile", async () => {
+  await on(newDevice())
+  await savePlayers([profilePlayer()])
+  await sync()
+  const dataKey = (await storedDataKey(pubkey))!
+  // Relays answer slowly, as public ones do: another profile signs in while the list is read.
+  for (const relay of relays) relay.options.delayMs = 300
+  const adding = addThisDevice(pubkey, "Laptop")
+  await new Promise((resolve) => setTimeout(resolve, 100))
+  const other = core.generateSecretKey()
+  await importLocalKey(other, { replace: true })
+  await assert.rejects(adding, { name: "DeviceListError", problem: "switched" })
+  for (const relay of relays) relay.options = {}
+  await send()
+  const slot = recordSlot(dataKey.key, DEVICES_RECORD)
+  const atSlot = relays[0].events.filter((e) => e.kind === 30078 && e.tags.some((t) => t[0] === "d" && t[1] === slot))
+  assert.deepEqual(atSlot, [], "nothing at the profile's slot, least of all signed by the other key")
+  assert.equal(await kvGet("profile.devices"), undefined, "the switch's deletion of the list's copy stands")
 })

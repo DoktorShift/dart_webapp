@@ -94,11 +94,12 @@ const ofClub = (stored: StoredClub) => {
   return (event: NostrEvent) => ids.has(event.id)
 }
 
-// Keeps signed events in the club's copy, together with whatever else belongs to the same
-// change, and queues them for the club's relays in their order. A newer version of a date or an
-// answer replaces one still waiting (coalesce).
-export async function keep(club: string, signed: Signed, change: Omit<ClubChange, "events" | "keys"> = {}): Promise<Sent> {
-  const stored = await updateClub(club, { ...change, events: signed.events, keys: signed.keys })
+// Keeps the events `author` signed in the club's copy, together with whatever else belongs to the
+// same change, and queues them for the club's relays in their order. A newer version of a date or
+// an answer replaces one still waiting (coalesce). Nothing is kept or sent once another profile
+// signed in while the signer was asked (ClubReaderError, lib/clubs/store.ts).
+export async function keep(club: string, author: string, signed: Signed, change: Omit<ClubChange, "events" | "keys"> = {}): Promise<Sent> {
+  const stored = await updateClub(club, { ...change, events: signed.events, keys: signed.keys }, author)
   const last = (await pendingEvents(ofClub(stored))).at(-1)
   const relays = clubRelays(stored.relays)
   const deliveries = signed.events.map((event, i) => ({ event, relays, after: i > 0 ? [signed.events[i - 1].id] : last ? [last.id] : [] }))
@@ -107,9 +108,9 @@ export async function keep(club: string, signed: Signed, change: Omit<ClubChange
 }
 
 // `club` null: the first event founds the club, and its id is the club's.
-export async function send(club: string | null, outgoing: readonly Outgoing[], { signer }: Author): Promise<Sent> {
+export async function send(club: string | null, outgoing: readonly Outgoing[], { pubkey, signer }: Author): Promise<Sent> {
   const signed = await sign(outgoing, signer)
-  return keep(club ?? signed.events[0].id, signed)
+  return keep(club ?? signed.events[0].id, pubkey, signed)
 }
 
 export interface Unsent {

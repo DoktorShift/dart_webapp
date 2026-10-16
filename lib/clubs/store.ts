@@ -1,4 +1,5 @@
 import type { NostrEvent } from "../nostr/types.ts"
+import { getSession } from "../profile/session.ts"
 import { CLUB_OBJECT_PREFIX } from "../profile/storage-keys.ts"
 import type { InvitePreview } from "../protocol/invite.ts"
 import { dbGet, dbKeys, dbWrite, type Keyed } from "../storage/db.ts"
@@ -67,9 +68,23 @@ export interface ClubChange {
   loadedAt?: number
 }
 
+export class ClubReaderError extends Error {
+  constructor() {
+    super("the profile the club was read or changed for is no longer signed in here")
+    this.name = "ClubReaderError"
+  }
+}
+
 // Changes of one club, one after another in every tab: the copy also holds what no relay can
-// bring back (the tokens of invite links made here, opened content keys).
-export const updateClub = (club: string, change: ClubChange) => updateStored<StoredClub>("objects", clubObjectId(club), (stored) => merge({ ...empty(club), ...stored }, change))
+// bring back (the tokens of invite links made here, opened content keys). Only for `reader`, the
+// profile the club is read or changed as (null: a guest), while it is the one signed in here:
+// relays and signers answer slowly, and what arrives after a sign-out or another profile's
+// sign-in must not bring the club back into the copy the sign-out deleted (lib/profile/session.ts).
+export const updateClub = (club: string, change: ClubChange, reader: string | null) =>
+  updateStored<StoredClub>("objects", clubObjectId(club), (stored) => {
+    if ((getSession()?.pubkey ?? null) !== reader) throw new ClubReaderError()
+    return merge({ ...empty(club), ...stored }, change)
+  })
 
 function merge(stored: StoredClub, change: ClubChange): StoredClub {
   return {

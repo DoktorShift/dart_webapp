@@ -9,11 +9,11 @@ import { loadCore } from "../lib/nostr/core.ts"
 import type { NostrEvent } from "../lib/nostr/types.ts"
 import { metadataTemplate } from "../lib/profile/metadata.ts"
 import { ownEvents, rememberOwn } from "../lib/profile/own-events.ts"
-import { getSession, getSigner, signOut, startLocalProfile } from "../lib/profile/session.ts"
+import { connectExternal, getSession, getSigner, importLocalKey, signOut, startLocalProfile } from "../lib/profile/session.ts"
 import { archiveFinished, type ArchivedMatch } from "../lib/storage/archive.ts"
 import { dbGetAll } from "../lib/storage/db.ts"
 import { assignPlayers, listPlayers, newPlayerRecord, savePlayers } from "../lib/storage/players.ts"
-import { publish, publishOwn } from "../lib/sync/publish.ts"
+import { publish, publishOwn, submitOwn } from "../lib/sync/publish.ts"
 
 // What leaves the device, through the one publishing interface (lib/sync/publish.ts): nothing
 // for a guest, and for a new profile its name, picture and relay list, nothing of its games
@@ -56,6 +56,34 @@ test("a profile publishes only its own events", async () => {
   const other = core.finalizeEvent({ kind: 0, tags: [], content: "{}", created_at: 1_790_000_000 }, core.generateSecretKey())
   await assert.rejects(publish([other]), /signed-in profile/)
   assert.deepEqual(received(), [])
+})
+
+test("a change signed while another profile signs in is neither kept nor sent", async () => {
+  const core = await loadCore()
+  const key = core.generateSecretKey()
+  // A browser extension that waits for the person to approve.
+  let approve = () => {}
+  const approved = new Promise<void>((resolve) => (approve = resolve))
+  const page = globalThis.window as unknown as { nostr?: unknown }
+  page.nostr = {
+    getPublicKey: async () => core.getPublicKey(key),
+    signEvent: async (t: object) => {
+      await approved
+      return core.finalizeEvent({ ...(t as Parameters<typeof core.finalizeEvent>[0]) }, key)
+    },
+  }
+  try {
+    const a = await connectExternal("nip07", { pubkey: core.getPublicKey(key) })
+    const change = submitOwn([metadataTemplate({ name: "Anna" })])
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    await importLocalKey(core.generateSecretKey(), { replace: true })
+    approve()
+    await assert.rejects(change, /another profile/)
+    assert.equal((await ownEvents(a.pubkey)).size, 0, "nothing of the first profile is back on the device")
+    assert.deepEqual(received(), [])
+  } finally {
+    delete page.nostr
+  }
 })
 
 test("creating a profile from a game: name, picture and relays go out; the games stay, and only this seat's become the profile's", async () => {

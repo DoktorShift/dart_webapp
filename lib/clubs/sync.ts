@@ -22,7 +22,7 @@ export interface Reader {
 
 export async function viewClub(stored: StoredClub, reader: Pick<Reader, "pubkey" | "signer">): Promise<ClubView> {
   const { view, keys } = await readClub(stored, { reader: reader.pubkey, signer: reader.signer, now: nowSeconds() })
-  if (Object.keys(keys).length > 0) await updateClub(stored.club, { keys })
+  if (Object.keys(keys).length > 0) await updateClub(stored.club, { keys }, reader.pubkey)
   return view
 }
 
@@ -44,14 +44,14 @@ export function refreshClub(club: string, reader: Reader): Promise<ClubView> {
 }
 
 async function refresh(club: string, reader: Reader): Promise<ClubView> {
-  const known = (await loadStoredClub(club)) ?? (await updateClub(club, {}))
+  const known = (await loadStoredClub(club)) ?? (await updateClub(club, {}, reader.pubkey))
   const first = await fetchClub(club, known.relays)
-  let stored = await updateClub(club, { events: first.events, ...(first.answered ? { loadedAt: Date.now() } : {}) })
+  let stored = await updateClub(club, { events: first.events, ...(first.answered ? { loadedAt: Date.now() } : {}) }, reader.pubkey)
   let view = await viewClub(stored, reader)
   const extras = extrasOf(view)
   if (first.answered && (extras.matches.length > 0 || extras.dates.length > 0)) {
     const more = await fetchClub(club, stored.relays, extras)
-    stored = await updateClub(club, { events: more.events, ...(more.answered ? { loadedAt: Date.now() } : {}) })
+    stored = await updateClub(club, { events: more.events, ...(more.answered ? { loadedAt: Date.now() } : {}) }, reader.pubkey)
     view = await viewClub(stored, reader)
   }
   return first.answered ? maintainClub(club, reader) : view
@@ -60,7 +60,7 @@ async function refresh(club: string, reader: Reader): Promise<ClubView> {
 // The club's upkeep from its local copy as it is, without asking relays: after a refresh, and
 // when a membership change arrives while the club is open. Returns the club as read afterwards.
 export async function maintainClub(club: string, reader: Reader): Promise<ClubView> {
-  const stored = (await loadStoredClub(club)) ?? (await updateClub(club, {}))
+  const stored = (await loadStoredClub(club)) ?? (await updateClub(club, {}, reader.pubkey))
   const view = await viewClub(stored, reader)
   if (!reader.pubkey || !reader.signer || !reader.automatic) return view
   if (!(await upkeep(view, stored, { pubkey: reader.pubkey, signer: reader.signer }))) return view
@@ -97,6 +97,6 @@ export async function grantAccess(club: string, author: Author): Promise<Sent> {
 export async function discoverClubs(pubkey: string): Promise<boolean> {
   const found = await fetchOwnClubs(pubkey)
   const known = new Set((await storedClubs()).map((c) => c.club))
-  for (const club of found.clubs) if (!known.has(club)) await updateClub(club, {})
+  for (const club of found.clubs) if (!known.has(club)) await updateClub(club, {}, pubkey)
   return found.answered
 }

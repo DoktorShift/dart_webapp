@@ -49,6 +49,9 @@ Dateien unter `lib/`, die in Node getestet werden, verwenden relative Importe mi
 - `lib/shell` (Navigation, Links, Registry) nutzt `lib/game` und `lib/i18n` nur als Typen.
 - Die NIP-52-Kinds der Club-Termine stehen im Katalog `lib/protocol/kinds.ts`; die Speichernamen des Profils nur in `lib/profile/storage-keys.ts`.
 
+**Nachtrag 16. Oktober 2026 (Freigabeprüfung):**
+- `lib/clubs/store.ts` nutzt `getSession` aus `lib/profile/session.ts`: Die lokale Kopie eines Clubs wird nur für das Profil geschrieben, das gerade angemeldet ist, damit eine langsame Relay- oder Signer-Antwort nach einem Abmelden oder Profilwechsel nichts zurückbringt.
+
 ## 3 Speicherung
 
 - Das **laufende Spiel** bleibt in `localStorage` unter `dart-scorer.current-match.v1` (synchron, klein, kompatibel zu 1.0.0). Schreibfehler werden sichtbar: „Dein Spiel konnte nicht gespeichert werden.“ mit „Erneut versuchen“; die Eingaben bleiben im Speicher der Seite.

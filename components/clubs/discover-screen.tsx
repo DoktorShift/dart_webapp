@@ -12,6 +12,7 @@ import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
 import { CLUB_SCREENS } from "@/components/clubs/screens"
 import { fetchPublicClubs } from "@/lib/clubs/relays"
 import { updateClub } from "@/lib/clubs/store"
+import { readerKey } from "@/components/clubs/use-clubs"
 import type { NostrEvent } from "@/lib/nostr/types"
 import { parseRecord } from "@/lib/protocol/records"
 
@@ -57,7 +58,7 @@ export default function DiscoverScreen() {
   }, [attempt])
 
   const open = async (club: Found) => {
-    await updateClub(club.id, { events: [club.event] })
+    await updateClub(club.id, { events: [club.event] }, await readerKey())
     nav.push(CLUB_SCREENS.view, { club: club.id, name: club.name })
   }
 
