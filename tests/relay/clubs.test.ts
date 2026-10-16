@@ -12,7 +12,7 @@ import { loadCore, type Core } from "../../lib/nostr/core.ts"
 import type { Throw } from "../../lib/game/types.ts"
 import { clubTasks } from "../../lib/clubs/club.ts"
 import { answerDate, cancelDate, CALENDAR_TIME_KIND, repeatDates, saveDates } from "../../lib/clubs/dates.ts"
-import { alreadyRecorded, answerGame, correctGame, gameSeats, recordGame, type FinishedGame } from "../../lib/clubs/games.ts"
+import { answerGame, correctGame, gameSeats, recordGame, recordedGame, type FinishedGame } from "../../lib/clubs/games.ts"
 import { acceptInvitation, invitationState, openInvitation } from "../../lib/clubs/invitation.ts"
 import { clubLink, readClubPayload } from "../../lib/clubs/links.ts"
 import { acceptOwnership, acceptRequest, createInvite, foundClub, isConfirmedMember, offerOwnership, openOffer, removeMember, setRole, updateInfo } from "../../lib/clubs/membership.ts"
@@ -330,7 +330,7 @@ test("a season table follows the games: a confirmed result counts, a correction 
   // The club remembers the game by its local id, and knows it by its throws: never twice.
   assert.equal((await loadStoredClub(club))?.recorded["local-1"], recorded.match)
   view = await refreshClub(club, author)
-  assert.ok(alreadyRecorded(view.games, owner.pubkey, gameSeats(seats, "closed", (n) => `Gast ${n}`), won.throws))
+  assert.equal(recordedGame(view.games, owner.pubkey, gameSeats(seats, "closed", (n) => `Gast ${n}`), won.throws)?.match, recorded.match)
 
   const season = Object.values(view.state!.seasons)[0]
   let table = seasonTable(season, view.games)

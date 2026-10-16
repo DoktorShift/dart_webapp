@@ -88,13 +88,15 @@ export async function recordGame(state: ClubState, game: FinishedGame, seats: Ag
   return { match, ...(await keep(state.id, { events, keys: { ...session.keys, ...rest.keys } }, { recorded: { [game.id]: match } })) }
 }
 
-// Whether a game with these players and exactly these throws was recorded for the club by
-// this profile already: the second guard against a double entry, next to the club's memory of
-// local ids (a game recorded on another device of the same profile, or a copy without it).
-export function alreadyRecorded(games: readonly ClubGame[], by: string, seats: Agreement["seats"], throws: readonly Throw[]): boolean {
+// The game with these players and exactly these throws this profile recorded for the club
+// already, if any: the second guard against a double entry, next to the club's memory of local
+// ids (a game recorded on another device of the same profile, or a copy without it).
+export function recordedGame(games: readonly ClubGame[], by: string, seats: Agreement["seats"], throws: readonly Throw[]): ClubGame | null {
   const encoded = encodeThrows(throws)
-  return games.some(
-    (g) => g.result?.by === by && g.result.throws === encoded && g.agreement.seats.length === seats.length && g.agreement.seats.every((s, i) => s.alias === seats[i].alias && s.pubkey === seats[i].pubkey),
+  return (
+    games.find(
+      (g) => g.result?.by === by && g.result.throws === encoded && g.agreement.seats.length === seats.length && g.agreement.seats.every((s, i) => s.alias === seats[i].alias && s.pubkey === seats[i].pubkey),
+    ) ?? null
   )
 }
 
