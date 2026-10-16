@@ -46,24 +46,57 @@ async function createProfile(page, seat, name) {
 }
 
 // --- The success card as a guest, on four screen sizes -----------------------------------------
+// With the profile track's "Deine Ergebnisse mitnehmen" (registered first) the guest's result
+// has two pieces. On a tall phone both are rows. On a short phone (up to 740 pt) the offer has
+// the one row and "+1" opens "Mehr zum Ergebnis" with both as rows; in landscape (up to 500 pt)
+// the bar shows their count, which opens the same sheet. In the sheet the card is a 44 pt row
+// without the icon; the sheet stays under the card's own sheet until Fertig.
 for (const [w, h] of [[320, 548], [390, 844], [568, 320], [844, 390]]) {
   const { ctx, page, sockets, errors } = await open({ seed: nearWin(["Anna", "Ben"]), viewport: { width: w, height: h } })
   await finishSeeded(page)
   await wait(page, 1200)
-  await shot(page, `10-result-card-${w}x${h}`)
+  await shot(page, `10-result-${w}x${h}`)
   const card = page.getByRole("button", { name: /Auszeichnung/ })
-  check(`result ${w}x${h}: the success card is one row naming the nine new badges`, (await card.count()) === 1 && (await card.textContent()) === `${ANNAS} neue Auszeichnungen`, await card.textContent())
+  const more = page.getByRole("button", { name: "Mehr zum Ergebnis, 2 Einträge" })
   const l = await layout(page)
   check(`result ${w}x${h}: no ellipsis, no horizontal overflow, no page scroll`, noLayoutProblems(l) && !(await page.evaluate(() => document.scrollingElement.scrollHeight > innerHeight + 1)), JSON.stringify(l))
   check(`result ${w}x${h}: no socket opened as a guest`, sockets.length === 0, sockets.join(","))
-  // Up to 500 pt high the card is a bar line: no dismiss button, no icon, no background; up to
-  // 740 pt it is 44 pt without the icon.
+  if (h <= 740) {
+    const count = h <= 500 ? "2" : "+1"
+    check(`result ${w}x${h}: the card is not inline; ${count} stands for the two pieces`, !(await card.isVisible()) && (await more.textContent()).trim() === count, await more.textContent())
+    await more.click()
+    await wait(page, 900)
+    await shot(page, `10a-result-more-${w}x${h}`)
+  }
+  check(`result ${w}x${h}: the success card is one row naming the nine new badges`, (await card.count()) === 1 && (await card.isVisible()) && (await card.textContent()) === `${ANNAS} neue Auszeichnungen`, await card.textContent())
   const dismiss = page.getByRole("button", { name: "Ausblenden" })
   const icon = card.locator("svg").first()
   const box = await card.boundingBox()
-  if (h <= 500) check(`result ${w}x${h}: landscape: a bar line without dismiss button, icon or ring`, !(await dismiss.isVisible()) && !(await icon.isVisible()) && (await card.evaluate((el) => getComputedStyle(el.parentElement).backgroundColor)) === "rgba(0, 0, 0, 0)", `${box?.height}`)
-  else if (h <= 740) check(`result ${w}x${h}: short: 44 pt without the icon`, (await dismiss.isVisible()) && !(await icon.isVisible()) && box.height >= 43.5 && box.height < 45, `${box?.height}`)
+  if (h <= 740) check(`result ${w}x${h}: in the sheet a 44 pt row without the icon, with Ausblenden`, (await dismiss.isVisible()) && !(await icon.isVisible()) && box.height >= 43.5 && box.height < 45, `${box?.height}`)
   else check(`result ${w}x${h}: the full row with icon and dismiss button`, (await dismiss.isVisible()) && (await icon.isVisible()) && box.height >= 47 && box.height <= 49, `${box?.height}`)
+  if (w === 320) {
+    await card.click()
+    await wait(page, 900)
+    await shot(page, "10b-earned-over-more-320x548")
+    const sheet = page.getByRole("dialog").last()
+    const moreTitle = page.getByText("Mehr zum Ergebnis", { exact: true }).locator("visible=true")
+    check("320x548: the card's sheet opens over 'Mehr zum Ergebnis', which stays", (await sheet.getByText("Erste 180").count()) === 1 && (await moreTitle.count()) === 1)
+    await sheet.getByRole("button", { name: "Fertig" }).click()
+    await wait(page, 600)
+    check("… and its Fertig leaves the pieces' sheet with the card", (await moreTitle.count()) === 1 && (await card.isVisible()))
+  }
+  if (h <= 500) {
+    // "Später" on the offer leaves the card alone: back on the result it is the bar line, without
+    // dismiss button, icon or background, in the bar's colour.
+    await page.getByRole("button", { name: "Später, nicht für dieses Spiel" }).click()
+    await wait(page, 400)
+    await page.getByRole("dialog").last().getByRole("button", { name: "Fertig" }).click()
+    await wait(page, 900)
+    await shot(page, `10c-result-bar-${w}x${h}`)
+    const bar = await card.evaluate((el) => ({ height: el.getBoundingClientRect().height, background: getComputedStyle(el).backgroundColor, color: getComputedStyle(el).color }))
+    const primary = await page.getByRole("button", { name: "Fertig" }).evaluate((el) => getComputedStyle(el).color)
+    check(`result ${w}x${h}: alone, the card is a bar line without dismiss button, icon or background`, (await card.isVisible()) && !(await dismiss.isVisible()) && !(await icon.isVisible()) && bar.height <= 44 && bar.background === "rgba(0, 0, 0, 0)" && bar.color === primary, JSON.stringify(bar))
+  }
   if (w === 390) {
     await card.click()
     await wait(page, 900)
@@ -341,6 +374,9 @@ let annaPubkey = ""
   const { ctx, page, errors } = await open({ seed: nearWin(["Carla", "Dieter"]), viewport: { width: 320, height: 548 } })
   await finishSeeded(page)
   await createProfile(page, "Carla", "Carla")
+  // On the short phone the offer's done line keeps the one row; the card is behind "+1".
+  await page.getByRole("button", { name: "Mehr zum Ergebnis, 2 Einträge" }).click()
+  await wait(page, 900)
   await page.getByRole("button", { name: /Auszeichnung/ }).click()
   await wait(page, 900)
   const sheet = page.getByRole("dialog").last()
@@ -349,10 +385,11 @@ let annaPubkey = ""
   await sheet.getByText("Jetzt in deinem Profil.").waitFor({ timeout: 30000 })
   await shot(page, "71-sheet-shown-320")
   check("320x548: the confirmation is in view without scrolling the list", await inView(sheet.getByText("Jetzt in deinem Profil."), 548))
-  await sheet.getByRole("button", { name: "Fertig" }).click()
-  await wait(page, 600)
-  await page.getByRole("button", { name: "Fertig" }).click()
-  await wait(page, 800)
+  // Fertig three times: the card's sheet, the pieces' sheet under it, the result.
+  for (let i = 0; i < 3; i++) {
+    await page.getByRole("dialog").last().getByRole("button", { name: "Fertig" }).click()
+    await wait(page, 700)
+  }
 
   // Anordnen at 320: names shrink, nothing breaks mid-word.
   await tab(page, "Profil")
