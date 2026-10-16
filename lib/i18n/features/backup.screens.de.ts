@@ -13,9 +13,8 @@ export const backupScreensDe = {
 
   // One line on the own profile while nothing secures it.
   hint: {
-    text: "Noch nicht gesichert.",
+    text: "Dein Profil ist noch nicht gesichert.",
     action: "Jetzt sichern",
-    later: "Später",
     laterLabel: "Hinweis für 30 Tage ausblenden",
   },
 
@@ -52,8 +51,10 @@ export const backupScreensDe = {
     copied: "Kopiert",
     save: "Datei speichern",
     share: "Datei teilen",
-    saved: "Dein Profil ist gesichert.",
+    saved: "Datei gespeichert",
     savedHint: "Bewahre die Datei dort auf, wo du sie wiederfindest, etwa in deiner Cloud oder als Mail an dich selbst.",
+    passwordCheck: "Kennwort gespeichert? Ohne Kennwort hilft die Datei nicht.",
+    noted: "Ich habe das Kennwort notiert",
     failed: "Die Sicherung konnte nicht erstellt werden. Versuch es noch einmal.",
     retry: "Erneut versuchen",
     done: "Fertig",
@@ -98,8 +99,9 @@ export const backupScreensDe = {
 
   // Once the profile is here (from a backup or another device).
   arrived: {
-    done: "Dein Profil ist dabei.",
-    doneText: "Du bist jetzt auch hier angemeldet.",
+    done: (name: string) => `${name} ist dabei.`,
+    doneUnnamed: "Dein Profil ist dabei.",
+    doneText: "Du bist jetzt auch auf diesem Gerät angemeldet.",
     signerTitle: "Fast geschafft",
     signerText: "Dein Profil liegt in einer Signer-App. Verbinde sie jetzt auch auf diesem Gerät; dein Zugang bleibt dort.",
     signerConnect: "Signer-App verbinden",
@@ -109,7 +111,7 @@ export const backupScreensDe = {
   // The history from the profile's other devices, while it arrives.
   history: {
     loading: "Deine Spiele werden geladen",
-    complete: "Deine Spiele sind da.",
+    complete: (games: number) => (games === 1 ? "Dein Spiel ist da." : `Deine ${games} Spiele sind da.`),
     partial: "Nicht alle Spiele konnten geladen werden.",
     unavailable: "Deine Spiele konnten noch nicht geladen werden.",
     retry: "Erneut versuchen",

@@ -16,7 +16,7 @@ let control: NewDeviceControl | null = null
 
 async function start() {
   const { pairNewDevice } = await import("../../lib/devices/pairing.ts")
-  control = await pairNewDevice((state) => parentPort!.postMessage({ type: "state", state: plain(state) }))
+  control = await pairNewDevice((state, offline) => parentPort!.postMessage({ type: "state", state: plain(state), offline }))
 }
 
 // What crosses the thread boundary must be plain data.

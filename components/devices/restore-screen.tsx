@@ -78,6 +78,7 @@ export default function RestoreScreen() {
           accept=".json,application/json"
           className="sr-only"
           tabIndex={-1}
+          aria-hidden="true"
           onChange={(event) => {
             setFile(event.target.files?.[0] ?? null)
             setProblem(null)

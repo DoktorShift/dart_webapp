@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, type FormEvent } from "react"
 import { Check, Copy, FileLock2, Fingerprint, ShieldAlert, ShieldCheck } from "lucide-react"
 import { InlineStatus } from "@/components/common/inline-status"
 import { Waiting } from "@/components/common/waiting"
@@ -20,7 +20,8 @@ import { SITE } from "@/lib/site"
 
 // Profil › Sicherung (P2.04): how the profile stands, the backup file (with its password, shown
 // once) and, where a passkey can work, the passkey. "Dein Profil ist gesichert." is said of the
-// file only, and only after the person saved or shared it (lib/recovery/status.ts). A profile
+// file only, and only after the person saved or shared it and kept its password
+// (lib/recovery/status.ts). A profile
 // in a signer app is secured there, and the screen says so instead.
 export default function BackupScreen() {
   const session = useSession()
@@ -101,15 +102,20 @@ function Backup({ session }: { session: Session }) {
 const primary = "h-12 w-full rounded-2xl text-[1.0625rem] font-semibold"
 const secondary = "h-12 w-full rounded-2xl text-[1.0625rem]"
 
-type FileStep = { step: "preparing" } | { step: "ready"; backup: PreparedBackup } | { step: "saved" } | { step: "failed" }
+type FileStep = { step: "preparing" } | { step: "ready"; backup: PreparedBackup } | { step: "failed" }
 
-// The file is made (and opened again, as a test) as the sheet opens; then the password, shown
-// this once, and the file to save or share. Only a tap on either makes the profile "gesichert".
+// The file is made (and opened again, as a test) as the sheet opens; then the password and the
+// file to save or share. The password stays in view until "Fertig", and the profile counts as
+// "gesichert" only then: once the file was saved and the password copied or noted (a file
+// without its password brings nothing back). The two hidden fields let the phone's password
+// manager offer to keep the password, under the file's name.
 function FileSheet({ pubkey, onClose }: { pubkey: string; onClose: () => void }) {
   const f = useAreaT(BACKUP_TEXTS).fileSheet
   const [state, setState] = useState<FileStep>({ step: "preparing" })
   const [round, setRound] = useState(0)
   const [copied, setCopied] = useState(false)
+  const [passwordKept, setPasswordKept] = useState(false)
+  const [savedAt, setSavedAt] = useState<number | null>(null)
   const [canShare, setCanShare] = useState(false)
 
   useEffect(() => {
@@ -137,15 +143,12 @@ function FileSheet({ pubkey, onClose }: { pubkey: string; onClose: () => void })
   const copy = async (password: string) => {
     if (!(await copyText(password))) return
     setCopied(true)
+    setPasswordKept(true)
     setTimeout(() => setCopied(false), 2000)
-  }
-  const saved = async () => {
-    await loadBackup().then(({ markBackupFileSaved }) => markBackupFileSaved(pubkey))
-    setState({ step: "saved" })
   }
   const save = (backup: PreparedBackup) => {
     saveFile(fileOf(backup), backup.name)
-    void saved()
+    setSavedAt(Date.now())
   }
   const share = async (backup: PreparedBackup) => {
     try {
@@ -154,53 +157,94 @@ function FileSheet({ pubkey, onClose }: { pubkey: string; onClose: () => void })
       if ((error as { name?: string })?.name === "AbortError") return
       return save(backup)
     }
-    void saved()
+    setSavedAt(Date.now())
+  }
+  // Saved and the password kept: secured here, and noted for the profile's other devices.
+  const finish = async (event: FormEvent) => {
+    event.preventDefault()
+    if (savedAt === null) return
+    await loadBackup().then(({ markBackupFileSaved }) => markBackupFileSaved(pubkey, savedAt))
+    void import("@/lib/devices/list").then(({ noteBackupFile }) => noteBackupFile(pubkey)).catch(() => {})
+    onClose()
   }
 
+  // Ready, the password scrolls if it must and the buttons stay at the bottom of the sheet.
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()} title={f.title}>
-      <SheetBody>
-        {state.step === "preparing" && <Waiting className="py-8">{f.preparing}</Waiting>}
-        {state.step === "failed" && (
-          <div className="grid gap-3 pb-2">
-            <InlineStatus tone="error">{f.failed}</InlineStatus>
-            <Button onClick={() => setRound((n) => n + 1)} className={primary}>
-              {f.retry}
-            </Button>
-          </div>
-        )}
-        {state.step === "ready" && (
-          <div className="grid gap-4 pb-2">
-            <div className="rounded-2xl border border-border bg-card px-4 py-4">
-              <p className="text-[0.8125rem] text-muted-foreground">{f.passwordLabel}</p>
-              <p className="mt-1 select-all break-all font-mono text-[1.25rem] font-semibold leading-snug tracking-wide">{state.backup.password}</p>
-              <Button variant="secondary" onClick={() => void copy(state.backup.password)} className="mt-3 h-11 w-full rounded-xl text-[1.0625rem] text-primary">
-                {copied ? <Check className="mr-2 h-5 w-5" aria-hidden="true" /> : <Copy className="mr-2 h-5 w-5" aria-hidden="true" />}
-                {copied ? f.copied : f.copy}
+      {state.step !== "ready" ? (
+        <SheetBody>
+          {state.step === "preparing" ? (
+            <Waiting className="py-8">{f.preparing}</Waiting>
+          ) : (
+            <div className="grid gap-3 pb-2">
+              <InlineStatus tone="error">{f.failed}</InlineStatus>
+              <Button onClick={() => setRound((n) => n + 1)} className={primary}>
+                {f.retry}
               </Button>
-              <p className="mt-3 text-[0.8125rem] leading-snug text-muted-foreground">{f.passwordHint}</p>
             </div>
-            {canShare && (
-              <Button onClick={() => void share(state.backup)} className={primary}>
-                {f.share}
+          )}
+        </SheetBody>
+      ) : (
+        <form onSubmit={(event) => void finish(event)} className="flex min-h-0 flex-col">
+          <input type="text" name="username" autoComplete="username" value={state.backup.name} readOnly hidden />
+          <input type="password" name="password" autoComplete="new-password" value={state.backup.password} readOnly className="sr-only" tabIndex={-1} aria-hidden="true" />
+          <SheetBody>
+            <div className="grid gap-4">
+              <div className="rounded-2xl border border-border bg-card px-4 py-4">
+                <p className="text-[0.8125rem] text-muted-foreground">{f.passwordLabel}</p>
+                <Password value={state.backup.password} />
+                <Button type="button" variant="secondary" onClick={() => void copy(state.backup.password)} className="mt-3 h-11 w-full rounded-xl text-[1.0625rem] text-primary">
+                  {copied ? <Check className="mr-2 h-5 w-5" aria-hidden="true" /> : <Copy className="mr-2 h-5 w-5" aria-hidden="true" />}
+                  {copied ? f.copied : f.copy}
+                </Button>
+                <p className="mt-3 text-[0.8125rem] leading-snug text-muted-foreground">{f.passwordHint}</p>
+              </div>
+              {savedAt !== null && (
+                <>
+                  <InlineStatus tone="success">{f.saved}</InlineStatus>
+                  <p className="text-[0.9375rem] leading-snug text-muted-foreground">{passwordKept ? f.savedHint : f.passwordCheck}</p>
+                </>
+              )}
+            </div>
+          </SheetBody>
+          {/* Keyed, so React doesn't turn the tapped "Datei speichern" into "Fertig" while the tap
+              is still running: the button would then submit the form at once. */}
+          <div className="mt-4 grid shrink-0 gap-2 pb-2">
+            {savedAt !== null ? (
+              <Button key="finish" type="submit" className={primary}>
+                {passwordKept ? f.done : f.noted}
               </Button>
+            ) : (
+              <>
+                {canShare && (
+                  <Button key="share" type="button" onClick={() => void share(state.backup)} className={primary}>
+                    {f.share}
+                  </Button>
+                )}
+                <Button key="save" type="button" variant={canShare ? "secondary" : "default"} onClick={() => save(state.backup)} className={canShare ? secondary : primary}>
+                  {f.save}
+                </Button>
+              </>
             )}
-            <Button variant={canShare ? "secondary" : "default"} onClick={() => save(state.backup)} className={canShare ? secondary : primary}>
-              {f.save}
-            </Button>
           </div>
-        )}
-        {state.step === "saved" && (
-          <div className="grid gap-3 pb-2">
-            <InlineStatus tone="success">{f.saved}</InlineStatus>
-            <p className="text-[0.9375rem] leading-snug text-muted-foreground">{f.savedHint}</p>
-            <Button onClick={onClose} className={primary}>
-              {f.done}
-            </Button>
-          </div>
-        )}
-      </SheetBody>
+        </form>
+      )}
     </Sheet>
+  )
+}
+
+// The generated password, in large monospace letters, wrapping only between its groups.
+function Password({ value }: { value: string }) {
+  const groups = value.split("-")
+  return (
+    <p className="mt-1 select-all font-mono text-[1.25rem] font-semibold leading-snug tracking-wide">
+      {groups.map((group, i) => (
+        <span key={i} className="inline-block">
+          {group}
+          {i < groups.length - 1 && "-"}
+        </span>
+      ))}
+    </p>
   )
 }
 

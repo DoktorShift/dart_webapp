@@ -67,7 +67,7 @@ Flüchtig, NIP-44 zwischen den Einmalschlüsseln, Empfänger im `p`-Tag. Nur die
 
 Ablauf QR: neues Gerät zeigt `P1`-QR → vorhandenes Gerät scannt, sendet `hello` → beide zeigen die Prüfkennung → neues Gerät bestätigt und sendet `accept` → vorhandenes Gerät bestätigt → `package` (wiederholt bis `ack`) → `ack` → beide fertig. Code-Weg: zuerst `announce` unter `x` = lookup, das vorhandene Gerät prüft deren MAC (`checkAnnounce`), danach wie oben mit MAC in `hello`.
 
-`applyPairingMessage` und `confirmPairingHere` führen den Zustand (`waiting` → `confirm` → `transfer` → `done`, oder `aborted` / `expired`) rein funktional; `lib/devices` speichert ihn.
+`applyPairingMessage` und `confirmPairingHere` führen den Zustand (`waiting` → `confirm` → `transfer` → `done`, oder `aborted` / `expired`) rein funktional; `lib/devices` speichert ihn. Ein `abort` gilt nur vom Gegenüber: Solange das neue Gerät noch auf eine Antwort wartet, kennt jeder Mitleser seine Ankündigung, deshalb wird ein `abort` dann abgelehnt (`out_of_order`).
 
 ## Profilpaket
 

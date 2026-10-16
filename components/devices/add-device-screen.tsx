@@ -10,56 +10,65 @@ import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
 import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
+import { PairColumns } from "@/components/devices/pair-columns"
 import { DEVICES_TEXTS } from "@/lib/i18n/features/devices.screens"
-import type { AddDeviceControl, AddDevicePairing, PairingInput } from "@/lib/devices/pairing"
+import type { AddDeviceControl, AddDevicePairing, HeldLink, PairingInput, PairingListener } from "@/lib/devices/pairing"
 import { useSession } from "@/lib/profile/session"
-import type { ScreenProps } from "@/lib/shell/registry"
+import { runAction, type ScreenProps } from "@/lib/shell/registry"
 import { parseAppLink } from "@/lib/shell/links"
 import { SITE } from "@/lib/site"
 
 // "Eigenes Gerät hinzufügen" (P2.03), on the device that has the profile: scan the new device's
 // code (or paste its link, or type its code), compare the check code, and give the profile
 // away with one clear tap. This is the only way a profile leaves a device: never the general
-// scanner, never a board code (decision 0002 §7). A /#pair= link opened on this device lands
-// here with the code already in (params.payload). A reload comes back to the pairing in
+// scanner, never a board code (decision 0002 §7). A /#pair= link opened from outside lands here
+// (params.payload) and is only held: it shows the check code it will have, and nothing is sent
+// before the person taps "Verbinden" (research DR-08). A reload comes back to the pairing in
 // progress (lib/devices/pairing.ts).
 export default function AddDeviceScreen({ params }: ScreenProps) {
   const t = useT()
-  const s = useAreaT(DEVICES_TEXTS).add
+  const tx = useAreaT(DEVICES_TEXTS)
+  const s = tx.add
   const nav = useNav()
   const session = useSession()
-  // null: the scanner.
-  const [state, setState] = useState<AddDevicePairing | null>(null)
-  const [round, setRound] = useState(0)
+  // null: the scanner (or the held link).
+  const [view, setView] = useState<{ state: AddDevicePairing; offline: boolean } | null>(null)
+  const [held, setHeld] = useState<HeldLink | "expired" | null>(null)
   const control = useRef<AddDeviceControl | null>(null)
   const payload = params.payload
   const signedIn = !!session
+  const show: PairingListener<AddDevicePairing> = (state, offline) => setView({ state, offline })
 
-  // The link the screen was opened with (once), else a pairing still in progress.
+  // A link from outside is held; without one, a pairing still in progress comes back.
   useEffect(() => {
     if (!signedIn) return
     let current = true
-    const onChange = (next: AddDevicePairing) => current && setState(next)
     void (async () => {
-      const { addDevice, resumeAddDevice } = await import("@/lib/devices/pairing")
-      let made: AddDeviceControl | null = null
-      if (payload && round === 0) {
-        try {
-          const { decodePairingLink } = await import("@/lib/protocol/pairing")
-          made = await addDevice({ link: decodePairingLink(decodeURIComponent(payload)) }, onChange)
-        } catch {
-          if (current) setState({ step: "expired" })
-        }
-      } else made = await resumeAddDevice(onChange)
-      if (!current) made?.close()
-      else control.current = made
+      const pairing = await import("@/lib/devices/pairing")
+      if (!payload) {
+        const made = await pairing.resumeAddDevice((state, offline) => current && setView({ state, offline }))
+        if (current) control.current = made
+        else made?.close()
+        return
+      }
+      try {
+        const { decodePairingLink } = await import("@/lib/protocol/pairing")
+        const link = await pairing.holdLink(decodePairingLink(decodeURIComponent(payload)))
+        if (current) setHeld(link)
+      } catch {
+        if (current) setHeld("expired")
+      }
     })()
     return () => {
       current = false
-      control.current?.close()
-      control.current = null
     }
-  }, [signedIn, payload, round])
+  }, [signedIn, payload])
+  useEffect(() => () => control.current?.close(), [])
+
+  const start = async (answer: () => Promise<AddDeviceControl>) => {
+    control.current?.close()
+    control.current = await answer()
+  }
 
   // A scanned, pasted or typed code: only a pairing code is taken; everything else is answered
   // in place and scanning goes on.
@@ -81,17 +90,23 @@ export default function AddDeviceScreen({ params }: ScreenProps) {
     }
     try {
       const { addDevice } = await import("@/lib/devices/pairing")
-      control.current = await addDevice(input, setState)
+      await start(() => addDevice(input, show))
     } catch {
       return s.linkExpired
     }
   }
 
+  const connect = (link: HeldLink) => {
+    setHeld(null)
+    void start(() => link.answer(show)).catch(() => setHeld("expired"))
+  }
+
   // Back to the scanner: the new device hears that nothing comes.
   const startOver = () => {
     control.current?.decline()
-    setRound((n) => n + 1)
-    setState(null)
+    control.current?.close()
+    control.current = null
+    setView(null)
   }
   const again = { label: s.again, onClick: startOver }
   const cancel = (
@@ -101,54 +116,112 @@ export default function AddDeviceScreen({ params }: ScreenProps) {
   )
 
   if (session === undefined) return null
-  if (session === null) return <EmptyState icon={UserRound} title={s.noProfile} description={s.noProfileText} />
-  if (!state)
+  if (session === null) return <EmptyState icon={UserRound} title={s.noProfile} description={s.noProfileText} primary={{ label: s.createProfile, onClick: () => runAction("profile.create", nav) }} />
+  if (held === "expired") return <EmptyState icon={Clock} title={s.expired} description={s.expiredText} primary={{ label: s.again, onClick: () => setHeld(null) }} />
+  if (held)
+    return (
+      <PairColumns
+        first={
+          <>
+            <h2 className="text-xl font-semibold leading-tight">{s.heldTitle}</h2>
+            {/* In landscape the check code goes first, beside the buttons; the sentence follows. */}
+            <p className="text-[1.0625rem] leading-snug text-muted-foreground xshort:order-last">{s.heldText}</p>
+            <CheckCode code={held.checkCode} label={s.checkCode} />
+          </>
+        }
+        second={
+          <>
+            <p className="text-[1.0625rem] font-semibold leading-snug">{s.warning}</p>
+            <Button onClick={() => connect(held)} className="h-14 w-full rounded-2xl text-[1.0625rem] font-semibold">
+              {s.connect}
+            </Button>
+            <Button variant="secondary" onClick={() => setHeld(null)} className="h-12 w-full rounded-2xl text-[1.0625rem]">
+              {t.common.cancel}
+            </Button>
+          </>
+        }
+      />
+    )
+  if (!view)
     return (
       <>
         <p className="mt-2 text-[1.0625rem] leading-snug text-muted-foreground">{s.intro}</p>
         <QRScanner className="mt-6" onResult={onResult} manualLabel={s.manualLabel} manualPlaceholder={s.manualPlaceholder} inputMode="text" />
       </>
     )
+
+  const { state, offline } = view
+  const offlineStatus = offline && <InlineStatus tone="error">{tx.offline}</InlineStatus>
   switch (state.step) {
     case "looking":
       return (
         <div className="mt-2 grid gap-4">
           <Waiting className="py-6">{s.looking}</Waiting>
           <p className="text-center text-[0.9375rem] leading-snug text-muted-foreground">{s.lookingHint}</p>
-          {cancel}
+          {offlineStatus || (state.unanswered && <InlineStatus>{s.notFound}</InlineStatus>)}
+          {state.unanswered ? (
+            <Button variant="secondary" onClick={startOver} className="h-12 w-full rounded-2xl text-[1.0625rem] text-primary">
+              {s.retype}
+            </Button>
+          ) : (
+            cancel
+          )}
         </div>
       )
     case "found":
       return (
-        <div className="mt-2 grid gap-4">
-          <p className="text-[1.0625rem] font-semibold leading-snug">{s.warning}</p>
-          <CheckCode code={state.checkCode} label={s.checkCode} />
-          <p className="text-[1.0625rem] leading-snug">{state.device ? s.compareDevice(state.device) : s.compare}</p>
-          <Button onClick={() => control.current?.give()} className="h-14 w-full rounded-2xl text-[1.0625rem] font-semibold">
-            {s.give}
-          </Button>
-          <Button variant="secondary" onClick={startOver} className="h-12 w-full rounded-2xl text-[1.0625rem]">
-            {s.decline}
-          </Button>
-        </div>
+        <PairColumns
+          first={
+            <>
+              <p className="text-[1.0625rem] font-semibold leading-snug">{s.warning}</p>
+              <CheckCode code={state.checkCode} label={s.checkCode} />
+            </>
+          }
+          second={
+            <>
+              <p className="text-[1.0625rem] leading-snug">{state.device ? s.compareDevice(state.device) : s.compare}</p>
+              {offlineStatus}
+              <Button onClick={() => control.current?.give()} className="h-14 w-full rounded-2xl text-[1.0625rem] font-semibold">
+                {s.give}
+              </Button>
+              <Button variant="secondary" onClick={startOver} className="h-12 w-full rounded-2xl text-[1.0625rem]">
+                {s.decline}
+              </Button>
+            </>
+          }
+        />
       )
     case "confirmed":
       return (
-        <div className="mt-2 grid gap-4">
-          <p className="text-[1.0625rem] leading-snug text-muted-foreground">{s.confirmed}</p>
-          <CheckCode code={state.checkCode} label={s.checkCode} />
-          <Waiting className="py-1">{s.waiting}</Waiting>
-          {state.unanswered && <InlineStatus>{s.unanswered}</InlineStatus>}
-          {cancel}
-        </div>
+        <PairColumns
+          first={
+            <>
+              <p className="text-[1.0625rem] leading-snug text-muted-foreground">{s.confirmed}</p>
+              <CheckCode code={state.checkCode} label={s.checkCode} />
+            </>
+          }
+          second={
+            <>
+              <Waiting className="py-1">{s.waiting}</Waiting>
+              {offlineStatus || (state.unanswered && <InlineStatus>{s.unanswered}</InlineStatus>)}
+              {cancel}
+            </>
+          }
+        />
       )
     case "sending":
-      return <Waiting>{s.sending}</Waiting>
+      return (
+        <div className="mt-2 grid gap-4">
+          <Waiting>{s.sending}</Waiting>
+          {offlineStatus}
+        </div>
+      )
+    case "sent":
     case "done":
       return (
         <div className="mt-2 grid gap-4">
-          <InlineStatus tone="success">{s.done}</InlineStatus>
-          <p className="text-[1.0625rem] leading-snug text-muted-foreground">{s.doneText}</p>
+          <InlineStatus tone={state.step === "done" ? "success" : "info"}>{state.step === "done" ? s.done : s.sent}</InlineStatus>
+          <p className="text-[1.0625rem] leading-snug text-muted-foreground">{state.step === "done" ? s.doneText : s.sentText}</p>
           <Button onClick={() => nav.pop()} className="h-14 w-full rounded-2xl text-[1.0625rem] font-semibold">
             {s.finish}
           </Button>
@@ -159,6 +232,8 @@ export default function AddDeviceScreen({ params }: ScreenProps) {
     case "expired":
       return <EmptyState icon={Clock} title={s.expired} description={s.expiredText} primary={again} />
     case "failed":
-      return state.reason === "too-long" ? <EmptyState icon={Smartphone} title={s.tooLong} description={s.tooLongText} /> : <EmptyState icon={Smartphone} title={s.wrongProfile} description={s.wrongProfileText} primary={again} />
+      if (state.reason === "too-long") return <EmptyState icon={Smartphone} title={s.tooLong} description={s.tooLongText} />
+      if (state.reason === "not-taken") return <EmptyState icon={Smartphone} title={s.notTaken} description={s.notTakenText} primary={again} />
+      return <EmptyState icon={Smartphone} title={s.wrongProfile} description={s.wrongProfileText} primary={again} />
   }
 }

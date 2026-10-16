@@ -31,12 +31,11 @@ export async function prepareBackupFile(options: { nip49?: Nip49; logN?: number 
   return { name: backupFileName(), text, password }
 }
 
-// The person saved or shared the file: known here at once, and noted for the profile's other
-// devices where that can be done now (lib/devices/list.ts); otherwise they keep asking until
-// one of them makes a file of its own.
+// The person saved or shared the file and kept its password: the profile is secured. The
+// profile's other devices learn so from the device list (lib/devices/list.ts, which reads this
+// status when it writes).
 export async function markBackupFileSaved(pubkey: string, at = Date.now()) {
   await updateBackupStatus(pubkey, { file: { at } })
-  await import("../devices/list.ts").then(({ noteBackupFile }) => noteBackupFile(pubkey, at)).catch(() => {})
 }
 
 export async function restoreFromFile(text: string, password: string, options: SessionOptions = {}): Promise<Applied> {

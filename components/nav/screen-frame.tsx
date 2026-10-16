@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState, type ReactNode } from "react"
+import { useMediaQuery, XSHORT } from "@/components/common/use-media-query"
 import { NavHeader } from "@/components/nav/nav-header"
 import { cn } from "@/lib/utils"
 
@@ -27,6 +28,10 @@ export function ScreenFrame({
   const [scrolled, setScrolled] = useState(false)
   const [titleAway, setTitleAway] = useState(false)
   const isRoot = !onBack
+  // A phone in landscape has no room for a large title on a pushed screen: as on iOS in compact
+  // height, the title sits in the bar and the content starts right below it.
+  const compactHeight = useMediaQuery(XSHORT)
+  const large = largeTitle && !(compactHeight && !isRoot)
   // A root without buttons lets its bar float over the content, so the large title sits exactly
   // where the Leaderboard has its own.
   const overlay = isRoot && largeTitle && !trailing
@@ -43,7 +48,7 @@ export function ScreenFrame({
   useEffect(() => {
     const el = scrollRef.current
     const heading = titleRef.current
-    if (!largeTitle || !el || !heading) return
+    if (!large || !el || !heading) return
     // The title counts as gone once most of it has moved under the bar, or, where the bar floats
     // over the title (roots), out of the top of the screen.
     const bar = overlay ? 0 : (el.querySelector("header")?.getBoundingClientRect().height ?? 44)
@@ -63,7 +68,7 @@ export function ScreenFrame({
     )
     observer.observe(heading)
     return () => observer.disconnect()
-  }, [largeTitle, overlay])
+  }, [large, overlay])
 
   return (
     <div ref={scrollRef} data-scroll-container className="absolute inset-0 overflow-y-auto overscroll-contain">
@@ -72,7 +77,7 @@ export function ScreenFrame({
         backLabel={backLabel}
         onBack={onBack}
         trailing={trailing}
-        showTitle={!largeTitle || titleAway}
+        showTitle={!large || titleAway}
         solid={overlay ? titleAway : scrolled}
         overlay={overlay}
       />
@@ -86,7 +91,7 @@ export function ScreenFrame({
           ref={titleRef}
           tabIndex={-1}
           data-screen-title
-          className={cn(largeTitle ? "pt-3 font-display text-4xl font-semibold leading-tight tracking-tight [overflow-wrap:anywhere]" : "sr-only", "outline-none")}
+          className={cn(large ? "pt-3 font-display text-4xl font-semibold leading-tight tracking-tight [overflow-wrap:anywhere]" : "sr-only", "outline-none")}
         >
           {title}
         </h1>

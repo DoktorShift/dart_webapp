@@ -1,4 +1,4 @@
-import { publish, subscribe } from "./client.ts"
+import { publish, subscribe, type PublishResult } from "./client.ts"
 import type { LocalKey } from "./signers.ts"
 import { nowSeconds } from "./time.ts"
 import type { EventTemplate } from "./types.ts"
@@ -20,7 +20,8 @@ export interface ChannelFlow<M> {
 
 export interface Channel<M> {
   key: LocalKey
-  send: (to: string, message: M) => Promise<void>
+  // Resolves whether a relay took the message: false says this device reaches none just now.
+  send: (to: string, message: M) => Promise<boolean>
   close: () => void
 }
 
@@ -43,17 +44,21 @@ export function openChannel<M>(flow: ChannelFlow<M>, key: LocalKey, relays: read
     key,
     async send(to, message) {
       const ciphertext = await key.signer.nip44!.encrypt(to, flow.plaintext(message))
-      await publish(await key.signer.signEvent(flow.template({ message, recipient: to, ciphertext, created_at: nowSeconds() })), relays)
+      return reached(await publish(await key.signer.signEvent(flow.template({ message, recipient: to, ciphertext, created_at: nowSeconds() })), relays))
     },
     close: () => sub.close(),
   }
 }
 
+// Whether a publish reached a relay: one that answered OK (also "duplicate:") has the message,
+// and "mute:" is how a relay says that nobody listens for an ephemeral message just now.
+export const reached = (results: readonly PublishResult[]) => results.some((result) => result.ok || result.code === "mute")
+
 // How often an unanswered message goes out again.
 export const REPEAT_MS = 3000
 
 // Sends now and again every REPEAT_MS until stopped.
-export function repeat(send: () => Promise<void>): () => void {
+export function repeat(send: () => Promise<unknown>): () => void {
   const fire = () => void send().catch(() => {})
   fire()
   const timer = setInterval(fire, REPEAT_MS)

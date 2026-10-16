@@ -12,9 +12,9 @@ import { useSession } from "@/lib/profile/session"
 import { backupHintDue, dismissBackupHint } from "@/lib/recovery/status"
 import { useArchive } from "@/lib/storage/hooks"
 
-// One quiet line on the own profile ("profile.card") while nothing secures a profile whose key
-// this app keeps: "Jetzt sichern", or "Später", which puts it off for 30 days or 10 games
-// (lib/recovery/status.ts). A profile in a signer app is secured there.
+// One quiet note on the own profile ("profile.card") while nothing secures a profile whose key
+// this app keeps: "Jetzt sichern", or the clear button, which puts it off for 30 days or 10
+// games (lib/recovery/status.ts). A profile in a signer app is secured there.
 export default function BackupHint({ pubkey, own }: { pubkey: string; own: boolean }) {
   const session = useSession()
   const local = own && session?.kind === "local" && session.pubkey === pubkey
@@ -44,15 +44,20 @@ function Hint({ pubkey }: { pubkey: string }) {
     setDue(false)
     void dismissBackupHint(pubkey, games).catch(() => {})
   }
+  // Two rows on a phone (the sentence, then "Jetzt sichern" under it), one from sm on.
   return (
-    <div className="flex items-center gap-2">
-      <ShieldAlert className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
-      <p className="min-w-0 flex-1 text-[0.9375rem] leading-snug">{h.text}</p>
-      <Button variant="ghost" onClick={() => nav.push(DEVICES_SCREENS.backup)} className="h-11 shrink-0 rounded-xl px-3 text-[1.0625rem] font-semibold text-primary hover:bg-primary/10 hover:text-primary">
-        {h.action}
-      </Button>
-      <Button variant="ghost" aria-label={h.laterLabel} onClick={later} className="-mr-2 h-11 w-11 shrink-0 rounded-xl text-muted-foreground hover:text-foreground">
-        <X className="h-5 w-5" aria-hidden="true" />
+    <div className="flex items-start gap-2 sm:items-center">
+      <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground sm:mt-0" aria-hidden="true" />
+      <div className="flex min-w-0 flex-1 flex-col items-start sm:flex-row sm:items-center sm:gap-2">
+        <p className="text-[0.9375rem] leading-snug sm:flex-1">{h.text}</p>
+        <Button variant="ghost" onClick={() => nav.push(DEVICES_SCREENS.backup)} className="-ml-3 h-11 shrink-0 rounded-xl px-3 text-[1.0625rem] font-semibold text-primary hover:bg-primary/10 hover:text-primary sm:ml-0">
+          {h.action}
+        </Button>
+      </div>
+      <Button variant="ghost" aria-label={h.laterLabel} onClick={later} className="-mr-2 -mt-3 h-11 w-11 shrink-0 rounded-xl hover:bg-transparent sm:mt-0">
+        <span className="flex h-[1.375rem] w-[1.375rem] items-center justify-center rounded-full bg-muted-foreground/60 text-card">
+          <X className="h-3.5 w-3.5" strokeWidth={3} aria-hidden="true" />
+        </span>
       </Button>
     </div>
   )

@@ -9,11 +9,12 @@ import { BACKUP_TEXTS } from "@/lib/i18n/features/backup.screens"
 import { useSyncStatus } from "@/lib/sync/status"
 
 // Once the profile is on this device: how its games from the other devices are coming, as the
-// sync reports it (lib/sync/status.ts), honestly: loading, all there, some, or none yet, with
-// one retry. Loading is bounded: after a while without any answer it says so.
+// sync reports it (lib/sync/status.ts), honestly: loading, all there (with how many, and nothing
+// for a profile without games), some, or none yet, with one retry. Loading is bounded: after a
+// while without any answer it says so.
 const LOADING_FOR_MS = 20_000
 
-export function HistoryProgress({ pubkey }: { pubkey: string }) {
+export function HistoryProgress({ pubkey, games }: { pubkey: string; games: number }) {
   const h = useAreaT(BACKUP_TEXTS).history
   const status = useSyncStatus()
   const [waited, setWaited] = useState(false)
@@ -28,7 +29,7 @@ export function HistoryProgress({ pubkey }: { pubkey: string }) {
   }, [loading])
 
   if (loading && !waited) return <Waiting className="py-2">{h.loading}</Waiting>
-  if (!loading && status.state === "complete") return <InlineStatus tone="success">{h.complete}</InlineStatus>
+  if (!loading && status.state === "complete") return games > 0 ? <InlineStatus tone="success">{h.complete(games)}</InlineStatus> : null
   const retry = () => void import("@/lib/sync/service").then(({ syncNow }) => syncNow())
   return (
     <div className="grid gap-2">

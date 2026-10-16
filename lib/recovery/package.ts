@@ -2,7 +2,7 @@ import { bytesToHex, hexToBytes } from "@noble/hashes/utils.js"
 import { createLocalSigner, verifySignedEvent } from "../nostr/signers.ts"
 import type { NostrEvent } from "../nostr/types.ts"
 import { OWN, ownEvents, rememberOwn } from "../profile/own-events.ts"
-import { getSession, importLocalKey, openLocalKey, type Session, type SessionKind, type SessionOptions } from "../profile/session.ts"
+import { getSession, importLocalKey, openLocalKey, SessionError, signOut, type Session, type SessionKind, type SessionOptions } from "../profile/session.ts"
 import { HEX64, isSignedEventShape } from "../protocol/tags.ts"
 import { isDataKeyEvent, keepDataKey, storedDataKey } from "../sync/data-key.ts"
 
@@ -96,10 +96,17 @@ async function keepExtras(pkg: ProfilePackage) {
 }
 
 // Takes a package on this device. A key that doesn't belong to the package's profile is refused
-// before anything is kept. The session options go to importLocalKey (another profile signed in
-// here is refused without `replace`, lib/profile/session.ts).
+// before anything is kept. Another profile signed in here is refused without `replace`, as every
+// sign-in is (lib/profile/session.ts): a local key through importLocalKey; a signer profile,
+// which signs in only once its signer app is connected, here, before its data key and events
+// take the places the signed-in profile uses. With `replace`, that profile signs out first.
 export async function applyProfilePackage(pkg: ProfilePackage, options: SessionOptions = {}): Promise<Applied> {
   if (pkg.access.kind !== "local") {
+    const signedIn = getSession()
+    if (signedIn && signedIn.pubkey !== pkg.pubkey) {
+      if (!options.replace) throw new SessionError("occupied", signedIn, "another profile is signed in on this device")
+      await signOut({ keepLocalData: true })
+    }
     await keepExtras(pkg)
     return { access: "signer", pubkey: pkg.pubkey, kind: pkg.access.kind }
   }

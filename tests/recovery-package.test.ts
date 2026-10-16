@@ -5,7 +5,7 @@ import { resetStorage } from "./storage-helpers.ts"
 import { createLocalSigner } from "../lib/nostr/signers.ts"
 import { OWN, ownEvents, rememberOwn } from "../lib/profile/own-events.ts"
 import { newRelayList, relayListTemplate } from "../lib/profile/relay-list.ts"
-import { getSession, getSigner, signOut, startLocalProfile } from "../lib/profile/session.ts"
+import { getSession, getSigner, SessionError, signOut, startLocalProfile } from "../lib/profile/session.ts"
 import { applyProfilePackage, buildProfilePackage, PackageError, parseProfilePackage, type ProfilePackage } from "../lib/recovery/package.ts"
 import { createDataKey, keepDataKey, storedDataKey } from "../lib/sync/data-key.ts"
 
@@ -62,6 +62,23 @@ test("a package for a profile in a signer app carries no key: the data key and e
   assert.equal(getSession(), null)
   assert.equal(bytesToHex((await storedDataKey(pubkey))!.key), bytesToHex(dataKey.key))
   assert.throws(() => parseProfilePackage({ ...pkg, access: { kind: "nip46", key: "ab".repeat(32) } }), /no key/)
+})
+
+test("a signer profile's package goes through the same sign-in guard: refused while another profile is signed in, taken with replace", async () => {
+  const { session: other, dataKey: othersKey } = await profileWithEverything()
+  const signer = await createLocalSigner(randomBytes(32))
+  const pubkey = await signer.getPublicKey()
+  const dataKey = await createDataKey(signer)
+  const pkg: ProfilePackage = { v: 1, pubkey, access: { kind: "nip46" }, dataKey: { key: bytesToHex(dataKey.key), created: dataKey.created, event: dataKey.event }, events: [] }
+
+  await assert.rejects(applyProfilePackage(pkg), (e: unknown) => e instanceof SessionError && e.code === "occupied" && e.session.pubkey === other.pubkey)
+  // Nothing of the signed-in profile was touched.
+  assert.equal(getSession()?.pubkey, other.pubkey)
+  assert.equal(bytesToHex((await storedDataKey(other.pubkey))!.key), bytesToHex(othersKey.key))
+
+  assert.deepEqual(await applyProfilePackage(pkg, { replace: true }), { access: "signer", pubkey, kind: "nip46" })
+  assert.equal(getSession(), null)
+  assert.equal(bytesToHex((await storedDataKey(pubkey))!.key), bytesToHex(dataKey.key))
 })
 
 test("a key that isn't the package's profile, a forged event and a malformed package are refused", async () => {

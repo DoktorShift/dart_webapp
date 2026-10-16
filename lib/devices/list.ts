@@ -5,7 +5,7 @@ import { publishTargets } from "../profile/relay-list.ts"
 import { getSigner } from "../profile/session.ts"
 import { KIND_PRIVATE } from "../protocol/kinds.ts"
 import { recordSlot } from "../protocol/private.ts"
-import { backupStatus, updateBackupStatus } from "../recovery/status.ts"
+import { backupStatus, updateBackupStatus, type BackupStatus } from "../recovery/status.ts"
 import { kvGet, kvSet } from "../storage/db.ts"
 import { storedDataKey, type DataKey } from "../sync/data-key.ts"
 import { syncMeta } from "../sync/engine.ts"
@@ -16,10 +16,11 @@ import { MAX_DEVICE_NAME } from "./device-name.ts"
 // Profil › Geräte: the profile's devices, as a private record on its relays
 // (docs/protocol/families/private-records.md, type "devices"). It is a list the person keeps,
 // nothing more (decision 0002 §10): a device that has the key keeps the key, whatever the list
-// says. Each device writes itself in once it has the profile (after a pairing or a restore,
-// the first device when it first opens the list), under the id it syncs with
+// says. Each device writes itself in once it has the profile and synced once (after a pairing or
+// a restore, the first device when it first opens the list), under the id it syncs with
 // (lib/sync/engine.ts), so "this device" is the same device the sync knows. The newest version
-// wins; this device keeps its last copy in kv "profile.devices", which goes with the profile.
+// wins, so every change is made on the version the relays hold now; this device keeps its last
+// copy in kv "profile.devices", which goes with the profile.
 //
 // The record also notes when a backup file of the profile was last saved, on whatever device:
 // a device that gets the profile learns so (lib/recovery/status.ts) instead of asking for a
@@ -36,9 +37,7 @@ export interface DeviceEntry {
 }
 
 // When a backup file was last saved (ms), on any device.
-interface BackupMark {
-  file: { at: number } | null
-}
+type BackupMark = Pick<BackupStatus, "file">
 
 interface StoredList {
   pubkey: string
@@ -59,12 +58,15 @@ export interface DeviceList {
   entries: DeviceEntry[]
   thisDevice: string
   state: ListState
-  // False while the list can't be kept on relays: the profile has no data key here yet (nothing
-  // was synced so far, or the signer can't decrypt).
+  // False while the list can't be kept on relays: the profile has no data key here yet, or this
+  // device hasn't synced once (nothing was synced so far, or the signer can't decrypt).
   available: boolean
+  // Devices this one just gave the profile to that aren't in the list yet (their names).
+  arriving: string[]
 }
 
-export type DeviceListProblem = "no-key" | "clock" | "signer"
+// "offline": no relay answered, so the list can't be read before it is changed.
+export type DeviceListProblem = "no-key" | "offline" | "clock" | "signer"
 
 export class DeviceListError extends Error {
   problem: DeviceListProblem
@@ -80,6 +82,13 @@ const HEX_ID = /^[0-9a-f]{16}$/
 async function local(pubkey: string): Promise<StoredList | null> {
   const stored = await kvGet<StoredList>(KEY)
   return stored?.pubkey === pubkey ? stored : null
+}
+
+// What the list needs on this device: the data key it is sealed with, and this device's id,
+// which the sync fixes on its first run (until then it isn't kept). null before both.
+async function ready(pubkey: string): Promise<{ device: string; dataKey: DataKey } | null> {
+  const [meta, dataKey] = await Promise.all([syncMeta(pubkey), storedDataKey(pubkey)])
+  return dataKey && meta.state !== null ? { device: meta.device, dataKey } : null
 }
 
 // The entries of a record's data, those that have the shape; the rest is left out.
@@ -98,6 +107,9 @@ const backupOf = (data: Record<string, unknown> | null): BackupMark => {
   return { file: Number.isInteger(at) ? { at: at as number } : null }
 }
 
+// The later of two backup marks.
+const newest = (a: BackupMark["file"], b: BackupMark["file"]): BackupMark => ({ file: !a || (b && b.at > a.at) ? b : a })
+
 const targetsOf = async (pubkey: string) => publishTargets(KIND_PRIVATE, ownRelaySettings(await ownEvents(pubkey)))
 
 // Takes the newest version the relays hold over this device's copy.
@@ -115,23 +127,35 @@ async function refresh(pubkey: string, dataKey: DataKey, copy: StoredList | null
 }
 
 export async function loadDeviceList(pubkey: string): Promise<DeviceList> {
-  const [meta, copy, dataKey] = await Promise.all([syncMeta(pubkey), local(pubkey), storedDataKey(pubkey)])
-  if (!dataKey) return { entries: copy?.entries ?? [], thisDevice: meta.device, state: "unavailable", available: false }
-  const { current, state } = await refresh(pubkey, dataKey, copy)
-  return { entries: current?.entries ?? [], thisDevice: meta.device, state, available: true }
+  const [meta, copy, here] = await Promise.all([syncMeta(pubkey), local(pubkey), ready(pubkey)])
+  if (!here) return { entries: copy?.entries ?? [], thisDevice: meta.device, state: "unavailable", available: false, arriving: [] }
+  const { current, state } = await refresh(pubkey, here.dataKey, copy)
+  const entries = current?.entries ?? []
+  return { entries, thisDevice: here.device, state, available: true, arriving: stillArriving(pubkey, entries) }
 }
 
-// Writes the list as a new version above this device's copy, signed by the profile, and hands
-// it to the outbox (lib/sync/outbox.ts): sent now, and again until relays have it.
-async function write(pubkey: string, entries: DeviceEntry[], listed: boolean, backup?: BackupMark) {
-  const [meta, copy, dataKey] = await Promise.all([syncMeta(pubkey), local(pubkey), storedDataKey(pubkey)])
-  backup ??= copy?.backup ?? { file: null }
-  if (!dataKey) throw new DeviceListError("no-key", "the profile has no data key on this device yet")
+interface Entries {
+  entries: DeviceEntry[]
+  listed: boolean
+}
+
+// Changes the list as the relays hold it now: read first, the change made on the newest
+// version, signed by the profile and handed to the outbox (lib/sync/outbox.ts), sent now and
+// again until relays have it. Nothing is written while no relay answers: a list made from this
+// device's copy alone would replace a newer one, and a device added elsewhere would drop out.
+// The newest backup mark known here goes along.
+async function change(pubkey: string, edit: (list: Entries & { thisDevice: string }) => Entries) {
+  const here = await ready(pubkey)
+  if (!here) throw new DeviceListError("no-key", "the profile has no data key or no device id here yet")
+  const { current, state } = await refresh(pubkey, here.dataKey, await local(pubkey))
+  if (state === "unavailable") throw new DeviceListError("offline", "no relay answered, so the list can't be read first")
+  const { entries, listed } = edit({ entries: current?.entries ?? [], listed: current?.listed ?? false, thisDevice: here.device })
+  const backup = newest(current?.backup.file ?? null, (await backupStatus(pubkey)).file)
   const at = nowSeconds()
-  const created_at = nextCreatedAt(at, copy?.createdAt ?? 0, at)
+  const created_at = nextCreatedAt(at, current?.createdAt ?? 0, at)
   if (created_at === null) throw new DeviceListError("clock", "this device's clock is behind the version on the relays")
-  const rev = (copy?.rev ?? 0) + 1
-  const templates = sealRecord({ type: DEVICES_RECORD, id: DEVICES_RECORD, rev, device: meta.device, at }, { devices: entries, backup }, dataKey.key, created_at)
+  const rev = (current?.rev ?? 0) + 1
+  const templates = sealRecord({ type: DEVICES_RECORD, id: DEVICES_RECORD, rev, device: here.device, at }, { devices: entries, backup }, here.dataKey.key, created_at)
   const events = []
   try {
     const signer = await getSigner()
@@ -140,7 +164,7 @@ async function write(pubkey: string, entries: DeviceEntry[], listed: boolean, ba
     throw new DeviceListError("signer", error instanceof Error ? error.message : String(error))
   }
   const targets = await targetsOf(pubkey)
-  await kvSet(KEY, { pubkey, rev, device: meta.device, entries, backup, createdAt: created_at, listed } satisfies StoredList)
+  await kvSet(KEY, { pubkey, rev, device: here.device, entries, backup, createdAt: created_at, listed } satisfies StoredList)
   await enqueue(events.map((event) => ({ event, relays: targets })), { coalesce: true })
   await deliverNow(events.map((event) => event.id))
 }
@@ -148,36 +172,52 @@ async function write(pubkey: string, entries: DeviceEntry[], listed: boolean, ba
 // Puts this device into the list, once: after it got the profile, or when the first device
 // opens the list. A device the person removed elsewhere doesn't put itself back.
 export async function addThisDevice(pubkey: string, name: string) {
-  const copy = await local(pubkey)
-  if (copy?.listed) return
-  const list = await loadDeviceList(pubkey)
-  if (!list.available) throw new DeviceListError("no-key", "the profile has no data key on this device yet")
-  const entries = list.entries.some((d) => d.id === list.thisDevice) ? list.entries : [...list.entries, { id: list.thisDevice, name: name.slice(0, MAX_DEVICE_NAME), added: nowSeconds() }]
-  await write(pubkey, entries, true)
+  if ((await local(pubkey))?.listed) return
+  await change(pubkey, ({ entries, thisDevice }) => ({
+    entries: entries.some((d) => d.id === thisDevice) ? entries : [...entries, { id: thisDevice, name: name.slice(0, MAX_DEVICE_NAME), added: nowSeconds() }],
+    listed: true,
+  }))
 }
 
 export async function renameDevice(pubkey: string, id: string, name: string) {
   const trimmed = name.trim().slice(0, MAX_DEVICE_NAME)
   if (!trimmed) return
-  const copy = await local(pubkey)
-  await write(
-    pubkey,
-    (copy?.entries ?? []).map((d) => (d.id === id ? { ...d, name: trimmed } : d)),
-    copy?.listed ?? false,
-  )
+  await change(pubkey, ({ entries, listed }) => ({ entries: entries.map((d) => (d.id === id ? { ...d, name: trimmed } : d)), listed }))
 }
 
-// A backup file was saved here: noted for the profile's other devices.
-export async function noteBackupFile(pubkey: string, at: number) {
-  const copy = await local(pubkey)
-  await write(pubkey, copy?.entries ?? [], copy?.listed ?? false, { file: { at } })
+// A backup file was saved here (lib/recovery/status.ts knows already): noted in the list for
+// the profile's other devices.
+export async function noteBackupFile(pubkey: string) {
+  await change(pubkey, ({ entries, listed }) => ({ entries, listed }))
 }
 
 export async function removeDevice(pubkey: string, id: string) {
-  const copy = await local(pubkey)
-  await write(
-    pubkey,
-    (copy?.entries ?? []).filter((d) => d.id !== id),
-    copy?.listed ?? false,
-  )
+  await change(pubkey, ({ entries, listed }) => ({ entries: entries.filter((d) => d.id !== id), listed }))
+}
+
+// ---- Devices on their way ----------------------------------------------------------------------
+
+// A device this one just gave the profile to (./pairing.ts) writes itself into the list once the
+// profile arrived there and it synced, which takes a moment. Until its entry shows, the list
+// names it from here. Kept in memory only: the list on the relays is what lasts.
+const arriving: { pubkey: string; name: string; at: number }[] = []
+const arrivalListeners = new Set<() => void>()
+// How much earlier than the pairing's end the new device's clock may date its entry.
+const CLOCK_SLACK = 300
+
+export function deviceAdded(pubkey: string, name: string) {
+  arriving.push({ pubkey, name, at: nowSeconds() })
+  for (const listener of arrivalListeners) listener()
+}
+
+export function onDeviceAdded(listener: () => void): () => void {
+  arrivalListeners.add(listener)
+  return () => arrivalListeners.delete(listener)
+}
+
+// The arriving devices of this profile not in `entries` yet; the ones that are, are forgotten.
+function stillArriving(pubkey: string, entries: readonly DeviceEntry[]): string[] {
+  const listed = (a: (typeof arriving)[number]) => entries.some((d) => d.name === a.name && d.added >= a.at - CLOCK_SLACK)
+  for (let i = arriving.length - 1; i >= 0; i--) if (arriving[i].pubkey === pubkey && listed(arriving[i])) arriving.splice(i, 1)
+  return arriving.filter((a) => a.pubkey === pubkey).map((a) => a.name)
 }

@@ -2,6 +2,9 @@
 // pairing a second device on both sides, and Profil › Geräte. Plain words only: no relay, key or
 // protocol (decision 0002 §1). The English file must have the same shape.
 export const devicesScreensDe = {
+  // Both sides of a pairing, while nothing that is sent reaches the internet.
+  offline: "Keine Verbindung – wird weiter versucht. Prüfe das Internet auf diesem Gerät.",
+
   // "Von meinem anderen Gerät": the new device shows its codes and takes the profile.
   newDevice: {
     intro: "Öffne auf dem Gerät mit deinem Profil „Profil › Geräte › Eigenes Gerät hinzufügen“ und scanne diesen Code.",
@@ -27,6 +30,8 @@ export const devicesScreensDe = {
     occupiedText: "Melde es ab und versuche es dann noch einmal.",
     invalid: "Das hat nicht geklappt",
     invalidText: "Dein Profil konnte nicht übernommen werden. Aktualisiere die App auf beiden Geräten und versuche es noch einmal.",
+    otherDevice: "Dein anderes Gerät hat abgebrochen",
+    otherDeviceText: "Dort steht, was passiert ist. Zeig danach hier einen neuen Code.",
     newCode: "Neuen Code zeigen",
   },
 
@@ -40,6 +45,11 @@ export const devicesScreensDe = {
     linkExpired: "Dieser Code ist abgelaufen. Lass dir auf dem neuen Gerät einen neuen zeigen.",
     looking: "Sucht das neue Gerät",
     lookingHint: "Lass den Code auf dem neuen Gerät offen.",
+    notFound: "Noch nichts gefunden. Steht der Code auf dem neuen Gerät noch da, und ist es online?",
+    retype: "Code noch einmal eingeben",
+    heldTitle: "Ein neues Gerät möchte dein Profil",
+    heldText: "Verbinde nur, wenn du diesen Code gerade selbst auf deinem neuen Gerät geöffnet hast.",
+    connect: "Verbinden",
     warning: "Dieses Gerät erhält vollen Zugriff auf dein Profil.",
     compare: "Steht auf dem neuen Gerät derselbe Prüfcode?",
     compareDevice: (device: string) => `Steht auf „${device}“ derselbe Prüfcode?`,
@@ -50,6 +60,8 @@ export const devicesScreensDe = {
     waiting: "Wartet auf das neue Gerät",
     unanswered: "Noch keine Antwort. Tippe auf dem neuen Gerät auf „Ja, verbinden“.",
     sending: "Dein Profil wird übertragen",
+    sent: "Wahrscheinlich angekommen",
+    sentText: "Das neue Gerät hat nicht bestätigt. Schau dort nach, ob dein Profil da ist.",
     done: "Verbunden",
     doneText: "Dein Profil ist jetzt auch auf dem anderen Gerät.",
     declined: "Das neue Gerät hat abgelehnt",
@@ -60,8 +72,11 @@ export const devicesScreensDe = {
     tooLongText: "Nutze stattdessen eine Sicherungsdatei (Profil › Sicherung).",
     wrongProfile: "Das Profil auf diesem Gerät hat sich geändert",
     wrongProfileText: "Fang noch einmal von vorn an.",
+    notTaken: "Das neue Gerät konnte dein Profil nicht übernehmen",
+    notTakenText: "Dort steht, warum. Danach kannst du es noch einmal versuchen.",
     noProfile: "Kein Profil auf diesem Gerät",
-    noProfileText: "Öffne den Code auf dem Gerät, auf dem dein Profil angemeldet ist.",
+    noProfileText: "Mit diesem Code holst du dein Profil auf ein neues Gerät. Öffne ihn dort, wo dein Profil ist, etwa in der App auf deinem Home-Bildschirm: Profil › Geräte › Eigenes Gerät hinzufügen. Oder lege hier ein Profil an.",
+    createProfile: "Profil anlegen",
     again: "Noch einmal",
     finish: "Fertig",
   },
@@ -71,6 +86,7 @@ export const devicesScreensDe = {
     devices: "Deine Geräte",
     thisDevice: "Dieses Gerät",
     since: (date: string) => `Seit ${date}`,
+    arriving: "Wird hinzugefügt",
     loading: "Wird geladen",
     partial: "Die Liste konnte nicht von überall geladen werden; sie ist vielleicht nicht ganz aktuell.",
     unavailable: "Die Liste konnte gerade nicht geladen werden. Das ist der letzte Stand auf diesem Gerät.",
@@ -87,14 +103,19 @@ export const devicesScreensDe = {
     removeText: "Das Gerät kann dein Profil weiter verwenden, wenn es den Zugang schon hat. Entfernt wird nur der Eintrag.",
     removeConfirm: "Entfernen",
     failed: "Das konnte nicht gespeichert werden. Versuch es noch einmal.",
+    offline: "Keine Verbindung. Die Liste lässt sich gerade nicht ändern; versuch es gleich noch einmal.",
+    thisDeviceNote: "Dieses Gerät meldest du im Profil mit „Abmelden“ ab.",
     lostTitle: "Gerät verloren?",
-    lostSteps: [
-      "Entferne das Gerät hier aus der Liste, damit du den Überblick behältst.",
-      "Hat das Gerät dein Profil, kann es dein Profil weiter verwenden. Das lässt sich aus der Ferne nicht sperren.",
-      "Liegt dein Profil in einer Signer-App, beende die Verbindung dort.",
-      "Reicht dir das nicht, lege ein neues Profil an und teile es neu. Deine Spiele bleiben auf deinen Geräten.",
-      "Sichere dein Profil, damit du es nicht mit einem Gerät verlierst.",
-    ],
+    // "Gerät verloren?": the one honest fact first, then only the steps that apply.
+    lostSteps: {
+      local: "Ein Gerät, das dein Profil hat, kann es weiter verwenden. Aus der Ferne lässt sich das nicht sperren.",
+      signer: "Dein Zugang liegt in deiner Signer-App, nicht in BlueLine.",
+      signerStep: "Beende in deiner Signer-App die Verbindung zu diesem Gerät.",
+      remove: "Entferne es hier aus der Liste, damit du den Überblick behältst.",
+      newProfile: "Reicht dir das nicht, lege ein neues Profil an und teile es neu. Deine Spiele bleiben auf deinen Geräten.",
+      backup: "Sichere dein Profil, damit du es nicht mit einem Gerät verlierst.",
+      backupAction: "Jetzt sichern",
+    },
     lostDone: "Verstanden",
   },
 }

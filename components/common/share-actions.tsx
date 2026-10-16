@@ -11,8 +11,9 @@ import { cn } from "@/lib/utils"
 // "Teilen" and "Link kopieren" for a link. Confirmation happens in place: the copy button says
 // "Kopiert" with a check for a moment, and VoiceOver hears it. No toast. If copying is impossible,
 // the link appears as selectable text instead. `copyLabel` names what is copied when it isn't a
-// link to this app (a payment request).
-export function ShareActions({ url, title, text, copyLabel, className }: { url: string; title?: string; text?: string; copyLabel?: string; className?: string }) {
+// link to this app (a payment request). `quiet` draws both as secondary buttons, where sharing
+// the link isn't what the screen is for.
+export function ShareActions({ url, title, text, copyLabel, quiet, className }: { url: string; title?: string; text?: string; copyLabel?: string; quiet?: boolean; className?: string }) {
   const t = useT()
   const [native, setNative] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -39,12 +40,12 @@ export function ShareActions({ url, title, text, copyLabel, className }: { url: 
     <div className={cn("flex flex-col gap-2", className)}>
       <div className={cn("grid gap-2", native && "grid-cols-2")}>
         {native && (
-          <Button onClick={() => run(false)} className="h-12 rounded-xl text-[1.0625rem] font-semibold">
+          <Button variant={quiet ? "secondary" : "default"} onClick={() => run(false)} className={cn("h-12 rounded-xl text-[1.0625rem]", quiet ? "text-primary" : "font-semibold")}>
             <Share className="mr-2 h-5 w-5" aria-hidden="true" />
             {t.shell.qr.share}
           </Button>
         )}
-        <Button variant={native ? "secondary" : "default"} onClick={() => run(true)} className={cn("h-12 rounded-xl text-[1.0625rem]", !native && "font-semibold")}>
+        <Button variant={native || quiet ? "secondary" : "default"} onClick={() => run(true)} className={cn("h-12 rounded-xl text-[1.0625rem]", quiet ? "text-primary" : !native && "font-semibold")}>
           {copied ? <Check className="mr-2 h-5 w-5" aria-hidden="true" /> : <Copy className="mr-2 h-5 w-5" aria-hidden="true" />}
           {copied ? t.shell.qr.copied : (copyLabel ?? t.shell.qr.copy)}
         </Button>

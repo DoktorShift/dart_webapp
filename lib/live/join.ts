@@ -99,7 +99,7 @@ export function visitBoard(link: BoardLink, onChange: (visit: BoardVisit) => voi
     clearTimeout(waiting)
   }
   // Sends until the board answers, or says it stayed silent.
-  const ask = (send: (to: Channel<BoardMessage>) => Promise<void>) => {
+  const ask = (send: (to: Channel<BoardMessage>) => Promise<unknown>) => {
     stop()
     const current = channel
     if (!current) return

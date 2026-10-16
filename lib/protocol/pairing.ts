@@ -198,7 +198,9 @@ export function applyPairingMessage(session: PairingSession, from: string, messa
   if (message.sid !== session.sid) return fail(session, "session_mismatch", "another pairing")
   if (session.peer !== null && from !== session.peer) return fail(session, "session_taken", "another device already answered")
 
-  if (message.t === "abort") return { session: { ...session, peer: session.peer ?? from, step: "aborted" } }
+  // Only the other device ends a pairing. While the new device still waits for one, an abort
+  // comes from anyone who read its announce on the relay: refused, or they could end it.
+  if (message.t === "abort") return session.peer === null ? fail(session, "out_of_order", "no device answered yet") : { session: { ...session, step: "aborted" } }
 
   if (session.role === "new") {
     switch (message.t) {

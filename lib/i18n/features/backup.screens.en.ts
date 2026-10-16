@@ -11,9 +11,8 @@ export const backupScreensEn: Widen<typeof backupScreensDe> = {
   },
 
   hint: {
-    text: "Not backed up yet.",
+    text: "Your profile isn't backed up yet.",
     action: "Back up now",
-    later: "Later",
     laterLabel: "Hide this hint for 30 days",
   },
 
@@ -48,8 +47,10 @@ export const backupScreensEn: Widen<typeof backupScreensDe> = {
     copied: "Copied",
     save: "Save file",
     share: "Share file",
-    saved: "Your profile is backed up.",
+    saved: "File saved",
     savedHint: "Keep the file where you will find it again, such as your cloud or an email to yourself.",
+    passwordCheck: "Password saved? Without the password the file is no help.",
+    noted: "I've noted the password",
     failed: "The backup couldn't be created. Try again.",
     retry: "Try again",
     done: "Done",
@@ -91,8 +92,9 @@ export const backupScreensEn: Widen<typeof backupScreensDe> = {
   },
 
   arrived: {
-    done: "Your profile is here.",
-    doneText: "You are now signed in here too.",
+    done: (name) => `${name} is here.`,
+    doneUnnamed: "Your profile is here.",
+    doneText: "You are now signed in on this device too.",
     signerTitle: "Almost there",
     signerText: "Your profile lives in a signer app. Connect it on this device too; your access stays there.",
     signerConnect: "Connect signer app",
@@ -101,7 +103,7 @@ export const backupScreensEn: Widen<typeof backupScreensDe> = {
 
   history: {
     loading: "Loading your games",
-    complete: "Your games are here.",
+    complete: (games) => (games === 1 ? "Your game is here." : `Your ${games} games are here.`),
     partial: "Not all games could be loaded.",
     unavailable: "Your games couldn't be loaded yet.",
     retry: "Try again",

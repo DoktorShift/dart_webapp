@@ -8,7 +8,7 @@ import { Worker } from "node:worker_threads"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils.js"
 import { ANNA, resetStorage } from "../storage-helpers.ts"
 import { newDevice, switchTo } from "../support/devices.ts"
-import { startRelay, type NakRelay } from "../support/nak.ts"
+import { freePort, startRelay, type NakRelay } from "../support/nak.ts"
 import type { AddDeviceControl, AddDevicePairing, NewDevicePairing } from "../../lib/devices/pairing.ts"
 import { relayClient, subscribe } from "../../lib/nostr/client.ts"
 import { nowSeconds } from "../../lib/nostr/time.ts"
@@ -19,6 +19,7 @@ import { rememberOwn } from "../../lib/profile/own-events.ts"
 import { MAX_HANDSHAKE_SECONDS } from "../../lib/protocol/kinds.ts"
 import { decodePairingCode, decodePairingLink, pairingTemplate } from "../../lib/protocol/pairing.ts"
 import { dbGetAll } from "../../lib/storage/db.ts"
+import { randomHex } from "../../lib/storage/ids.ts"
 import { newPlayerRecord, savePlayers } from "../../lib/storage/players.ts"
 import { syncHistory } from "../../lib/sync/engine.ts"
 import { deliverNow, outboxStatus } from "../../lib/sync/outbox.ts"
@@ -76,6 +77,8 @@ async function profileHere() {
 // The new device, in its thread.
 interface NewDevice {
   states: NewDevicePairing[]
+  // Whether its last message reached no relay.
+  offline: () => boolean
   latest: () => NewDevicePairing | undefined
   send: (command: { type: "start" | "confirm" | "decline" | "reload" | "close" }) => void
   session: () => Promise<{ pubkey: string; kind: string } | null>
@@ -84,14 +87,18 @@ interface NewDevice {
   close: () => Promise<number>
 }
 
-async function newDeviceThread(): Promise<NewDevice> {
-  const worker = new Worker(new URL("./pairing-device.ts", import.meta.url), { workerData: { relay: relay.url } })
+async function newDeviceThread(relayUrl = relay.url): Promise<NewDevice> {
+  const worker = new Worker(new URL("./pairing-device.ts", import.meta.url), { workerData: { relay: relayUrl } })
   const states: NewDevicePairing[] = []
   let ready = false
+  let offline = false
   const answers = new Map<string, (value: unknown) => void>()
-  worker.on("message", (m: { type: string; state?: NewDevicePairing; session?: unknown; ids?: unknown }) => {
+  worker.on("message", (m: { type: string; state?: NewDevicePairing; offline?: boolean; session?: unknown; ids?: unknown }) => {
     if (m.type === "ready") ready = true
-    else if (m.type === "state" && m.state) states.push(m.state)
+    else if (m.type === "state" && m.state) {
+      states.push(m.state)
+      offline = m.offline === true
+    }
     else answers.get(m.type)?.(m.type === "session" ? (m.session ?? null) : m.ids)
   })
   const ask = <T>(type: "session" | "pending") =>
@@ -101,6 +108,7 @@ async function newDeviceThread(): Promise<NewDevice> {
     })
   const device: NewDevice = {
     states,
+    offline: () => offline,
     latest: () => states[states.length - 1],
     send: (command) => worker.postMessage(command),
     session: () => ask("session"),
@@ -200,32 +208,45 @@ test("QR path: both devices show the same check code, both confirm, the profile 
   await until("the new device's keys gone", async () => (await device.pending()).length === 0)
 })
 
-test("code path: the typed code finds the new device; an outsider who sees the announce can't answer it", async () => {
+// What an outsider who reads the relay can send to the new device: a message from a key of
+// their own, encrypted to the one-time key the announce names.
+async function fromOutsider(to: string, message: Parameters<typeof pairingTemplate>[0]["message"]) {
+  const outsider = await signers.newLocalKey()
+  const ciphertext = await outsider.signer.nip44!.encrypt(to, JSON.stringify(message))
+  await relayClient().publish(await outsider.signer.signEvent(pairingTemplate({ message, created_at: nowSeconds(), recipient: to, ciphertext })), [relay.url])
+}
+
+test("code path: the typed code finds the new device; an outsider who reads the announce can neither answer it, nor end it, nor pass for it", async () => {
   const { pubkey } = await profileHere()
   const device = await newDeviceThread()
   device.send({ type: "start" })
   const waiting = await step(device, "waiting")
 
-  // The announce is plaintext on the relay: an outsider learns the session id and the key, and
-  // tries a hello without the code's MAC. The new device ignores it.
+  // The announce is plaintext on the relay: an outsider learns the session id and the key. A
+  // hello without the code's MAC, and an abort, are both ignored: the new device waits on.
   const announce = await until("the announce on the relay", async () => {
     const seen = spy()
     await pause(300)
     return seen.find((e) => e.tags.some((t) => t[0] === "x"))
   })
   const { sid } = JSON.parse(announce.content)
-  const outsider = await signers.newLocalKey()
-  const forged = await outsider.signer.signEvent(pairingTemplate({ message: { t: "hello", sid, device: "Angreifer" }, created_at: nowSeconds(), recipient: announce.pubkey, ciphertext: await outsider.signer.nip44!.encrypt(announce.pubkey, JSON.stringify({ t: "hello", sid, device: "Angreifer" })) }))
-  await relayClient().publish(forged, [relay.url])
+  await fromOutsider(announce.pubkey, { t: "hello", sid, device: "Angreifer" })
+  await fromOutsider(announce.pubkey, { t: "abort", sid, reason: "declined" })
   await pause(1500)
-  assert.equal(device.latest()?.step, "waiting")
+  assert.deepEqual(device.states.map((s) => s.step), ["waiting"])
 
+  // The existing device looks under the code's lookup tag; an announce there without the code's
+  // MAC (anyone can copy the tag from the real one) is passed over.
   const here = existing()
   await here.start({ code: decodePairingCode(waiting.code)! })
   await here.at("looking")
+  const lookup = announce.tags.find((t) => t[0] === "x")![1]
+  const outsider = await signers.newLocalKey()
+  const fake = { t: "announce" as const, sid: randomHex(16), exp: nowSeconds() + 300, mac: "00".repeat(32) }
+  await relayClient().publish(await outsider.signer.signEvent(pairingTemplate({ message: fake, created_at: nowSeconds(), lookup })), [relay.url])
   const found = await here.at("found")
   const there = await step(device, "found")
-  assert.equal(found.checkCode, there.checkCode)
+  assert.equal(found.checkCode, there.checkCode, "the existing device answered the real new device")
   assert.notEqual(found.checkCode.replace(" ", ""), waiting.code.replace(/-/g, ""), "the check code is never the typed code")
   here.control().give()
   await here.at("confirmed")
@@ -233,6 +254,36 @@ test("code path: the typed code finds the new device; an outsider who sees the a
   const done = await step(device, "done")
   assert.equal(done.applied.access === "local" && done.applied.session.pubkey, pubkey)
   await here.at("done")
+})
+
+test("a link opened from outside sends nothing until it is answered, with the check code shown before", async () => {
+  await profileHere()
+  const device = await newDeviceThread()
+  device.send({ type: "start" })
+  const waiting = await step(device, "waiting")
+
+  const held = await pairing.holdLink(decodePairingLink(waiting.link))
+  await pause(1500)
+  assert.deepEqual(device.states.map((s) => s.step), ["waiting"], "the new device heard nothing")
+  assert.deepEqual((await dbGetAll("pending")).filter((r) => r.id.startsWith("pairing:")), [], "nothing kept either")
+
+  const states: AddDevicePairing[] = []
+  keep(await held.answer((next) => states.push(next)))
+  const there = await step(device, "found")
+  assert.equal(there.checkCode, held.checkCode, "the check code shown before the tap is the one the new device shows")
+  await until("found here", () => states.find((s) => s.step === "found"))
+
+  // A link that ran out is refused before anything else.
+  await assert.rejects(pairing.holdLink({ ...decodePairingLink(waiting.link), expires: nowSeconds() - 1 }), /expiry/)
+})
+
+test("without a relay to reach, the new device says so while it keeps trying", async () => {
+  const dead = `ws://127.0.0.1:${await freePort()}`
+  const device = await newDeviceThread(dead)
+  device.send({ type: "start" })
+  await step(device, "waiting")
+  await until("offline", () => device.offline())
+  assert.equal(device.latest()?.step, "waiting")
 })
 
 test("a check code that doesn't match: declining on either side ends the pairing on both", async () => {
@@ -265,7 +316,7 @@ test("a check code that doesn't match: declining on either side ends the pairing
   assert.equal(await device.session(), null)
 })
 
-test("an expired or replayed code is refused; a replayed message does nothing", async () => {
+test("an expired code is refused; everything replayed to the new device, still listening on its key, takes nothing a second time", async () => {
   const { pubkey } = await profileHere()
   const seen = spy()
   const device = await newDeviceThread()
@@ -286,18 +337,16 @@ test("an expired or replayed code is refused; a replayed message does nothing", 
   here.control().give()
   await step(device, "done")
   await here.at("done")
-  const messages = [...seen]
+  const steps = device.states.length
 
-  // Everything the relay carried, played again: the finished pairing takes nothing, and a new
-  // pairing on the new device belongs to another session.
-  device.send({ type: "reload" })
-  const fresh = await until("fresh codes", () => {
-    const w = device.latest()
-    return w?.step === "waiting" && w.link !== waiting.link ? w : null
-  })
+  // The new device's screen is still open: it listens on the same one-time key and answers the
+  // package's repeats. The whole conversation, played to it again, changes nothing there.
+  const messages = seen.filter((event) => event.tags.some((t) => t[0] === "p" && t[1] === link.pubkey))
+  assert.ok(messages.some((event) => event.pubkey !== link.pubkey), "the existing device's messages were captured")
   for (const event of messages) await relayClient().publish(event, [relay.url])
   await pause(2000)
-  assert.equal(device.latest(), fresh)
+  assert.equal(device.states.length, steps, "no step again")
+  assert.equal(device.latest()?.step, "done")
   assert.equal((await device.session())?.pubkey, pubkey)
 })
 
@@ -380,4 +429,52 @@ test("the device list: each device writes itself in; renaming and removing from 
   await importLocalKey(secret)
   await list.addThisDevice(pubkey, "iPad · Safari")
   assert.deepEqual((await list.loadDeviceList(pubkey)).entries.map((d) => d.name), ["Mias iPhone"])
+})
+
+// Two devices of one profile, each in the list, as in the test above.
+async function twoListedDevices() {
+  const secret = randomBytes(32)
+  const first = newDevice()
+  const second = newDevice()
+  await switchTo(first)
+  const { pubkey } = await importLocalKey(secret)
+  await savePlayers([{ ...newPlayerRecord("Anna", "2026-09-01T10:00:00.000Z", ANNA), pubkey }])
+  assert.equal((await syncHistory(pubkey, { full: true }))?.state, "complete")
+  await deliverNow((await outboxStatus()).map((s) => s.id))
+  await list.addThisDevice(pubkey, "iPhone · Safari")
+  await switchTo(second)
+  await importLocalKey(secret)
+  assert.equal((await syncHistory(pubkey, { full: true }))?.state, "complete")
+  return { secret, pubkey, first, second }
+}
+
+test("the device list: a change made on a stale copy keeps the device added elsewhere", async () => {
+  const { secret, pubkey, first } = await twoListedDevices()
+  await list.addThisDevice(pubkey, "iPad · Safari")
+  // The first device hasn't opened Profil › Geräte since; its copy has only itself. Saving a
+  // backup file there notes it in the list.
+  await pause(1100)
+  await switchTo(first)
+  await importLocalKey(secret)
+  await list.noteBackupFile(pubkey)
+  const fresh = newDevice()
+  await switchTo(fresh)
+  await importLocalKey(secret)
+  await syncHistory(pubkey, { full: true })
+  assert.deepEqual((await list.loadDeviceList(pubkey)).entries.map((d) => d.name), ["iPhone · Safari", "iPad · Safari"])
+})
+
+test("the device list: a device that reaches no relay writes nothing, and puts itself in once it does", async () => {
+  const { pubkey } = await twoListedDevices()
+  process.env.NEXT_PUBLIC_BLUELINE_RELAYS = `ws://127.0.0.1:${await freePort()}`
+  try {
+    await assert.rejects(list.addThisDevice(pubkey, "iPad · Safari"), (e: unknown) => e instanceof list.DeviceListError && e.problem === "offline")
+    assert.deepEqual(await outboxStatus(), [], "no list of this device alone is waiting to go out")
+    const offline = await list.loadDeviceList(pubkey)
+    assert.equal(offline.state, "unavailable")
+  } finally {
+    process.env.NEXT_PUBLIC_BLUELINE_RELAYS = relay.url
+  }
+  await list.addThisDevice(pubkey, "iPad · Safari")
+  assert.deepEqual((await list.loadDeviceList(pubkey)).entries.map((d) => d.name), ["iPhone · Safari", "iPad · Safari"])
 })
