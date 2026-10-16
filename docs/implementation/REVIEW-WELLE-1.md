@@ -2,6 +2,8 @@
 
 Stand: 5. Oktober 2026 · Branch `nostr-welle-1` · Grundlage: Version 1.0.0 (`e6ff77e`)
 
+> Veraltet seit 16. Oktober 2026. Für den integrierten Stand gilt [REVIEW.md](REVIEW.md).
+
 Welle 1 legt die Grundlagen der Nostr-Erweiterung: lokale Datenhaltung, App-Rahmen mit Tabs und Navigation, die Nostr-Schicht über nostr-core, das BlueLine-Protokoll und die Turnierengine. Profile, Abgleich, Geräte, Clubs, Turniere und Zahlungen haben noch keine fertigen Bildschirme; sie folgen in Welle 2 und 3 und docken an die hier gebauten Stellen an.
 
 Der Branch ist nicht veröffentlicht. `main` (1.0.0) ist unverändert.
