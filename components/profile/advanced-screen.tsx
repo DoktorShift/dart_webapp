@@ -25,7 +25,7 @@ import { probeRelays, relayHost, type RelayStatus } from "@/lib/profile/relay-st
 import { submitOwn } from "@/lib/sync/publish"
 import { useSyncStatus } from "@/lib/sync/status"
 import { cn } from "@/lib/utils"
-import { version } from "@/package.json"
+import pkg from "@/package.json"
 
 // Profil › Erweitert: the only place that names the technology (decision 0002 §1). The public key
 // to copy, how this device signs, the relay list (NIP-65) with how each relay answers now, the
@@ -92,7 +92,7 @@ function Advanced({ own }: { own: OwnProfile }) {
     return diagnosticsReport([
       {
         title: "App",
-        lines: [`BlueLine Darts ${version}`, `time: ${new Date().toISOString()}`, `language: ${t.lang}`, `installed: ${window.matchMedia("(display-mode: standalone)").matches ? "yes" : "no"}`, `browser: ${navigator.userAgent}`],
+        lines: [`BlueLine Darts ${pkg.version}`, `time: ${new Date().toISOString()}`, `language: ${t.lang}`, `installed: ${window.matchMedia("(display-mode: standalone)").matches ? "yes" : "no"}`, `browser: ${navigator.userAgent}`],
       },
       {
         title: "Profile",
