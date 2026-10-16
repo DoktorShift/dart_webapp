@@ -42,7 +42,8 @@ export interface ReplayLog {
 }
 
 export interface ReplayOptions {
-  // Reader's clock, unix seconds; events further than 15 minutes ahead are not (yet) applied.
+  // Reader's clock, unix seconds (by default the app's corrected clock, lib/nostr/time.ts); events
+  // further than 15 minutes ahead are not (yet) applied.
   now?: number
   // Decrypted content of an encrypted event, when this reader could open it: from
   // openSealedEvents (seal.ts) for sealed records, or with the link key of a private match.

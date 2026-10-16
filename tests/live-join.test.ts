@@ -1,11 +1,14 @@
-import { test } from "node:test"
+import { afterEach, test } from "node:test"
 import assert from "node:assert/strict"
 import { finalizeEvent, generateSecretKey, getPublicKey } from "nostr-core"
 import "./storage-helpers.ts"
+import { FakeNetwork } from "./support/fake-relay.ts"
 import { replay } from "../lib/game/engine.ts"
 import type { SavedMatch } from "../lib/game/types.ts"
 import { agreementFor, resultFor } from "../lib/live/content.ts"
+import { followMatch, type Followed } from "../lib/live/follow.ts"
 import { holdsSeat, ownVerdict, type JoinedMatch } from "../lib/live/join.ts"
+import { adjustClock, createdAt } from "../lib/nostr/time.ts"
 import { MAX_SESSION_SECONDS } from "../lib/protocol/match.ts"
 import { reduceMatch, type MatchStateP } from "../lib/protocol/match-state.ts"
 import { buildRecord, type ContentOf, type RecordType } from "../lib/protocol/records.ts"
@@ -13,7 +16,17 @@ import type { SignedEvent } from "../lib/protocol/tags.ts"
 import { config, dart, play } from "./helpers.ts"
 
 // Whose verdict a seat's verdict is, as the phone decides it (ownVerdict): its own key's, for
-// as long as the result it names stands, whatever happens to the seat afterwards.
+// as long as the result it names stands, whatever happens to the seat afterwards. A phone whose
+// clock runs off still reads the match by the app's corrected clock (lib/nostr/time.ts).
+
+const network = new FakeNetwork()
+Object.assign(globalThis, { WebSocket: network.WebSocket })
+const URL = "wss://one.example"
+const relay = network.add(URL)
+afterEach(() => {
+  adjustClock(new Date())
+  relay.events = []
+})
 
 const T0 = 1_800_000_000
 const authority = generateSecretKey()
@@ -61,3 +74,22 @@ test("the seat's next holder's verdict replaces it, and a correction drops it", 
   assert.ok(corrected.result && corrected.result.event !== result.id)
   assert.equal(ownVerdict(phoneOf(mia), corrected), null)
 })
+
+test("a match signed by the corrected clock is read by it: a device whose clock runs behind still sees it", async () => {
+  // What syncClock does with a server Date header 20 minutes ahead of the device's clock.
+  adjustClock(new Date(Date.now() + 1_200_000))
+  const at = createdAt()
+  const signed = finalizeEvent(
+    buildRecord("match.session", { sv: 1, session: getPublicKey(session), from: at, until: at + MAX_SESSION_SECONDS, agreement: { ...agreementFor(c), visibility: "public" } }, { created_at: at }),
+    authority,
+  ) as SignedEvent
+  relay.events.push(signed)
+  assert.ok(reduceMatch([signed], signed.id).state, "read without `now`, by the corrected clock")
+
+  const seen: Followed[] = []
+  const followed = followMatch({ match: signed.id, key: null, relays: [URL] }, (f) => seen.push(f))
+  await new Promise((resolve) => setTimeout(resolve, 300))
+  followed.close()
+  assert.ok(seen.at(-1)?.state, "the board's own follower sees its founding")
+})
+

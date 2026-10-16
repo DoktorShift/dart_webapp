@@ -1,4 +1,5 @@
 import { shortKey } from "../nostr/pointers.ts"
+import { nowSeconds } from "../nostr/time.ts"
 import type { NostrEvent } from "../nostr/types.ts"
 import { parseRecord, type ContentOf } from "../protocol/records.ts"
 import type { FoundingProblem } from "../protocol/replay.ts"
@@ -280,9 +281,9 @@ function decide(bare: Tournament, state: TournamentState, events: readonly Nostr
 // ---- Reading ---------------------------------------------------------------------------------
 
 export function readTournament(stored: StoredTournament, opts: ReadOptions): TournamentRead {
-  const now = opts.now
+  const now = opts.now ?? nowSeconds()
   const result = reduceTournament(stored.events, stored.tournament, {
-    ...(now !== undefined ? { now } : {}),
+    now,
     dependents: (slot, s) => {
       const bare = bracketOf(s)
       return bare ? dependentSlots(bare, slot) : []
@@ -302,7 +303,7 @@ export function readTournament(stored: StoredTournament, opts: ReadOptions): Tou
   const me: Me = {
     participant,
     organizer: pubkey !== null && state.organizer === pubkey,
-    offered: pubkey !== null && state.offer !== null && state.offer.to === pubkey && state.offer.expires > (now ?? Math.floor(Date.now() / 1000)),
+    offered: pubkey !== null && state.offer !== null && state.offer.to === pubkey && state.offer.expires > now,
   }
   return {
     ...base,

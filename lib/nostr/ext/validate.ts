@@ -9,6 +9,7 @@
 import { sha256 } from "@noble/hashes/sha2.js"
 import { bytesToHex } from "@noble/hashes/utils.js"
 import { loadCore } from "../core.ts"
+import { nowSeconds } from "../time.ts"
 import type { NostrEvent } from "../types.ts"
 
 export type Check = { ok: true } | { ok: false; reason: string }
@@ -68,7 +69,7 @@ export async function checkInvoice(bolt11: string, expected: InvoiceExpectation 
     return { ok: false, reason: "not a valid invoice", problem: "invalid" }
   }
   if (expected.amountMsat !== undefined && invoice.amountMsat !== expected.amountMsat) return { ok: false, reason: "the invoice amount differs", problem: "amount" }
-  const now = expected.now ?? Math.floor(Date.now() / 1000)
+  const now = expected.now ?? nowSeconds()
   if (invoice.expiresAt - now < (expected.minRemainingSeconds ?? 30)) return { ok: false, reason: "the invoice has expired or is about to", problem: "expired" }
   if (expected.descriptionHash !== undefined && invoice.descriptionHash !== expected.descriptionHash) return { ok: false, reason: "the invoice is for something else", problem: "description" }
   return { ok: true, amountMsat: invoice.amountMsat, paymentHash: invoice.paymentHash, expiresAt: invoice.expiresAt }

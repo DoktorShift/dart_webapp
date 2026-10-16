@@ -1,3 +1,4 @@
+import { nowSeconds } from "../nostr/time.ts"
 import type { EventTemplate } from "../nostr/types.ts"
 import { BADGE_TYPES } from "./badges.ts"
 import { CLUB_TYPES, MAX_SHARED_KEYS } from "./club.ts"
@@ -194,13 +195,15 @@ export function encryptForLinkKey(template: EventTemplate, linkPubkey: string, c
 }
 
 // Parses a signed BlueLine record. `plaintext` is the decrypted content of an encrypted record,
-// when the reader could open it (seal.ts openSealedEvents, or the link key).
+// when the reader could open it (seal.ts openSealedEvents, or the link key). `now` defaults to the
+// app's corrected clock (lib/nostr/time.ts), the one every created_at is signed with: a reader on
+// the raw device clock would take a record of its own device for one from the future.
 export function parseRecord(event: unknown, opts: { now?: number; plaintext?: string | null } = {}): ParseResult {
   if (!isSignedEventShape(event)) {
     return { status: "invalid", event: event as SignedEvent, reason: "invalid_event", detail: "not a signed event" }
   }
   const invalid = (reason: Reason, detail: string, type?: string): ParseResult => ({ status: "invalid", event, reason, detail, type })
-  const now = opts.now ?? Math.floor(Date.now() / 1000)
+  const now = opts.now ?? nowSeconds()
 
   if (event.kind !== KIND_RECORD && event.kind !== KIND_STATE) return invalid("wrong_kind", `kind ${event.kind}`)
   const labels = readLabels(event.tags)
