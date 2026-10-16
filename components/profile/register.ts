@@ -11,20 +11,36 @@ import { SCREENS, registerLinkHandler, registerScreen, registerSlot, registerSlo
 
 const screen = (load: () => Promise<{ default: ComponentType<ScreenProps> }>) => lazyScreen<ScreenProps>(load)
 
-registerSlot("profile.root", lazyScreen<{ fallback: ReactNode }>(() => import("@/components/profile/profile-root")))
+const ProfileRoot = lazyScreen<{ fallback: ReactNode }>(() => import("@/components/profile/profile-root"))
+const StatsScreen = screen(() => import("@/components/profile/stats-screen"))
+const GamesScreen = screen(() => import("@/components/profile/games-screen"))
+const MatchScreen = screen(() => import("@/components/profile/match-screen"))
+const PlayerScreen = screen(() => import("@/components/profile/player-screen"))
+const AdvancedScreen = screen(() => import("@/components/profile/advanced-screen"))
+
+registerSlot("profile.root", ProfileRoot)
 registerSlotItem("result.actions", "profile.keep", lazyScreen<{ match: FinishedMatch }>(() => import("@/components/profile/keep-results")))
 registerSlotItem("setup.players", "profile.players", lazyScreen<SetupPlayersProps>(() => import("@/components/profile/setup-players")))
 
 registerScreen(SCREENS.profileCreate, { title: (t) => t.profile.guest.create, Component: screen(() => import("@/components/profile/create-screen")) })
 registerScreen(SCREENS.profileFromApp, { title: (t) => t.profile.guest.fromApp, Component: screen(() => import("@/components/profile/connect-screen")) })
 registerScreen(SCREENS.profilePublic, { title: (t) => t.shell.screens.publicProfile, Component: screen(() => import("@/components/profile/public-screen")) })
-registerScreen(PROFILE_SCREENS.stats, { title: (t) => t.profile.titles.stats, Component: screen(() => import("@/components/profile/stats-screen")) })
-registerScreen(PROFILE_SCREENS.games, { title: (t) => t.profile.titles.games, Component: screen(() => import("@/components/profile/games-screen")) })
-registerScreen(PROFILE_SCREENS.match, { title: (t) => t.profile.titles.game, largeTitle: false, Component: screen(() => import("@/components/profile/match-screen")) })
-registerScreen(PROFILE_SCREENS.player, { title: (t, params) => params.name || t.profile.titles.player, largeTitle: false, Component: screen(() => import("@/components/profile/player-screen")) })
+registerScreen(PROFILE_SCREENS.stats, { title: (t) => t.profile.titles.stats, Component: StatsScreen })
+registerScreen(PROFILE_SCREENS.games, { title: (t) => t.profile.titles.games, Component: GamesScreen })
+registerScreen(PROFILE_SCREENS.match, { title: (t) => t.profile.titles.game, largeTitle: false, Component: MatchScreen })
+registerScreen(PROFILE_SCREENS.player, { title: (t, params) => params.name || t.profile.titles.player, largeTitle: false, Component: PlayerScreen })
 registerScreen(PROFILE_SCREENS.preview, { title: (t) => t.profile.titles.preview, Component: screen(() => import("@/components/profile/preview-screen")) })
-registerScreen(PROFILE_SCREENS.advanced, { title: (t) => t.profile.titles.advanced, Component: screen(() => import("@/components/profile/advanced-screen")) })
+registerScreen(PROFILE_SCREENS.advanced, { title: (t) => t.profile.titles.advanced, Component: AdvancedScreen })
 
 registerLinkHandler("signer-return", (link, nav) => {
   void import("@/components/profile/signer-return").then(({ handleSignerReturn }) => handleSignerReturn(link.payload, nav))
 })
+
+// Fetches the screens a signed-in profile can show from this device's data alone, so they open
+// offline too, as the shell does for its own tab roots (components/shell/lazy.ts): Statistik,
+// Spiele, a game's details, a player here and Erweitert (with "Diagnose kopieren", which is for
+// exactly such moments). Called once a profile is here (./profile-root.tsx). The public preview
+// and other players' profiles need a connection anyway.
+export function warmProfileScreens() {
+  return Promise.all([StatsScreen, GamesScreen, MatchScreen, PlayerScreen, AdvancedScreen].map((screen) => screen.preload()))
+}
