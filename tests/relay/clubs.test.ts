@@ -11,25 +11,31 @@ import { loadCore, type Core } from "../../lib/nostr/core.ts"
 import type { Throw } from "../../lib/game/types.ts"
 import { clubTasks } from "../../lib/clubs/club.ts"
 import { answerDate, cancelDate, CALENDAR_TIME_KIND, repeatDates, saveDates } from "../../lib/clubs/dates.ts"
-import { answerGame, correctGame, gameSeats, recordGame, type FinishedGame } from "../../lib/clubs/games.ts"
+import { alreadyRecorded, answerGame, correctGame, gameSeats, recordGame, type FinishedGame } from "../../lib/clubs/games.ts"
 import { acceptInvitation, invitationState, openInvitation } from "../../lib/clubs/invitation.ts"
 import { clubLink, readClubPayload } from "../../lib/clubs/links.ts"
-import { acceptOwnership, acceptRequest, createInvite, foundClub, offerOwnership, removeMember, setRole, updateInfo } from "../../lib/clubs/membership.ts"
-import { createSeason, DEFAULT_RULES } from "../../lib/clubs/seasons.ts"
+import { acceptOwnership, acceptRequest, createInvite, foundClub, isConfirmedMember, offerOwnership, openOffer, removeMember, setRole, updateInfo } from "../../lib/clubs/membership.ts"
+import { createSeason, decideResult, DEFAULT_RULES } from "../../lib/clubs/seasons.ts"
 import { loadStoredClub } from "../../lib/clubs/store.ts"
 import { refreshClub, type Reader } from "../../lib/clubs/sync.ts"
 import { seasonTable } from "../../lib/clubs/table.ts"
 import { getSigner, importLocalKey, signOut } from "../../lib/profile/session.ts"
+import { parseEnvelope, wrapsFor } from "../../lib/protocol/seal.ts"
+import { readLabels } from "../../lib/protocol/tags.ts"
 
 let core: Core
 let a: NakRelay
 let b: NakRelay
 const SITE = "https://blueline21.netlify.app"
+const now = () => Math.floor(Date.now() / 1000)
 
 before(async () => {
   core = await loadCore()
-  // The nak ports assigned to this track (20600-20609).
-  ;[a, b] = await Promise.all([startRelay({ port: 20600 }), startRelay({ port: 20601 })])
+  // Free ports, one after the other (a free port is only free until something listens on it);
+  // BLUELINE_NAK_PORTS="20600,20601" pins them to a range assigned on a shared machine.
+  const pinned = (process.env.BLUELINE_NAK_PORTS ?? "").split(",").map(Number)
+  a = await startRelay(Number.isInteger(pinned[0]) ? { port: pinned[0] } : {})
+  b = await startRelay(Number.isInteger(pinned[1]) ? { port: pinned[1] } : {})
   process.env.NEXT_PUBLIC_BLUELINE_RELAYS = `${a.url},${b.url}`
 })
 
@@ -45,12 +51,12 @@ const person = () => {
 }
 type Person = ReturnType<typeof person>
 
-// Opens the app on this person's own device: empty storage, their key.
+// Opens the app on this person's own device: empty storage, their key (which signs by itself).
 async function device(who: Person): Promise<Reader & { pubkey: string; signer: NonNullable<Reader["signer"]> }> {
   await signOut({ keepLocalData: true })
   await resetStorage()
   await importLocalKey(who.secret)
-  return { pubkey: who.pubkey, signer: await getSigner() }
+  return { pubkey: who.pubkey, signer: await getSigner(), automatic: true }
 }
 
 async function opened(club: string, who: Person) {
@@ -67,9 +73,12 @@ async function viaLink(link: string, who: Person) {
   return { address, author }
 }
 
-test("a closed club: a member joins through a group link while no leader is online, and reads everything once a leader's device shared access", async () => {
+const keyShares = async (club: string) => (await loadStoredClub(club))!.events.filter((e) => readLabels(e.tags)?.type === "club.keys").map((e) => parseEnvelope(e.content))
+
+test("a closed club: a member joins through a group link while no leader is online, and reads everything once a leader's device shared access with them alone", async () => {
   const owner = person()
   const ben = person()
+  const carl = person()
   let author = await device(owner)
   const club = await foundClub({ name: "Dartfreunde Nord", about: "Donnerstags im Vereinsheim", visibility: "closed" }, author)
   let view = await refreshClub(club, author)
@@ -86,22 +95,37 @@ test("a closed club: a member joins through a group link while no leader is onli
   view = await refreshClub(club, joining.author)
   assert.equal(view.info?.name, "Dartfreunde Nord")
   assert.equal(view.invite?.preview?.hostName, "Olaf")
-  assert.equal(invitationState(view, Math.floor(Date.now() / 1000)), "open")
+  assert.equal(invitationState(view, now()), "open")
   await acceptInvitation(club, joining.author)
   view = await refreshClub(club, joining.author)
   assert.equal(view.me.status, "joined", "joined, waiting for a leader's device")
   assert.equal(view.state, null)
 
   // The owner opens the app: Ben is a member through the link's proof, and the owner's device
-  // shares access to everything written before he joined.
+  // shares access to everything written before he joined, sealed for him alone.
   author = await device(owner)
   view = await refreshClub(club, author)
   assert.equal(view.state?.members[ben.pubkey]?.via, "group")
   assert.equal(view.state?.shares.length, 1)
+  assert.deepEqual(view.access, [])
+  let shares = await keyShares(club)
+  assert.equal(shares[0].wraps.length, 1)
+  assert.equal(wrapsFor(shares[0], ben.pubkey).length, 1)
 
   view = await opened(club, ben)
   assert.equal(view.me.status, "member")
   assert.equal(view.state?.info.about, "Donnerstags im Vereinsheim")
+
+  // Carl joins the same way: the next share is for him only; Ben keeps reading.
+  await acceptInvitation(club, (await viaLink(link, carl)).author)
+  author = await device(owner)
+  view = await refreshClub(club, author)
+  shares = await keyShares(club)
+  assert.equal(shares.length, 2)
+  assert.equal(shares[1].wraps.length, 1)
+  assert.equal(wrapsFor(shares[1], carl.pubkey).length, 1)
+  assert.equal((await opened(club, carl)).state?.info.name, "Dartfreunde Nord")
+  assert.equal((await opened(club, ben)).state?.members[carl.pubkey]?.role, "member")
 })
 
 test("over capacity: a group link only asks, and a leader can't accept past the limit", async () => {
@@ -117,14 +141,14 @@ test("over capacity: a group link only asks, and a leader can't accept past the 
   for (const who of [ben, carl]) {
     const joining = await viaLink(link, who)
     view = await refreshClub(club, joining.author)
-    assert.equal(invitationState(view, Math.floor(Date.now() / 1000)), "request")
+    assert.equal(invitationState(view, now()), "request")
     await acceptInvitation(club, joining.author)
     view = await refreshClub(club, joining.author)
     assert.equal(view.me.status, "request")
   }
   author = await device(owner)
   view = await refreshClub(club, author)
-  assert.deepEqual(clubTasks(view, Math.floor(Date.now() / 1000)).map((t) => t.kind), ["requests"])
+  assert.deepEqual(clubTasks(view, now()).map((t) => t.kind), ["requests"])
   await acceptRequest(view.state!, view.state!.requests[ben.pubkey], author)
   view = await refreshClub(club, author)
   await acceptRequest(view.state!, view.state!.requests[carl.pubkey], author)
@@ -132,6 +156,22 @@ test("over capacity: a group link only asks, and a leader can't accept past the 
   assert.equal(view.state?.members[ben.pubkey]?.role, "member")
   assert.equal(view.state?.members[carl.pubkey], undefined)
   assert.equal(view.state?.log.rejected.at(-1)?.reason, "club_full")
+})
+
+test("a closed club with a member limit says so in the link's preview: the group link only asks", async () => {
+  const owner = person()
+  const ben = person()
+  const author = await device(owner)
+  const club = await foundClub({ name: "Begrenzt", visibility: "closed" }, author)
+  let view = await refreshClub(club, author)
+  await updateInfo(view.state!, { capacity: 5 }, author)
+  view = await refreshClub(club, author)
+  const invite = await createInvite(view.state!, { kind: "group", days: 7 }, author)
+  const joining = await viaLink(clubLink(SITE, { club, invite: { id: invite.invite, token: invite.token }, relays: [] }), ben)
+  view = await refreshClub(club, joining.author)
+  assert.equal(view.state, null, "nothing of the club opens before joining")
+  assert.equal(view.invite?.preview?.limited, true)
+  assert.equal(invitationState(view, now()), "request")
 })
 
 test("a removed member reads nothing written after the removal; the club and its games stay readable for the others", async () => {
@@ -151,7 +191,7 @@ test("a removed member reads nothing written after the removal; the club and its
   view = await refreshClub(club, author)
   await updateInfo(view.state!, { name: "Neuer Name" }, author)
   view = await refreshClub(club, author)
-  await saveDates(view.state!, [{ title: "Clubabend", starts: Math.floor(Date.now() / 1000) + 86400 }], author)
+  await saveDates(view.state!, [{ title: "Clubabend", starts: now() + 86400 }], author)
 
   view = await refreshClub(club, await device(ben))
   assert.equal(view.me.status, "removed")
@@ -191,7 +231,7 @@ test("the hand-over of ownership keeps the club's id and makes the former owner 
 
   author = await device(alice)
   view = await refreshClub(club, author)
-  assert.deepEqual(clubTasks(view, Math.floor(Date.now() / 1000)).map((t) => t.kind)[0], "ownership")
+  assert.deepEqual(clubTasks(view, now()).map((t) => t.kind)[0], "ownership")
   await acceptOwnership(view.state!, author)
   view = await refreshClub(club, author)
   assert.equal(view.id, club)
@@ -199,6 +239,39 @@ test("the hand-over of ownership keeps the club's id and makes the former owner 
 
   view = await opened(club, owner)
   assert.equal(view.state?.owner, alice.pubkey)
+  assert.equal(view.me.role, "admin")
+})
+
+test("ownership can go to a member who came in through a group link: the offer confirms the membership first, and a new offer replaces one that lapsed", async () => {
+  const owner = person()
+  const ben = person()
+  let author = await device(owner)
+  const club = await foundClub({ name: "Gruppenlink", visibility: "closed" }, author)
+  let view = await refreshClub(club, author)
+  const invite = await createInvite(view.state!, { kind: "group", days: 7 }, author)
+  await acceptInvitation(club, (await viaLink(clubLink(SITE, { club, invite: { id: invite.invite, token: invite.token }, relays: [] }), ben)).author)
+  author = await device(owner)
+  view = await refreshClub(club, author)
+  assert.equal(isConfirmedMember(view.state!, ben.pubkey), false)
+  await offerOwnership(view.state!, ben.pubkey, author)
+  view = await refreshClub(club, author)
+  assert.equal(isConfirmedMember(view.state!, ben.pubkey), true, "a role record naming his join confirms him")
+  assert.equal(view.state?.members[ben.pubkey]?.role, "member", "with the role he had")
+  assert.equal(view.state?.offer?.to, ben.pubkey)
+  // A day later the offer has lapsed for the screens; the owner offers again on top of it.
+  assert.equal(openOffer(view.state!, view.state!.offer!.expires + 1), null)
+  const again = await offerOwnership(view.state!, ben.pubkey, author)
+  view = await refreshClub(club, author)
+  assert.equal(view.state?.offer?.event, again.events[0].id)
+
+  author = await device(ben)
+  view = await refreshClub(club, author)
+  assert.deepEqual(clubTasks(view, now()).map((t) => t.kind)[0], "ownership")
+  await acceptOwnership(view.state!, author)
+  view = await refreshClub(club, author)
+  assert.equal(view.state?.owner, ben.pubkey)
+  view = await opened(club, owner)
+  assert.equal(view.state?.owner, ben.pubkey)
   assert.equal(view.me.role, "admin")
 })
 
@@ -218,7 +291,7 @@ const config = (names: string[]) => ({
 })
 const visits = (...totals: number[]): Throw[] => totals.map((total, i) => ({ kind: "visit", total, darts: 3, ...(i === totals.length - 1 ? { atDouble: 1 } : {}) }))
 
-test("a season table follows the games: a confirmed result counts, a correction recounts it, a closed club's games are private", async () => {
+test("a season table follows the games: a confirmed result counts, a correction recounts it, a game against guests waits for a leader, a closed club's games are private", async () => {
   const owner = person()
   const ben = person()
   let author = await device(owner)
@@ -228,16 +301,19 @@ test("a season table follows the games: a confirmed result counts, a correction 
   await acceptInvitation(club, (await viaLink(clubLink(SITE, { club, invite: { id: invite.invite, token: invite.token }, relays: [] }), ben)).author)
   author = await device(owner)
   view = await refreshClub(club, author)
-  await createSeason(view.state!, { name: "Herbst", starts: Math.floor(Date.now() / 1000) - 60, rules: { ...DEFAULT_RULES, confirmations: "opponent" } }, author)
+  await createSeason(view.state!, { name: "Herbst", starts: now() - 60, rules: { ...DEFAULT_RULES, confirmations: "opponent" } }, author)
   view = await refreshClub(club, author)
 
   const seats = [{ name: "Olaf", pubkey: owner.pubkey }, { name: "Ben", pubkey: ben.pubkey }, { name: "Mia" }]
-  const won: FinishedGame = { config: config(["Olaf", "Ben", "Mia"]), seats, winner: 0, throws: visits(180, 60, 60, 180, 60, 60, 141) }
+  const won: FinishedGame = { id: "local-1", config: config(["Olaf", "Ben", "Mia"]), seats, winner: 0, throws: visits(180, 60, 60, 180, 60, 60, 141) }
   const recorded = await recordGame(view.state!, won, gameSeats(seats, "closed", (n) => `Gast ${n}`), author)
   const raw = await relayClient().query([{ ids: [recorded.match] }], [a.url])
   assert.ok(!raw.events[0].content.includes("Ben"), "the match is private: its agreement is encrypted")
-
+  // The club remembers the game by its local id, and knows it by its throws: never twice.
+  assert.equal((await loadStoredClub(club))?.recorded["local-1"], recorded.match)
   view = await refreshClub(club, author)
+  assert.ok(alreadyRecorded(view.games, owner.pubkey, gameSeats(seats, "closed", (n) => `Gast ${n}`), won.throws))
+
   const season = Object.values(view.state!.seasons)[0]
   let table = seasonTable(season, view.games)
   assert.deepEqual(table.open.map((o) => o.why), ["confirmations"])
@@ -245,7 +321,7 @@ test("a season table follows the games: a confirmed result counts, a correction 
   author = await device(ben)
   view = await refreshClub(club, author)
   assert.equal(view.games[0].agreement.seats[2].alias, "Mia", "a guest's name stays inside the club")
-  assert.deepEqual(clubTasks(view, Math.floor(Date.now() / 1000)).map((t) => t.kind), ["verdict"])
+  assert.deepEqual(clubTasks(view, now()).map((t) => t.kind), ["verdict"])
   await answerGame(view.state!, view.games[0], "confirm", author)
   view = await refreshClub(club, author)
   table = seasonTable(Object.values(view.state!.seasons)[0], view.games)
@@ -254,15 +330,33 @@ test("a season table follows the games: a confirmed result counts, a correction 
   // The host corrects the result: Ben won. The old confirmation lapses until Ben confirms again.
   author = await device(owner)
   view = await refreshClub(club, author)
-  await correctGame(view.state!, view.games[0], { ...won, winner: 1, throws: visits(60, 180, 60, 60, 180, 60, 60, 141) }, "Falsch eingetragen", author)
+  await correctGame(view.state!, view.games[0], { winner: 1, legs: [0, 1, 0] }, "Falsch eingetragen", author)
+  view = await refreshClub(club, author)
+  assert.equal(view.games[0].result?.replaces, recorded.events[1].id)
+  assert.equal(view.games[0].result?.stats, undefined, "a corrected result carries no statistics")
+
+  // A game against a guest only: nobody can confirm it, so it is the leader's to decide.
+  const solo: FinishedGame = { id: "local-2", config: config(["Olaf", "Mia"]), seats: [seats[0], seats[2]], winner: 0, throws: visits(180, 60, 180, 60, 141) }
+  await recordGame(view.state!, solo, gameSeats(solo.seats, "closed", (n) => `Gast ${n}`), author)
+  view = await refreshClub(club, author)
+  table = seasonTable(Object.values(view.state!.seasons)[0], view.games)
+  assert.deepEqual(table.open.map((o) => o.why).sort(), ["confirmations", "unconfirmable"])
+  const decide = clubTasks(view, now()).find((t) => t.kind === "decide")
+  assert.equal(decide?.kind === "decide" && decide.why, "unconfirmable")
+  await decideResult(view.state!, Object.values(view.state!.seasons)[0], (decide as { game: (typeof view.games)[number] }).game, true, author, "Mia hat kein Profil")
+  view = await refreshClub(club, author)
+  table = seasonTable(Object.values(view.state!.seasons)[0], view.games, view.state!.results[Object.values(view.state!.seasons)[0].id])
+  assert.equal(table.counted.length, 1)
+
   author = await device(ben)
   view = await refreshClub(club, author)
-  table = seasonTable(Object.values(view.state!.seasons)[0], view.games)
-  assert.deepEqual(table.counted, [])
-  await answerGame(view.state!, view.games[0], "confirm", author)
+  table = seasonTable(Object.values(view.state!.seasons)[0], view.games, view.state!.results[Object.values(view.state!.seasons)[0].id])
+  assert.deepEqual(table.open.map((o) => o.why), ["confirmations"], "Ben's old confirmation no longer counts")
+  await answerGame(view.state!, view.games.find((g) => g.match === recorded.match)!, "confirm", author)
   view = await refreshClub(club, author)
-  table = seasonTable(Object.values(view.state!.seasons)[0], view.games)
-  assert.deepEqual(table.ranked.map((r) => [r.pubkey, r.points]), [[ben.pubkey, 2], [owner.pubkey, 0]])
+  table = seasonTable(Object.values(view.state!.seasons)[0], view.games, view.state!.results[Object.values(view.state!.seasons)[0].id])
+  // Two points each; head to head Ben beat Olaf.
+  assert.deepEqual(table.ranked.map((r) => [r.pubkey, r.points, r.rank]), [[ben.pubkey, 2, 1], [owner.pubkey, 2, 2]])
 })
 
 // A week later at the same local time: across a change of daylight-saving time that is not
@@ -283,7 +377,7 @@ test("a public club's dates are calendar events other apps read; members answer,
   await acceptInvitation(club, (await viaLink(clubLink(SITE, { club, invite: { id: invite.invite, token: invite.token }, relays: [] }), ben)).author)
   author = await device(owner)
   view = await refreshClub(club, author)
-  const first = Math.floor(Date.now() / 1000) + 86400
+  const first = now() + 86400
   await saveDates(view.state!, repeatDates({ title: "Clubabend", starts: first, ends: first + 3 * 3600, place: "Vereinsheim" }, 7, 3), author)
   const calendar = await relayClient().query([{ kinds: [CALENDAR_TIME_KIND], "#e": [club] }], [a.url])
   assert.equal(calendar.events.length, 3)

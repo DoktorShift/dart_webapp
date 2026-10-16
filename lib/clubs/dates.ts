@@ -21,6 +21,9 @@ const STATUS_OF = { yes: "accepted", maybe: "tentative", no: "declined" } as con
 
 export type Answer = "yes" | "maybe" | "no"
 
+// Another app's RSVP may carry any status; only the three NIP-52 ones are answers here.
+const answerOf = (status: string): Answer | null => (Object.hasOwn(ANSWER_OF, status) ? ANSWER_OF[status as keyof typeof ANSWER_OF] : null)
+
 export interface ClubDate {
   // The date's own id: club.date's, or the NIP-52 address ("31923:<author>:<d>").
   id: string
@@ -77,8 +80,9 @@ export async function publicDates(events: readonly NostrEvent[], state: ClubStat
     const said: ClubDate["answers"] = {}
     for (const rsvp of answers) {
       const r = core.parseCalendarEventRSVP(rsvp)
+      const answer = answerOf(r.status)
       // Newest first: a member's older answers (another app's, under another "d") don't count.
-      if (r.calendarEventAddress === address && !(rsvp.pubkey in said) && clubRoleAt(state, rsvp.pubkey, rsvp.created_at)) said[rsvp.pubkey] = { answer: ANSWER_OF[r.status], at: rsvp.created_at }
+      if (r.calendarEventAddress === address && answer && !(rsvp.pubkey in said) && clubRoleAt(state, rsvp.pubkey, rsvp.created_at)) said[rsvp.pubkey] = { answer, at: rsvp.created_at }
     }
     dates.push({
       id: address,

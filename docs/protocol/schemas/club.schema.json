@@ -799,6 +799,10 @@
           "minimum": 0,
           "maximum": 4294967295
         },
+        "limited": {
+          "type": "boolean",
+          "description": "The club has a member limit: a group link only asks, an owner or admin accepts"
+        },
         "next": {
           "type": "object",
           "properties": {

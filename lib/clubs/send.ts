@@ -7,12 +7,18 @@ import { contentKeyText, newContentKey, newSealNonce } from "../protocol/seal.ts
 import type { InvitePreview } from "../protocol/invite.ts"
 import { createdAtAfter } from "../protocol/tags.ts"
 import { publish } from "../sync/publish.ts"
-import { updateClub } from "./store.ts"
+import { updateClub, type ClubChange } from "./store.ts"
 
 // The one way a club's events leave this device: encrypted as the club requires, signed by the
 // profile's signer (one after another: a signer app asks for each), kept in the club's local
 // copy first, then handed to lib/sync/publish.ts. A change counts as made once it is signed and
 // kept; relays that can't be reached don't undo it, the club shows it as not sent yet.
+//
+// Not sent yet (StoredClub.unsent) is bookkeeping for the time being: events are marked when
+// they are kept, before any relay is asked, and cleared only once relays of two operators
+// confirmed them; "Erneut senden" (resend) is the one way to send them again. At integration the
+// coordinator moves club publishing onto lib/sync's persistent outbox: one list of what has to
+// go out, no second mechanism here.
 
 export interface Author {
   pubkey: string
@@ -28,6 +34,12 @@ export interface Outgoing {
   template: EventTemplate
   seal?: { readers: readonly string[]; preview?: { key: Uint8Array; content: InvitePreview } }
   link?: string
+}
+
+export interface Signed {
+  events: NostrEvent[]
+  // Content keys of the sealed ones, by event id.
+  keys: Record<string, string>
 }
 
 export interface Sent {
@@ -65,8 +77,8 @@ async function prepare({ template, seal, link }: Outgoing, signer: Signer): Prom
   return { template: sealRecord(template, { key, nonce: newSealNonce(), wraps, ...(preview ? { preview } : {}) }), key: bytesToHex(key) }
 }
 
-// `club` null: the first event founds the club, and its id is the club's.
-export async function send(club: string | null, outgoing: readonly Outgoing[], { signer }: Author): Promise<Sent> {
+// Encrypts and signs, in order.
+export async function sign(outgoing: readonly Outgoing[], signer: Signer): Promise<Signed> {
   const events: NostrEvent[] = []
   const keys: Record<string, string> = {}
   for (const item of outgoing) {
@@ -75,15 +87,28 @@ export async function send(club: string | null, outgoing: readonly Outgoing[], {
     events.push(event)
     if (key) keys[event.id] = key
   }
-  const id = club ?? events[0].id
-  await updateClub(id, { events, keys })
-  return { events, published: await resend(id, events) }
+  return { events, keys }
 }
 
-// Hands signed events to relays: right after signing, and again from "Erneut senden".
+// Keeps signed events in the club's copy, marked as not sent, together with whatever else
+// belongs to the same change.
+export const keep = (club: string, signed: Signed, change: Omit<ClubChange, "events" | "keys" | "unsent" | "sent"> = {}) =>
+  updateClub(club, { ...change, events: signed.events, keys: signed.keys, unsent: signed.events.map((e) => e.id) })
+
+// `club` null: the first event founds the club, and its id is the club's.
+export async function send(club: string | null, outgoing: readonly Outgoing[], { signer }: Author): Promise<Sent> {
+  const signed = await sign(outgoing, signer)
+  const id = club ?? signed.events[0].id
+  await keep(id, signed)
+  return { events: signed.events, published: await resend(id, signed.events) }
+}
+
+// Hands signed events to relays: right after signing, and again from "Erneut senden". What two
+// operators confirmed is no longer unsent; a relay answering at all counts as loaded.
 export async function resend(club: string, events: readonly NostrEvent[]): Promise<boolean> {
   const reports = await publish(events).catch(() => [])
-  const confirmed = new Set(reports.filter((r) => r.published).map((r) => r.event.id))
-  await updateClub(club, { sent: { confirmed: [...confirmed], missing: events.map((e) => e.id).filter((id) => !confirmed.has(id)) } })
-  return events.every((e) => confirmed.has(e.id))
+  const confirmed = reports.filter((r) => r.published).map((r) => r.event.id)
+  const answered = reports.some((r) => r.results.some((x) => x.ok))
+  await updateClub(club, { sent: confirmed, ...(answered ? { loadedAt: Date.now() } : {}) })
+  return events.every((e) => confirmed.includes(e.id))
 }

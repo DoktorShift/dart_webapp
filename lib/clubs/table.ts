@@ -9,8 +9,9 @@ import type { ClubGame } from "./games.ts"
 //   season's start and its end;
 // - it counts once confirmed as the rules ask (docs/protocol/families/club.md, "Clubspiele"):
 //   "none" always; "opponent" once another player with a profile confirmed; "all" once every
-//   other player with a profile did (at least one). A dispute stops it. A leader's decision on
-//   exactly this result (club.result) overrides all of that;
+//   other player with a profile did (at least one). A dispute stops it, and a game nobody but
+//   the recorder could confirm (guests only) waits for a leader. A leader's decision on exactly
+//   this result (club.result) overrides all of that;
 // - points per win, draw and loss; ties are split by the rules' tiebreak order, step by step
 //   within each tied group; what still ties shares the rank;
 // - players with fewer games than the minimum are listed apart, without a rank.
@@ -33,7 +34,7 @@ export interface Standing {
   rank: number | null
 }
 
-export type NotCounted = "confirmations" | "disputed" | "excluded"
+export type NotCounted = "confirmations" | "unconfirmable" | "disputed" | "excluded"
 
 export interface SeasonTable {
   season: ClubSeason
@@ -62,6 +63,7 @@ export function countsFor(game: ClubGame, rules: SeasonRules, decision?: ClubRes
   if (verdicts.includes("dispute")) return "disputed"
   const confirmed = verdicts.filter((v) => v === "confirm").length
   if (rules.confirmations === "none") return true
+  if (verdicts.length === 0) return "unconfirmable"
   if (rules.confirmations === "opponent") return confirmed > 0 ? true : "confirmations"
   return confirmed > 0 && confirmed === verdicts.length ? true : "confirmations"
 }

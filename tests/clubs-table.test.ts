@@ -67,8 +67,10 @@ test("confirmations: none, one opponent, every other player; a dispute stops a g
   assert.equal(countsFor(recorded({ 1: "confirm" }), all), "confirmations")
   assert.equal(countsFor(recorded({ 1: "confirm", 2: "confirm" }), all), true)
   assert.equal(countsFor(recorded({ 1: "confirm", 2: "dispute" }), opponent), "disputed")
-  // The recorder's own seat needs no confirmation; a game with only guests besides needs a leader.
-  assert.equal(countsFor(game([ANNA, { guest: "Gast 1" }], 0, [3, 0], { by: ANNA }), opponent), "confirmations")
+  // The recorder's own seat needs no confirmation; a game with only guests besides waits for a
+  // leader's decision, unless no confirmation is asked at all.
+  assert.equal(countsFor(game([ANNA, { guest: "Gast 1" }], 0, [3, 0], { by: ANNA }), opponent), "unconfirmable")
+  assert.equal(countsFor(game([ANNA, { guest: "Gast 1" }], 0, [3, 0], { by: ANNA }), { ...DEFAULT_RULES, confirmations: "none" }), true)
   const disputed = recorded({ 1: "dispute" })
   const decision = (result: string, count: boolean): ClubResultDecision => ({ season: "5".repeat(32), match: disputed.match, result, count, event: "9".repeat(64), by: BEN, at: NOW + 2000 })
   assert.equal(countsFor(disputed, opponent, decision(disputed.result!.event, true)), true)

@@ -7,6 +7,7 @@ import type { FoundingProblem } from "../protocol/replay.ts"
 import { readLabels, tagValue } from "../protocol/tags.ts"
 import { closedDates, publicDates, type ClubDate } from "./dates.ts"
 import { awaitsVerdict, readGames, type ClubGame } from "./games.ts"
+import { openOffer, waitingAccess } from "./membership.ts"
 import { openClubRecords, openGameRecords } from "./open.ts"
 import type { OpenedInvite, StoredClub } from "./store.ts"
 import { belongsTo, countsFor, currentSeason, rulesOf } from "./table.ts"
@@ -60,8 +61,16 @@ export interface ClubView {
   relays: string[]
   // Own events no relay has confirmed yet.
   unsent: NostrEvent[]
+  // Games of this device recorded for the club, by local match id.
+  recorded: Record<string, string>
+  // Members of a closed club who can't read earlier records yet; only a manager's device
+  // works that out, since only a manager can share access (membership.ts waitingAccess).
+  access: string[]
   loadedAt: number | null
 }
+
+export const isLeader = (role: ClubRole | null) => role === "owner" || role === "admin" || role === "director"
+export const isManager = (role: ClubRole | null) => role === "owner" || role === "admin"
 
 const isClubRecord = (club: string) => (e: NostrEvent) => e.kind === KIND_RECORD && (e.id === club || tagValue(e.tags, "e") === club)
 
@@ -91,6 +100,7 @@ export async function readClub(
   const state = reduced.state
   const games = state ? readGames(state, stored.events, await openGameRecords(stored.events, Object.values(state.games)), now) : []
   const dates = !state ? [] : state.info.visibility === "closed" ? closedDates(state) : await publicDates(stored.events, state)
+  const me = membership(state, records, club, reader)
   const preview = stored.invite?.preview
   const info: ClubInfo | null = state
     ? { name: state.info.name, about: state.info.about, picture: state.info.picture, visibility: state.info.visibility, archived: state.info.archived }
@@ -104,21 +114,20 @@ export async function readClub(
       state,
       problem: reduced.state ? null : reduced.problem,
       info,
-      me: membership(state, records, club, reader),
+      me,
       dates,
       games,
       ...(stored.invite ? { invite: stored.invite } : {}),
       tokens: stored.tokens,
       relays: stored.relays,
       unsent: stored.events.filter((e) => stored.unsent.includes(e.id)),
+      recorded: stored.recorded,
+      access: state && reader && isManager(me.role) ? waitingAccess(state, records, reader) : [],
       loadedAt: stored.loadedAt,
     },
     keys: fresh,
   }
 }
-
-export const isLeader = (role: ClubRole | null) => role === "owner" || role === "admin" || role === "director"
-export const isManager = (role: ClubRole | null) => role === "owner" || role === "admin"
 
 // The next club date that hasn't ended or been cancelled.
 export const nextDate = (view: ClubView, now: number) => view.dates.find((d) => !d.cancelled && (d.ends ?? d.starts + 4 * 3600) > now) ?? null
@@ -128,8 +137,11 @@ export const nextDate = (view: ClubView, now: number) => view.dates.find((d) => 
 export type ClubTask =
   | { kind: "ownership" }
   | { kind: "verdict"; game: ClubGame }
+  // Members who joined a closed club and still read nothing: share access with one tap.
+  | { kind: "access"; count: number }
   | { kind: "requests"; count: number }
-  | { kind: "decide"; game: ClubGame }
+  // A result the season's rules can't settle: disputed, or nobody with a profile can confirm it.
+  | { kind: "decide"; game: ClubGame; why: "disputed" | "unconfirmable" }
   | { kind: "answer"; date: ClubDate }
 
 export function clubTasks(view: ClubView, now: number): ClubTask[] {
@@ -137,16 +149,21 @@ export function clubTasks(view: ClubView, now: number): ClubTask[] {
   if (!state || me.status !== "member" || !me.pubkey || state.info.archived) return []
   const tasks: ClubTask[] = []
   const pubkey = me.pubkey
-  if (state.offer?.to === pubkey && state.offer.expires > now) tasks.push({ kind: "ownership" })
+  if (openOffer(state, now)?.to === pubkey) tasks.push({ kind: "ownership" })
   for (const game of view.games) if (awaitsVerdict(game, pubkey)) tasks.push({ kind: "verdict", game })
   if (isManager(me.role)) {
+    if (view.access.length > 0) tasks.push({ kind: "access", count: view.access.length })
     const count = Object.keys(state.requests).length
     if (count > 0) tasks.push({ kind: "requests", count })
   }
   const season = currentSeason(state, now)
   if (season && isLeader(me.role)) {
     const decided = state.results[season.id] ?? {}
-    for (const game of view.games) if (belongsTo(season, game) && countsFor(game, rulesOf(season), decided[game.match]) === "disputed") tasks.push({ kind: "decide", game })
+    for (const game of view.games) {
+      if (!belongsTo(season, game)) continue
+      const why = countsFor(game, rulesOf(season), decided[game.match])
+      if (why === "disputed" || why === "unconfirmable") tasks.push({ kind: "decide", game, why })
+    }
   }
   const date = nextDate(view, now)
   if (date && !(pubkey in date.answers)) tasks.push({ kind: "answer", date })

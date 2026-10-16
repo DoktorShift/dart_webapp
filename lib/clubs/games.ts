@@ -10,7 +10,7 @@ import type { MatchStateP } from "../protocol/match-state.ts"
 import { reduceMatch } from "../protocol/match-state.ts"
 import { buildRecord, parseRecord } from "../protocol/records.ts"
 import { encodeThrows } from "../protocol/throws.ts"
-import { afterState, recordTime, send, type Author, type Sent } from "./send.ts"
+import { afterState, keep, recordTime, resend, send, sign, type Author, type Sent } from "./send.ts"
 
 // Club games (docs/protocol/families/club.md, "Clubspiele"). A game started from the club is
 // played on one device like any game; when it is finished, the host's profile records it as a
@@ -31,6 +31,8 @@ export interface GameSeat {
 }
 
 export interface FinishedGame {
+  // The game's id on this device: the club remembers it as recorded (store.ts).
+  id: string
   config: MatchConfig
   seats: readonly GameSeat[]
   winner: number | null
@@ -68,20 +70,33 @@ function resultContent(game: FinishedGame, finishedAt: number) {
   }
 }
 
-// Records a finished club game: the match, then its result and its name in the club.
+// Records a finished club game: the match, then its result and its name in the club. All
+// three are kept in one write together with the memory of this game, so a result screen shown
+// again (a reload) never records it twice.
 export async function recordGame(state: ClubState, game: FinishedGame, seats: Agreement["seats"], author: Author): Promise<Sent & { match: string }> {
   const closed = state.info.visibility === "closed"
   const key = closed ? await createLocalKey() : null
   const link = key ? key.pubkey : undefined
   const now = afterState(state)
   const agreement: Agreement = { engine: ENGINE_VERSION, rules: configToRules(game.config), seats, visibility: closed ? "private" : "public", club: state.id }
-  const session = buildRecord("match.session", { sv: 1, session: author.pubkey, from: now, until: now + 3600, agreement }, { created_at: now })
-  const founded = await send(state.id, [{ template: session, link }], author)
-  const match = founded.events[0].id
+  const session = await sign([{ template: buildRecord("match.session", { sv: 1, session: author.pubkey, from: now, until: now + 3600, agreement }, { created_at: now }), link }], author.signer)
+  const match = session.events[0].id
   const result = buildRecord("match.result", resultContent(game, now), { created_at: recordTime(now), root: match })
   const named = buildRecord("club.game", { match, ...(key ? { key: bytesToHex(key.secretKey) } : {}) }, { created_at: now, root: state.id })
-  const sent = await send(state.id, [{ template: result, link }, { template: named, ...(closed ? { seal: { readers: Object.keys(state.members) } } : {}) }], author)
-  return { match, events: [...founded.events, ...sent.events], published: founded.published && sent.published }
+  const rest = await sign([{ template: result, link }, { template: named, ...(closed ? { seal: { readers: Object.keys(state.members) } } : {}) }], author.signer)
+  const events = [...session.events, ...rest.events]
+  await keep(state.id, { events, keys: { ...session.keys, ...rest.keys } }, { recorded: { [game.id]: match } })
+  return { match, events, published: await resend(state.id, events) }
+}
+
+// Whether a game with these players and exactly these throws was recorded for the club by
+// this profile already: the second guard against a double entry, next to the club's memory of
+// local ids (a game recorded on another device of the same profile, or a copy without it).
+export function alreadyRecorded(games: readonly ClubGame[], by: string, seats: Agreement["seats"], throws: readonly Throw[]): boolean {
+  const encoded = encodeThrows(throws)
+  return games.some(
+    (g) => g.result?.by === by && g.result.throws === encoded && g.agreement.seats.length === seats.length && g.agreement.seats.every((s, i) => s.alias === seats[i].alias && s.pubkey === seats[i].pubkey),
+  )
 }
 
 // ---- Reading ---------------------------------------------------------------------------------
@@ -103,6 +118,9 @@ export interface ClubGame {
     winner: number | null
     legs: number[]
     stats?: { darts: number[]; points: number[] }
+    // The compact throw log and the end of the game, as the record says them.
+    throws?: string
+    finishedAt?: number
     replaces?: string
   } | null
   confirmations: MatchStateP["confirmations"]
@@ -124,17 +142,20 @@ export function readGames(state: ClubState, events: readonly NostrEvent[], plain
       ...(named.key ? { key: named.key } : {}),
       agreement: s.agreement,
       authority: s.authority,
-      result: s.result ? { event: s.result.event, by: s.result.by, at: s.result.at, winner: s.result.winner, legs: s.result.legs, ...statsOf(records, s.result.event, plaintexts), ...(s.result.replaces ? { replaces: s.result.replaces } : {}) } : null,
+      result: s.result ? { event: s.result.event, by: s.result.by, at: s.result.at, winner: s.result.winner, legs: s.result.legs, ...resultDetails(records, s.result.event, plaintexts), ...(s.result.replaces ? { replaces: s.result.replaces } : {}) } : null,
       confirmations: s.confirmations,
     })
   }
   return games.sort((a, b) => (b.result?.at ?? b.named) - (a.result?.at ?? a.named))
 }
 
-function statsOf(records: readonly NostrEvent[], id: string, plaintexts: ReadonlyMap<string, string>) {
+// What the result record says beyond the reduced entry: statistics for the table's average,
+// the throws and the end of the game for a correction.
+function resultDetails(records: readonly NostrEvent[], id: string, plaintexts: ReadonlyMap<string, string>): Pick<NonNullable<ClubGame["result"]>, "stats" | "throws" | "finishedAt"> {
   const parsed = parseRecord(records.find((e) => e.id === id), { plaintext: plaintexts.get(id) ?? null })
-  if (parsed.status !== "ok" || parsed.record.type !== "match.result" || !parsed.record.content.stats) return {}
-  return { stats: parsed.record.content.stats }
+  if (parsed.status !== "ok" || parsed.record.type !== "match.result") return {}
+  const c = parsed.record.content
+  return { ...(c.stats ? { stats: c.stats } : {}), ...(c.throws !== undefined ? { throws: c.throws } : {}), finishedAt: c.finishedAt }
 }
 
 const seatOf = (game: ClubGame, pubkey: string) => game.agreement.seats.findIndex((s) => s.pubkey === pubkey)
@@ -159,12 +180,22 @@ export async function answerGame(state: ClubState, game: ClubGame, verdict: "con
   return send(state.id, [{ template, link: await linkOf(game) }], author)
 }
 
-// The host corrects the result after a mistake: a new result that replaces the old one, with a
-// reason. Confirmations of the old one no longer count (match-result.md, rule 3).
-export async function correctGame(state: ClubState, game: ClubGame, finished: FinishedGame, reason: string, author: Author): Promise<Sent> {
-  if (!game.result) throw new Error("no result to correct")
-  const now = recordTime(game.result.at)
-  const content = { ...resultContent(finished, now), replaces: game.result.event, reason }
+// What the host says the outcome really was.
+export interface Outcome {
+  winner: number | null
+  legs: number[]
+}
+
+// The host corrects a result entered wrongly: a new result naming the old one, with the reason
+// everyone sees; the old one's confirmations no longer count (match-result.md, rule 3). The
+// throws stay as they were scored. Winner and legs are now the host's word, not the throws',
+// so the corrected result carries no statistics derived from them: the table's average leaves
+// the game out.
+export async function correctGame(state: ClubState, game: ClubGame, outcome: Outcome, reason: string, author: Author): Promise<Sent> {
+  const result = game.result
+  if (!result?.throws) throw new Error("no result with its throws to correct")
+  const now = recordTime(result.at)
+  const content = { sv: 1, status: "finished" as const, winner: outcome.winner, legs: outcome.legs, throws: result.throws, finishedAt: result.finishedAt ?? result.at, replaces: result.event, reason }
   const template = buildRecord("match.result", content, { created_at: now, root: game.match })
   return send(state.id, [{ template, link: await linkOf(game) }], author)
 }
