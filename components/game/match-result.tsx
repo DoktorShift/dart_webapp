@@ -1,12 +1,12 @@
 "use client"
 
-import { useLayoutEffect, useMemo, useRef, useState, type ComponentType, type MouseEvent } from "react"
+import { useLayoutEffect, useMemo, useRef, useState, type ComponentType } from "react"
 import { motion, useReducedMotion } from "framer-motion"
 import { ChartColumn, CircleEllipsis, History, RotateCcw, Share, Trophy, Undo2, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet } from "@/components/ui/sheet"
 import { FitText } from "@/components/fit-text"
-import { SPLIT, XSHORT, useMediaQuery } from "@/components/common/use-media-query"
+import { SHORT, SPLIT, XSHORT, useMediaQuery } from "@/components/common/use-media-query"
 import { useT } from "@/components/i18n-provider"
 import { ConfettiBurst } from "@/components/game/confetti-burst"
 import { PlayerStatsTable, StatsTable, allRows, keyRows, rowValues } from "@/components/game/result-stats"
@@ -77,55 +77,81 @@ function SmallAction({
   )
 }
 
-// The areas' pieces ("result.actions", lib/shell/registry.ts) on a phone in landscape, where
-// the hero and the buttons alone fill the screen: in the free middle of the top bar. One piece
-// sits there as a bar button; two or more become one button with their count that opens a sheet
-// with the pieces as their rows. How many show something for this game is known only from the
-// DOM (a piece renders nothing for a game it has nothing to say about), so the bar's pieces are
-// counted there; while the sheet is open they are in the sheet instead, and counted again when
-// it closes.
-function BarPieces({ match }: { match: FinishedMatch }) {
-  const t = useT()
-  const [open, setOpen] = useState(false)
-  const bar = useRef<HTMLDivElement>(null)
+// How many of the areas' pieces ("result.actions", lib/shell/registry.ts) show something for
+// this game is known only from the DOM: a piece renders nothing for a game it has nothing to
+// say about. So `ref` goes on the pieces' wrapper and `shown` counts its children. While the
+// sheet with all of them is open they are in the sheet instead (the wrapper is gone), and they
+// are counted again once it closes.
+function useShownPieces(sheetOpen: boolean) {
+  const ref = useRef<HTMLDivElement>(null)
   const [shown, setShown] = useState(0)
   useLayoutEffect(() => {
-    const el = bar.current
+    const el = ref.current
     if (!el) return
     const count = () => setShown(el.childElementCount)
     count()
     const observer = new MutationObserver(count)
     observer.observe(el, { childList: true })
     return () => observer.disconnect()
-  }, [open])
-  const several = shown > 1
-  // A tap on one of the pieces is the end of the sheet's job, like choosing from a menu.
-  const chosen = (event: MouseEvent) => {
-    if ((event.target as Element).closest("button, a")) setOpen(false)
-  }
+  }, [sheetOpen])
+  return { ref, shown }
+}
 
+// "Mehr zum Ergebnis": every piece as its row, where the screen has room for fewer. The pieces
+// live in this sheet while it is open, so it stays under whatever one of them opens (its own
+// sheet) until Fertig: closing it would take the piece, and with it that sheet, away.
+function MoreSheet({ match, open, onOpenChange }: { match: FinishedMatch; open: boolean; onOpenChange: (open: boolean) => void }) {
+  const t = useT()
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange} title={t.result.more}>
+      <div className="min-h-0 overflow-y-auto overscroll-contain">
+        <SlotItems list="result.actions" props={() => ({ match, placement: "row" })} className="grid gap-2" />
+      </div>
+      <Button variant="ghost" onClick={() => onOpenChange(false)} className="mt-2 h-12 w-full shrink-0 rounded-2xl text-[1.0625rem]">
+        {t.common.done}
+      </Button>
+    </Sheet>
+  )
+}
+
+// The pieces on a phone in landscape, where the hero and the buttons alone fill the screen: in
+// the free middle of the top bar. One piece sits there as a bar button; two or more become one
+// button with their count that opens the sheet.
+function BarPieces({ match }: { match: FinishedMatch }) {
+  const t = useT()
+  const [open, setOpen] = useState(false)
+  const { ref, shown } = useShownPieces(open)
+  const several = shown > 1
   return (
     <div className="flex min-w-0 flex-1 items-center justify-center">
-      {!open && <SlotItems ref={bar} list="result.actions" props={() => ({ match, placement: "bar" })} className={cn("flex min-w-0 max-w-full items-center justify-center", several && "hidden")} />}
+      {!open && <SlotItems ref={ref} list="result.actions" props={() => ({ match, placement: "bar" })} className={cn("flex min-w-0 max-w-full items-center justify-center", several && "hidden")} />}
       {several && (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          aria-label={t.result.moreLabel(shown)}
-          className="flex h-11 items-center gap-1.5 rounded-xl px-3 text-[1.0625rem] font-semibold tabular-nums text-primary active:bg-secondary/70"
-        >
+        <Button variant="ghost" onClick={() => setOpen(true)} aria-label={t.result.moreLabel(shown)} className="h-11 gap-1.5 rounded-xl px-3 text-[1.0625rem] font-semibold tabular-nums text-primary">
           <CircleEllipsis className="h-5 w-5" aria-hidden="true" />
           {shown}
-        </button>
-      )}
-      <Sheet open={open} onOpenChange={setOpen} title={t.result.more}>
-        <div className="min-h-0 overflow-y-auto overscroll-contain" onClickCapture={chosen}>
-          <SlotItems list="result.actions" props={() => ({ match, placement: "row" })} className="grid gap-2" />
-        </div>
-        <Button variant="ghost" onClick={() => setOpen(false)} className="mt-2 h-12 w-full shrink-0 rounded-2xl text-[1.0625rem]">
-          {t.common.done}
         </Button>
-      </Sheet>
+      )}
+      <MoreSheet match={match} open={open} onOpenChange={setOpen} />
+    </div>
+  )
+}
+
+// The pieces on a short phone in portrait (the iPhone SE), where the key numbers can spare one
+// row: the first piece shows as its row, and with more a count ("+1") at the row's end opens
+// the sheet with all of them. The other pieces stay mounted, hidden, so they are counted.
+function ShortPieces({ match }: { match: FinishedMatch }) {
+  const t = useT()
+  const [open, setOpen] = useState(false)
+  const { ref, shown } = useShownPieces(open)
+  return (
+    <div className={cn("mb-1 flex items-stretch gap-2", shown === 0 && "hidden")}>
+      {!open && <SlotItems ref={ref} list="result.actions" props={() => ({ match, placement: "row" })} className="grid min-w-0 flex-1 gap-1 [&>*:not(:first-child)]:hidden" />}
+      {shown > 1 && (
+        <Button variant="secondary" onClick={() => setOpen(true)} aria-label={t.result.moreLabel(shown)} className="h-11 min-w-11 shrink-0 rounded-2xl px-3 text-[1.0625rem] font-semibold tabular-nums text-primary">
+          +{shown - 1}
+        </Button>
+      )}
+      <MoreSheet match={match} open={open} onOpenChange={setOpen} />
     </div>
   )
 }
@@ -138,8 +164,10 @@ export function MatchResult({ state, match, onRematch, onNewGame, onHome, onLead
   const reduceMotion = useReducedMotion()
   const [statsOpen, setStatsOpen] = useState(false)
   const { title, subtitle, badges } = useMemo(() => headline(state, t), [state, t])
-  // Tailwind's `split` (side by side in landscape) and `xshort` (a phone in landscape).
+  // Tailwind's `split` (side by side in landscape), `short` (a small phone in portrait, every
+  // phone in landscape) and `xshort` (a phone in landscape).
   const split = useMediaQuery(SPLIT)
+  const short = useMediaQuery(SHORT)
   const xshort = useMediaQuery(XSHORT)
   const finished = useMemo<FinishedMatch>(
     () => ({
@@ -191,8 +219,9 @@ export function MatchResult({ state, match, onRematch, onNewGame, onHome, onLead
   )
 
   // Areas' pieces are rendered once, next to the buttons on screen, not in both copies of them.
-  // An empty list costs no room: a guest's result looks exactly as before.
-  const pieces = <SlotItems list="result.actions" props={() => ({ match: finished, placement: "row" })} className="mb-2 grid gap-2 empty:hidden short:mb-1 short:gap-1" />
+  // An empty list costs no room: a guest's result looks exactly as before. A row each where the
+  // screen is tall enough; one row and a count where it is short; the top bar in landscape.
+  const pieces = short ? <ShortPieces match={finished} /> : <SlotItems list="result.actions" props={() => ({ match: finished, placement: "row" })} className="mb-2 grid gap-2 empty:hidden" />
   const actions = (withPieces: boolean) => (
     <div>
       {withPieces && !xshort && pieces}

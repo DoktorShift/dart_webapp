@@ -6,8 +6,8 @@ import { androidSigner, completeAnswer, preparePublicKeyRequest } from "../lib/p
 import { dbKeys } from "../lib/storage/db.ts"
 
 // The Android signer path (NIP-55 from a web page): every request is stored before the page is
-// left, its answer comes back as /#signer-return… and is matched to it, once. A signature asked
-// for in one page reaches it through the database, wherever the answer arrived.
+// left, its answer comes back as /#signer-return=<id>.<result> and is matched to it, once. A
+// signature asked for in one page reaches it through the database, wherever the answer arrived.
 
 let core: Core
 let secret: Uint8Array
@@ -28,25 +28,26 @@ beforeEach(async () => {
 // The request id and callback the signer app would read from the link.
 function request(url: string) {
   const callback = decodeURIComponent(/callbackUrl=([^&]+)/.exec(url)![1])
-  const id = /id=([0-9a-f]{32})&result=$/.exec(callback)![1]
+  const id = /=([0-9a-f]{32})\.$/.exec(callback)![1]
   return { id, callback }
 }
 
-// What the app sees after the signer app opened the callback with its result appended.
-const answer = (id: string, result: string) => `&id=${id}&result=${result}`
+// The link payload (lib/shell/links.ts) after the signer app opened the callback with its result
+// appended: everything after "#signer-return=".
+const answer = (id: string, result: string) => `${id}.${result}`
 
 test("sign-in: the key comes back once, and only to the request that asked for it", async () => {
   const url = await preparePublicKeyRequest()
   assert.match(url, /^nostrsigner:\?type=get_public_key/)
   const { id, callback } = request(url)
-  assert.ok(callback.startsWith("https://blueline.example/#signer-return&id="), "the answer stays in the fragment")
+  assert.equal(callback, `https://blueline.example/#signer-return=${id}.`, "the answer stays in the fragment, the id in front of it")
   assert.deepEqual(await dbKeys("pending"), [`signer:${id}`])
   assert.deepEqual(await completeAnswer(answer(id, core.nip19.npubEncode(pubkey))), { type: "pubkey", pubkey })
   assert.deepEqual(await dbKeys("pending"), [])
   // The same link again (browser history) and an unknown request change nothing.
   assert.equal(await completeAnswer(answer(id, pubkey)), null)
   assert.equal(await completeAnswer(answer("0".repeat(32), pubkey)), null)
-  assert.equal(await completeAnswer("&garbage"), null)
+  assert.equal(await completeAnswer("garbage"), null)
 })
 
 test("signing: the page that asked gets the checked event from the answer", async () => {

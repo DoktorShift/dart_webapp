@@ -4,10 +4,11 @@ import { dbGet, dbWrite, onStorageChange, type Keyed } from "../storage/db.ts"
 import { SIGNER_PENDING_PREFIX } from "./session.ts"
 
 // An Android signer app (NIP-55) from a web page. A request leaves the page as a nostrsigner:
-// link; the answer comes back as a new address of the app (/#signer-return…), in the same tab or
-// a new one, maybe after a reload. So every request is stored before the page is left, and the
-// answer is matched to it by the link handler (completeAnswer), wherever it arrives. A signature
-// asked for in one tab and answered in another reaches the waiting tab through the database.
+// link; the answer comes back as a new address of the app (/#signer-return=<id>.<result>), in
+// the same tab or a new one, maybe after a reload. So every request is stored before the page is
+// left, and the answer is matched to it by the link handler (completeAnswer), wherever it
+// arrives. A signature asked for in one tab and answered in another reaches the waiting tab
+// through the database.
 //
 // Only reading the key and occasional signatures (decision 0002 §4): decryption would put
 // plaintext into the page address, so this signer has no NIP-44. Private lists then stay
@@ -97,13 +98,13 @@ export type SignerAnswer =
   | { type: "signed"; event: VerifiedEvent; awaited: boolean }
   | { type: "refused" }
 
-// Takes the answer of /#signer-return… (the link payload after "signer-return"). Null when it
+// Takes the answer of /#signer-return=… (the link payload after "signer-return="). Null when it
 // answers nothing stored here: an old link from the history, or one answered already.
 export async function completeAnswer(payload: string): Promise<SignerAnswer | null> {
   const nip55 = await import("../nostr/ext/nip55.ts")
   let callback: ReturnType<typeof nip55.parseCallback>
   try {
-    callback = nip55.parseCallback(`#signer-return${payload}`)
+    callback = nip55.parseCallback(`#signer-return=${payload}`)
   } catch {
     return null
   }

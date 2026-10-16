@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { ChevronRight } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,18 +14,18 @@ import {
 import { Button } from "@/components/ui/button"
 import { ListRow } from "@/components/ui/list-row"
 import { Sheet, SheetBody } from "@/components/ui/sheet"
-import { FitText } from "@/components/fit-text"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { useMediaQuery } from "@/components/common/use-media-query"
 import { AmountPicker } from "@/components/payments/amount-picker"
 import { CongratulateFlow } from "@/components/payments/congratulate"
 import { RequestOriginContext } from "@/components/payments/connect"
-import { StatusIcon, TONE_COLORS, entryStatus, type Tone } from "@/components/payments/entry-status"
+import { entryStatus, type Tone } from "@/components/payments/entry-status"
 import { useFormat, type Format } from "@/components/payments/format"
 import { PayFlow } from "@/components/payments/pay-flow"
 import { ReceiveFlow } from "@/components/payments/receive-flow"
 import { useLandscapePhone } from "@/components/payments/sheet-actions"
 import { PaymentSignet } from "@/components/payments/signet"
+import { ResultRow, type ResultRowTone } from "@/components/shell/result-row"
 import type { MatchPlayer } from "@/lib/game/types"
 import { PAYMENTS_TEXTS, type PaymentTexts } from "@/lib/i18n/features/payments.screens"
 import { useSession } from "@/lib/profile/session"
@@ -34,40 +33,18 @@ import { useJournal, useReturnedConnection, useWallet } from "@/lib/payments/hoo
 import { actions, isDone, isOpen, noteSettled, type PaymentEntry } from "@/lib/payments/journal"
 import { deviceSide, AMOUNT_PRESETS, resultOffer, type StakeParties } from "@/lib/payments/stake"
 import type { RequestOrigin } from "@/lib/payments/wallet-return"
-import type { FinishedMatch, SlotListProps } from "@/lib/shell/registry"
+import type { SlotListProps } from "@/lib/shell/registry"
 import { usePlayers } from "@/lib/storage/hooks"
-import { cn } from "@/lib/utils"
 
-// The result screen's payment row ("result.actions", one row of about 44 pt). With a stake:
-// "500 sats an Mia zahlen", or how the stake stands. Without one, only where a wallet is connected:
-// paying, receiving or congratulating. Loaded only then (./gate.tsx), so for everyone else the
-// result looks exactly as before. Tapping opens a sheet; nothing is paid without its own
-// confirmation.
+// The result screen's payment row ("result.actions", one ResultRow with the signet). With a
+// stake: "500 sats an Mia zahlen", or how the stake stands, as the row's tone and in its words.
+// Without one, only where a wallet is connected: paying, receiving or congratulating. Loaded only
+// then (./gate.tsx), so for everyone else the result looks exactly as before. Tapping opens a
+// sheet; nothing is paid without its own confirmation.
 
-// The row itself: the signet, how it stands (a symbol with words, never colour alone) and one
-// line of text, which shrinks a little to fit and wraps to a second line when it still doesn't.
-// min-w-0 keeps the row inside its grid column while the text is measured at full size;
-// otherwise the column would stretch to the text and the measurement would be wrong. On a phone
-// in landscape the row sits in the result's narrow left column, so it keeps its spacing tight
-// there and its few words stay on one line.
-function PaymentRow({ label, tone, onClick }: { label: string; tone?: Tone; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex min-h-12 w-full min-w-0 items-center gap-3 rounded-2xl border border-border bg-card px-4 py-2 text-left text-[1.0625rem] transition-colors active:bg-secondary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring short:min-h-11 xshort:gap-2 xshort:px-3"
-    >
-      <PaymentSignet />
-      <span className={cn("flex min-w-0 flex-1 items-center gap-1.5 leading-snug", tone && TONE_COLORS[tone])}>
-        {tone && <StatusIcon tone={tone} />}
-        <FitText minScale={0.75} className="flex-1">
-          {label}
-        </FitText>
-      </span>
-      <ChevronRight className="-mr-1 h-5 w-5 shrink-0 text-muted-foreground/70" aria-hidden="true" />
-    </button>
-  )
-}
+// How a settled stake stands (./entry-status.tsx) as the row's tone: done, worth a look, or
+// nothing special yet.
+const ROW_TONES: Record<Tone, ResultRowTone> = { success: "success", progress: "accent", warning: "warning", error: "warning", neutral: "neutral" }
 
 // The profile key each player is linked to on this device, if any.
 function useLinked() {
@@ -96,7 +73,7 @@ function stakeLabel(tx: PaymentTexts, format: Format, parties: StakeParties, sid
   return entryStatus(tx, settled).label
 }
 
-function StakeAction({ match, parties, entry }: { match: FinishedMatch; parties: StakeParties; entry: PaymentEntry | undefined }) {
+function StakeAction({ match, placement, parties, entry }: SlotListProps["result.actions"] & { parties: StakeParties; entry: PaymentEntry | undefined }) {
   const t = useT()
   const tx = useAreaT(PAYMENTS_TEXTS)
   const format = useFormat()
@@ -134,7 +111,14 @@ function StakeAction({ match, parties, entry }: { match: FinishedMatch; parties:
 
   return (
     <RequestOriginContext.Provider value={origin}>
-      <PaymentRow label={stakeLabel(tx, format, parties, side, settled, brief)} tone={settled && entryStatus(tx, settled).tone} onClick={() => setOpen(true)} />
+      <ResultRow
+        icon={PaymentSignet}
+        label={stakeLabel(tx, format, parties, side, settled, brief)}
+        tone={settled ? ROW_TONES[entryStatus(tx, settled).tone] : "neutral"}
+        placement={placement}
+        onClick={() => setOpen(true)}
+        trailing={{ kind: "chevron" }}
+      />
       <Sheet open={open} onOpenChange={(next) => (next ? setOpen(true) : close())} title={t.payments.stake.title} description={landscape ? undefined : s.agreed(parties.payer.name, amount, parties.payee.name)}>
         <SheetBody>
           {open && shown === "pay" && <PayFlow action={action} once counterpart={payee} amountSats={parties.sats} onDone={close} />}
@@ -186,7 +170,7 @@ function StakeAction({ match, parties, entry }: { match: FinishedMatch; parties:
 
 type FreeChoice = { kind: "pay"; player: MatchPlayer } | { kind: "receive" } | { kind: "congratulate"; player: MatchPlayer; pubkey: string }
 
-function FreeAction({ match }: { match: FinishedMatch }) {
+function FreeAction({ match, placement }: SlotListProps["result.actions"]) {
   const t = useT()
   const tx = useAreaT(PAYMENTS_TEXTS)
   const f = tx.free
@@ -217,7 +201,7 @@ function FreeAction({ match }: { match: FinishedMatch }) {
 
   return (
     <RequestOriginContext.Provider value={origin}>
-      <PaymentRow label={brief ? f.briefButton : f.button} onClick={() => setOpen(true)} />
+      <ResultRow icon={PaymentSignet} label={brief ? f.briefButton : f.button} placement={placement} onClick={() => setOpen(true)} trailing={{ kind: "chevron" }} />
       <Sheet open={open} onOpenChange={(next) => (next ? setOpen(true) : close())} title={choice?.kind === "congratulate" ? tx.congratulate.title(choice.player.name) : f.title}>
         <SheetBody>
           {open && !choice && (
@@ -253,12 +237,12 @@ function FreeAction({ match }: { match: FinishedMatch }) {
   )
 }
 
-export default function ResultPayment({ match }: SlotListProps["result.actions"]) {
+export default function ResultPayment({ match, placement }: SlotListProps["result.actions"]) {
   const wallet = useWallet()
   const journal = useJournal()
   if (journal === undefined || wallet === undefined) return null
   const offer = resultOffer(match, wallet !== null)
-  if (offer?.kind === "stake") return <StakeAction match={match} parties={offer.parties} entry={journal.find((entry) => entry.action === actions.stake(match.id))} />
-  if (offer?.kind === "free") return <FreeAction match={match} />
+  if (offer?.kind === "stake") return <StakeAction match={match} placement={placement} parties={offer.parties} entry={journal.find((entry) => entry.action === actions.stake(match.id))} />
+  if (offer?.kind === "free") return <FreeAction match={match} placement={placement} />
   return null
 }
