@@ -51,6 +51,7 @@ Dateien unter `lib/`, die in Node getestet werden, verwenden relative Importe mi
 
 **Nachtrag 16. Oktober 2026 (Freigabeprüfung):**
 - `lib/clubs/store.ts` nutzt `getSession` aus `lib/profile/session.ts`: Die lokale Kopie eines Clubs wird nur für das Profil geschrieben, das gerade angemeldet ist, damit eine langsame Relay- oder Signer-Antwort nach einem Abmelden oder Profilwechsel nichts zurückbringt.
+- `lib/storage/archive.ts` nutzt `lib/profile/storage-keys.ts` (nur Namen): Eine Löschmarke nennt das Profil der gespeicherten Sitzung, gelesen aus dem Speicher, damit der Spielbildschirm (Gastweg) das Sitzungsmodul nicht lädt.
 
 ## 3 Speicherung
 

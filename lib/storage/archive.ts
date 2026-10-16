@@ -1,6 +1,7 @@
 import { ENGINE_VERSION, replay, type MatchState } from "../game/engine.ts"
 import type { MatchConfig, SavedMatch, Throw } from "../game/types.ts"
-import { dbGet, dbGetAll, dbKeys, dbWrite, type Keyed, type WriteOp } from "./db.ts"
+import { SESSION_KEY } from "../profile/storage-keys.ts"
+import { dbGet, dbGetAll, dbKeys, dbWrite, kvGet, type Keyed, type WriteOp } from "./db.ts"
 import { isUnnamed, listPlayers, resolvePlayers, type PlayerRecord } from "./players.ts"
 import {
   clearV1Records,
@@ -26,7 +27,10 @@ import {
 // A game taken off again (unarchive) leaves a mark, "deleted:<id>" in the kv store, until it is
 // archived again. By it lib/sync tells a deletion (the game is gone, from the profile's other
 // devices too) from a game that is merely gone here: resetting the Rangliste (clearLeaderboard)
-// stays on this device and leaves no mark.
+// stays on this device and leaves no mark. The mark names who deleted it, the profile signed in
+// then (null for a guest), and only that profile's history takes it: on a shared device a guest
+// or another profile deleting a game doesn't delete it from a profile's other devices. Marks from
+// before they named anyone count as a guest's.
 
 export const ARCHIVE_SCHEMA = 1
 
@@ -128,12 +132,32 @@ async function snapshotOps(now: Date): Promise<WriteOp[]> {
 }
 
 const DELETED_PREFIX = "deleted:"
-const deletedMark = (id: string, now: Date): WriteOp => ({ store: "kv", put: { id: `${DELETED_PREFIX}${id}`, value: now.toISOString() } as Keyed })
+const deletedMark = (id: string, by: string | null, now: Date): WriteOp => ({ store: "kv", put: { id: `${DELETED_PREFIX}${id}`, value: { at: now.toISOString(), by } } as Keyed })
 const noDeletedMark = (id: string): WriteOp => ({ store: "kv", delete: `${DELETED_PREFIX}${id}` })
 
-// The ids of games deleted on this device and not archived again since.
-export async function deletedMatches(): Promise<string[]> {
-  return (await dbKeys("kv")).filter((key) => key.startsWith(DELETED_PREFIX)).map((key) => key.slice(DELETED_PREFIX.length))
+// A game deleted on this device and not archived again since, and by whom (null: a guest).
+export interface DeletedMark {
+  id: string
+  by: string | null
+}
+
+export async function deletedMatches(): Promise<DeletedMark[]> {
+  const keys = (await dbKeys("kv")).filter((key) => key.startsWith(DELETED_PREFIX))
+  return Promise.all(
+    keys.map(async (key) => {
+      // Marks from before they named anyone hold only the time.
+      const by = (await kvGet<{ by?: unknown }>(key))?.by
+      return { id: key.slice(DELETED_PREFIX.length), by: typeof by === "string" ? by : null }
+    }),
+  )
+}
+
+// The profile signed in here now, null for a guest: the stored session (lib/profile/session.ts
+// keeps it under SESSION_KEY), read from storage so that the game screen, the guest path, never
+// carries the session module.
+async function signedIn(): Promise<string | null> {
+  const pubkey = (await kvGet<{ pubkey?: unknown }>(SESSION_KEY))?.pubkey
+  return typeof pubkey === "string" ? pubkey : null
 }
 
 const sameGame = (stored: ArchivedMatch, match: SavedMatch) =>
@@ -203,12 +227,12 @@ export function archiveFinished(match: SavedMatch, state: MatchState = replay(ma
 }
 
 // Takes a game off again when its winning dart is undone (or a correction reopens it), and marks
-// it deleted here.
+// it deleted here by whoever is signed in.
 export function unarchive(id: string, now = new Date()) {
   return serial(async () => {
     let ok = removeV1Record(id)
     try {
-      if (await dbGet("matches", id)) await dbWrite([{ store: "matches", delete: id }, deletedMark(id, now)])
+      if (await dbGet("matches", id)) await dbWrite([{ store: "matches", delete: id }, deletedMark(id, await signedIn(), now)])
     } catch {
       ok = false
     }

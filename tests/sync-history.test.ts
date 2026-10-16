@@ -364,7 +364,7 @@ test("resetting the Rangliste on one device deletes nothing from the profile and
 
   // A game deleted on purpose still goes everywhere.
   assert.ok(await unarchive("game-2"))
-  assert.deepEqual(await deletedMatches(), ["game-2"])
+  assert.deepEqual(await deletedMatches(), [{ id: "game-2", by: pubkey }])
   await sync(false)
   assert.equal((await opened(relays[0])).versions.get("match:game-2")?.data, null)
   await on(newDevice())
@@ -492,6 +492,29 @@ test("without `write` a sync only reads: nothing is signed, nothing is sent", as
   const written = await sync()
   assert.deepEqual([written.state, written.pending], ["complete", 0])
   await on(newDevice())
+  await sync()
+  assert.deepEqual(await ids(), ["game-1"])
+})
+
+test("a game a guest deletes on a shared device stays in the profile's history on its other devices", async () => {
+  const [shared, phone] = [newDevice(), newDevice()]
+  await on(shared)
+  await savePlayers([profilePlayer()])
+  await play101("game-1", annaBen, "2026-10-01T20:00:00.000Z")
+  await sync()
+  await on(phone)
+  await sync()
+  assert.deepEqual(await ids(), ["game-1"])
+
+  // The profile signs out on the shared device, keeping its games, and a guest deletes the game.
+  await switchTo(shared)
+  await signOut({ keepLocalData: true })
+  assert.ok(await unarchive("game-1"))
+  assert.deepEqual(await deletedMatches(), [{ id: "game-1", by: null }])
+  // Signed in there again, the profile's sync doesn't take the guest's deletion for its own.
+  await on(shared)
+  await sync()
+  await on(phone)
   await sync()
   assert.deepEqual(await ids(), ["game-1"])
 })
