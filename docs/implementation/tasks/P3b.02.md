@@ -1,6 +1,6 @@
 # P3b.02 Abgleich und Konflikte
 
-**Status:** In Prüfung
+**Status:** Umgesetzt, Nachweis offen: Offline-Abend mit echten Geräten; Grenze bei nachgehender Uhr (STATUS SY-01); Bestätigung E8
 **Paket:** P3b · **Planstelle:** [PLAN.md](../PLAN.md), Zeile 694; Zeilen 183–199 (Speicherung), 315 (Tombstones)
 
 ## Ziel
@@ -60,6 +60,17 @@ Siehe [P3b.01](P3b.01.md) (dieselben Läufe).
 | Nicht ausgeführte Prüfungen | Konflikte mit mehr als zwei Geräten gleichzeitig; Uhren, die um Stunden abweichen, ohne dass die Korrektur über den eigenen Ursprung greift (die Streuung von zehn Minuten und 15 Minuten Überlappung beim Nachlesen bleiben die Annahme) |
 | Verbleibende Einschränkungen | Ein Relay, das nur einen Teil der Teile eines großen Datensatzes hält, macht ihn dort unlesbar; die anderen Relays gleichen das beim vollständigen Abgleich aus. Gleichzeitige Änderung derselben Spielerliste auf zwei Geräten mischt je Eintrag, nicht je Feld |
 
+## Stand im Integrationszweig (16. Oktober 2026)
+
+| Punkt | Wert |
+| --- | --- |
+| Zusammengeführt | Spur `wave2/sync`, Endstand `f7bb861`, zusammengeführt in `871e237` (16. Oktober 2026) |
+| Review | Review 1 (3 hoch, 4 mittel, 6 niedrig) und HIG 1 (3 mittel, 2 niedrig) → Korrektur `788dfab`/`c01e355`; Review 2: alle drei hohen Befunde halten, ein neuer hoher (Outbox-Schleife) und zwei niedrige → Korrektur `f7bb861`; Koordinator-Review |
+| nostr-core-Version | 1.0.6 |
+| Prüfungen der Spur | 16. Oktober 2026 auf `f7bb861`: `npm test` 516/516, Relay 31/31; beide neuen Tests scheitern gegen den alten Code. Browser 34/34 auf `788dfab` ([evidence/P3b](../evidence/P3b/README.md)); nach Korrektur 2 kein neuer Browserlauf |
+| Prüfungen auf `nostr-plan` `4c4ce92` | 16. Oktober 2026, Prüfung beim Zusammenführen: `lint` und `typecheck` ohne Meldung, `npm test` 662 von 662, `npm run test:relay` 80 von 80 gegen lokale nak-Relays, `build` bestanden (`/` 71,1 kB, First Load 278 kB). Kein Browserlauf auf genau diesem Stand (P8.01). |
+| Offen für die Abnahme | Offline-Abend mit echten Geräten; ein Gerät mit nachgehender Uhr ohne Zeitabgleich schreibt in die Vergangenheit; E8 (Rangliste zurücksetzen bleibt auf dem Gerät) |
+
 ## Nächster Schritt
 
-Die Live-Spur auf die Outbox umstellen (Koordinator), damit Ergebnisse von Live-Spielen dieselben Regeln nutzen.
+E8 bestätigen; den Offline-Abend im P8-Ablauf und auf echten Geräten durchspielen.

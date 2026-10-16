@@ -1,6 +1,6 @@
 # P3a.03 Profilverteilung und Listen
 
-**Status:** In Prüfung (Schreibtest auf öffentlichen Relays offen)
+**Status:** Umgesetzt, Nachweis offen: Schreib- und Aufbewahrungstest an den fünf öffentlichen Zielen (A03, E7)
 **Paket:** P3a · **Planstelle:** [PLAN.md](../PLAN.md), Zeilen 157–180 (Relays, NIP-65), 201–218 (NIP-51)
 
 ## Ziel
@@ -28,6 +28,17 @@ Profile verteilen Metadaten und Relay-Liste an die fünf Profilziele, ohne fremd
 
 Nicht nachgewiesen: Annahme und Aufbewahrung auf den fünf öffentlichen Relays (Nutzerfreigabe E7), Ersatz-Relays aus einem Katalog, Selbstheilung fehlender Kopien (Abgleich-Spur, Outbox).
 
+## Stand im Integrationszweig (16. Oktober 2026)
+
+| Punkt | Wert |
+| --- | --- |
+| Zusammengeführt | Spur `wave2/profile`, Endstand `0c203d0`, zusammengeführt in `760d704` (16. Oktober 2026); Ergebniszeile auf `ResultRow` in `057803a` |
+| Review | Review 1 (3 hoch, 7 mittel, 7 niedrig) → Korrektur `466c581`; Review 2 (1 hoch, 3 mittel, 6 niedrig) → Korrektur `0c203d0`; Koordinator-Review. Der Bericht des ersten HIG-Prüfers ging verloren; die HIG-Prüfung deckt der integrierte Durchgang (läuft) |
+| nostr-core-Version | 1.0.6 |
+| Prüfungen der Spur | 16. Oktober 2026 auf `0c203d0`: `lint` ohne Meldung, `npm test` 481/481, Relay 24/24, `build` bestanden, Browser 54/54 (Skripte in [evidence/P2.01/scripts/fix2](../evidence/P2.01/scripts/fix2)) |
+| Prüfungen auf `nostr-plan` `4c4ce92` | 16. Oktober 2026, Prüfung beim Zusammenführen: `lint` und `typecheck` ohne Meldung, `npm test` 662 von 662, `npm run test:relay` 80 von 80 gegen lokale nak-Relays, `build` bestanden (`/` 71,1 kB, First Load 278 kB). Kein Browserlauf auf genau diesem Stand (P8.01). |
+| Offen für die Abnahme | Nur lokale nak-Relays; ob nos.lol, Primal, yakihonne, oxtr und purplepag.es die Events annehmen und halten, ist nicht nachgewiesen |
+
 ## Nächster Schritt
 
-Persistente Outbox hinter `lib/sync/publish.ts` (Abgleich-Spur), dann Schreibtest auf den öffentlichen Zielen.
+Schreibtest auf den öffentlichen Zielen nach E7.

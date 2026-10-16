@@ -655,11 +655,11 @@ P0 liefert überprüfbare Entscheidungen und erste lauffähige Nachweise, keine 
 
 Alle folgenden Punkte sind offen. Die IDs verbinden Aufgaben, Entscheidungen, Fehlerberichte und Nachweise. Jede Zeile wird vor Bearbeitung zur kurzen Aufgabenkarte nach dem oben beschriebenen Muster ergänzt. Die jeweiligen Produktkapitel und A01 bis A29 bleiben verbindlich; diese Liste ersetzt sie nicht.
 
-- [ ] **P0.01 Ausgangsstand und Arbeitsablage:** Bestehende Funktionen, Tests, Build, Paketversionen und Git-Zustand erfassen; heutige Gastabläufe und UI als Vergleich festhalten; Aufgaben- und Nachweisablage anlegen.
+- [x] **P0.01 Ausgangsstand und Arbeitsablage:** Bestehende Funktionen, Tests, Build, Paketversionen und Git-Zustand erfassen; heutige Gastabläufe und UI als Vergleich festhalten; Aufgaben- und Nachweisablage anlegen.
 
 - [ ] **P0.02 Bedienmodell:** Navigation, Rollenansichten, Bildschirmzustände und DE/EN-Begriffe abstimmen; die beschriebenen Nutzerwege als klickbare Prototypen erstellen und erste Nutzertestbefunde bearbeiten.
 
-- [ ] **P0.03 Core-Abdeckung:** Tatsächlich installierbares nostr-core-Paket in Browser und Next.js nachweisen; dokumentierte Funktionen gegen Quellstand und aktuelle NIPs prüfen; jede Lücke mit Beispiel erfassen.
+- [x] **P0.03 Core-Abdeckung:** Tatsächlich installierbares nostr-core-Paket in Browser und Next.js nachweisen; dokumentierte Funktionen gegen Quellstand und aktuelle NIPs prüfen; jede Lücke mit Beispiel erfassen.
 
 - [ ] **P0.04 Geräte und Wiederherstellung:** QR-Kopplung, Passkey-PRF und vorhandene externe Signer mit benannten Geräten und Browsern erproben; Sicherungsformat und Import-Testvektoren festlegen; benötigte Core-Ergänzungen P3a zuordnen.
 
@@ -669,11 +669,11 @@ Alle folgenden Punkte sind offen. Die IDs verbinden Aufgaben, Entscheidungen, Fe
 
 - [ ] **P0.07 Gestaltungsgrundlage:** Abstände, Typografie, Zustandsfarben, Dialoge, Tabellen und Originalassets festlegen; Referenzgeräte, Messverfahren und konkrete Leistungsziele dokumentieren.
 
-- [ ] **P1.01 IDs und Archive:** Spieleridentität von Anzeigenamen lösen; neue Rohdaten und importierte Summen nachvollziehbar unterscheiden.
+- [x] **P1.01 IDs und Archive:** Spieleridentität von Anzeigenamen lösen; neue Rohdaten und importierte Summen nachvollziehbar unterscheiden.
 
 - [ ] **P1.02 Migration und Schreiben:** Unterbrochenes Upgrade, Speicherfehler und Rückweg testen; laufendes Spiel und Historie erhalten.
 
-- [ ] **P1.03 Statistik und Export:** Kennzahlen gegen unabhängig berechnete Beispiele prüfen; Regeln, fehlende Werte und Datenbasis erklären; exportierte Daten wieder einlesen.
+- [x] **P1.03 Statistik und Export:** Kennzahlen gegen unabhängig berechnete Beispiele prüfen; Regeln, fehlende Werte und Datenbasis erklären; exportierte Daten wieder einlesen.
 
 - [ ] **P3a.01 Core-Ergänzungen:** NIP-49, direkte NIP-55-Anbindung, aktuelle Badge-Formate, vollständige Badge-Prüfung und sichere private Listenwege in nostr-core liefern; Änderungen und Tests zur geprüften Paketversion verknüpfen.
 
@@ -705,7 +705,7 @@ Alle folgenden Punkte sind offen. Die IDs verbinden Aufgaben, Entscheidungen, Fe
 
 - [ ] **P5.02 Saison und Übergabe:** Ranglistenregeln, Gäste, Schlüsselwechsel, Austritt, Ausschluss, Eigentümerwechsel und portablen Clubexport abschließen.
 
-- [ ] **P6.01 Turnierengine:** Einzel-KO, Doppel-KO einschließlich Final-Reset-Regel, Jeder-gegen-jeden sowie Gruppen plus KO gegen unabhängig berechnete Turnierbeispiele prüfen.
+- [x] **P6.01 Turnierengine:** Einzel-KO, Doppel-KO einschließlich Final-Reset-Regel, Jeder-gegen-jeden sowie Gruppen plus KO gegen unabhängig berechnete Turnierbeispiele prüfen.
 
 - [ ] **P6.02 Teilnahme:** Anmeldung, Check-in, Warteliste, Gäste, Setzung, Auslosungsvorschau, Rückzug und Nichterscheinen.
 

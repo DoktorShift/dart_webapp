@@ -9,6 +9,7 @@ Diese Ablage steuert die Erweiterung von BlueLine Darts um Profile, Geräte, Clu
 | [PLAN.md](PLAN.md) | Vollständiger Umsetzungsplan mit 37 Arbeitspunkten und den Abnahmekriterien A01 bis A29 |
 | [HANDOFF.md](HANDOFF.md) | Übergabe an den Umsetzer und Review-Verfahren |
 | [STATUS.md](STATUS.md) | Aktueller Stand: aktive Aufgabe, letzter Nachweis, offene Befunde, nächster Schritt und Zustand aller 37 Punkte |
+| [REVIEW.md](REVIEW.md) | Prüfanleitung für den Menschen: Start mit lokalem Relay, ein Darts-Abend durch alle Bereiche, was nicht geprüft ist |
 | [tasks/](tasks/) | Eine Karte je Arbeitspunkt, angelegt vor Beginn der Arbeit; Muster in [tasks/_VORLAGE.md](tasks/_VORLAGE.md) |
 | [evidence/](evidence/) | Nachweise je Arbeitspunkt: Berichte, Bilder, Skripte, Messwerte |
 | [../decisions/](../decisions/) | Begründete Entscheidungen; sie gehen dem Plan vor, wo sie ihm widersprechen |

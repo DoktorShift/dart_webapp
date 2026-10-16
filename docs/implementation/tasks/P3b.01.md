@@ -1,6 +1,6 @@
 # P3b.01 Private Daten
 
-**Status:** In Prüfung (Fix-Runde 1 eingearbeitet; Schreib- und Aufbewahrungstest auf öffentlichen Relays offen, Nutzerfreigabe E7)
+**Status:** Umgesetzt, Nachweis offen: zwei unabhängige Kopien auf öffentlichen Relays (E7)
 **Paket:** P3b · **Planstelle:** [PLAN.md](../PLAN.md), Zeile 692; Zeilen 181–199 (Speicherung), 299–316 (Historie)
 
 ## Ziel
@@ -72,6 +72,17 @@ Nicht dazu gehören: Sicherungsdatei und Passkey (P2.04, Spur Sicherung), Gerät
 | Nicht ausgeführte Prüfungen | Öffentliche Relays (E7); echte Signer-Apps (Amber, nsec.app) und Geräte; Safari, Firefox, installierte PWA; VoiceOver |
 | Verbleibende Einschränkungen | Keine Vorwärtssicherheit (Bedrohungsmodell 0002 §10); NIP-55-Profile ohne private Historie; eine Signer-App ohne gemerkte Erlaubnis fragt je Datensatz, aber nur beim Start, auf Wunsch und beim Verlassen der App; „gesichert“ heißt: bei einem vollständigen Abgleich wieder gelesen; ein hier angelegtes Profil zeigt unter Erweitert seine Geburt als „Zuletzt abgeglichen“, auch wenn noch kein Relay antwortete (zu dem Zeitpunkt war sein Bestand sicher leer) |
 
+## Stand im Integrationszweig (16. Oktober 2026)
+
+| Punkt | Wert |
+| --- | --- |
+| Zusammengeführt | Spur `wave2/sync`, Endstand `f7bb861`, zusammengeführt in `871e237` (16. Oktober 2026) |
+| Review | Review 1 (3 hoch, 4 mittel, 6 niedrig) und HIG 1 (3 mittel, 2 niedrig) → Korrektur `788dfab`/`c01e355`; Review 2: alle drei hohen Befunde halten, ein neuer hoher (Outbox-Schleife) und zwei niedrige → Korrektur `f7bb861`; Koordinator-Review |
+| nostr-core-Version | 1.0.6 |
+| Prüfungen der Spur | 16. Oktober 2026 auf `f7bb861`: `npm test` 516/516, Relay 31/31; beide neuen Tests scheitern gegen den alten Code. Browser 34/34 auf `788dfab` ([evidence/P3b](../evidence/P3b/README.md)); nach Korrektur 2 kein neuer Browserlauf |
+| Prüfungen auf `nostr-plan` `4c4ce92` | 16. Oktober 2026, Prüfung beim Zusammenführen: `lint` und `typecheck` ohne Meldung, `npm test` 662 von 662, `npm run test:relay` 80 von 80 gegen lokale nak-Relays, `build` bestanden (`/` 71,1 kB, First Load 278 kB). Kein Browserlauf auf genau diesem Stand (P8.01). |
+| Offen für die Abnahme | Aufbewahrung auf öffentlichen Relays; Android-Signer ohne NIP-44 bekommen keine private Historie (STATUS SY-02) |
+
 ## Nächster Schritt
 
-Schreib- und Aufbewahrungstest (24 Stunden, 7 Tage) auf den fünf öffentlichen Relays nach Nutzerfreigabe E7.
+Schreib- und Aufbewahrungstest (24 Stunden, 7 Tage) auf den fünf öffentlichen Relays nach E7.

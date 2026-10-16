@@ -1,6 +1,6 @@
 # P3a.01 Core-Ergänzungen
 
-**Status:** Wartet auf Nachweis
+**Status:** Umgesetzt, Nachweis offen: NIP-49, NIP-55, Badge- und Listenwege sind in keiner veröffentlichten nostr-core-Version (A25); Zweige `feat/nip49` und `feat/nip55` nicht gepusht (E10)
 **Paket:** P3a · **Planstelle:** [PLAN.md](../PLAN.md), Zeile 678; Bibliothekskapitel Zeilen 593 bis 608
 
 ## Ziel
@@ -76,6 +76,17 @@ Nicht dazu: NWC-Korrekturen (P7b), Relay-Client (P0.03/P3a.02), die eigentlichen
 | Nicht ausgeführte Prüfungen | NIP-55 mit echtem Amber (Anhängen an ein Fragment, Rückkehr in die PWA), NIP-46 mit Amber, nsec.app und Clave (darunter: Schlüsselnachweis ohne zusätzliche Rückfrage, `auth_url` beim `connect`), NIP-49-Laufzeit auf Telefonen |
 | Verbleibende Einschränkungen | Erst zum Teil in nostr-core (Abschlussnachweise). Das Planziel „in nostr-core liefern“ ist für die übrigen Bausteine erst mit Veröffentlichung und fester Version erfüllt. Kontotausch beim nostrconnect://-QR-Code nur mit Bestätigung durch den Nutzer abgewehrt (CORE.md, Restrisiken). |
 
+## Stand im Integrationszweig (16. Oktober 2026)
+
+| Punkt | Wert |
+| --- | --- |
+| Zusammengeführt | `bbabb74` (Welle 1); nostr-core 1.0.6 in `f8d0d5b` (16. Oktober 2026); Upstream-Zweige `feat/nip49` (`b1f4e03`) und `feat/nip55` (`07e48af`) in `~/projects/nostr-core-wt`, nicht im App-Repository |
+| Review | Welle 1: zwei Review-Runden; 1.0.6 vom Koordinator geprüft |
+| nostr-core-Version | 1.0.6 |
+| Prüfungen der Spur | 16. Oktober 2026: nostr-core-Zweige je `npm run build`, `npm test` (NIP-49 7/7 mit dem offiziellen Vektor, NIP-55 11/11), `npm run docs:build`; beide Zweige lassen sich konfliktfrei zusammenführen. App auf `f8d0d5b`: 414/414, Relay 20/20 |
+| Prüfungen auf `nostr-plan` `4c4ce92` | 16. Oktober 2026, Prüfung beim Zusammenführen: `lint` und `typecheck` ohne Meldung, `npm test` 662 von 662, `npm run test:relay` 80 von 80 gegen lokale nak-Relays, `build` bestanden (`/` 71,1 kB, First Load 278 kB). Kein Browserlauf auf genau diesem Stand (P8.01). |
+| Offen für die Abnahme | E10 (Push, PR, Release); danach die App von `lib/nostr/ext/nip49.ts` und `nip55.ts` auf nostr-core umstellen; Badge- und Listenwege, NWC-Korrekturen und strenge Zap-Prüfung haben noch keine PR |
+
 ## Nächster Schritt
 
-Für die offenen Bausteine kleine, getrennte Pull-Requests an nostr-core in der Reihenfolge aus CORE.md vorbereiten; der Nutzer stimmt Review und Veröffentlichung mit dem Co-Maintainer ab.
+E10; danach die Umstellung in `lib/nostr` und die Lückentests auf die neue Version.

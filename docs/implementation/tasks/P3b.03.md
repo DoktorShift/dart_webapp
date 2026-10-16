@@ -1,6 +1,6 @@
 # P3b.03 Portabilität
 
-**Status:** In Prüfung (Wiederherstellung ohne Ursprungsgerät über Sicherungsdatei und Kopplung folgt in den Spuren Sicherung und Geräte)
+**Status:** Umgesetzt, Nachweis offen: Wiederaufbau auf sauberem echten Gerät, Export mit unabhängiger Implementierung (A20, E11), Wechsel eines ausgefallenen Relays im Feld
 **Paket:** P3b · **Planstelle:** [PLAN.md](../PLAN.md), Zeile 696; A07, A20
 
 ## Ziel
@@ -51,6 +51,17 @@ Siehe [P3b.01](P3b.01.md).
 | Nicht ausgeführte Prüfungen | Öffentliche Relays; Export-Import-Rundlauf über ein Profil hinweg auf echten Geräten |
 | Verbleibende Einschränkungen | Die vier allgemeinen Relays der App bleiben immer Ziel; ein ausgefallenes Standardrelay lässt sich ergänzen, nicht entfernen (es stört nicht, kostet aber einen Verbindungsversuch je Abgleich) |
 
+## Stand im Integrationszweig (16. Oktober 2026)
+
+| Punkt | Wert |
+| --- | --- |
+| Zusammengeführt | Spur `wave2/sync`, Endstand `f7bb861`, zusammengeführt in `871e237` (16. Oktober 2026); Wiederherstellung aus Sicherungsdatei und Passkey mit Geräte und Sicherung (`291f4e9`) |
+| Review | Review 1 (3 hoch, 4 mittel, 6 niedrig) und HIG 1 (3 mittel, 2 niedrig) → Korrektur `788dfab`/`c01e355`; Review 2: alle drei hohen Befunde halten, ein neuer hoher (Outbox-Schleife) und zwei niedrige → Korrektur `f7bb861`; Koordinator-Review |
+| nostr-core-Version | 1.0.6 |
+| Prüfungen der Spur | 16. Oktober 2026 auf `f7bb861`: `npm test` 516/516, Relay 31/31; beide neuen Tests scheitern gegen den alten Code. Browser 34/34 auf `788dfab` ([evidence/P3b](../evidence/P3b/README.md)); nach Korrektur 2 kein neuer Browserlauf |
+| Prüfungen auf `nostr-plan` `4c4ce92` | 16. Oktober 2026, Prüfung beim Zusammenführen: `lint` und `typecheck` ohne Meldung, `npm test` 662 von 662, `npm run test:relay` 80 von 80 gegen lokale nak-Relays, `build` bestanden (`/` 71,1 kB, First Load 278 kB). Kein Browserlauf auf genau diesem Stand (P8.01). |
+| Offen für die Abnahme | Wiederherstellung ohne Ursprungsgerät lief nur im Browser (Datei echt, Passkey simuliert, siehe P2.04); kein unabhängiger Leser des Exports; E11 |
+
 ## Nächster Schritt
 
-Nach der Spur Sicherung: Wiederaufbau aus Sicherungsdatei plus Relay-Kopien auf einem sauberen Gerät durchspielen.
+E11 klären; dann Wiederaufbau aus Sicherungsdatei plus Relay-Kopien auf einem sauberen echten Gerät.
