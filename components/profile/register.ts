@@ -3,7 +3,7 @@
 import type { ComponentType, ReactNode } from "react"
 import { lazyScreen } from "@/components/nav/lazy-screen"
 import { PROFILE_SCREENS } from "@/components/profile/screens"
-import type { FinishedMatch, ScreenProps, SetupPlayersProps } from "@/lib/shell/registry"
+import type { ScreenProps, SetupPlayersProps, SlotListProps } from "@/lib/shell/registry"
 import { SCREENS, registerLinkHandler, registerScreen, registerSlot, registerSlotItem } from "@/lib/shell/registry"
 
 // Where the profile area plugs into the shell (imported by components/shell/extensions.ts). Every
@@ -19,7 +19,7 @@ const PlayerScreen = screen(() => import("@/components/profile/player-screen"))
 const AdvancedScreen = screen(() => import("@/components/profile/advanced-screen"))
 
 registerSlot("profile.root", ProfileRoot)
-registerSlotItem("result.actions", "profile.keep", lazyScreen<{ match: FinishedMatch }>(() => import("@/components/profile/keep-results")))
+registerSlotItem("result.actions", "profile.keep", lazyScreen<SlotListProps["result.actions"]>(() => import("@/components/profile/keep-results")))
 registerSlotItem("setup.players", "profile.players", lazyScreen<SetupPlayersProps>(() => import("@/components/profile/setup-players")))
 
 registerScreen(SCREENS.profileCreate, { title: (t) => t.profile.guest.create, Component: screen(() => import("@/components/profile/create-screen")) })
