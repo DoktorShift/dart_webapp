@@ -59,7 +59,10 @@ module.exports = {
         },
         success: "hsl(var(--success))",
         warning: "hsl(var(--warning))",
-        danger: "hsl(var(--danger))",
+        danger: {
+          DEFAULT: "hsl(var(--danger))",
+          foreground: "hsl(var(--danger-foreground))",
+        },
         key: {
           DEFAULT: "hsl(var(--key))",
           quiet: "hsl(var(--key-quiet))",

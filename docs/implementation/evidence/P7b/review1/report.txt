@@ -1,0 +1,61 @@
+rows-de-light-se-result-paid.jpg layout ok
+rows-de-light-se row {"text":"500 sats an Mia bezahlt","font":"13.6px","client":153,"scroll":153,"height":48} pay_invoice 1 foreign []
+rows-en-dark-se-result-paid.jpg layout ok
+rows-en-dark-se row {"text":"500 sats paid to Mia","font":"15.9px","client":153,"scroll":153,"height":48} pay_invoice 1 foreign []
+rows-de-dark-landscape-result-paid.jpg layout ok
+rows-de-dark-landscape row {"text":"500 sats an Mia bezahlt","font":"17px","client":216,"scroll":216,"height":44} pay_invoice 1 foreign []
+rows-de-light-tablet-result-paid.jpg layout ok
+rows-de-light-tablet row {"text":"500 sats an Mia bezahlt","font":"17px","client":297,"scroll":297,"height":48} pay_invoice 1 foreign []
+return-de-light-iphone-01-unrequested.jpg layout ok
+return-de-light-iphone unrequested link: wallet null
+return-de-light-iphone-02-confirm.jpg layout ok
+return-de-light-iphone before confirming: wallet null
+return-de-light-iphone-03-connected.jpg layout ok
+return-de-light-iphone after confirming: wallet me@mine.test
+return-de-light-iphone-04-replayed.jpg layout ok
+return-de-light-iphone replayed link: wallet me@mine.test
+return-de-light-iphone-05-confirm-replaces.jpg layout ok
+return-de-light-iphone replacement cancelled: wallet me@mine.test errors [] foreign []
+return-en-dark-se-01-unrequested.jpg layout ok
+return-en-dark-se unrequested link: wallet null
+return-en-dark-se-02-confirm.jpg layout ok
+return-en-dark-se before confirming: wallet null
+return-en-dark-se-03-connected.jpg layout ok
+return-en-dark-se after confirming: wallet me@mine.test
+return-en-dark-se-04-replayed.jpg layout ok
+return-en-dark-se replayed link: wallet me@mine.test
+return-en-dark-se-05-confirm-replaces.jpg layout ok
+return-en-dark-se replacement cancelled: wallet me@mine.test errors [] foreign []
+switch-de-light-iphone-01-unknown.jpg layout ok
+switch-de-light-iphone paid by the first wallet 1 [{"id":"cdde0fa0","action":"stake:1c26fce81c5fc0ca4cc9f9ee82e298ba","state":"unknown","problem":"no-answer","connection":"9767016d"}]
+switch-de-light-iphone-02-checked-other-wallet.jpg layout ok
+switch-de-light-iphone after Status prüfen through the new wallet [{"id":"cdde0fa0","action":"stake:1c26fce81c5fc0ca4cc9f9ee82e298ba","state":"unknown","problem":"no-answer","connection":"9767016d"}]
+switch-de-light-iphone-03-confirm-by-hand.jpg layout ok
+switch-de-light-iphone-04-noted.jpg layout ok
+switch-de-light-iphone noted by hand [{"id":"cdde0fa0","action":"stake:1c26fce81c5fc0ca4cc9f9ee82e298ba","state":"paid","byHand":true,"connection":"9767016d"}]
+switch-de-light-iphone-05-result.jpg layout ok
+switch-de-light-iphone pay_invoice first 1 second 0 errors [] foreign []
+switch-en-dark-se-01-unknown.jpg layout ok
+switch-en-dark-se paid by the first wallet 1 [{"id":"e285b1e6","action":"stake:0753379db789f9ad884c1b657a1ca007","state":"unknown","problem":"no-answer","connection":"ca437e91"}]
+switch-en-dark-se-02-checked-other-wallet.jpg layout ok
+switch-en-dark-se after Status prüfen through the new wallet [{"id":"e285b1e6","action":"stake:0753379db789f9ad884c1b657a1ca007","state":"unknown","problem":"no-answer","connection":"ca437e91"}]
+switch-en-dark-se-03-confirm-by-hand.jpg layout ok
+switch-en-dark-se-04-noted.jpg layout ok
+switch-en-dark-se noted by hand [{"id":"e285b1e6","action":"stake:0753379db789f9ad884c1b657a1ca007","state":"paid","byHand":true,"connection":"ca437e91"}]
+switch-en-dark-se-05-result.jpg layout ok
+switch-en-dark-se pay_invoice first 1 second 0 errors [] foreign []
+address-de-dark-se-01-looking-up.jpg layout ok
+address-de-dark-se lookup given up after 11 s from opening the payment (lab value)
+address-de-dark-se-02-unreachable.jpg layout ok
+address-de-dark-se-03-review.jpg layout ok
+address-de-dark-se-04-requesting.jpg layout ok
+address-de-dark-se cancelled while requesting: journal [] pay_invoice 0 foreign []
+tabs-de-light-tab2-01-paid-meanwhile.jpg layout ok
+tabs-de-light tab 2 offers paying again: true pay_invoice 1
+guest start page: ["main-app-265be24eb1607d43.js 233","webpack-359b8e2ae62d6ba5.js 2262","layout-32bcc0b85fccccad.js 1957","8389-ea6e270b59cb71c3.js 6777","6815-75e8745ee771df86.js 7100","7340-145fb7bd8650e30d.js 17491 [texts]","error-61530624d4bfa8f1.js 393","not-found-8aef7c8a3cf35825.js 2939","8506-3677bfebb832c769.js 11649","global-error-b7320a6e6101c12b.js 466","9269-feb6a975844a4356.js 46428","e622d8cb-dbf449b4cb7fe26d.js 54370","page-afc066abae2d2bf4.js 49487 [stakeRow]","7479-51cb24868f653cac.js 70397"]
+guest setup with two players: ["1144.7951d735cbf26ef0.js 1479 [stakeRow]"]
+guest game and result: []
+guest-result-no-stake.jpg layout ok
+guest sockets [] foreign []
+receive-en-dark-se-01-waiting-slow-wallet.jpg layout ok
+receive-en-dark-se relay connections opened while waiting 26 s with a slow wallet: 1

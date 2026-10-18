@@ -15,7 +15,8 @@ import { announce, announceUndo } from "@/lib/game/announce"
 import { calloutFor, type Callout } from "@/components/game/callout"
 import type { AppSettings } from "@/lib/game/storage"
 import type { Dart, SavedMatch, Throw } from "@/lib/game/types"
-import { recordMatch, removeMatch } from "@/lib/leaderboard"
+import { archiveFinished, unarchive } from "@/lib/storage/archive"
+import { archiveSaveKind, trackSave } from "@/lib/storage/save-status"
 import type { CorrectionTarget } from "@/components/game/visit-panel"
 
 const BOUNCE_MS = 70
@@ -181,7 +182,7 @@ export function useMatchController({
     if (throws) commit(throws, { edit: true })
   }, [commit, state.legIndex])
 
-  useLeaderboardSync(match, state)
+  useArchiveSync(match, state)
 
   return {
     state,
@@ -213,30 +214,20 @@ function hasUndo(match: SavedMatch) {
   return match.throws.length > 0 || match.edits?.at(-1)?.afterLength === match.throws.length
 }
 
-// Finished games with two or more players are on the Rangliste. If a correction or Undo
-// reopens the game, its entry is taken off again until it finishes.
-function useLeaderboardSync(match: SavedMatch, state: MatchState) {
-  const recorded = useRef(false)
+// Every finished game goes into the archive (and, with two or more players, onto the
+// Rangliste). If a correction or Undo reopens the game, it is taken off again until it finishes.
+// The archive keeps the time the game was first won, however often this runs.
+function useArchiveSync(match: SavedMatch, state: MatchState) {
+  // null until the first check: a game reopened unfinished may have been archived before its
+  // winning dart was undone (and the page reloaded before that was saved). A new game can't.
+  const archived = useRef<boolean | null>(null)
   useEffect(() => {
-    if (match.config.players.length < 2) return
     if (state.winner === null) {
-      if (recorded.current) removeMatch(match.id)
-      recorded.current = false
+      if (archived.current || (archived.current === null && match.throws.length > 0)) void trackSave(archiveSaveKind(match.id), () => unarchive(match.id))
+      archived.current = false
       return
     }
-    recordMatch({
-      id: match.id,
-      finishedAt: new Date().toISOString(),
-      modeId: match.config.modeId,
-      modeName: match.config.modeName,
-      modeType: match.config.type,
-      players: match.config.players.map((p, i) => ({
-        name: p.name,
-        won: i === state.winner,
-        darts: state.stats[i].darts,
-        points: match.config.type === "x01" ? state.stats[i].points : 0,
-      })),
-    })
-    recorded.current = true
-  }, [match.id, match.config, state])
+    void trackSave(archiveSaveKind(match.id), () => archiveFinished(match, state))
+    archived.current = true
+  }, [match, state])
 }

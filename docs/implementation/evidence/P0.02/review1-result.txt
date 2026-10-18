@@ -1,0 +1,69 @@
+PASS tab bar is hidden during the game
+PASS save and leave returns to Spielen (Spielen)
+PASS after a game, Profil still shows Einstellungen (Einstellungen)
+PASS after a game, Einstellungen keeps its scroll position (300 → 300)
+PASS after a game, Rangliste keeps its scroll position (400 → 400)
+PASS after a game, Clubs still shows Einladung öffnen with the typed draft (Einladung öffnen / entwurf-123)
+PASS no console errors (finding 1 flow)
+PASS the winning dart shows the result
+PASS Fertig returns to Spielen (Spielen)
+PASS the kept leaderboard keeps its scroll position and shows the new result (scroll 250, Anna 1)
+PASS no console errors (result flow)
+PASS setup from Play: back says Spielen
+PASS setup back returns to Spielen
+PASS focus returns to the X01 button (X01301, 501,)
+PASS browser back from setup returns to Spielen
+PASS no console errors (setup return)
+PASS setup from the empty leaderboard: back says Spielen (as 1.0.0)
+PASS setup from the empty leaderboard returns to Spielen (as 1.0.0) (Spielen)
+PASS no console errors (leaderboard start)
+PASS a root shown again keeps its bar clear (no title flash after a tab switch or setup) (max opacity 0 / 0)
+PASS scrolled away, the title sits in the bar, also after a tab switch (1 / 1)
+PASS no console errors (bar title)
+PASS #p= link (de-DE): title Spielerprofil, back Profil (Spielerprofil / Profil)
+PASS #p= link (en-US): title Player profile, back Profile (Player profile / Profile)
+PASS EN placeholder text reads "This is coming in a future version."
+PASS Clubs empty state fits above the tab bar at 568x320 de-DE light (bar 275, primary bottom 215, secondary bottom 215)
+PASS Turniere empty state fits above the tab bar at 568x320 de-DE light (bar 275, primary bottom 195, secondary bottom 195)
+PASS Clubs empty state fits above the tab bar at 568x320 de-DE dark (bar 275, primary bottom 215, secondary bottom 215)
+PASS Turniere empty state fits above the tab bar at 568x320 de-DE dark (bar 275, primary bottom 195, secondary bottom 195)
+PASS Clubs empty state fits above the tab bar at 568x320 en-US light (bar 275, primary bottom 195, secondary bottom 195)
+PASS Tournaments empty state fits above the tab bar at 568x320 en-US light (bar 275, primary bottom 195, secondary bottom 195)
+PASS Clubs empty state fits above the tab bar at 568x320 en-US dark (bar 275, primary bottom 195, secondary bottom 195)
+PASS Tournaments empty state fits above the tab bar at 568x320 en-US dark (bar 275, primary bottom 195, secondary bottom 195)
+PASS Clubs empty state fits above the tab bar at 844x390 de-DE light (bar 345, primary bottom 215, secondary bottom 215)
+PASS Turniere empty state fits above the tab bar at 844x390 de-DE light (bar 345, primary bottom 195, secondary bottom 195)
+PASS Clubs empty state fits above the tab bar at 844x390 de-DE dark (bar 345, primary bottom 215, secondary bottom 215)
+PASS Turniere empty state fits above the tab bar at 844x390 de-DE dark (bar 345, primary bottom 195, secondary bottom 195)
+PASS Clubs empty state fits above the tab bar at 844x390 en-US light (bar 345, primary bottom 195, secondary bottom 195)
+PASS Tournaments empty state fits above the tab bar at 844x390 en-US light (bar 345, primary bottom 195, secondary bottom 195)
+PASS Clubs empty state fits above the tab bar at 844x390 en-US dark (bar 345, primary bottom 195, secondary bottom 195)
+PASS Tournaments empty state fits above the tab bar at 844x390 en-US dark (bar 345, primary bottom 195, secondary bottom 195)
+PASS Clubs empty state fits above the tab bar at 320x548 de-DE light (bar 498, primary bottom 356, secondary bottom 408)
+PASS Turniere empty state fits above the tab bar at 320x548 de-DE light (bar 498, primary bottom 335, secondary bottom 387)
+PASS Clubs empty state fits above the tab bar at 320x548 de-DE dark (bar 498, primary bottom 356, secondary bottom 408)
+PASS Turniere empty state fits above the tab bar at 320x548 de-DE dark (bar 498, primary bottom 335, secondary bottom 387)
+PASS Clubs empty state fits above the tab bar at 320x548 en-US light (bar 498, primary bottom 335, secondary bottom 387)
+PASS Tournaments empty state fits above the tab bar at 320x548 en-US light (bar 498, primary bottom 335, secondary bottom 387)
+PASS Clubs empty state fits above the tab bar at 320x548 en-US dark (bar 498, primary bottom 335, secondary bottom 387)
+PASS Tournaments empty state fits above the tab bar at 320x548 en-US dark (bar 498, primary bottom 335, secondary bottom 387)
+PASS without registrations, setup is pixel-identical to the reviewed commit
+PASS without registrations, setupEnd is pixel-identical to the reviewed commit
+PASS without registrations, game is pixel-identical to the reviewed commit
+PASS without registrations, options is pixel-identical to the reviewed commit
+PASS without registrations, result is pixel-identical to the reviewed commit
+PASS openSetup from Clubs: setup back says Clubs
+PASS setup back returns to Clubs
+PASS browser back from setup returns to Clubs
+PASS setup.extras piece is shown at the end of the options
+PASS a throwing setup.extras piece is left out, setup still works
+PASS setup.extras onChange sets the value
+PASS the started game carries config.extras ({"test":true})
+PASS game menu item is listed in the options menu
+PASS selecting it closes the menu and passes the running game (muv6ijk9-yun22e|1|{"test":true})
+PASS leaving a game started from Clubs returns to Clubs (Clubs)
+PASS no console errors besides the deliberate throwing piece
+PASS result.actions at 390x844: once, visible, in order, above Revanche (1 card(s), 1 button(s), "Testkarte: Anna gewinnt, 2 Spieler, 9 Würfe, Extras null")
+PASS result.actions at 844x390: once, visible, in order, above Revanche (1 card(s), 1 button(s), "Testkarte: Anna gewinnt, 2 Spieler, 9 Würfe, Extras null")
+PASS result.actions at 320x548: once, visible, in order, above Revanche (1 card(s), 1 button(s), "Testkarte: Anna gewinnt, 2 Spieler, 9 Würfe, Extras null")
+68 of 68 checks passed

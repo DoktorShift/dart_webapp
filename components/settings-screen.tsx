@@ -3,26 +3,18 @@
 import { useState } from "react"
 import { useTheme } from "next-themes"
 import { Share, SquarePlus } from "lucide-react"
+import { Confirm } from "@/components/ui/confirm"
 import { Button } from "@/components/ui/button"
-import { ChoiceRow, Group, LinkRow } from "@/components/ui/group"
+import { ChoiceRow, Group } from "@/components/ui/group"
+import { ListRow } from "@/components/ui/list-row"
 import { Segmented } from "@/components/ui/segmented"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 import { GamePreferences } from "@/components/game-preferences"
+import { DataSection } from "@/components/data/data-section"
 import { useI18n, useT } from "@/components/i18n-provider"
 import { useMatchHistory } from "@/lib/leaderboard"
 import { useInstallApp, type InstallState } from "@/hooks/use-install-app"
 import { LOCALES, type LocalePreference } from "@/lib/i18n"
 import type { AppSettings } from "@/lib/game/storage"
-import { SITE } from "@/lib/site"
 
 // Installing to the home screen: one tap where the browser allows it, otherwise the steps.
 function InstallRow({ state }: { state: InstallState | null }) {
@@ -70,7 +62,17 @@ function InstallRow({ state }: { state: InstallState | null }) {
   )
 }
 
-export function SettingsScreen({ settings, onSettingsChange }: { settings: AppSettings; onSettingsChange: (s: AppSettings) => void }) {
+// Settings, opened from the Profile tab (also as a guest). The tab's navigation stack brings the
+// title, back button and scrolling; the install guide opens inside the app as well.
+export function SettingsScreen({
+  settings,
+  onSettingsChange,
+  onOpenGuide,
+}: {
+  settings: AppSettings
+  onSettingsChange: (s: AppSettings) => void
+  onOpenGuide: () => void
+}) {
   const { t, preference, setPreference } = useI18n()
   const { theme, setTheme } = useTheme()
   const { matches, clear } = useMatchHistory()
@@ -78,10 +80,8 @@ export function SettingsScreen({ settings, onSettingsChange }: { settings: AppSe
   const install = useInstallApp()
 
   return (
-    <div className="h-full overflow-y-auto overscroll-contain">
-      <div className="mx-auto max-w-2xl px-4 pb-10 pl-[max(env(safe-area-inset-left),1rem)] pr-[max(env(safe-area-inset-right),1rem)] pt-[max(env(safe-area-inset-top),0.5rem)] lg:pt-10">
-        <h1 className="pt-3 font-display text-4xl font-semibold tracking-tight">{t.settings.title}</h1>
-
+    <>
+      <div>
         <Group title={t.settings.duringGame}>
           <ChoiceRow
             title={t.settings.scoreEntry}
@@ -98,7 +98,7 @@ export function SettingsScreen({ settings, onSettingsChange }: { settings: AppSe
 
         <Group title={t.settings.app} footer={install?.kind === "installed" ? t.settings.appInstalledFooter : t.settings.appFooter}>
           <InstallRow state={install} />
-          <LinkRow href="/about#install">{t.settings.guide}</LinkRow>
+          <ListRow title={t.settings.guide} onClick={onOpenGuide} />
         </Group>
 
         <Group title={t.settings.language}>
@@ -142,25 +142,18 @@ export function SettingsScreen({ settings, onSettingsChange }: { settings: AppSe
           </button>
         </Group>
 
-        <Group title={t.settings.about}>
-          <LinkRow href="/about">{t.settings.aboutApp(SITE.name)}</LinkRow>
-        </Group>
+        <DataSection />
       </div>
 
-      <AlertDialog open={confirmReset} onOpenChange={setConfirmReset}>
-        <AlertDialogContent className="max-w-[calc(100vw-2rem)] rounded-2xl sm:max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t.settings.resetTitle}</AlertDialogTitle>
-            <AlertDialogDescription>{t.settings.resetDescription(matches.length)}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel className="h-11">{t.common.cancel}</AlertDialogCancel>
-            <AlertDialogAction onClick={clear} className="h-11 bg-danger text-white hover:bg-danger/90">
-              {t.settings.resetConfirm}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+      <Confirm
+        open={confirmReset}
+        onOpenChange={setConfirmReset}
+        title={t.settings.resetTitle}
+        text={t.settings.resetDescription(matches.length)}
+        confirm={t.settings.resetConfirm}
+        destructive
+        onConfirm={clear}
+      />
+    </>
   )
 }

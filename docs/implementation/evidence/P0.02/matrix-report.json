@@ -1,0 +1,2522 @@
+[
+  {
+    "shot": "play-de-light-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "leaderboard-de-light-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "clubs-de-light-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "tournaments-de-light-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-de-light-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-scrolled-de-light-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-sheet-de-light-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "settings-de-light-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "about-de-light-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "club-create-de-light-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-de-light-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-denied-de-light-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "link-invite-de-light-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "game-de-light-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "play-de-light-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "leaderboard-de-light-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "clubs-de-light-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "tournaments-de-light-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-de-light-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-scrolled-de-light-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-sheet-de-light-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "settings-de-light-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "about-de-light-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "club-create-de-light-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-de-light-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-denied-de-light-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "link-invite-de-light-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "game-de-light-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "play-de-light-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "leaderboard-de-light-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "clubs-de-light-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "tournaments-de-light-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-de-light-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-scrolled-de-light-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-sheet-de-light-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "settings-de-light-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "about-de-light-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "club-create-de-light-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-de-light-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-denied-de-light-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "link-invite-de-light-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "game-de-light-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "play-de-light-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "leaderboard-de-light-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "clubs-de-light-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "tournaments-de-light-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-de-light-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-scrolled-de-light-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-sheet-de-light-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "settings-de-light-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "about-de-light-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "club-create-de-light-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-de-light-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-denied-de-light-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "link-invite-de-light-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "game-de-light-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "play-de-light-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "leaderboard-de-light-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "clubs-de-light-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "tournaments-de-light-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-de-light-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-scrolled-de-light-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-sheet-de-light-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "settings-de-light-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "about-de-light-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "club-create-de-light-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-de-light-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-denied-de-light-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "link-invite-de-light-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "game-de-light-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "play-de-dark-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "leaderboard-de-dark-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "clubs-de-dark-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "tournaments-de-dark-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-de-dark-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-scrolled-de-dark-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-sheet-de-dark-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "settings-de-dark-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "about-de-dark-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "club-create-de-dark-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-de-dark-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-denied-de-dark-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "link-invite-de-dark-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "game-de-dark-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "play-de-dark-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "leaderboard-de-dark-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "clubs-de-dark-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "tournaments-de-dark-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-de-dark-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-scrolled-de-dark-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-sheet-de-dark-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "settings-de-dark-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "about-de-dark-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "club-create-de-dark-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-de-dark-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-denied-de-dark-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "link-invite-de-dark-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "game-de-dark-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "play-de-dark-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "leaderboard-de-dark-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "clubs-de-dark-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "tournaments-de-dark-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-de-dark-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-scrolled-de-dark-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-sheet-de-dark-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "settings-de-dark-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "about-de-dark-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "club-create-de-dark-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-de-dark-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-denied-de-dark-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "link-invite-de-dark-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "game-de-dark-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "play-de-dark-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "leaderboard-de-dark-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "clubs-de-dark-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "tournaments-de-dark-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-de-dark-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-scrolled-de-dark-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-sheet-de-dark-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "settings-de-dark-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "about-de-dark-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "club-create-de-dark-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-de-dark-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-denied-de-dark-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "link-invite-de-dark-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "game-de-dark-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "play-de-dark-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "leaderboard-de-dark-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "clubs-de-dark-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "tournaments-de-dark-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-de-dark-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-scrolled-de-dark-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-sheet-de-dark-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "settings-de-dark-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "about-de-dark-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "club-create-de-dark-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-de-dark-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-denied-de-dark-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "link-invite-de-dark-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "game-de-dark-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "play-en-light-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "leaderboard-en-light-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "clubs-en-light-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "tournaments-en-light-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-en-light-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-scrolled-en-light-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-sheet-en-light-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "settings-en-light-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "about-en-light-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "club-create-en-light-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-en-light-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-denied-en-light-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "link-invite-en-light-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "game-en-light-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "play-en-light-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "leaderboard-en-light-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "clubs-en-light-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "tournaments-en-light-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-en-light-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-scrolled-en-light-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-sheet-en-light-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "settings-en-light-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "about-en-light-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "club-create-en-light-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-en-light-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-denied-en-light-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "link-invite-en-light-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "game-en-light-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "play-en-light-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "leaderboard-en-light-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "clubs-en-light-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "tournaments-en-light-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-en-light-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-scrolled-en-light-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-sheet-en-light-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "settings-en-light-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "about-en-light-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "club-create-en-light-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-en-light-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-denied-en-light-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "link-invite-en-light-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "game-en-light-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "play-en-light-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "leaderboard-en-light-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "clubs-en-light-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "tournaments-en-light-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-en-light-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-scrolled-en-light-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-sheet-en-light-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "settings-en-light-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "about-en-light-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "club-create-en-light-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-en-light-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-denied-en-light-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "link-invite-en-light-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "game-en-light-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "play-en-light-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "leaderboard-en-light-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "clubs-en-light-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "tournaments-en-light-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-en-light-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-scrolled-en-light-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-sheet-en-light-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "settings-en-light-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "about-en-light-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "club-create-en-light-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-en-light-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-denied-en-light-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "link-invite-en-light-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "game-en-light-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "play-en-dark-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "leaderboard-en-dark-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "clubs-en-dark-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "tournaments-en-dark-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-en-dark-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-scrolled-en-dark-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-sheet-en-dark-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "settings-en-dark-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "about-en-dark-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "club-create-en-dark-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-en-dark-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-denied-en-dark-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "link-invite-en-dark-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "game-en-dark-se.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "play-en-dark-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "leaderboard-en-dark-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "clubs-en-dark-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "tournaments-en-dark-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-en-dark-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-scrolled-en-dark-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-sheet-en-dark-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "settings-en-dark-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "about-en-dark-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "club-create-en-dark-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-en-dark-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-denied-en-dark-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "link-invite-en-dark-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "game-en-dark-iphone.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "play-en-dark-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "leaderboard-en-dark-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "clubs-en-dark-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "tournaments-en-dark-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-en-dark-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-scrolled-en-dark-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-sheet-en-dark-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "settings-en-dark-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "about-en-dark-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "club-create-en-dark-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-en-dark-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-denied-en-dark-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "link-invite-en-dark-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "game-en-dark-ipad.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "play-en-dark-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "leaderboard-en-dark-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "clubs-en-dark-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "tournaments-en-dark-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-en-dark-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-scrolled-en-dark-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-sheet-en-dark-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "settings-en-dark-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "about-en-dark-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "club-create-en-dark-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-en-dark-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-denied-en-dark-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "link-invite-en-dark-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "game-en-dark-ipad-landscape.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "play-en-dark-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "leaderboard-en-dark-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "clubs-en-dark-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "tournaments-en-dark-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-en-dark-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-scrolled-en-dark-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "profile-sheet-en-dark-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "settings-en-dark-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "about-en-dark-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "club-create-en-dark-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-en-dark-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "open-invite-denied-en-dark-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "link-invite-en-dark-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  },
+  {
+    "shot": "game-en-dark-desktop.png",
+    "pageScroll": false,
+    "scrollsVertically": false,
+    "offscreen": [],
+    "ellipsis": [],
+    "overflowing": [],
+    "small": []
+  }
+]

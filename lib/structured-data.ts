@@ -5,7 +5,7 @@ import { SITE, absoluteUrl } from "@/lib/site"
 const t = MESSAGES.de
 
 // What search engines and assistants read about the app and its maker (schema.org).
-export const STRUCTURED_DATA = {
+const STRUCTURED_DATA = {
   "@context": "https://schema.org",
   "@graph": [
     {

@@ -1,8 +1,9 @@
 "use client"
 
-import { replay } from "./engine"
-import { DEFAULT_RULES, LEG_OPTIONS, SET_OPTIONS, START_SCORES, type GameRules } from "./rules"
-import type { GameType, MatchConfig, SavedMatch } from "./types"
+// Explicit .ts paths: the storage tests run this module directly in Node.
+import { replay } from "./engine.ts"
+import { DEFAULT_RULES, LEG_OPTIONS, SET_OPTIONS, START_SCORES, type GameRules } from "./rules.ts"
+import type { GameType, MatchConfig, SavedMatch } from "./types.ts"
 
 const MATCH_KEY = "dart-scorer.current-match.v1"
 const PLAYERS_KEY = "dart-scorer.last-players.v1"
@@ -30,12 +31,15 @@ function read(key: string): unknown {
   }
 }
 
+// Returns whether the value was stored. Storage can be blocked or full; the app keeps working,
+// and the game says so instead of claiming it was saved (see lib/storage/save-status.ts).
 function write(key: string, value: unknown) {
   try {
     if (value === null) window.localStorage.removeItem(key)
     else window.localStorage.setItem(key, JSON.stringify(value))
+    return true
   } catch {
-    // Storage blocked or full: the app keeps working, it just can't resume.
+    return false
   }
 }
 
@@ -46,7 +50,7 @@ const flag = (value: unknown, fallback: boolean) => (typeof value === "boolean" 
 
 // Saved data can be from an older version or damaged. Anything that doesn't look right, or
 // can't be replayed, is dropped quietly: the player just starts a new game.
-function validConfig(config: unknown): config is MatchConfig {
+export function validConfig(config: unknown): config is MatchConfig {
   if (!isObject(config)) return false
   const players = config.players
   return (
@@ -64,16 +68,13 @@ function validMatch(value: unknown): value is SavedMatch {
   return isObject(value) && typeof value.id === "string" && Array.isArray(value.throws) && validConfig(value.config)
 }
 
-export function loadMatch(): SavedMatch | null {
-  const value = read(MATCH_KEY)
-  if (!validMatch(value)) {
-    if (value !== null) saveMatch(null)
-    return null
-  }
+// A game as stored here or received from another device, or null if it isn't one this version
+// can replay.
+export function parseSavedMatch(value: unknown): SavedMatch | null {
+  if (!validMatch(value)) return null
   try {
     replay(value.config, value.throws)
   } catch {
-    saveMatch(null)
     return null
   }
   return {
@@ -83,12 +84,17 @@ export function loadMatch(): SavedMatch | null {
   }
 }
 
+export function loadMatch(): SavedMatch | null {
+  const value = read(MATCH_KEY)
+  const match = parseSavedMatch(value)
+  if (!match && value !== null) saveMatch(null)
+  return match
+}
+
 export const saveMatch = (match: SavedMatch | null) => write(MATCH_KEY, match)
 
-export function loadLastPlayers(): string[] {
-  const value = read(PLAYERS_KEY)
-  return Array.isArray(value) ? value.filter((n): n is string => typeof n === "string").slice(0, 6) : []
-}
+// Still written as 1.0.0 reads it (tests/storage-v1.test.ts); setup seats the last game's players
+// from the game itself (loadLastGame), which also carries their ids.
 export const saveLastPlayers = (names: string[]) => write(PLAYERS_KEY, names)
 
 export function loadSettings(): AppSettings {

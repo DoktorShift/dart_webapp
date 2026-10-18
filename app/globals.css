@@ -31,6 +31,9 @@
     --success: 158 64% 52%;
     --warning: 46 97% 65%;
     --danger: 0 91% 71%;
+    /* Text and glyphs on a danger fill: the bright red needs dark text to pass WCAG AA (7.3:1;
+       white on it was 2.8:1). */
+    --danger-foreground: 222.2 84% 4.9%;
 
     /* Keypad keys: number keys, quieter function keys, pressed state, bottom edge */
     --key: 217.2 32.6% 17.5%;
@@ -65,6 +68,7 @@
     --success: 142 72% 25%;
     --warning: 32 95% 30%;
     --danger: 0 72% 45%;
+    --danger-foreground: 0 0% 100%;
 
     --key: 0 0% 100%;
     --key-quiet: 240 6% 84%;
@@ -103,5 +107,14 @@
     -webkit-touch-callout: default;
     -webkit-user-select: text;
     user-select: text;
+  }
+}
+
+/* A printable sheet (the tournament's pairings: components/tournaments/print-screen.tsx) is put
+   next to the app while its screen is open; printing shows only the sheet, without the app's
+   tab bar, sidebar or navigation, and lets it run over as many pages as it needs. */
+@media print {
+  body:has(> [data-print-sheet]) > :not([data-print-sheet]) {
+    display: none !important;
   }
 }

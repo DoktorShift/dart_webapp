@@ -1,0 +1,1040 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BlueLine tournament record content",
+  "$defs": {
+    "tournament.found": {
+      "description": "Founds a tournament; its id is the tournament id",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60,
+          "pattern": "^\\S(.*\\S)?$",
+          "description": "Name, trimmed"
+        },
+        "about": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Plain text, never HTML"
+        },
+        "picture": {
+          "type": "string",
+          "maxLength": 512,
+          "pattern": "^https:\\/\\/[^\\s\"<>\\\\]+$",
+          "description": "https URL"
+        },
+        "club": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Club id, when the club runs the tournament"
+        },
+        "engine": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
+          "description": "Bracket and draw rules version (TOURNAMENT_ENGINE)"
+        },
+        "format": {
+          "enum": ["single", "double", "roundRobin", "groups"]
+        },
+        "rules": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "enum": ["x01", "cricket", "clock"]
+            },
+            "modeId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 16,
+              "pattern": "^[a-z0-9]{1,16}$",
+              "description": "Game mode id, e.g. 501, cricket"
+            },
+            "startScore": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10001,
+              "description": "X01 start score (other games carry what the app set)"
+            },
+            "doubleIn": {
+              "type": "boolean"
+            },
+            "doubleOut": {
+              "type": "boolean"
+            },
+            "cutThroat": {
+              "type": "boolean"
+            },
+            "bullFinish": {
+              "type": "boolean"
+            },
+            "legsToWin": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 11
+            },
+            "setsToWin": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 7,
+              "description": "1 means the match is played in legs only"
+            },
+            "startRule": {
+              "enum": ["alternate", "loser"]
+            }
+          },
+          "required": ["type", "modeId", "startScore", "doubleIn", "doubleOut", "cutThroat", "bullFinish", "legsToWin", "setsToWin", "startRule"],
+          "additionalProperties": true,
+          "description": "Scoring rules (lib/game/types.ts MatchConfig without players and names)"
+        },
+        "final": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "enum": ["x01", "cricket", "clock"]
+            },
+            "modeId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 16,
+              "pattern": "^[a-z0-9]{1,16}$",
+              "description": "Game mode id, e.g. 501, cricket"
+            },
+            "startScore": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10001,
+              "description": "X01 start score (other games carry what the app set)"
+            },
+            "doubleIn": {
+              "type": "boolean"
+            },
+            "doubleOut": {
+              "type": "boolean"
+            },
+            "cutThroat": {
+              "type": "boolean"
+            },
+            "bullFinish": {
+              "type": "boolean"
+            },
+            "legsToWin": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 11
+            },
+            "setsToWin": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 7,
+              "description": "1 means the match is played in legs only"
+            },
+            "startRule": {
+              "enum": ["alternate", "loser"]
+            }
+          },
+          "required": ["type", "modeId", "startScore", "doubleIn", "doubleOut", "cutThroat", "bullFinish", "legsToWin", "setsToWin", "startRule"],
+          "additionalProperties": true,
+          "description": "Scoring rules (lib/game/types.ts MatchConfig without players and names)"
+        },
+        "capacity": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 128
+        },
+        "admission": {
+          "enum": ["auto", "manual"],
+          "description": "auto: the organizer's device admits registrations as they arrive; either way only tournament.admit admits"
+        },
+        "waitlist": {
+          "type": "boolean"
+        },
+        "checkIn": {
+          "type": "boolean",
+          "description": "Players check in before the draw"
+        },
+        "approval": {
+          "enum": ["organizer", "board"],
+          "description": "Who makes a result count"
+        },
+        "starts": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "timezone": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[A-Za-z_]+(\\/[A-Za-z0-9_+-]+)*$",
+          "description": "IANA time zone"
+        },
+        "place": {
+          "type": "string",
+          "maxLength": 140,
+          "description": "Plain text, never HTML"
+        },
+        "online": {
+          "type": "boolean"
+        },
+        "calendar": {
+          "type": "string",
+          "maxLength": 200,
+          "pattern": "^31923:[0-9a-f]{64}:[^\\s]{1,100}$",
+          "description": "NIP-52 calendar event address"
+        },
+        "registrationCloses": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "seedCommit": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "seedCommitment(seed), published before the draw"
+        },
+        "grandFinalReset": {
+          "type": "boolean",
+          "description": "Double elimination: a second final when the losers' bracket winner wins the first"
+        },
+        "doubleRoundRobin": {
+          "type": "boolean",
+          "description": "Round robin and groups: everyone meets everyone twice"
+        },
+        "groups": {
+          "type": "object",
+          "properties": {
+            "count": {
+              "type": "integer",
+              "minimum": 2,
+              "maximum": 32
+            },
+            "advance": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 8
+            }
+          },
+          "required": ["count", "advance"],
+          "additionalProperties": true
+        }
+      },
+      "required": ["name", "engine", "format", "rules", "capacity", "admission", "waitlist", "checkIn", "approval"],
+      "additionalProperties": true
+    },
+    "tournament.update": {
+      "description": "Changes details; rules only before the draw",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "prev": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Expected predecessor: last change of this subject, or the founding"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60,
+          "pattern": "^\\S(.*\\S)?$",
+          "description": "Name, trimmed"
+        },
+        "about": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Plain text, never HTML"
+        },
+        "picture": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 512,
+              "pattern": "^https:\\/\\/[^\\s\"<>\\\\]+$",
+              "description": "https URL"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "starts": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "timezone": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[A-Za-z_]+(\\/[A-Za-z0-9_+-]+)*$",
+          "description": "IANA time zone"
+        },
+        "place": {
+          "type": "string",
+          "maxLength": 140,
+          "description": "Plain text, never HTML"
+        },
+        "online": {
+          "type": "boolean"
+        },
+        "capacity": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 128
+        },
+        "registrationCloses": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rules": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "enum": ["x01", "cricket", "clock"]
+            },
+            "modeId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 16,
+              "pattern": "^[a-z0-9]{1,16}$",
+              "description": "Game mode id, e.g. 501, cricket"
+            },
+            "startScore": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10001,
+              "description": "X01 start score (other games carry what the app set)"
+            },
+            "doubleIn": {
+              "type": "boolean"
+            },
+            "doubleOut": {
+              "type": "boolean"
+            },
+            "cutThroat": {
+              "type": "boolean"
+            },
+            "bullFinish": {
+              "type": "boolean"
+            },
+            "legsToWin": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 11
+            },
+            "setsToWin": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 7,
+              "description": "1 means the match is played in legs only"
+            },
+            "startRule": {
+              "enum": ["alternate", "loser"]
+            }
+          },
+          "required": ["type", "modeId", "startScore", "doubleIn", "doubleOut", "cutThroat", "bullFinish", "legsToWin", "setsToWin", "startRule"],
+          "additionalProperties": true,
+          "description": "Scoring rules (lib/game/types.ts MatchConfig without players and names)"
+        },
+        "final": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "enum": ["x01", "cricket", "clock"]
+            },
+            "modeId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 16,
+              "pattern": "^[a-z0-9]{1,16}$",
+              "description": "Game mode id, e.g. 501, cricket"
+            },
+            "startScore": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10001,
+              "description": "X01 start score (other games carry what the app set)"
+            },
+            "doubleIn": {
+              "type": "boolean"
+            },
+            "doubleOut": {
+              "type": "boolean"
+            },
+            "cutThroat": {
+              "type": "boolean"
+            },
+            "bullFinish": {
+              "type": "boolean"
+            },
+            "legsToWin": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 11
+            },
+            "setsToWin": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 7,
+              "description": "1 means the match is played in legs only"
+            },
+            "startRule": {
+              "enum": ["alternate", "loser"]
+            }
+          },
+          "required": ["type", "modeId", "startScore", "doubleIn", "doubleOut", "cutThroat", "bullFinish", "legsToWin", "setsToWin", "startRule"],
+          "additionalProperties": true,
+          "description": "Scoring rules (lib/game/types.ts MatchConfig without players and names)"
+        }
+      },
+      "required": ["prev"],
+      "additionalProperties": true
+    },
+    "tournament.phase": {
+      "description": "Moves the tournament to another phase",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "phase": {
+          "enum": ["checkin", "running", "paused", "finished", "cancelled"]
+        },
+        "prev": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Expected predecessor: last change of this subject, or the founding"
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 280,
+          "description": "Plain text, never HTML"
+        }
+      },
+      "required": ["phase", "prev"],
+      "additionalProperties": true
+    },
+    "tournament.seed": {
+      "description": "Commits to the draw seed before the draw",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "commit": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "seedCommitment(seed)"
+        },
+        "prev": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Expected predecessor: last change of this subject, or the founding"
+        }
+      },
+      "required": ["commit", "prev"],
+      "additionalProperties": true
+    },
+    "tournament.draw": {
+      "description": "Reveals the seed and fixes field and order",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "seed": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "Revealed seed (128 bits)"
+        },
+        "seeded": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 32,
+            "maxLength": 64,
+            "pattern": "^([0-9a-f]{64}|[0-9a-f]{32})$",
+            "description": "Pubkey of a player, or guest id"
+          },
+          "maxItems": 128,
+          "uniqueItems": true,
+          "description": "Seeded players, best first"
+        },
+        "order": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 32,
+            "maxLength": 64,
+            "pattern": "^([0-9a-f]{64}|[0-9a-f]{32})$",
+            "description": "Pubkey of a player, or guest id"
+          },
+          "minItems": 2,
+          "maxItems": 128,
+          "uniqueItems": true,
+          "description": "The whole field in draw order"
+        },
+        "prev": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Expected predecessor: last change of this subject, or the founding"
+        }
+      },
+      "required": ["seed", "seeded", "order", "prev"],
+      "additionalProperties": true
+    },
+    "tournament.register": {
+      "description": "A player asks for a place",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "alias": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40,
+          "pattern": "^\\S(.*\\S)?$",
+          "description": "Public display alias, trimmed"
+        }
+      },
+      "required": [],
+      "additionalProperties": true
+    },
+    "tournament.withdraw": {
+      "description": "A player withdraws",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "maxLength": 280,
+          "description": "Plain text, never HTML"
+        }
+      },
+      "required": [],
+      "additionalProperties": true
+    },
+    "tournament.admit": {
+      "description": "The organizer admits a registration",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "participant": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 64,
+          "pattern": "^([0-9a-f]{64}|[0-9a-f]{32})$",
+          "description": "Pubkey of a player, or guest id"
+        },
+        "prev": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Expected predecessor: last change of this subject, or the founding"
+        }
+      },
+      "required": ["participant", "prev"],
+      "additionalProperties": true
+    },
+    "tournament.waitlist": {
+      "description": "The organizer puts a registration on the waiting list",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "participant": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 64,
+          "pattern": "^([0-9a-f]{64}|[0-9a-f]{32})$",
+          "description": "Pubkey of a player, or guest id"
+        },
+        "prev": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Expected predecessor: last change of this subject, or the founding"
+        }
+      },
+      "required": ["participant", "prev"],
+      "additionalProperties": true
+    },
+    "tournament.remove": {
+      "description": "The organizer takes a participant out",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "participant": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 64,
+          "pattern": "^([0-9a-f]{64}|[0-9a-f]{32})$",
+          "description": "Pubkey of a player, or guest id"
+        },
+        "prev": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Expected predecessor: last change of this subject, or the founding"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 280,
+          "description": "Why: declined, no-show, disqualified"
+        }
+      },
+      "required": ["participant", "prev", "reason"],
+      "additionalProperties": true
+    },
+    "tournament.guest": {
+      "description": "The organizer adds a guest without a profile",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "guest": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "128-bit object id, lowercase hex"
+        },
+        "alias": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40,
+          "pattern": "^\\S(.*\\S)?$",
+          "description": "Public display alias, trimmed"
+        },
+        "named": {
+          "type": "boolean",
+          "description": "true: the guest agreed to be shown under this name; otherwise it is a neutral alias"
+        }
+      },
+      "required": ["guest", "alias"],
+      "additionalProperties": true
+    },
+    "tournament.claim": {
+      "description": "A player claims a guest place as theirs",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "guest": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "128-bit object id, lowercase hex"
+        }
+      },
+      "required": ["guest"],
+      "additionalProperties": true
+    },
+    "tournament.link": {
+      "description": "The organizer links a guest place to the claiming player",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "guest": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "128-bit object id, lowercase hex"
+        },
+        "player": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Pubkey, lowercase hex"
+        },
+        "prev": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Expected predecessor: last change of this subject, or the founding"
+        }
+      },
+      "required": ["guest", "player", "prev"],
+      "additionalProperties": true
+    },
+    "tournament.checkin": {
+      "description": "A player checks in, or the organizer checks someone in",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "participant": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 64,
+          "pattern": "^([0-9a-f]{64}|[0-9a-f]{32})$",
+          "description": "Pubkey of a player, or guest id"
+        },
+        "prev": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Expected predecessor: last change of this subject, or the founding"
+        }
+      },
+      "required": [],
+      "additionalProperties": true
+    },
+    "tournament.board": {
+      "description": "The organizer authorizes a board device",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "board": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "128-bit object id, lowercase hex"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60,
+          "pattern": "^\\S(.*\\S)?$",
+          "description": "Name, trimmed"
+        },
+        "key": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Board device key"
+        },
+        "prev": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Expected predecessor: last change of this subject, or the founding"
+        }
+      },
+      "required": ["board", "name", "key", "prev"],
+      "additionalProperties": true
+    },
+    "tournament.board.revoke": {
+      "description": "The organizer withdraws a board",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "board": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "128-bit object id, lowercase hex"
+        },
+        "prev": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Expected predecessor: last change of this subject, or the founding"
+        }
+      },
+      "required": ["board", "prev"],
+      "additionalProperties": true
+    },
+    "tournament.assign": {
+      "description": "The organizer assigns a match slot to a board",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "slot": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$",
+          "description": "Match slot named by the tournament engine"
+        },
+        "board": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 32,
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "128-bit object id, lowercase hex"
+        },
+        "prev": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Expected predecessor: last change of this subject, or the founding"
+        }
+      },
+      "required": ["slot", "board", "prev"],
+      "additionalProperties": true
+    },
+    "tournament.result": {
+      "description": "A board (or the organizer) submits a result",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "slot": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$",
+          "description": "Match slot named by the tournament engine"
+        },
+        "winner": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 32,
+              "maxLength": 64,
+              "pattern": "^([0-9a-f]{64}|[0-9a-f]{32})$",
+              "description": "Pubkey of a player, or guest id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "score": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 99
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "Legs (or sets) won by the two sides"
+        },
+        "walkover": {
+          "enum": ["noShow", "retired"],
+          "description": "Won without (finishing) the match"
+        },
+        "match": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Match id of the recorded match"
+        },
+        "result": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "match.result event id"
+        }
+      },
+      "required": ["slot", "winner", "score"],
+      "additionalProperties": true
+    },
+    "tournament.approve": {
+      "description": "The organizer approves a submitted result",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "slot": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$",
+          "description": "Match slot named by the tournament engine"
+        },
+        "submission": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "tournament.result event id"
+        },
+        "prev": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Expected predecessor: last change of this subject, or the founding"
+        }
+      },
+      "required": ["slot", "submission", "prev"],
+      "additionalProperties": true
+    },
+    "tournament.correct": {
+      "description": "The organizer corrects an approved result (winner null: the match is played again)",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "slot": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$",
+          "description": "Match slot named by the tournament engine"
+        },
+        "winner": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 32,
+              "maxLength": 64,
+              "pattern": "^([0-9a-f]{64}|[0-9a-f]{32})$",
+              "description": "Pubkey of a player, or guest id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "score": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 99
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "Legs (or sets) won by the two sides"
+        },
+        "walkover": {
+          "enum": ["noShow", "retired"],
+          "description": "The new winner won without (finishing) the match"
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 280,
+          "description": "Plain text, never HTML"
+        },
+        "prev": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Expected predecessor: last change of this subject, or the founding"
+        }
+      },
+      "required": ["slot", "winner", "score", "reason", "prev"],
+      "additionalProperties": true
+    },
+    "tournament.handover.offer": {
+      "description": "The organizer offers the organization to someone",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "to": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Pubkey, lowercase hex"
+        },
+        "prev": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Expected predecessor: last change of this subject, or the founding"
+        },
+        "expires": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295,
+          "description": "Open until then: after created_at, at most MAX_OFFER_SECONDS (7 days) later"
+        },
+        "core": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "The current tournament core it hands over: its last change, or the tournament id"
+        }
+      },
+      "required": ["to", "prev", "expires", "core"],
+      "additionalProperties": true
+    },
+    "tournament.handover.cancel": {
+      "description": "The organizer withdraws the open offer",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "offer": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Event id"
+        }
+      },
+      "required": ["offer"],
+      "additionalProperties": true
+    },
+    "tournament.handover.accept": {
+      "description": "The offered person takes over the organization",
+      "kind": 1180,
+      "encryption": "seal",
+      "type": "object",
+      "properties": {
+        "offer": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Event id"
+        },
+        "core": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Last change of the tournament core (or its id) the new organizer saw: the offer's core or one built on it"
+        }
+      },
+      "required": ["offer", "core"],
+      "additionalProperties": true
+    }
+  }
+}

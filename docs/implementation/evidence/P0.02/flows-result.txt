@@ -1,0 +1,76 @@
+PASS five tabs in the tab bar (Spielen, Rangliste, Clubs, Turniere, Profil)
+PASS Spielen is the open tab
+PASS start entry is marked depth 0
+PASS Profil shows the guest header
+PASS guest numbers come from the match history
+PASS most wins names the leader
+PASS no history entry for switching tabs
+PASS Einstellungen pushes with a back button to Profil
+PASS pushed screen title
+PASS push adds one history entry
+PASS back button pops to Profil
+PASS pop steps the history back
+PASS browser back pops the stack
+PASS Über die App opens inside the Profil tab
+PASS history follows the open tab (Clubs at its root)
+PASS each tab keeps its stack and scroll position (scrollTop 600)
+PASS switching back restores its history entry
+PASS tapping the open tab goes to its root
+PASS Rangliste keeps its scroll position across tabs (scrollTop 406 of 406)
+PASS no console errors (navigation)
+PASS a club link opens the Clubs tab
+PASS … on its invitation screen
+PASS … and the link leaves the address bar
+PASS browser back from a link goes to the tab root
+PASS a link while the app is open (hashchange)
+PASS … and browser back pops it (Turniere)
+PASS unknown fragments are ignored
+PASS a signer answer nobody waits for is dropped from the address
+PASS no console errors (links)
+PASS setup hides the tab bar
+PASS setup has one history entry
+PASS browser back leaves setup to Spielen
+PASS the game hides the tab bar
+PASS the game has no history entry of its own
+PASS the game screen does not scroll
+PASS a link during a game opens it
+PASS … and the game waits on Spielen
+PASS … with every dart kept (throws 1)
+PASS no console errors (game)
+PASS Einladung öffnen pushes the scanner screen
+PASS the paste field is always there
+PASS a foreign link is refused in place
+PASS a tournament link is not taken as a club invitation
+PASS a club link replaces the scanner
+PASS no console errors (paste)
+PASS scanner state: denied
+PASS scanner denied: paste field still offered
+PASS scanner state: no camera
+PASS scanner no camera: paste field still offered
+PASS scanner state: busy camera
+PASS scanner busy camera: paste field still offered
+PASS camera scan opens the invitation (BarcodeDetector)
+PASS no console errors (camera BarcodeDetector club.y4m)
+PASS camera scan refuses a foreign code (BarcodeDetector)
+PASS camera is on while scanning (BarcodeDetector)
+PASS another tab turns the camera off (BarcodeDetector)
+PASS coming back to the scanner turns it on again (BarcodeDetector)
+PASS leaving the scanner turns the camera off (BarcodeDetector)
+PASS no console errors (camera BarcodeDetector other.y4m)
+PASS camera scan opens the invitation (jsQR)
+PASS no console errors (camera jsQR club.y4m)
+PASS camera scan refuses a foreign code (jsQR)
+PASS camera is on while scanning (jsQR)
+PASS another tab turns the camera off (jsQR)
+PASS coming back to the scanner turns it on again (jsQR)
+PASS leaving the scanner turns the camera off (jsQR)
+PASS no console errors (camera jsQR other.y4m)
+PASS offline after one visit: Profil, Einstellungen and Über die App open (profile true, settings true, about true)
+PASS offline after one visit: the Clubs and Turniere empty states open (clubs true, tournaments true)
+PASS no page errors (offline)
+PASS Permissions-Policy allows the camera for this site only (camera=(self), microphone=(), geolocation=())
+PASS Reduce Motion: pushes fade instead of sliding (none)
+PASS English tab bar
+PASS English sheet for an existing profile
+PASS sheet choice opens its screen in the Profile tab
+75 of 75 checks passed

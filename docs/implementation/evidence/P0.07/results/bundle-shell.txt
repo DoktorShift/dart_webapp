@@ -1,0 +1,48 @@
+Route "/" first-load JavaScript shell
+┌─────────┬────────────────────────────────────────────────┬─────────┬─────────┐
+│ (index) │ file                                           │ kB      │ gzip_kB │
+├─────────┼────────────────────────────────────────────────┼─────────┼─────────┤
+│ 0       │ 'static/chunks/webpack-9ab26c2aceda1b45.js'    │ '3.7'   │ '1.9'   │
+│ 1       │ 'static/chunks/4bd1b696-c023c6e3521b1417.js'   │ '169.0' │ '53.0'  │
+│ 2       │ 'static/chunks/255-ce8c7c75002f810b.js'        │ '169.9' │ '45.4'  │
+│ 3       │ 'static/chunks/main-app-05291b574cf7af79.js'   │ '0.5'   │ '0.2'   │
+│ 4       │ 'static/chunks/504-ff3f1074e6db515d.js'        │ '46.3'  │ '14.7'  │
+│ 5       │ 'static/chunks/app/layout-acb93b77ffd37ae1.js' │ '4.4'   │ '1.9'   │
+│ 6       │ 'static/chunks/909-aed3aa549e59d0fb.js'        │ '19.7'  │ '6.6'   │
+│ 7       │ 'static/chunks/790-3158895a0b91f52d.js'        │ '210.9' │ '67.8'  │
+│ 8       │ 'static/chunks/995-ea46119a86c78374.js'        │ '26.8'  │ '10.5'  │
+│ 9       │ 'static/chunks/407-3ef763728b2b1fb7.js'        │ '19.7'  │ '6.9'   │
+│ 10      │ 'static/chunks/app/page-e666469bd7b2eece.js'   │ '134.8' │ '38.0'  │
+└─────────┴────────────────────────────────────────────────┴─────────┴─────────┘
+Total: 805.4 kB raw, 246.9 kB gzip, 11 files
+nostr-core in first load: no
+jsqr in first load: no
+qrcode-generator in first load: no
+Other chunks (async or other routes):
+┌─────────┬──────────────────────────────────────────────────────────────────────┬─────────┬────────────────────┐
+│ (index) │ file                                                                 │ kB      │ contains           │
+├─────────┼──────────────────────────────────────────────────────────────────────┼─────────┼────────────────────┤
+│ 0       │ 'static/chunks/17.2ccfbc22e1e75542.js'                               │ '19.9'  │ 'qrcode-generator' │
+│ 1       │ 'static/chunks/232.261ae73fd9b2dbc0.js'                              │ '8.6'   │ '-'                │
+│ 2       │ 'static/chunks/400.0564387dc77dfae9.js'                              │ '9.8'   │ '-'                │
+│ 3       │ 'static/chunks/408.185c28c9bc068531.js'                              │ '9.8'   │ '-'                │
+│ 4       │ 'static/chunks/434-9588da0938423617.js'                              │ '18.0'  │ '-'                │
+│ 5       │ 'static/chunks/436.7a922ce7dcbace25.js'                              │ '8.7'   │ '-'                │
+│ 6       │ 'static/chunks/674-c74e239c9dc3463a.js'                              │ '14.1'  │ '-'                │
+│ 7       │ 'static/chunks/963.1711d29a145cea15.js'                              │ '6.1'   │ '-'                │
+│ 8       │ 'static/chunks/992.597abcd504db5f00.js'                              │ '0.7'   │ '-'                │
+│ 9       │ 'static/chunks/d0f5a89a.0ce1dc59f6fa84b9.js'                         │ '126.9' │ 'jsqr'             │
+│ 10      │ 'static/chunks/app/error-04c7b33de24451c2.js'                        │ '0.5'   │ '-'                │
+│ 11      │ 'static/chunks/app/global-error-c0039ab5017e3f24.js'                 │ '0.7'   │ '-'                │
+│ 12      │ 'static/chunks/app/not-found-f4b98b01f22f6e3e.js'                    │ '6.9'   │ '-'                │
+│ 13      │ 'static/chunks/app/_not-found/page-e4970b3de7d9a660.js'              │ '0.2'   │ '-'                │
+│ 14      │ 'static/chunks/app/about/page-62c9f959f7d02304.js'                   │ '12.1'  │ '-'                │
+│ 15      │ 'static/chunks/app/apple-icon/route-e4970b3de7d9a660.js'             │ '0.2'   │ '-'                │
+│ 16      │ 'static/chunks/app/llms-full.txt/route-e4970b3de7d9a660.js'          │ '0.2'   │ '-'                │
+│ 17      │ 'static/chunks/app/llms.txt/route-e4970b3de7d9a660.js'               │ '0.2'   │ '-'                │
+│ 18      │ 'static/chunks/app/manifest.webmanifest/route-e4970b3de7d9a660.js'   │ '0.2'   │ '-'                │
+│ 19      │ 'static/chunks/app/robots.txt/route-e4970b3de7d9a660.js'             │ '0.2'   │ '-'                │
+│ 20      │ 'static/chunks/app/sitemap.xml/route-e4970b3de7d9a660.js'            │ '0.2'   │ '-'                │
+│ 21      │ 'static/chunks/app/apple-splash/[id]/route-e4970b3de7d9a660.js'      │ '0.2'   │ '-'                │
+│ 22      │ 'static/chunks/app/icon/[__metadata_id__]/route-e4970b3de7d9a660.js' │ '0.2'   │ '-'                │
+└─────────┴──────────────────────────────────────────────────────────────────────┴─────────┴────────────────────┘

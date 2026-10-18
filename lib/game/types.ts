@@ -52,6 +52,9 @@ export interface MatchConfig {
   // Who throws first in the next leg: take turns, or the loser of the last leg ("mugs away").
   startRule?: "alternate" | "loser"
   players: MatchPlayer[]
+  // Values areas added in game setup (lib/shell/registry.ts, "setup.extras"), by area id. Only
+  // present when an area set one; the rules of the game never depend on them.
+  extras?: Readonly<Record<string, unknown>>
 }
 
 export interface SavedMatch {

@@ -5,6 +5,7 @@ import { Dartboard, GAME_HIGHLIGHTS } from "@/components/dartboard"
 import { HeroBoard } from "@/components/hero-board"
 import { FitText } from "@/components/fit-text"
 import { useT } from "@/components/i18n-provider"
+import { SlotItems } from "@/components/shell/slot-items"
 import { GAME_TYPES } from "@/lib/game/rules"
 import type { GameType } from "@/lib/game/types"
 import { SITE } from "@/lib/site"
@@ -108,6 +109,9 @@ export function PlayScreen({ onSelect, resume, onResume, onDiscardResume, again,
             again && <AgainCard again={again} onPlay={onPlayAgain} onChange={onChangeAgain} />
           )}
 
+          {/* Games that go on elsewhere and concern this device (lib/shell/registry.ts "play.rows"). */}
+          <SlotItems list="play.rows" props={() => ({})} className="contents" />
+
           <section aria-labelledby="new-game">
             <h2 id="new-game" className="sr-only">
               {t.play.newGame}
@@ -118,9 +122,9 @@ export function PlayScreen({ onSelect, resume, onResume, onDiscardResume, again,
                   <button
                     type="button"
                     onClick={() => onSelect(type)}
-                    className="flex h-full min-h-[clamp(5.25rem,12dvh,7.5rem)] w-full flex-col items-center justify-center gap-1 rounded-2xl border border-border bg-card/70 px-1.5 py-2 text-center transition-colors hover:bg-secondary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:bg-secondary/70 xshort:min-h-14 xshort:flex-row xshort:gap-2 xshort:py-1 tablet:min-h-28 tablet:gap-2"
+                    className="flex h-full min-h-[clamp(5.25rem,12dvh,7.5rem)] w-full flex-col items-center justify-center gap-1 rounded-2xl border border-border bg-card/70 px-1.5 py-2 text-center transition-colors hover:bg-secondary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:bg-secondary/70 xshort:min-h-14 xshort:gap-0.5 xshort:py-1 tablet:min-h-28 tablet:gap-2"
                   >
-                    <Dartboard variant="mini" highlight={GAME_HIGHLIGHTS[type]} className="h-8 w-8 shrink-0 tablet:h-11 tablet:w-11" />
+                    <Dartboard variant="mini" highlight={GAME_HIGHLIGHTS[type]} className="h-8 w-8 shrink-0 xshort:h-6 xshort:w-6 tablet:h-11 tablet:w-11" />
                     <span className="w-full min-w-0">
                       <FitText minScale={0.8} className="text-[0.9375rem] font-semibold leading-tight tablet:text-[1.1875rem]">
                         {t.families[type].name}

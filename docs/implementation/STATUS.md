@@ -1,0 +1,123 @@
+# Status der Erweiterung
+
+Stand: 16. Oktober 2026 · Integrationszweig `nostr-plan`, Commit `4c4ce92`
+
+Diese Datei zuerst lesen, wenn die Arbeit fortgesetzt wird. Danach die Karte der aktiven Aufgabe und die dort verlinkten Planstellen und Entscheidungen. Für einen eigenen Rundgang durch die App: [REVIEW.md](REVIEW.md).
+
+## Aktueller Stand
+
+| Punkt | Wert |
+| --- | --- |
+| Was zusammengeführt ist | **Alle Spuren aller 37 Arbeitspunkte liegen auf `nostr-plan`.** Welle 1 (Grundlagen: Turnierengine, Nostr-Schicht, lokale Daten, App-Rahmen, Protokoll) seit 5. Oktober. Am 16. Oktober: nostr-core 1.0.6 (`f8d0d5b`), Profil (`760d704`), Live-Spiele (`dedc1d3`), Zahlungen (`4117c31`), Abgleich mit dauerhafter Outbox (`871e237`), Auszeichnungen (`e8c9c48`), eine Outbox auch für Live-Spiele (`7ddc143`), gemeinsame Ergebniszeile, NIP-55-Rücksprung und Feature-Schalter (`057803a`), Clubs (`cf1f124`), Clubs über die Outbox und Clubauszeichnungen (`c9b5a80`), Geräte und Sicherung (`291f4e9`), Turniere (`4c4ce92`). Danach: Doku (`eeabc66`), Qualitätsdurchgang (`fca12d9`), Spielabend-Ablauf P8.01 (`08a70c4`), Korrekturen aus dem Release-Review (`9093c87`), Korrekturen aus dem Spielabend (`2a83e25`) und zwei kleine Koordinator-Korrekturen (`b4af609`, `120e652`). |
+| Wie geprüft wurde | Jede Spur: Bau, unabhängiges Review und ein eigener Prüfer für Apple HIG und den Darts-Abend-Test, Korrekturrunde, Code-Review des Koordinators vor dem Zusammenführen. Zwei unabhängige Review-Runden hatten Profil, Zahlungen, Live, Abgleich und Geräte; Turniere drei (Runde 3: „ship“). Clubs und Auszeichnungen hatten **nur eine** unabhängige Runde; ihre Korrekturen prüfte nur der Koordinator. |
+| Letzter nachgewiesener Stand | `120e652`, 16. Oktober 2026 (Protokolle in `_coordination/merge-logs/final-*`): `lint` und `typecheck` ohne Meldung, `npm test` 678 von 678, Relay-Tests 80 von 80 gegen lokale nak-Relays, `build` bestanden (`/` 72,7 kB, First Load 280 kB; alle Routen statisch vorgerendert). Doppelter Code (jscpd, ab 50 Token): eine bewusst gelassene Stelle. |
+| Browsernachweise | Je Spur auf dem Stand der Spur (Chromium über Playwright, Produktionsbuild, lokale Relays): Profil 54/54, Zahlungen 48/49 plus Wiederholung 11/11, Live 67/68 plus Wiederholung 2/2, Abgleich 34/34, Geräte 25/25 plus vier Größen, Clubs 64/64 und 19/19, Auszeichnungen 73/73, Turniere 43/43, Ergebniszeile 27/27, Schalter aus 9/9. **Ganzer Spielabend auf `120e652`** (P8.01, ein durchgehender Lauf mit sechs Geräten, nur lokale Relays und eine Test-Wallet): 17 von 17 Schritten, 66 von 66 Prüfungen, keine Hinweise, keine Seitenfehler, 96 s (Laborwert); HIG-Matrix über die ganze App 154 von 154 auf dem Stand von `wave3/p8fix` ([P8/README.md](evidence/P8/README.md)). |
+| Nicht nachgewiesen | Safari/WebKit, Firefox, echte Telefone, Tablets und Kameras, installierte PWA, VoiceOver und TalkBack, öffentliche Relays, echte Signer (Amber, nsec.app, Erweiterungen), echte Passkeys, echte Wallets und echte sats, Nutzertests (A29), externe Kryptoprüfung. |
+| Release-Review | Ein lesendes Review der ganzen App als ein Produkt (gemeinsame Outbox, Abmelden, Geheimnisse, zwei Tabs, Offline, Schalter, Gastpfad, Verhalten von 1.0.0) fand 1 hohen, 6 mittlere und 8 niedrige Befunde; alle behoben (`9093c87`), jeder mit einem Test, der vorher scheiterte. Gastpfad danach: Spielbildschirm lädt keinen Bereichscode mehr (vorher 21,8 KB), Ergebnis 17,7 KB statt 74,7 KB. Keine Geheimnisse in Events, Diagnose, Export, Logs oder Adressen. |
+| Entwicklungsserver | Immer mit lokalem Relay starten (Befehle in [REVIEW.md](REVIEW.md)). `NEXT_PUBLIC_BLUELINE_RELAYS` ersetzt alle voreingestellten Relays. **Ohne die Variable** veröffentlicht schon das Anlegen eines Profils echte Events (Kind 0 und 10002) auf den öffentlichen Katalog-Relays. |
+| Feature-Schalter | `NEXT_PUBLIC_BLUELINE_FEATURES` (Komma-Liste) zur Build-Zeit: `profile`, `payments`, `live`, `sync`, `clubs`, `badges`, `devices`, `tournaments`. Ohne Variable ist alles an, mit leerem Wert alles aus. `sync`, `clubs`, `badges` und `tournaments` brauchen `profile`; `devices` braucht `profile` und `sync`. Ein ausgeschalteter Bereich registriert nichts; seine Daten auf dem Gerät bleiben unberührt (`lib/shell/features.ts`, [README.md](README.md#feature-schalter)). |
+| nostr-core | 1.0.6, fest eingetragen. Alle Nostr- und NWC-Zugriffe laufen über `lib/nostr`. |
+| Nächster Schritt | Menschliches Review nach [REVIEW.md](REVIEW.md); danach Gerätematrix, öffentliche Relays und Nutzertests nach den Entscheidungen unten. |
+
+## Zustände in dieser Datei
+
+- **Umgesetzt, geprüft:** gebaut, unabhängige Review-Runden bestanden, automatische Tests und Browsernachweise vorhanden, und die Abnahme des Punkts braucht keinen Nachweis von außen. Nur diese Punkte haben im Plan ein Häkchen.
+- **Umgesetzt, Nachweis offen:** gebaut und im Labor geprüft; die Abnahme verlangt noch etwas, das es nicht gibt (Geräte, öffentliche Relays, echte Wallets oder Signer, Nutzertests, eine weitere Review-Runde). Was fehlt, steht in der Zeile.
+- **Offen:** nicht begonnen oder nur in Teilen.
+
+## Arbeitspunkte
+
+Reihenfolge und Titel wie in [PLAN.md](PLAN.md), Zeilen 658 bis 730. Welche Punkte Entscheidung 0001 berührt, steht im [Risikobericht](evidence/P0.01/RISKS-P0.02-P0.07.md) (Abschnitt „Kein eigenes Backend“).
+
+| ID | Arbeitspunkt | Status | Was fehlt | Karte |
+| --- | --- | --- | --- | --- |
+| P0.01 | Ausgangsstand und Arbeitsablage | Umgesetzt, geprüft | – | [P0.01](tasks/P0.01.md) |
+| P0.02 | Bedienmodell | Umgesetzt, Nachweis offen | Nutzertests (A29); integrierte HIG-Prüfung der ganzen App (läuft); echte Geräte | [P0.02](tasks/P0.02.md) |
+| P0.03 | Core-Abdeckung | Umgesetzt, geprüft | – | [P0.03](tasks/P0.03.md) |
+| P0.04 | Geräte und Wiederherstellung | Offen | Erprobung mit benannten Geräten, Browsern, Passkey-Anbietern und Signern nicht begonnen; Format und Vektoren liegen vor | [P0.04](tasks/P0.04.md) |
+| P0.05 | Protokoll und Befugnisse | Umgesetzt, Nachweis offen | Bestätigung E2 bis E4; externe Kryptoprüfung; Annahme der Kinds auf öffentlichen Relays (E7) | [P0.05](tasks/P0.05.md) |
+| P0.06 | Betrieb und Empfang | Offen | Domain (E9), Aufbewahrungstest (E7), NWC-Fähigkeiten echter Wallets (E12), Kosten | [P0.06](tasks/P0.06.md) |
+| P0.07 | Gestaltungsgrundlage | Umgesetzt, Nachweis offen | Referenzgerät und Messung auf echten Geräten (E6); Startseitenbudget (E5) | [P0.07](tasks/P0.07.md) |
+| P1.01 | IDs und Archive | Umgesetzt, geprüft | – | [P1.01](tasks/P1.01.md) |
+| P1.02 | Migration und Schreiben | Umgesetzt, Nachweis offen | Echter Rückweg auf 1.0.0 per Deploy; voller Speicher und PWA-Update auf Geräten | [P1.02](tasks/P1.02.md) |
+| P1.03 | Statistik und Export | Umgesetzt, geprüft | – (der unabhängige Leser des Exports gehört zu A20, P3b.03) | [P1.03](tasks/P1.03.md) |
+| P3a.01 | Core-Ergänzungen | Umgesetzt, Nachweis offen | NIP-49, NIP-55, Badge- und Listenwege sind in keiner nostr-core-Version; PR-Zweige nicht gepusht (E10); A25 | [P3a.01](tasks/P3a.01.md) |
+| P3a.02 | Transport und Validierung | Umgesetzt, Nachweis offen | Echte Signer; öffentliche Relays (E7) | [P3a.02](tasks/P3a.02.md) |
+| P3a.03 | Profilverteilung und Listen | Umgesetzt, Nachweis offen | Schreibtest an den fünf öffentlichen Zielen (A03, E7) | [P3a.03](tasks/P3a.03.md) |
+| P2.01 | Kontextprofil und Ansichten | Umgesetzt, Nachweis offen | Echte Geräte, Safari, VoiceOver; Nutzertest (A21, A29) | [P2.01](tasks/P2.01.md) |
+| P2.02 | Externe Zugänge | Umgesetzt, Nachweis offen | Echte Signer auf Geräten (Amber über NIP-55 und NIP-46, nsec.app, Erweiterungen); der neue NIP-55-Rücksprung ist nur gegen Ambers Quelltext gelesen | [P2.02](tasks/P2.02.md) |
+| P2.03 | Eigenes Gerät koppeln | Umgesetzt, Nachweis offen | Kopplung auf echten Geräten mit Kamera und PWA; öffentliche Relays; Signer-Profil nur als Einheitstest | [P2.03](tasks/P2.03.md) |
+| P2.04 | Zugang sichern | Umgesetzt, Nachweis offen | Echte Passkeys (nur simuliert); Passwortmanager; `log_n` 16 auf Handys; Domain und rpId (E9) | [P2.04](tasks/P2.04.md) |
+| P3b.01 | Private Daten | Umgesetzt, Nachweis offen | Zwei unabhängige Kopien auf öffentlichen Relays (E7) | [P3b.01](tasks/P3b.01.md) |
+| P3b.02 | Abgleich und Konflikte | Umgesetzt, Nachweis offen | Offline-Abend mit echten Geräten; nachgehende Uhr (SY-01); E8 | [P3b.02](tasks/P3b.02.md) |
+| P3b.03 | Portabilität | Umgesetzt, Nachweis offen | Wiederaufbau auf sauberem echten Gerät; Export mit unabhängiger Implementierung lesen (A20, E11); Wechsel eines ausgefallenen Relays im Feld | [P3b.03](tasks/P3b.03.md) |
+| P4.01 | Teilnahme und Board | Umgesetzt, Nachweis offen | Board-Tablet und Handys; Beitreten mit Signer-App | [P4](tasks/P4.md) |
+| P4.02 | Schreiben und Zuschauen | Umgesetzt, Nachweis offen | Zwei-Sekunden-Ziel nur im Labor gemessen; öffentliche Relays | [P4](tasks/P4.md) |
+| P4.03 | Ergebnislebenszyklus | Umgesetzt, Nachweis offen | Echte Geräte | [P4](tasks/P4.md) |
+| P5.01 | Clubbetrieb | Umgesetzt, Nachweis offen | Zweite unabhängige Review-Runde; externe Kryptoprüfung geschlossener Clubs; echte Geräte und Signer; E3, E4 | [P5.01](tasks/P5.01.md) |
+| P5.02 | Saison und Übergabe | Umgesetzt, Nachweis offen | Wie P5.01; Clubs nahe 100 Mitgliedern nicht im Browser; Anerkennung nur per Typprüfung | [P5.01](tasks/P5.01.md) |
+| P6.01 | Turnierengine | Umgesetzt, geprüft | – | [P6.01](tasks/P6.01.md) |
+| P6.02 | Teilnahme | Umgesetzt, Nachweis offen | Echte Geräte; Doppel-K.-o., Gruppen und Jeder gegen jeden nur in Node, nicht im Browser | [P6.02](tasks/P6.02.md) |
+| P6.03 | Leitungsbetrieb | Umgesetzt, Nachweis offen | Korrektur und „Neu spielen lassen“ nur in Node; Übergabe ohne Seed und Board-Schlüssel (TN-01) | [P6.02](tasks/P6.02.md) |
+| P6.04 | Darstellung und Last | Umgesetzt, Nachweis offen | 128/16 nur in Node und beim Relay-Abruf gemessen, nicht in der Oberfläche (A16); TV auf echter Großanzeige | [P6.02](tasks/P6.02.md) |
+| P7a.01 | Voraussetzungen und Vergabe | Umgesetzt, Nachweis offen | Zweite unabhängige Review-Runde; externe Signer | [P7a.01](tasks/P7a.01.md) |
+| P7a.02 | Profil und Austausch | Umgesetzt, Nachweis offen | Wie P7a.01; Vergaben anderer Apps auf öffentlichen Relays | [P7a.02](tasks/P7a.02.md) |
+| P7b.01 | Verbindung | Umgesetzt, Nachweis offen | Echte Wallets und Wallet-App-Rücksprung (E12); Signet mit Screenreader (A28) | [P7b](tasks/P7b.md) |
+| P7b.02 | Zahlungsablauf | Umgesetzt, Nachweis offen | Echte Wallets und sats (E12) | [P7b](tasks/P7b.md) |
+| P7b.03 | Zap und Wallet-Abnahme | Umgesetzt, Nachweis offen | Echte Zap- und LNURL-Dienste mit CORS; kontrollierte Praxistests (E12) | [P7b](tasks/P7b.md) |
+| P8.01 | Gesamter Spielabend | Offen | Ablauf über alle Bereiche wird gebaut (`wave3/p8`), nicht auf `4c4ce92` | [P8.01](tasks/P8.01.md) |
+| P8.02 | Produktqualität | Offen | Gerätematrix, Barrierefreiheit, zweite Nutzertestrunde; integrierte HIG-Prüfung läuft | [P8.02](tasks/P8.02.md) |
+| P8.03 | Betrieb und Freigabe | Offen | A01 bis A29 schließen; Netlify, gestufter Rollout; Release-Review läuft lesend | [P8.03](tasks/P8.03.md) |
+
+Zusammen: 37 Punkte. Umgesetzt, geprüft: 5. Umgesetzt, Nachweis offen: 27. Offen: 5. **Abgeschlossen im Sinn des Plans ist damit kein Paket:** Jedes Paket hat mindestens einen Punkt mit offenem Nachweis.
+
+## Entscheidungen für den Nutzer
+
+| Nr. | Frage | Wo beschrieben |
+| --- | --- | --- |
+| E1 | F1 bis F9 aus Entscheidung 0001 bestätigen oder ändern. | [0001](../decisions/0001-kein-eigenes-backend.md) |
+| E2 | Einladungsnachweis als Signatur eines aus dem Link abgeleiteten Schlüssels statt HMAC (Änderung von 0002 §6). Folge: Jede Leitungsperson erstellt eigene Links. | [0002 §6](../decisions/0002-architektur.md), [P0.05](tasks/P0.05.md) |
+| E3 | Grenzen ohne vertrauenswürdige Zeit hinnehmen oder absichern (Rückdatieren um Übergaben). Optionen: mehrere Eigentümer oder Ersatzleitung, Angebote standardmäßig 24 Stunden, später NIP-03. | [conflicts.md](../protocol/conflicts.md), [P0.05](tasks/P0.05.md) |
+| E4 | Mitgliedergrenze geschlossener Clubs: Verdrängung an der Grenze von 100. | [club.md](../protocol/families/club.md), [P0.05](tasks/P0.05.md) |
+| E5 | Startseitenbudget. Heute `/` First Load 278 kB (1.0.0: 246 kB, nach Welle 1: 266 kB). Ein Grenzwert ist nicht festgelegt. | [DESIGN.md](evidence/P0.07/DESIGN.md) |
+| E6 | Referenzgerät für die Eingabelatenz und Testpersonen für die Nutzertests (A29). | [P0.07](tasks/P0.07.md) |
+| E7 | Freigabe des Schreib- und Aufbewahrungstests auf den fünf öffentlichen Relays (24 Stunden und 7 Tage, mit Testidentitäten). Ohne ihn bleiben A03, A09 und P3b.01 offen. | [Risikobericht](evidence/P0.01/RISKS-P0.02-P0.07.md), [P0.06](tasks/P0.06.md) |
+| E8 | „Rangliste zurücksetzen“ bleibt auf diesem Gerät und löscht nie Spiele des Profils auf anderen Geräten. Die Alternative wäre eine „frische Tabelle ab Datum“, ebenfalls ohne Löschen. So umgesetzt; Bestätigung offen. | [P3b.02](tasks/P3b.02.md) |
+| E9 | Langfristige Domain (heute `blueline21.netlify.app`, F7). Passkeys sind an die Domain gebunden (rpId); ein späterer Umzug macht Passkey-Sicherungen unbrauchbar, Datei und Kopplung bleiben gültig. Vor dem ersten echten Passkey entscheiden. | [0001 F7](../decisions/0001-kein-eigenes-backend.md), [P2.04](tasks/P2.04.md) |
+| E10 | Die nostr-core-Zweige `feat/nip49` (`b1f4e03`) und `feat/nip55` (`07e48af`) pushen und als PR einreichen; Release mit dem Co-Maintainer abstimmen. PR-Texte: `_coordination/research/pr-nip49.md` und `pr-nip55.md`. Erst danach kann A25 schließen. | [P3a.01](tasks/P3a.01.md) |
+| E11 | A20 heißt im Plan „Serverseitige Wiederherstellung“. Entscheidung 0001 fasst A20 neu: Wiederherstellung ohne Ursprungsgerät und ein portabler Export, den eine unabhängige Implementierung lesen kann. Bestätigen, dass die Fassung aus 0001 gilt (Teil von E1). | [0001](../decisions/0001-kein-eigenes-backend.md), [P3b.03](tasks/P3b.03.md) |
+| E12 | Freigabe kontrollierter Praxistests mit echten Wallets und Kleinstbeträgen (OP-19), auch für den Wallet-App-Rücksprung und Zap-Dienste. | [P7b](tasks/P7b.md) |
+| E13 | Spielbildschirm mit 6 Spielern auf 320×548: die Spielerkacheln (Werfer wechseln, mit Rückfrage) sind 29 pt hoch, unter den 44 pt der HIG-Regel. Das Raster stammt aus 1.0.0; 44 pt gingen nur mit Überlappung oder einem anderen Raster. Hinnehmen, die Kacheln im engen Raster nicht tippbar machen, oder das Raster ändern? | [P8/README.md](evidence/P8/README.md) |
+
+## Offene Befunde
+
+### Geschlossen seit dem 5. Oktober
+
+| ID | Befund | Wie geschlossen |
+| --- | --- | --- |
+| W1-02 | Die dauerhafte Outbox fehlte. | `lib/sync/outbox.ts`; seit `7ddc143` und `c9b5a80` senden Profil, Abgleich, Live, Clubs, Turniere und Auszeichnungen über diese eine Outbox. |
+| ST-01 | Der Build mit den Abhängigkeiten aus `db81218` war nicht nachgewiesen. | Jeder Build seither bestanden, zuletzt auf `4c4ce92`. Die Abweichung zwischen Karte P0.01 und Lieferung steht als Hinweis in der Karte. |
+| PR-12, RB-02, RB-03 | Kinds, Ersatzcode, Einladungen. | Wie am 5. Oktober beschrieben (Entscheidung 0002, P0.05). |
+
+### Weiter offen
+
+| ID | Befund | Umgang |
+| --- | --- | --- |
+| W1-03 | Teilweise geschlossen: nostr-core 1.0.6 enthält die `connect`-Parameter und das Warten bei `auth_url` (NIP-46), die Rumor-ID-Prüfung (NIP-59), Ergebnisse je Relay und die NIP-42-Wiederholung. Weiter lokal in `lib/nostr/ext/`: nostrconnect://-Ablauf, fortsetzbarer Signer, NIP-49, NIP-55, NIP-59 über Signer, private Listen, Badge- und Zap-Prüfung, NWC-Korrekturen. | E10; weitere PRs (P3a.01, P7b). |
+| NB-19 | `/icon/[…]` erscheint im Build als statisch vorgerendert. Ob Netlify die Route ohne Server-Handler ausliefert, ist nicht nachgewiesen. | Auf einem Vorschau-Deploy prüfen (P0.06, P8.03). |
+| OP-14 | „Gesichert“ erst nach Rücklesen. | In 0002 §5 aufgenommen. Das Passkey-Paket wartet auf das Rücklesen (P2.04); private Datensätze liest der vollständige Abgleich zurück (P3b.01). Auf öffentlichen Relays nicht nachgewiesen (E7). |
+| NB-24 | Klarstellungen für A16, A21 und die v1-Migration. | Nicht nachgewiesen, dass sie geklärt sind; bei P8.03. |
+| ENV | Safari/WebKit, Firefox, echte Geräte, PWA, VoiceOver, öffentliche Relays, echte Signer, Passkeys und Wallets sind nirgends geprüft. | P0.04, P8.02, E7, E12. |
+| SY-01 | Ein Gerät, dessen Uhr mehr als 10 Minuten nachgeht und dessen Zeitabgleich scheitert, schreibt in die Vergangenheit; andere Geräte sehen die Änderung dann erst beim täglichen vollständigen Abgleich. | Dokumentierte Grenze (P3b.02). |
+| SY-02 | Android-Signer (NIP-55) ohne NIP-44: keine private Historie, keine geschlossenen Clubs, Gäste nicht in Runden. | Wird ehrlich angezeigt; kein anderer Weg. |
+| SY-03 | Externe Signer fragen oft: jede automatische Abgleichsänderung ohne gemerkte Erlaubnis; 28 Anfragen für neun Meilensteine. | Produktfrage; mit echten Signern messen (P2.02). |
+| DV-01 | „Wahrscheinlich angekommen“ bei der Kopplung ist eine Schätzung. Zwei Geräte, die sich in derselben Sekunde in die Geräteliste eintragen, verlieren einen Eintrag. | Dokumentiert (P2.03); die Liste ist informativ. |
+| DV-02 | Der Passkey wird überall angeboten, wo PRF nicht ausdrücklich fehlt; auf Geräten ohne PRF sagt die App erst nach dem Versuch „geht hier nicht“. | Vor einem echten Angebot auf Geräten prüfen (P0.04, E9). |
+| CL-01 | Annehmen einer Anfrage bei genau 100 Mitgliedern eines geschlossenen Clubs scheitert mit der allgemeinen Signer-Meldung. Ein korrigiertes Ergebnis zählt nicht in den Average der Tabelle. | Offen (P5.01). |
+| TN-01 | Die Übergabe der Turnierleitung überträgt Auslosungs-Seed und Board-Schlüssel nicht. „Auslosung vorbereiten“ vor Anmeldeschluss fehlt. Ein Board, das auf einen anderen Code wechselt, meldet ein unterbrochenes Spiel später nicht. | Offen (P6.02). |
+| PY-01 | Gebühren sind erst nach dem Zahlen bekannt. Die Antwort einer Wallet-App in einem anderen Browser wird abgewiesen (dann einfügen). | Dokumentiert (P7b). |
+| UI-01 | Ergebnisansicht bei 568×320: „Aufnahmen“ bricht mitten im Wort, die kleine Aktionsleiste endet 7 px unter dem Bildschirm; das iPhone SE zeigt eine Statistikzeile weniger. | Qualitätsdurchgang läuft. |
+| QA-01 | Code-Duplikate (Exportliste in `lib/nostr/runtime.ts`, `lib/game/engine.ts`, drei im Profilbereich); Kontrast der roten Aktion im dunklen Modus. | Qualitätsdurchgang läuft. |
+| EV-01 | Nachweisskripte sind nach der Integration teils veraltet: `review-round-2.mjs` Szenario 6 (Selektoren), `clubs-flows.mjs` (alter Text). `tests/relay/sync.test.ts` Zeile 114 schlägt selten zufällig fehl (Base64 enthält „Ben“). | Mit dem P8-Ablauf anpassen. |
+| BL-01 | Nach dem matchentscheidenden Dart zeigt die Kachel des Siegers einen zu hohen Live-Average. | Unverändert; kleiner Fix auf `main`, Entscheidung beim Nutzer. |
+| BL-02 bis BL-04, W1-01 | 16-Zeichen-Namen, Node-22-Warnung, alter Dependabot-Branch, `npm audit` nur in Entwicklungswerkzeugen. | Unverändert wie am 5. Oktober. |

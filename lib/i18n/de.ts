@@ -3,6 +3,17 @@
 // order and plurals stay right in each language.
 
 import type { ModeId } from "@/types/game-modes"
+import { shellDe } from "./features/shell.de.ts"
+import { dataDe } from "./features/data.de.ts"
+import { profileDe } from "./features/profile.de.ts"
+import { devicesDe } from "./features/devices.de.ts"
+import { backupDe } from "./features/backup.de.ts"
+import { syncDe } from "./features/sync.de.ts"
+import { liveDe } from "./features/live.de.ts"
+import { clubsDe } from "./features/clubs.de.ts"
+import { tournamentsDe } from "./features/tournaments.de.ts"
+import { badgesDe } from "./features/badges.de.ts"
+import { paymentsDe } from "./features/payments.de.ts"
 
 // The options picked in setup that a game's rules text mentions.
 export interface RuleOptions {
@@ -301,11 +312,16 @@ export const de = {
     undoDart: "Rückgängig",
     visits: "Aufnahmen",
     visitsLabel: "Alle Aufnahmen ansehen",
+    // Under the result's small Rangliste button: one short word, it never wraps.
+    leaderboard: "Rangliste",
     share: "Teilen",
     shareText: (line: string) => `${line}. Gezählt mit BlueLine Darts.`,
     imageFooter: "Gezählt mit BlueLine Darts",
     allStats: "Statistik",
     allStatsDescription: "Alle Werte dieses Spiels.",
+    // The sheet with the areas' pieces, and its button in the top bar on a phone in landscape.
+    more: "Mehr zum Ergebnis",
+    moreLabel: (count: number) => `Mehr zum Ergebnis, ${count} Einträge`,
   },
 
   sheets: {
@@ -351,6 +367,8 @@ export const de = {
       restartLeg: "Dieses Leg neu starten",
       playerLeaves: "Ein Spieler hört auf",
       restartButton: "Leg neu starten",
+      // Over the entries areas add (lib/shell/registry.ts): other devices joining the game.
+      devices: "Mit anderen Geräten",
       tip: "Falscher Dart? Antippen und korrigieren. Falscher Spieler? Seinen Spielstand antippen.",
     },
   },
@@ -366,6 +384,8 @@ export const de = {
 
   leaderboard: {
     title: "Rangliste",
+    // Under a name two rows share: the start of the profile's key.
+    profileId: (short: string) => `Kennung ${short}`,
     subtitle: "Sortiert nach Siegen, dann Siegquote. Auf diesem Gerät gespeichert.",
     filter: "Spielart",
     filters: { all: "Alle", x01: "X01", cricket: "Cricket", clock: "Clock" },
@@ -410,15 +430,14 @@ export const de = {
     appearance: "Darstellung",
     themes: { dark: "Dunkel", light: "Hell", system: "Automatisch" },
     leaderboard: "Rangliste",
-    leaderboardFooter: "Ergebnisse werden nur auf diesem Gerät gespeichert.",
+    leaderboardFooter: "Ergebnisse werden auf diesem Gerät gespeichert. Mit Profil bleiben deine Spiele auch auf deinen anderen Geräten.",
     savedGames: "Gespeicherte Spiele",
     reset: "Rangliste zurücksetzen",
     resetTitle: "Rangliste zurücksetzen?",
     resetDescription: (n: number) =>
-      `Das löscht ${n === 1 ? "das gespeicherte Spiel" : `alle ${n} gespeicherten Spiele`} auf diesem Gerät. Das lässt sich nicht rückgängig machen.`,
+      `Das löscht ${n === 1 ? "das gespeicherte Spiel" : `alle ${n} gespeicherten Spiele`} der Rangliste auf diesem Gerät und lässt sich nicht rückgängig machen. Mit Profil bleiben deine Spiele in deinem Profil und auf deinen anderen Geräten.`,
     resetConfirm: "Zurücksetzen",
     about: "Über die App",
-    aboutApp: (name: string) => `Über ${name}`,
   },
 
   undoBanner: { ended: "Spiel beendet" },
@@ -582,4 +601,17 @@ export const de = {
       },
     },
   },
+
+  // Areas added for profiles, devices, clubs, tournaments and payments (one file each).
+  shell: shellDe,
+  data: dataDe,
+  profile: profileDe,
+  devices: devicesDe,
+  backup: backupDe,
+  sync: syncDe,
+  live: liveDe,
+  clubs: clubsDe,
+  tournaments: tournamentsDe,
+  badges: badgesDe,
+  payments: paymentsDe,
 }

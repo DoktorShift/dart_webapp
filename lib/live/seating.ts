@@ -1,0 +1,78 @@
+import { openChannel, type ChannelFlow } from "../nostr/channel.ts"
+import { loadCore } from "../nostr/core.ts"
+import { nowSeconds } from "../nostr/time.ts"
+import type { BoardMessage } from "../protocol/board.ts"
+import { boardPlaintext, boardTemplate, checkClaim, checkJoin, encodeBoardLink, parseBoardEvent } from "../protocol/board.ts"
+import { KIND_EPHEMERAL, MAX_BOARD_CODE_SECONDS } from "../protocol/kinds.ts"
+import type { SeatHolder } from "../protocol/match-state.ts"
+import type { Reason } from "../protocol/reasons.ts"
+import type { SignedEvent } from "../protocol/tags.ts"
+import { seatInfo, seatPlayer } from "./board.ts"
+import { newKey, toHex } from "./keys.ts"
+
+// The board side of "Spieler verbinden" (docs/protocol/families/board-join.md): a board code
+// with a one-time key, answered for as long as it is valid. A phone looks at the seats, then
+// asks for one as a guest or with its profile's claim; the board gives the seat (match.seat)
+// and the match key, or says why not. No one here confirms anything: the seat is the player's
+// own choice, and the board can free it again.
+
+export const BOARD_FLOW: ChannelFlow<BoardMessage> = { kind: KIND_EPHEMERAL, plaintext: boardPlaintext, template: boardTemplate, parse: parseBoardEvent }
+
+export interface Seating {
+  // The board code's payload (B1…) and when it runs out (unix seconds).
+  code: string
+  expires: number
+  close: () => void
+}
+
+export async function openSeating(local: string): Promise<Seating> {
+  const info = seatInfo(local)
+  if (!info) throw new Error("the match is not live here")
+  const key = await newKey()
+  const sid = toHex(crypto.getRandomValues(new Uint8Array(16)))
+  const expires = nowSeconds() + MAX_BOARD_CODE_SECONDS
+  // One message at a time: two phones asking for the same seat at once get it in turn.
+  let answering: Promise<unknown> = Promise.resolve()
+  const channel = openChannel(BOARD_FLOW, key, info.relays, (message, from) => {
+    answering = answering.then(() => answer(message, from)).catch(() => {})
+  })
+
+  async function answer(message: BoardMessage, from: string) {
+    const now = nowSeconds()
+    const current = seatInfo(local)
+    if (!current || message.sid !== sid) return
+    if (now > expires) return channel.send(from, { t: "decline", sid, reason: "expired" })
+    if (message.t === "look") {
+      const seats = current.aliases.map((alias, i) => ({ alias, taken: current.holders[i] !== null }))
+      return channel.send(from, { t: "table", sid, match: current.match, rules: current.rules, seats })
+    }
+    if (message.t === "leave") {
+      // The seat goes back to whoever holds it, whichever code or key the phone used to get it.
+      const holder = await holderOf(message, from, { board: key.pubkey, sid, now })
+      const seat = holder ? current.holders.findIndex((h) => h?.pubkey === holder.pubkey) : -1
+      if (seat >= 0) await seatPlayer(local, seat, null)
+      return
+    }
+    if (message.t !== "join") return
+    const holder = await holderOf(message, from, { board: key.pubkey, sid, now })
+    if (!holder) return channel.send(from, { t: "decline", sid, reason: "declined" })
+    const verdict = checkJoin(message, { from: holder.pubkey, sid, expires, now, seats: current.holders.map((h) => h?.pubkey ?? null) })
+    if (!verdict.ok) return channel.send(from, { t: "decline", sid, reason: DECLINE[verdict.reason] ?? "declined" })
+    if (current.holders[verdict.seat]?.pubkey !== holder.pubkey) await seatPlayer(local, verdict.seat, holder)
+    return channel.send(from, { t: "seat", sid, seat: verdict.seat, match: current.match, key: current.key })
+  }
+
+  return { code: encodeBoardLink({ pubkey: key.pubkey, sid, expires, relays: info.relays }), expires, close: channel.close }
+}
+
+const DECLINE: Partial<Record<Reason, "full" | "taken" | "expired">> = { no_free_seat: "full", session_taken: "taken", expired_message: "expired" }
+
+// Who a join or a leave speaks for: the profile whose signed claim it carries, or else the
+// phone's own key (a guest). A claim that doesn't hold up speaks for no one.
+async function holderOf(message: { profile?: SignedEvent }, from: string, ctx: { board: string; sid: string; now: number }): Promise<SeatHolder | null> {
+  if (!message.profile) return { pubkey: from, profile: false }
+  const core = await loadCore()
+  if (!core.verifyEventSignature(message.profile)) return null
+  const claim = checkClaim(message.profile, { ...ctx, from })
+  return claim.ok ? { pubkey: claim.pubkey, profile: true } : null
+}

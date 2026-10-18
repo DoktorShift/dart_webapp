@@ -1,4 +1,15 @@
 import type { Messages } from "./index"
+import { shellEn } from "./features/shell.en.ts"
+import { dataEn } from "./features/data.en.ts"
+import { profileEn } from "./features/profile.en.ts"
+import { devicesEn } from "./features/devices.en.ts"
+import { backupEn } from "./features/backup.en.ts"
+import { syncEn } from "./features/sync.en.ts"
+import { liveEn } from "./features/live.en.ts"
+import { clubsEn } from "./features/clubs.en.ts"
+import { tournamentsEn } from "./features/tournaments.en.ts"
+import { badgesEn } from "./features/badges.en.ts"
+import { paymentsEn } from "./features/payments.en.ts"
 
 // English. Same shape as the German catalog (TypeScript checks every entry).
 
@@ -276,11 +287,14 @@ export const en: Messages = {
     undoDart: "Undo",
     visits: "Visits",
     visitsLabel: "Review all visits",
+    leaderboard: "Ranking",
     share: "Share",
     shareText: (line) => `${line}. Scored with BlueLine Darts.`,
     imageFooter: "Scored with BlueLine Darts",
     allStats: "Stats",
     allStatsDescription: "Every number from this game.",
+    more: "More about the result",
+    moreLabel: (count) => `More about the result, ${count} items`,
   },
 
   sheets: {
@@ -326,6 +340,7 @@ export const en: Messages = {
       restartLeg: "Restart this leg",
       playerLeaves: "A player has to leave",
       restartButton: "Restart leg",
+      devices: "With other devices",
       tip: "Wrong dart? Tap it to fix it. Wrong player? Tap their score.",
     },
   },
@@ -341,6 +356,7 @@ export const en: Messages = {
 
   leaderboard: {
     title: "Leaderboard",
+    profileId: (short) => `ID ${short}`,
     subtitle: "Ranked by wins, then win rate. Saved on this device.",
     filter: "Game type",
     filters: { all: "All", x01: "X01", cricket: "Cricket", clock: "Clock" },
@@ -385,14 +401,13 @@ export const en: Messages = {
     appearance: "Appearance",
     themes: { dark: "Dark", light: "Light", system: "Automatic" },
     leaderboard: "Leaderboard",
-    leaderboardFooter: "Results are saved on this device only.",
+    leaderboardFooter: "Results are saved on this device. With a profile, your games also stay on your other devices.",
     savedGames: "Saved games",
     reset: "Reset leaderboard",
     resetTitle: "Reset leaderboard?",
-    resetDescription: (n) => `This deletes all ${n} saved ${n === 1 ? "game" : "games"} on this device. It can’t be undone.`,
+    resetDescription: (n) => `This deletes ${n === 1 ? "the saved leaderboard game" : `all ${n} saved leaderboard games`} on this device and can’t be undone. With a profile, your games stay in your profile and on your other devices.`,
     resetConfirm: "Reset",
     about: "About",
-    aboutApp: (name) => `About ${name}`,
   },
 
   undoBanner: { ended: "Game ended" },
@@ -555,4 +570,17 @@ export const en: Messages = {
       },
     },
   },
+
+  // Areas added for profiles, devices, clubs, tournaments and payments (one file each).
+  shell: shellEn,
+  data: dataEn,
+  profile: profileEn,
+  devices: devicesEn,
+  backup: backupEn,
+  sync: syncEn,
+  live: liveEn,
+  clubs: clubsEn,
+  tournaments: tournamentsEn,
+  badges: badgesEn,
+  payments: paymentsEn,
 }

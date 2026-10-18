@@ -1,0 +1,4 @@
+Winning dart with all tabs opened before, freeze (http://localhost:3303), CPU 4× slower, 9 runs
+Key press to next paint: median 128 ms, max 400 ms
+Key press to result dialog in the page: median 109 ms, max 366 ms
+{"label":"freeze","runs":[{"key":400,"toResult":366.40000009536743},{"key":200,"toResult":168.59999990463257},{"key":96,"toResult":74.29999995231628},{"key":104,"toResult":87.80000007152557},{"key":200,"toResult":169.29999995231628},{"key":104,"toResult":80.89999997615814},{"key":160,"toResult":128.30000007152557},{"key":128,"toResult":109},{"key":112,"toResult":89.70000004768372}]}

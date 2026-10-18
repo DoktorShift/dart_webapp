@@ -1,0 +1,102 @@
+storage after first open: {"dart-scorer.settings.v1":68}
+storage after start: {"dart-scorer.rules.v1":149,"dart-scorer.current-match.v1":390,"dart-scorer.settings.v1":68,"dart-scorer.last-players.v1":14,"dart-scorer.last-game.v1":265}
+after Anna visit 1: ["Anna 161 Ø 140 Zuletzt 140","Ben 301 Ø –"]
+storage after Anna visit 1: {"dart-scorer.rules.v1":149,"dart-scorer.current-match.v1":602,"dart-scorer.settings.v1":68,"dart-scorer.last-players.v1":14,"dart-scorer.last-game.v1":265}
+storage after Ben 2 darts (one wrong): {"dart-scorer.rules.v1":149,"dart-scorer.current-match.v1":743,"dart-scorer.settings.v1":68,"dart-scorer.last-players.v1":14,"dart-scorer.last-game.v1":265}
+undo enabled after undo: true
+after Ben visit 1 with correction: ["Anna 161 Ø 140 Zuletzt 140","Ben 242 Ø 59 Zuletzt 59"]
+storage after Ben visit 1: {"dart-scorer.rules.v1":149,"dart-scorer.current-match.v1":815,"dart-scorer.settings.v1":68,"dart-scorer.last-players.v1":14,"dart-scorer.last-game.v1":265}
+after reload, game screen visible: true
+scores after reload: ["Anna 161 Ø 140 Zuletzt 140","Ben 242 Ø 59 Zuletzt 59"]
+result screen:
+- banner:
+  - button "Spiel verlassen":
+    - img
+  - heading "301" [level=1]
+  - paragraph: Double Out
+  - button "Alle Aufnahmen":
+    - img
+  - button "Spieloptionen":
+    - img
+- main:
+  - region "Spielstand":
+    - list:
+      - listitem:
+        - button "Anna, noch 0" [disabled]: Anna 0 Ø 231 Zuletzt 161
+      - listitem:
+        - button "Ben, noch 242" [disabled]: Ben 242 Ø 59 Zuletzt 59
+    - text: Anna ist dran
+    - 'button "Anna: 161. Diese Aufnahme korrigieren"': "Anna: 161"
+    - text: 1 2 3 161
+    - paragraph
+  - region "Punkteingabe":
+    - button "Double"
+    - button "Triple"
+    - 'button "Rest der Aufnahme daneben: 3 Darts mit 0 Punkten"': 3× Daneben
+    - button "1"
+    - button "2"
+    - button "3"
+    - button "4"
+    - button "5"
+    - button "6"
+    - button "7"
+    - button "8"
+    - button "9"
+    - button "10"
+    - button "11"
+    - button "12"
+    - button "13"
+    - button "14"
+    - button "15"
+    - button "16"
+    - button "17"
+    - button "18"
+    - button "19"
+    - button "20"
+    - button "Daneben, 0 Punkte": Daneben 0
+    - button "Single Bull, 25": "25"
+    - button "Bull, 50": Bull
+    - button "Letzten Dart rückgängig machen": Rückgängig
+- dialog "Anna gewinnt":
+  - banner:
+    - button "Letzten Dart rückgängig machen": Rückgängig
+    - button "Fertig"
+  - heading "Anna gewinnt" [level=1]
+  - paragraph: "301"
+  - paragraph: Sechs-Darter von Anna!
+  - table:
+    - rowgroup:
+      - row "Statistik Anna Ben":
+        - columnheader "Statistik"
+        - columnheader "Anna"
+        - columnheader "Ben"
+    - rowgroup:
+      - row "3-Dart-Average 150,5 59":
+        - rowheader "3-Dart-Average"
+        - cell "150,5"
+        - cell "59"
+      - row "First-9-Average 150,5 59":
+        - rowheader "First-9-Average"
+        - cell "150,5"
+        - cell "59"
+      - row "Bestes Checkout 161 –":
+        - rowheader "Bestes Checkout"
+        - cell "161"
+        - cell "–"
+      - row "Checkout-Quote 100 % –":
+        - rowheader "Checkout-Quote"
+        - cell "100 %"
+        - cell "–"
+      - row "180 / 140+ / 100+ 0 / 2 / 0 0 / 0 / 0":
+        - rowheader "180 / 140+ / 100+"
+        - cell "0 / 2 / 0"
+        - cell "0 / 0 / 0"
+  - button "Revanche"
+  - button "Neues Spiel"
+  - button "Teilen"
+  - button "Statistik"
+  - button "Alle Aufnahmen ansehen": Aufnahmen
+  - button "Rangliste"
+- alert
+storage after finish: {"dart-scorer.rules.v1":149,"dart-scorer.current-match.v1":1028,"dart-scorer.settings.v1":68,"dart-scorer.matches.v1":226,"dart-scorer.last-players.v1":14,"dart-scorer.last-game.v1":265}
+page errors: []

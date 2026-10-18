@@ -1,0 +1,574 @@
+{
+  "family": "payment-request",
+  "description": "Unwrapped payment request rumors checked by checkPaymentRequest (lib/protocol/payment.ts).",
+  "generator": "tests/support/make-vectors.ts",
+  "format": "Events are signed (BIP-340, zero aux randomness) with keys derived as sha256('blueline-vector:' + name). Content keys, nonces and NIP-44 nonces are fixed. Expected outcomes are written by hand from docs/protocol.",
+  "cases": [
+    {
+      "name": "valid",
+      "description": "Mia asks Jonas for the agreed stake; the invoice matches amount and hash and is still valid.",
+      "now": 1496314670,
+      "match": "78c00c5473bfbfbfb82eff63352d54dbf6793a65fb4ea8a8792aa0a228bfb6e7",
+      "payer": "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6",
+      "sealPubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
+      "agreement": {
+        "engine": 1,
+        "rules": {
+          "type": "x01",
+          "modeId": "501",
+          "startScore": 501,
+          "doubleIn": false,
+          "doubleOut": true,
+          "cutThroat": false,
+          "bullFinish": false,
+          "legsToWin": 1,
+          "setsToWin": 1,
+          "startRule": "alternate"
+        },
+        "seats": [
+          {
+            "alias": "Mia",
+            "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0"
+          },
+          {
+            "alias": "Jonas",
+            "pubkey": "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6"
+          }
+        ],
+        "visibility": "private",
+        "stake": {
+          "msat": 250000000
+        }
+      },
+      "invoice": {
+        "amountMsat": 250000000,
+        "paymentHash": "0001020304050607080900010203040506070809000102030405060708090102",
+        "expiresAt": 1496314718
+      },
+      "rumor": {
+        "kind": 1180,
+        "created_at": 1496314665,
+        "tags": [
+          ["L", "blueline"],
+          ["l", "payment.request", "blueline"],
+          ["v", "1"],
+          ["e", "78c00c5473bfbfbfb82eff63352d54dbf6793a65fb4ea8a8792aa0a228bfb6e7"],
+          ["alt", "BlueLine Darts payment.request"],
+          ["p", "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6"]
+        ],
+        "content": "{\"amount\":250000000,\"invoice\":\"lnbc2500u1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdq5xysxxatsyp3k7enxv4jsxqzpuaztrnwngzn3kdzw5hydlzf03qdgm2hdq27cqv3agm2awhz5se903vruatfhq77w3ls4evs3ch9zw97j25emudupq63nyw24cg27h2rspfj9srp\",\"hash\":\"0001020304050607080900010203040506070809000102030405060708090102\",\"expires\":1496314700,\"seat\":0,\"memo\":\"501, Verlierer zahlt\"}",
+        "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
+        "id": "2677715a933c85589c5f21c135b90e842627edc4cfee8d81042bd896f507ba6e"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "session-key-requests",
+      "description": "The board's session key tries to request a payment: it is no player.",
+      "now": 1496314670,
+      "match": "78c00c5473bfbfbfb82eff63352d54dbf6793a65fb4ea8a8792aa0a228bfb6e7",
+      "payer": "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6",
+      "sealPubkey": "2e594645da039653d1a27edbb56c0e4a3693b68cf62345bc68f564fa5ed7c505",
+      "agreement": {
+        "engine": 1,
+        "rules": {
+          "type": "x01",
+          "modeId": "501",
+          "startScore": 501,
+          "doubleIn": false,
+          "doubleOut": true,
+          "cutThroat": false,
+          "bullFinish": false,
+          "legsToWin": 1,
+          "setsToWin": 1,
+          "startRule": "alternate"
+        },
+        "seats": [
+          {
+            "alias": "Mia",
+            "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0"
+          },
+          {
+            "alias": "Jonas",
+            "pubkey": "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6"
+          }
+        ],
+        "visibility": "private",
+        "stake": {
+          "msat": 250000000
+        }
+      },
+      "invoice": {
+        "amountMsat": 250000000,
+        "paymentHash": "0001020304050607080900010203040506070809000102030405060708090102",
+        "expiresAt": 1496314718
+      },
+      "rumor": {
+        "kind": 1180,
+        "created_at": 1496314665,
+        "tags": [
+          ["L", "blueline"],
+          ["l", "payment.request", "blueline"],
+          ["v", "1"],
+          ["e", "78c00c5473bfbfbfb82eff63352d54dbf6793a65fb4ea8a8792aa0a228bfb6e7"],
+          ["alt", "BlueLine Darts payment.request"],
+          ["p", "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6"]
+        ],
+        "content": "{\"amount\":250000000,\"invoice\":\"lnbc2500u1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdq5xysxxatsyp3k7enxv4jsxqzpuaztrnwngzn3kdzw5hydlzf03qdgm2hdq27cqv3agm2awhz5se903vruatfhq77w3ls4evs3ch9zw97j25emudupq63nyw24cg27h2rspfj9srp\",\"hash\":\"0001020304050607080900010203040506070809000102030405060708090102\",\"expires\":1496314700,\"seat\":0,\"memo\":\"501, Verlierer zahlt\"}",
+        "pubkey": "2e594645da039653d1a27edbb56c0e4a3693b68cf62345bc68f564fa5ed7c505",
+        "id": "bcca5bed6b49493411390c125909116ae3c2fc9877c3706706af955a9b0caa4f"
+      },
+      "expect": {
+        "ok": false,
+        "reason": "not_a_player"
+      }
+    },
+    {
+      "name": "seal-differs",
+      "description": "The seal is signed by someone other than the request's author.",
+      "now": 1496314670,
+      "match": "78c00c5473bfbfbfb82eff63352d54dbf6793a65fb4ea8a8792aa0a228bfb6e7",
+      "payer": "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6",
+      "sealPubkey": "c1e16b2f3158d52908cf590f78527436ec5b2a5f79832834d5ff81ad47321978",
+      "agreement": {
+        "engine": 1,
+        "rules": {
+          "type": "x01",
+          "modeId": "501",
+          "startScore": 501,
+          "doubleIn": false,
+          "doubleOut": true,
+          "cutThroat": false,
+          "bullFinish": false,
+          "legsToWin": 1,
+          "setsToWin": 1,
+          "startRule": "alternate"
+        },
+        "seats": [
+          {
+            "alias": "Mia",
+            "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0"
+          },
+          {
+            "alias": "Jonas",
+            "pubkey": "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6"
+          }
+        ],
+        "visibility": "private",
+        "stake": {
+          "msat": 250000000
+        }
+      },
+      "invoice": {
+        "amountMsat": 250000000,
+        "paymentHash": "0001020304050607080900010203040506070809000102030405060708090102",
+        "expiresAt": 1496314718
+      },
+      "rumor": {
+        "kind": 1180,
+        "created_at": 1496314665,
+        "tags": [
+          ["L", "blueline"],
+          ["l", "payment.request", "blueline"],
+          ["v", "1"],
+          ["e", "78c00c5473bfbfbfb82eff63352d54dbf6793a65fb4ea8a8792aa0a228bfb6e7"],
+          ["alt", "BlueLine Darts payment.request"],
+          ["p", "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6"]
+        ],
+        "content": "{\"amount\":250000000,\"invoice\":\"lnbc2500u1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdq5xysxxatsyp3k7enxv4jsxqzpuaztrnwngzn3kdzw5hydlzf03qdgm2hdq27cqv3agm2awhz5se903vruatfhq77w3ls4evs3ch9zw97j25emudupq63nyw24cg27h2rspfj9srp\",\"hash\":\"0001020304050607080900010203040506070809000102030405060708090102\",\"expires\":1496314700,\"seat\":0,\"memo\":\"501, Verlierer zahlt\"}",
+        "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
+        "id": "2677715a933c85589c5f21c135b90e842627edc4cfee8d81042bd896f507ba6e"
+      },
+      "expect": {
+        "ok": false,
+        "reason": "not_authorized"
+      }
+    },
+    {
+      "name": "wrong-amount",
+      "description": "The amount differs from the agreed stake.",
+      "now": 1496314670,
+      "match": "78c00c5473bfbfbfb82eff63352d54dbf6793a65fb4ea8a8792aa0a228bfb6e7",
+      "payer": "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6",
+      "sealPubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
+      "agreement": {
+        "engine": 1,
+        "rules": {
+          "type": "x01",
+          "modeId": "501",
+          "startScore": 501,
+          "doubleIn": false,
+          "doubleOut": true,
+          "cutThroat": false,
+          "bullFinish": false,
+          "legsToWin": 1,
+          "setsToWin": 1,
+          "startRule": "alternate"
+        },
+        "seats": [
+          {
+            "alias": "Mia",
+            "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0"
+          },
+          {
+            "alias": "Jonas",
+            "pubkey": "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6"
+          }
+        ],
+        "visibility": "private",
+        "stake": {
+          "msat": 250000000
+        }
+      },
+      "invoice": {
+        "amountMsat": 250000000,
+        "paymentHash": "0001020304050607080900010203040506070809000102030405060708090102",
+        "expiresAt": 1496314718
+      },
+      "rumor": {
+        "kind": 1180,
+        "created_at": 1496314665,
+        "tags": [
+          ["L", "blueline"],
+          ["l", "payment.request", "blueline"],
+          ["v", "1"],
+          ["e", "78c00c5473bfbfbfb82eff63352d54dbf6793a65fb4ea8a8792aa0a228bfb6e7"],
+          ["alt", "BlueLine Darts payment.request"],
+          ["p", "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6"]
+        ],
+        "content": "{\"amount\":300000000,\"invoice\":\"lnbc2500u1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdq5xysxxatsyp3k7enxv4jsxqzpuaztrnwngzn3kdzw5hydlzf03qdgm2hdq27cqv3agm2awhz5se903vruatfhq77w3ls4evs3ch9zw97j25emudupq63nyw24cg27h2rspfj9srp\",\"hash\":\"0001020304050607080900010203040506070809000102030405060708090102\",\"expires\":1496314700,\"seat\":0,\"memo\":\"501, Verlierer zahlt\"}",
+        "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
+        "id": "28de07ced62599384adad1b4ca8325dff582c57168e0c5e1208f837846e914ee"
+      },
+      "expect": {
+        "ok": false,
+        "reason": "amount_mismatch"
+      }
+    },
+    {
+      "name": "hash-differs",
+      "description": "The request names another payment hash than the invoice.",
+      "now": 1496314670,
+      "match": "78c00c5473bfbfbfb82eff63352d54dbf6793a65fb4ea8a8792aa0a228bfb6e7",
+      "payer": "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6",
+      "sealPubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
+      "agreement": {
+        "engine": 1,
+        "rules": {
+          "type": "x01",
+          "modeId": "501",
+          "startScore": 501,
+          "doubleIn": false,
+          "doubleOut": true,
+          "cutThroat": false,
+          "bullFinish": false,
+          "legsToWin": 1,
+          "setsToWin": 1,
+          "startRule": "alternate"
+        },
+        "seats": [
+          {
+            "alias": "Mia",
+            "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0"
+          },
+          {
+            "alias": "Jonas",
+            "pubkey": "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6"
+          }
+        ],
+        "visibility": "private",
+        "stake": {
+          "msat": 250000000
+        }
+      },
+      "invoice": {
+        "amountMsat": 250000000,
+        "paymentHash": "0001020304050607080900010203040506070809000102030405060708090102",
+        "expiresAt": 1496314718
+      },
+      "rumor": {
+        "kind": 1180,
+        "created_at": 1496314665,
+        "tags": [
+          ["L", "blueline"],
+          ["l", "payment.request", "blueline"],
+          ["v", "1"],
+          ["e", "78c00c5473bfbfbfb82eff63352d54dbf6793a65fb4ea8a8792aa0a228bfb6e7"],
+          ["alt", "BlueLine Darts payment.request"],
+          ["p", "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6"]
+        ],
+        "content": "{\"amount\":250000000,\"invoice\":\"lnbc2500u1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdq5xysxxatsyp3k7enxv4jsxqzpuaztrnwngzn3kdzw5hydlzf03qdgm2hdq27cqv3agm2awhz5se903vruatfhq77w3ls4evs3ch9zw97j25emudupq63nyw24cg27h2rspfj9srp\",\"hash\":\"b97a9e4704d0d99c73e7877715c766a5a2d1de1ea5673a69bd7b5132d84c79e9\",\"expires\":1496314700,\"seat\":0,\"memo\":\"501, Verlierer zahlt\"}",
+        "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
+        "id": "7da73bb522b1288dfa9036cb21d46e574179574cdcf4646d407227bdbf3b1d69"
+      },
+      "expect": {
+        "ok": false,
+        "reason": "invoice_mismatch"
+      }
+    },
+    {
+      "name": "expired",
+      "description": "Checked after the invoice expired.",
+      "now": 1496314720,
+      "match": "78c00c5473bfbfbfb82eff63352d54dbf6793a65fb4ea8a8792aa0a228bfb6e7",
+      "payer": "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6",
+      "sealPubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
+      "agreement": {
+        "engine": 1,
+        "rules": {
+          "type": "x01",
+          "modeId": "501",
+          "startScore": 501,
+          "doubleIn": false,
+          "doubleOut": true,
+          "cutThroat": false,
+          "bullFinish": false,
+          "legsToWin": 1,
+          "setsToWin": 1,
+          "startRule": "alternate"
+        },
+        "seats": [
+          {
+            "alias": "Mia",
+            "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0"
+          },
+          {
+            "alias": "Jonas",
+            "pubkey": "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6"
+          }
+        ],
+        "visibility": "private",
+        "stake": {
+          "msat": 250000000
+        }
+      },
+      "invoice": {
+        "amountMsat": 250000000,
+        "paymentHash": "0001020304050607080900010203040506070809000102030405060708090102",
+        "expiresAt": 1496314718
+      },
+      "rumor": {
+        "kind": 1180,
+        "created_at": 1496314665,
+        "tags": [
+          ["L", "blueline"],
+          ["l", "payment.request", "blueline"],
+          ["v", "1"],
+          ["e", "78c00c5473bfbfbfb82eff63352d54dbf6793a65fb4ea8a8792aa0a228bfb6e7"],
+          ["alt", "BlueLine Darts payment.request"],
+          ["p", "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6"]
+        ],
+        "content": "{\"amount\":250000000,\"invoice\":\"lnbc2500u1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdq5xysxxatsyp3k7enxv4jsxqzpuaztrnwngzn3kdzw5hydlzf03qdgm2hdq27cqv3agm2awhz5se903vruatfhq77w3ls4evs3ch9zw97j25emudupq63nyw24cg27h2rspfj9srp\",\"hash\":\"0001020304050607080900010203040506070809000102030405060708090102\",\"expires\":1496314700,\"seat\":0,\"memo\":\"501, Verlierer zahlt\"}",
+        "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
+        "id": "2677715a933c85589c5f21c135b90e842627edc4cfee8d81042bd896f507ba6e"
+      },
+      "expect": {
+        "ok": false,
+        "reason": "invoice_expired"
+      }
+    },
+    {
+      "name": "other-seat",
+      "description": "Mia claims Jonas' seat.",
+      "now": 1496314670,
+      "match": "78c00c5473bfbfbfb82eff63352d54dbf6793a65fb4ea8a8792aa0a228bfb6e7",
+      "payer": "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6",
+      "sealPubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
+      "agreement": {
+        "engine": 1,
+        "rules": {
+          "type": "x01",
+          "modeId": "501",
+          "startScore": 501,
+          "doubleIn": false,
+          "doubleOut": true,
+          "cutThroat": false,
+          "bullFinish": false,
+          "legsToWin": 1,
+          "setsToWin": 1,
+          "startRule": "alternate"
+        },
+        "seats": [
+          {
+            "alias": "Mia",
+            "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0"
+          },
+          {
+            "alias": "Jonas",
+            "pubkey": "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6"
+          }
+        ],
+        "visibility": "private",
+        "stake": {
+          "msat": 250000000
+        }
+      },
+      "invoice": {
+        "amountMsat": 250000000,
+        "paymentHash": "0001020304050607080900010203040506070809000102030405060708090102",
+        "expiresAt": 1496314718
+      },
+      "rumor": {
+        "kind": 1180,
+        "created_at": 1496314665,
+        "tags": [
+          ["L", "blueline"],
+          ["l", "payment.request", "blueline"],
+          ["v", "1"],
+          ["e", "78c00c5473bfbfbfb82eff63352d54dbf6793a65fb4ea8a8792aa0a228bfb6e7"],
+          ["alt", "BlueLine Darts payment.request"],
+          ["p", "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6"]
+        ],
+        "content": "{\"amount\":250000000,\"invoice\":\"lnbc2500u1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdq5xysxxatsyp3k7enxv4jsxqzpuaztrnwngzn3kdzw5hydlzf03qdgm2hdq27cqv3agm2awhz5se903vruatfhq77w3ls4evs3ch9zw97j25emudupq63nyw24cg27h2rspfj9srp\",\"hash\":\"0001020304050607080900010203040506070809000102030405060708090102\",\"expires\":1496314700,\"seat\":1,\"memo\":\"501, Verlierer zahlt\"}",
+        "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
+        "id": "991a3f069849e399d0e3f75f0908f044669587c46f309b2171915de1dd5f6327"
+      },
+      "expect": {
+        "ok": false,
+        "reason": "not_a_player"
+      }
+    },
+    {
+      "name": "newer-version",
+      "description": "A request in a newer format version is not executed.",
+      "now": 1496314670,
+      "match": "78c00c5473bfbfbfb82eff63352d54dbf6793a65fb4ea8a8792aa0a228bfb6e7",
+      "payer": "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6",
+      "sealPubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
+      "agreement": {
+        "engine": 1,
+        "rules": {
+          "type": "x01",
+          "modeId": "501",
+          "startScore": 501,
+          "doubleIn": false,
+          "doubleOut": true,
+          "cutThroat": false,
+          "bullFinish": false,
+          "legsToWin": 1,
+          "setsToWin": 1,
+          "startRule": "alternate"
+        },
+        "seats": [
+          {
+            "alias": "Mia",
+            "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0"
+          },
+          {
+            "alias": "Jonas",
+            "pubkey": "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6"
+          }
+        ],
+        "visibility": "private",
+        "stake": {
+          "msat": 250000000
+        }
+      },
+      "invoice": {
+        "amountMsat": 250000000,
+        "paymentHash": "0001020304050607080900010203040506070809000102030405060708090102",
+        "expiresAt": 1496314718
+      },
+      "rumor": {
+        "kind": 1180,
+        "created_at": 1496314665,
+        "tags": [
+          ["L", "blueline"],
+          ["l", "payment.request", "blueline"],
+          ["v", "2"],
+          ["e", "78c00c5473bfbfbfb82eff63352d54dbf6793a65fb4ea8a8792aa0a228bfb6e7"],
+          ["alt", "BlueLine Darts payment.request"],
+          ["p", "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6"]
+        ],
+        "content": "{\"amount\":250000000,\"invoice\":\"lnbc2500u1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdq5xysxxatsyp3k7enxv4jsxqzpuaztrnwngzn3kdzw5hydlzf03qdgm2hdq27cqv3agm2awhz5se903vruatfhq77w3ls4evs3ch9zw97j25emudupq63nyw24cg27h2rspfj9srp\",\"hash\":\"0001020304050607080900010203040506070809000102030405060708090102\",\"expires\":1496314700,\"seat\":0,\"memo\":\"501, Verlierer zahlt\"}",
+        "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
+        "id": "dd66481cfbccc8805fb772ead220ae196fe8af95e19e2162c45f9e3d551134d3"
+      },
+      "expect": {
+        "ok": false,
+        "reason": "unknown_version"
+      }
+    },
+    {
+      "name": "tampered-id",
+      "description": "The rumor's id does not match its content (nostr-core's unwrap does not check this).",
+      "now": 1496314670,
+      "match": "78c00c5473bfbfbfb82eff63352d54dbf6793a65fb4ea8a8792aa0a228bfb6e7",
+      "payer": "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6",
+      "sealPubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
+      "agreement": {
+        "engine": 1,
+        "rules": {
+          "type": "x01",
+          "modeId": "501",
+          "startScore": 501,
+          "doubleIn": false,
+          "doubleOut": true,
+          "cutThroat": false,
+          "bullFinish": false,
+          "legsToWin": 1,
+          "setsToWin": 1,
+          "startRule": "alternate"
+        },
+        "seats": [
+          {
+            "alias": "Mia",
+            "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0"
+          },
+          {
+            "alias": "Jonas",
+            "pubkey": "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6"
+          }
+        ],
+        "visibility": "private",
+        "stake": {
+          "msat": 250000000
+        }
+      },
+      "invoice": {
+        "amountMsat": 250000000,
+        "paymentHash": "0001020304050607080900010203040506070809000102030405060708090102",
+        "expiresAt": 1496314718
+      },
+      "rumor": {
+        "kind": 1180,
+        "created_at": 1496314665,
+        "tags": [
+          ["L", "blueline"],
+          ["l", "payment.request", "blueline"],
+          ["v", "1"],
+          ["e", "78c00c5473bfbfbfb82eff63352d54dbf6793a65fb4ea8a8792aa0a228bfb6e7"],
+          ["alt", "BlueLine Darts payment.request"],
+          ["p", "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6"]
+        ],
+        "content": "{\"amount\":250000000,\"invoice\":\"lnbc2500u1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdq5xysxxatsyp3k7enxv4jsxqzpuaztrnwngzn3kdzw5hydlzf03qdgm2hdq27cqv3agm2awhz5se903vruatfhq77w3ls4evs3ch9zw97j25emudupq63nyw24cg27h2rspfj9srp\",\"hash\":\"0001020304050607080900010203040506070809000102030405060708090102\",\"expires\":1496314700,\"seat\":0,\"memo\":\"geändert\"}",
+        "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0",
+        "id": "2677715a933c85589c5f21c135b90e842627edc4cfee8d81042bd896f507ba6e"
+      },
+      "expect": {
+        "ok": false,
+        "reason": "invalid_event"
+      }
+    }
+  ],
+  "keys": {
+    "mallory": {
+      "secret": "9be7c2943089a10a5b83ebbd95d0634afa644ee232db8397c3d5be8d260979c0",
+      "pubkey": "c1e16b2f3158d52908cf590f78527436ec5b2a5f79832834d5ff81ad47321978"
+    },
+    "p1": {
+      "secret": "5f376707328cb0702d59a27465f39f418af2e6d728638ec9416ffc415b55aa31",
+      "pubkey": "b4634ea85201c342edda59fd5b883dbecc7fe569eccfd0bba0c4befea33b50c0"
+    },
+    "p2": {
+      "secret": "6fa792f67001e89db0f94b1d158b5b87f43ce5a7f68a551bf2684f9373dc0be9",
+      "pubkey": "a18b0718197ca582075594631d4c0577749ee4799c6a0adc71d7dc6149182cc6"
+    },
+    "session1": {
+      "secret": "6e122d69aa6d2ba19b378d43e0b468915ce345962076529f47c4965f15f904ae",
+      "pubkey": "2e594645da039653d1a27edbb56c0e4a3693b68cf62345bc68f564fa5ed7c505"
+    }
+  }
+}

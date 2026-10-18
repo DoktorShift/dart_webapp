@@ -4,11 +4,14 @@ import { useState, type ReactNode } from "react"
 import { Button } from "@/components/ui/button"
 import { ChoiceRow } from "@/components/ui/group"
 import { Sheet } from "@/components/ui/sheet"
-import { slotLabel, visitResult } from "@/components/game/visit-panel"
+import { LegVisits, playedLegs } from "@/components/game/visit-list"
 import { GamePreferences } from "@/components/game-preferences"
 import { useT } from "@/components/i18n-provider"
+import { useRegistryVersion } from "@/components/nav/use-registry"
 import type { CorrectionPlan, MatchState, Visit } from "@/lib/game/engine"
 import type { AppSettings } from "@/lib/game/storage"
+import type { SavedMatch } from "@/lib/game/types"
+import { getGameMenuItems } from "@/lib/shell/registry"
 import { legName, rulesSummary } from "@/lib/game/words"
 import { cn } from "@/lib/utils"
 
@@ -62,10 +65,7 @@ export function HistorySheet({
   onSelect: (visit: Visit) => void
 }) {
   const t = useT()
-  const players = state.config.players
-  const legs = [...state.pastLegs.map((visits, leg) => ({ leg, visits })), { leg: state.legIndex, visits: state.legVisits }]
-    .filter((l) => l.visits.length > 0)
-    .reverse()
+  const legs = playedLegs(state)
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title={t.sheets.history.title} description={t.sheets.history.description}>
@@ -73,39 +73,7 @@ export function HistorySheet({
         <p className="pb-4 text-[0.9375rem] text-muted-foreground">{t.sheets.history.empty}</p>
       ) : (
         <div className="min-h-0 space-y-4 overflow-y-auto">
-          {legs.map(({ leg, visits }) => {
-            const result = state.legResults[leg]
-            return (
-              <section key={leg} aria-label={legName(t, state, leg)}>
-                <h3 className="mb-1.5 px-1 text-[0.8125rem] text-muted-foreground">
-                  {t.sheets.history.leg(legName(t, state, leg), result ? players[result.winner].name : null)}
-                </h3>
-                <ol className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
-                  {[...visits].reverse().map((v) => (
-                    <li key={v.seq}>
-                      <button
-                        type="button"
-                        onClick={() => onSelect(v)}
-                        className="flex min-h-14 w-full items-center gap-3 px-4 py-2 text-left active:bg-secondary/70"
-                      >
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-[1.0625rem] font-medium [overflow-wrap:anywhere]">{players[v.player].name}</span>
-                          <span className="block text-[0.8125rem] text-muted-foreground">
-                            {v.enteredAsTotal ? t.sheets.history.totalOf(v.dartCount) : v.darts.map((d) => slotLabel(state, d, t)).join("  ")}
-                            {v.edited && <span className="ml-2 text-warning">{t.sheets.history.corrected}</span>}
-                            {v.keptResult && <span className="ml-2 text-warning">{t.sheets.history.kept}</span>}
-                          </span>
-                        </span>
-                        <span className={cn("shrink-0 text-right text-[0.9375rem] tabular-nums", v.bust && "font-medium text-danger")}>
-                          {visitResult(state, v, t)}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ol>
-              </section>
-            )
-          })}
+          <LegVisits state={state} legs={legs} onSelect={onSelect} />
         </div>
       )}
       <Button variant="ghost" onClick={() => onOpenChange(false)} className={cn(secondary, "mt-2 w-full shrink-0")}>
@@ -196,12 +164,17 @@ export function CorrectionSheet({
 
 type OptionsView = "main" | "leaving" | "restart"
 
+const card = "divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card"
+
 // The game's settings while it runs: how scores are entered (X01), sounds, the caller. Also
-// restarting the leg and a player leaving, which are rare enough to sit one level down.
+// restarting the leg and a player leaving, which are rare enough to sit one level down, and
+// what areas add for other devices (lib/shell/registry.ts). The cards scroll on small phones;
+// the tip and Fertig stay put.
 export function OptionsSheet({
   open,
   onOpenChange,
   state,
+  match,
   settings,
   onSettingsChange,
   onRestartLeg,
@@ -210,6 +183,7 @@ export function OptionsSheet({
   open: boolean
   onOpenChange: (open: boolean) => void
   state: MatchState
+  match: SavedMatch
   settings: AppSettings
   onSettingsChange: (settings: AppSettings) => void
   onRestartLeg: () => void
@@ -218,6 +192,9 @@ export function OptionsSheet({
   const t = useT()
   const [view, setView] = useState<OptionsView>("main")
   const players = state.config.players
+  // Entries areas added (lib/shell/registry.ts, game menu items), after the game's own.
+  useRegistryVersion()
+  const extraItems = getGameMenuItems()
   const change = (next: boolean) => {
     onOpenChange(next)
     if (!next) setView("main")
@@ -232,37 +209,60 @@ export function OptionsSheet({
     <Sheet open={open} onOpenChange={change} title={title} description={description}>
       {view === "main" && (
         <>
-          <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
-            {state.config.type === "x01" && (
-              <ChoiceRow
-                title={t.game.entry}
-                options={[
-                  { value: "dart", label: t.game.perDart },
-                  // Totals start with a new visit.
-                  { value: "visit", label: t.game.perVisit, disabled: state.visitDarts.length > 0 },
-                ]}
-                value={settings.entryMode}
-                onChange={(entryMode) => onSettingsChange({ ...settings, entryMode })}
+          <div className="min-h-0 overflow-y-auto overscroll-contain">
+            <div className={card}>
+              {state.config.type === "x01" && (
+                <ChoiceRow
+                  title={t.game.entry}
+                  options={[
+                    { value: "dart", label: t.game.perDart },
+                    // Totals start with a new visit.
+                    { value: "visit", label: t.game.perVisit, disabled: state.visitDarts.length > 0 },
+                  ]}
+                  value={settings.entryMode}
+                  onChange={(entryMode) => onSettingsChange({ ...settings, entryMode })}
+                />
+              )}
+              <GamePreferences
+                settings={settings}
+                onSettingsChange={onSettingsChange}
+                showAskAtDouble={state.config.type === "x01" && state.config.doubleOut && settings.entryMode === "visit"}
               />
-            )}
-            <GamePreferences
-              settings={settings}
-              onSettingsChange={onSettingsChange}
-              showAskAtDouble={state.config.type === "x01" && state.config.doubleOut && settings.entryMode === "visit"}
-            />
-          </div>
-          <div className="mt-3 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
-            <button type="button" onClick={() => setView("restart")} className={cn(rowButton, "text-primary")}>
-              {texts.restartLeg}
-            </button>
-            {state.active.filter(Boolean).length > 1 && (
-              <button type="button" onClick={() => setView("leaving")} className={cn(rowButton, "text-primary")}>
-                {texts.playerLeaves}
+            </div>
+            <div className={cn(card, "mt-3")}>
+              <button type="button" onClick={() => setView("restart")} className={cn(rowButton, "text-primary")}>
+                {texts.restartLeg}
               </button>
+              {state.active.filter(Boolean).length > 1 && (
+                <button type="button" onClick={() => setView("leaving")} className={cn(rowButton, "text-primary")}>
+                  {texts.playerLeaves}
+                </button>
+              )}
+            </div>
+            {extraItems.length > 0 && (
+              <section className="mt-4" aria-label={texts.devices}>
+                <h3 className="mb-1.5 px-1 text-[0.8125rem] text-muted-foreground">{texts.devices}</h3>
+                <div className={card}>
+                  {extraItems.map(({ id, label, icon: Icon, onSelect }) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => {
+                        change(false)
+                        onSelect({ match })
+                      }}
+                      className={cn(rowButton, "gap-3 text-primary")}
+                    >
+                      {Icon && <Icon className="h-5 w-5 shrink-0" aria-hidden />}
+                      {label(t)}
+                    </button>
+                  ))}
+                </div>
+              </section>
             )}
           </div>
-          <p className="mt-3 px-1 text-[0.8125rem] text-muted-foreground">{texts.tip}</p>
-          <Button variant="ghost" onClick={() => change(false)} className={cn(secondary, "mt-2 w-full")}>
+          <p className="mt-3 shrink-0 px-1 text-[0.8125rem] text-muted-foreground">{texts.tip}</p>
+          <Button variant="ghost" onClick={() => change(false)} className={cn(secondary, "mt-2 w-full shrink-0")}>
             {t.common.done}
           </Button>
         </>
@@ -287,7 +287,7 @@ export function OptionsSheet({
 
       {view === "leaving" && (
         <Actions>
-          <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
+          <div className={card}>
             {players.map((p, i) =>
               state.active[i] ? (
                 <button

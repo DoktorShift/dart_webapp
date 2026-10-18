@@ -1,0 +1,37 @@
+PASS de-light-320x548: Profil › Einstellungen shows the Daten section
+PASS de-light-320x548: a failed save shows the alert over the game
+PASS de-light-320x548: after the game Profil still shows Einstellungen at the Daten section ({"title":"Einstellungen","scroll":983} → {"title":"Einstellungen","scroll":983})
+PASS de-light-320x548: no page errors
+PASS de-light-1024x768: Profil › Einstellungen shows the Daten section
+PASS de-light-1024x768: a failed save shows the alert over the game
+PASS de-light-1024x768: after the game Profil still shows Einstellungen at the Daten section ({"title":"Einstellungen","scroll":581} → {"title":"Einstellungen","scroll":581})
+PASS de-light-1024x768: no page errors
+PASS de-light-568x320: Clubs empty state above the tab bar (bar 275, buttons 215 / 215)
+PASS de-dark-320x548: Profil › Einstellungen shows the Daten section
+PASS de-dark-320x548: a failed save shows the alert over the game
+PASS de-dark-320x548: after the game Profil still shows Einstellungen at the Daten section ({"title":"Einstellungen","scroll":983} → {"title":"Einstellungen","scroll":983})
+PASS de-dark-320x548: no page errors
+PASS de-dark-1024x768: Profil › Einstellungen shows the Daten section
+PASS de-dark-1024x768: a failed save shows the alert over the game
+PASS de-dark-1024x768: after the game Profil still shows Einstellungen at the Daten section ({"title":"Einstellungen","scroll":581} → {"title":"Einstellungen","scroll":581})
+PASS de-dark-1024x768: no page errors
+PASS de-dark-568x320: Clubs empty state above the tab bar (bar 275, buttons 215 / 215)
+PASS en-light-320x548: Profil › Einstellungen shows the Daten section
+PASS en-light-320x548: a failed save shows the alert over the game
+PASS en-light-320x548: after the game Profil still shows Einstellungen at the Daten section ({"title":"Settings","scroll":964} → {"title":"Settings","scroll":964})
+PASS en-light-320x548: no page errors
+PASS en-light-1024x768: Profil › Einstellungen shows the Daten section
+PASS en-light-1024x768: a failed save shows the alert over the game
+PASS en-light-1024x768: after the game Profil still shows Einstellungen at the Daten section ({"title":"Settings","scroll":581} → {"title":"Settings","scroll":581})
+PASS en-light-1024x768: no page errors
+PASS en-light-568x320: Clubs empty state above the tab bar (bar 275, buttons 195 / 195)
+PASS en-dark-320x548: Profil › Einstellungen shows the Daten section
+PASS en-dark-320x548: a failed save shows the alert over the game
+PASS en-dark-320x548: after the game Profil still shows Einstellungen at the Daten section ({"title":"Settings","scroll":964} → {"title":"Settings","scroll":964})
+PASS en-dark-320x548: no page errors
+PASS en-dark-1024x768: Profil › Einstellungen shows the Daten section
+PASS en-dark-1024x768: a failed save shows the alert over the game
+PASS en-dark-1024x768: after the game Profil still shows Einstellungen at the Daten section ({"title":"Settings","scroll":581} → {"title":"Settings","scroll":581})
+PASS en-dark-1024x768: no page errors
+PASS en-dark-568x320: Clubs empty state above the tab bar (bar 275, buttons 195 / 195)
+36 of 36 checks passed

@@ -1,0 +1,39 @@
+Route "/" first-load JavaScript baseline
+┌─────────┬────────────────────────────────────────────────┬─────────┬─────────┐
+│ (index) │ file                                           │ kB      │ gzip_kB │
+├─────────┼────────────────────────────────────────────────┼─────────┼─────────┤
+│ 0       │ 'static/chunks/webpack-1ab12ada655b6c0b.js'    │ '3.3'   │ '1.7'   │
+│ 1       │ 'static/chunks/2ae3794e-694893e4eac5da0e.js'   │ '169.0' │ '53.0'  │
+│ 2       │ 'static/chunks/54-2660323c1ca27f06.js'         │ '169.8' │ '45.3'  │
+│ 3       │ 'static/chunks/main-app-af2f8cfc7c776fc7.js'   │ '0.5'   │ '0.2'   │
+│ 4       │ 'static/chunks/58-b3edb0a2c12850fe.js'         │ '40.9'  │ '13.0'  │
+│ 5       │ 'static/chunks/app/layout-c2b2c6ca51ccb035.js' │ '4.4'   │ '1.9'   │
+│ 6       │ 'static/chunks/285-4964fa14a0b56322.js'        │ '19.7'  │ '6.6'   │
+│ 7       │ 'static/chunks/52-851a10bd5ee662c4.js'         │ '211.8' │ '68.9'  │
+│ 8       │ 'static/chunks/320-35b3caf66735858b.js'        │ '31.0'  │ '12.0'  │
+│ 9       │ 'static/chunks/211-1b318d0c49ea05cb.js'        │ '19.7'  │ '6.9'   │
+│ 10      │ 'static/chunks/app/page-9c49b2070f8e8a7f.js'   │ '121.4' │ '33.5'  │
+└─────────┴────────────────────────────────────────────────┴─────────┴─────────┘
+Total: 791.5 kB raw, 242.9 kB gzip, 11 files
+nostr-core in first load: no
+jsqr in first load: no
+qrcode-generator in first load: no
+Other chunks (async or other routes):
+┌─────────┬──────────────────────────────────────────────────────────────────────┬────────┬──────────┐
+│ (index) │ file                                                                 │ kB     │ contains │
+├─────────┼──────────────────────────────────────────────────────────────────────┼────────┼──────────┤
+│ 0       │ 'static/chunks/640-f1e6ddaa6c0400e6.js'                              │ '17.1' │ '-'      │
+│ 1       │ 'static/chunks/app/error-ed11b38bf5c69e91.js'                        │ '0.5'  │ '-'      │
+│ 2       │ 'static/chunks/app/global-error-96ff3495fcb24108.js'                 │ '0.7'  │ '-'      │
+│ 3       │ 'static/chunks/app/not-found-1008103cf94dde92.js'                    │ '6.9'  │ '-'      │
+│ 4       │ 'static/chunks/app/_not-found/page-bdf4b7f634b3698e.js'              │ '0.2'  │ '-'      │
+│ 5       │ 'static/chunks/app/about/page-a33a412b6d4a3d28.js'                   │ '25.9' │ '-'      │
+│ 6       │ 'static/chunks/app/apple-icon/route-bdf4b7f634b3698e.js'             │ '0.2'  │ '-'      │
+│ 7       │ 'static/chunks/app/llms-full.txt/route-bdf4b7f634b3698e.js'          │ '0.2'  │ '-'      │
+│ 8       │ 'static/chunks/app/llms.txt/route-bdf4b7f634b3698e.js'               │ '0.2'  │ '-'      │
+│ 9       │ 'static/chunks/app/manifest.webmanifest/route-bdf4b7f634b3698e.js'   │ '0.2'  │ '-'      │
+│ 10      │ 'static/chunks/app/robots.txt/route-bdf4b7f634b3698e.js'             │ '0.2'  │ '-'      │
+│ 11      │ 'static/chunks/app/sitemap.xml/route-bdf4b7f634b3698e.js'            │ '0.2'  │ '-'      │
+│ 12      │ 'static/chunks/app/apple-splash/[id]/route-bdf4b7f634b3698e.js'      │ '0.2'  │ '-'      │
+│ 13      │ 'static/chunks/app/icon/[__metadata_id__]/route-bdf4b7f634b3698e.js' │ '0.2'  │ '-'      │
+└─────────┴──────────────────────────────────────────────────────────────────────┴────────┴──────────┘

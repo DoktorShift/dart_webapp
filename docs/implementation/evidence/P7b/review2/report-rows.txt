@@ -1,0 +1,26 @@
+rows-de-dark-landscape-01-result-unpaid.jpg {"pageScroll":false,"offscreen":[],"ellipsis":[],"clipped":[],"small":[],"belowFold":["button:Teilen","button:Statistik","button:Alle Aufnahmen ansehen","button:Rangliste"]}
+OK rows-de-dark-landscape row fits {"text":"500 sats an Mia","font":"17px","client":128,"scroll":128,"lines":1,"height":44,"fits":true}
+rows-de-dark-landscape-02-result-paid.jpg {"pageScroll":false,"offscreen":[],"ellipsis":[],"clipped":[],"small":[],"belowFold":["button:Teilen","button:Statistik","button:Alle Aufnahmen ansehen","button:Rangliste"]}
+OK rows-de-dark-landscape row fits {"text":"500 sats an Mia","font":"14.4px","client":108,"scroll":108,"lines":1,"height":44,"fits":true}
+OK rows-de-dark-landscape alert asks Einsatz als vor Ort erledigt vermerken?
+rows-de-dark-landscape-03-settled-alert.jpg layout ok
+rows-de-dark-landscape-04-result-settled.jpg {"pageScroll":false,"offscreen":[],"ellipsis":[],"clipped":[],"small":[],"belowFold":["button:Teilen","button:Statistik","button:Alle Aufnahmen ansehen","button:Rangliste"]}
+OK rows-de-dark-landscape row fits {"text":"Vor Ort erledigt","font":"14.9px","client":108,"scroll":108,"lines":1,"height":44,"fits":true}
+rows-de-dark-landscape pay_invoice 1 errors [] foreign []
+rows-en-dark-se-01-result-waiting.jpg layout ok
+OK rows-en-dark-se row fits {"text":"Awaiting payment","font":"17px","client":153,"scroll":153,"lines":1,"height":44,"fits":true}
+rows-en-dark-se-02-result-received.jpg layout ok
+OK rows-en-dark-se row fits {"text":"500 sats from Tom","font":"17px","client":153,"scroll":153,"lines":1,"height":44,"fits":true}
+rows-en-dark-se errors [] foreign []
+rows-de-light-iphone-long-01-result-unpaid.jpg layout ok
+OK rows-de-light-iphone-long row fits {"text":"500 sats an Maximilian-Alexa zahlen","font":"14px","client":243,"scroll":243,"lines":1,"height":48,"fits":true}
+rows-de-light-iphone-long-02-result-unknown-after-reload.jpg layout ok
+OK rows-de-light-iphone-long row fits {"text":"Einsatz: Zahlung noch nicht bestätigt","font":"12.8px","client":223,"scroll":223,"lines":1,"height":48,"fits":true}
+OK rows-de-light-iphone-long unknown with lookup: Status prüfen alone, no by-hand rows 
+rows-de-light-iphone-long-03-unknown-sheet.jpg layout ok
+rows-de-light-iphone-long journal [{"id":"8e10ca60","action":"stake:c7c61a8733175a23d7c3268d55134245","state":"unknown","connection":"0cd2a4c9"}] pay_invoice 1 errors []
+rows-de-light-se-01-result-unknown-after-reload.jpg layout ok
+OK rows-de-light-se row fits {"text":"Nicht bestätigt","font":"17px","client":153,"scroll":153,"lines":1,"height":44,"fits":true}
+rows-de-light-se-02-result-waiting.jpg layout ok
+OK rows-de-light-se row fits {"text":"Warte auf Zahlung","font":"17px","client":153,"scroll":153,"lines":1,"height":44,"fits":true}
+rows-de-light-se journal [{"id":"256bc20f","action":"stake:66c7601e5c6073d8b4e1fc9b78573057","state":"waiting","connection":"bde57bac"},{"id":"7f0bd034","action":"stake:caa07de6db634db963d17bc7750f384d","state":"unknown","connection":"bde57bac"}] pay_invoice 1 errors []

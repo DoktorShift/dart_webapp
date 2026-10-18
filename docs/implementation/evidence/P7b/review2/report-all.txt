@@ -1,0 +1,168 @@
+rows-de-dark-landscape-01-result-unpaid.jpg {"pageScroll":false,"offscreen":[],"ellipsis":[],"clipped":[],"small":[],"belowFold":["button:Teilen","button:Statistik","button:Alle Aufnahmen ansehen","button:Rangliste"]}
+OK rows-de-dark-landscape row fits {"text":"500 sats an Mia","font":"17px","client":128,"scroll":128,"lines":1,"height":44,"fits":true}
+rows-de-dark-landscape-02-result-paid.jpg {"pageScroll":false,"offscreen":[],"ellipsis":[],"clipped":[],"small":[],"belowFold":["button:Teilen","button:Statistik","button:Alle Aufnahmen ansehen","button:Rangliste"]}
+OK rows-de-dark-landscape row fits {"text":"500 sats an Mia","font":"14.4px","client":108,"scroll":108,"lines":1,"height":44,"fits":true}
+OK rows-de-dark-landscape alert asks Einsatz als vor Ort erledigt vermerken?
+rows-de-dark-landscape-03-settled-alert.jpg layout ok
+rows-de-dark-landscape-04-result-settled.jpg {"pageScroll":false,"offscreen":[],"ellipsis":[],"clipped":[],"small":[],"belowFold":["button:Teilen","button:Statistik","button:Alle Aufnahmen ansehen","button:Rangliste"]}
+OK rows-de-dark-landscape row fits {"text":"Vor Ort erledigt","font":"14.9px","client":108,"scroll":108,"lines":1,"height":44,"fits":true}
+rows-de-dark-landscape pay_invoice 1 errors [] foreign []
+rows-en-dark-se-01-result-waiting.jpg layout ok
+OK rows-en-dark-se row fits {"text":"Awaiting payment","font":"17px","client":153,"scroll":153,"lines":1,"height":44,"fits":true}
+rows-en-dark-se-02-result-received.jpg layout ok
+OK rows-en-dark-se row fits {"text":"500 sats from Tom","font":"17px","client":153,"scroll":153,"lines":1,"height":44,"fits":true}
+rows-en-dark-se errors [] foreign []
+rows-de-light-iphone-long-01-result-unpaid.jpg layout ok
+OK rows-de-light-iphone-long row fits {"text":"500 sats an Maximilian-Alexa zahlen","font":"14px","client":243,"scroll":243,"lines":1,"height":48,"fits":true}
+rows-de-light-iphone-long-02-result-unknown-after-reload.jpg layout ok
+OK rows-de-light-iphone-long row fits {"text":"Einsatz: Zahlung noch nicht bestätigt","font":"12.8px","client":223,"scroll":223,"lines":1,"height":48,"fits":true}
+OK rows-de-light-iphone-long unknown with lookup: Status prüfen alone, no by-hand rows 
+rows-de-light-iphone-long-03-unknown-sheet.jpg layout ok
+rows-de-light-iphone-long journal [{"id":"d079a9a0","action":"stake:02eadff00926ffea9d7d15ab0a8ea18e","state":"unknown","connection":"f620ddf0"}] pay_invoice 1 errors []
+rows-de-light-se-01-result-unknown-after-reload.jpg layout ok
+FAIL rows-de-light-se row fits 
+rows-de-light-se-02-result-waiting.jpg layout ok
+OK rows-de-light-se row fits {"text":"Warte auf Zahlung","font":"17px","client":153,"scroll":153,"lines":1,"height":44,"fits":true}
+rows-de-light-se journal [{"id":"80409d24","action":"stake:159d1b357507b2da9d8d45512eb84987","state":"unknown","connection":"ee3989c7"},{"id":"c0db7706","action":"stake:238ef81f8915776d8cb328e1cda45288","state":"waiting","connection":"ee3989c7"}] pay_invoice 1 errors []
+return-de-light-iphone-01-unrequested.jpg layout ok
+return-de-light-iphone unrequested link: wallet null
+OK return-de-light-iphone one connect screen 
+return-de-light-iphone-02-confirm.jpg layout ok
+return-de-light-iphone before confirming: wallet null
+return-de-light-iphone-03-connected.jpg layout ok
+return-de-light-iphone after confirming: wallet me@mine.test
+return-de-light-iphone-04-replayed.jpg layout ok
+return-de-light-iphone replayed link: wallet me@mine.test
+return-de-light-iphone-05-confirm-replaces.jpg layout ok
+return-de-light-iphone-06-after-cancel.jpg layout ok
+return-de-light-iphone replacement cancelled: wallet me@mine.test errors [] foreign []
+return-en-dark-se-01-unrequested.jpg layout ok
+return-en-dark-se unrequested link: wallet null
+OK return-en-dark-se one connect screen 
+return-en-dark-se-02-confirm.jpg layout ok
+return-en-dark-se before confirming: wallet null
+return-en-dark-se-03-connected.jpg layout ok
+return-en-dark-se after confirming: wallet me@mine.test
+return-en-dark-se-04-replayed.jpg layout ok
+return-en-dark-se replayed link: wallet me@mine.test
+return-en-dark-se-05-confirm-replaces.jpg layout ok
+return-en-dark-se-06-after-cancel.jpg layout ok
+return-en-dark-se replacement cancelled: wallet me@mine.test errors [] foreign []
+returnsheet-de-light-iphone request from the sheet: {"from":{"match":"9a75a12938079dbe973beaa0f0a723f8","side":"pay"}}
+OK returnsheet-de-light-iphone same tab: result kept, confirmation in the sheet {"result":true,"dialog":true,"headings":["301","Mia gewinnt","Einsatz","Diese Wallet verbinden?","Testwallet"]}
+returnsheet-de-light-iphone-same-tab-01-confirm-in-sheet.jpg layout ok
+OK returnsheet-de-light-iphone same tab: payment goes on 
+returnsheet-de-light-iphone-same-tab-02-scan-after-connect.jpg layout ok
+returnsheet-de-light-iphone-same-tab-03-result-paid.jpg layout ok
+returnsheet-de-light-iphone same tab: journal [{"id":"4f9da389","action":"stake:9a75a12938079dbe973beaa0f0a723f8","state":"paid","connection":"a1c6fb3a"}] wallet me@mine.test pay_invoice 1 errors []
+returnsheet-de-light-iphone request from the sheet: {"from":{"match":"8ebf0c0465b057596d0ad1a588b532a2","side":"pay"}}
+OK returnsheet-de-light-iphone fresh load: game restored with its sheet {"result":true,"dialog":true,"headings":["301","Mia gewinnt","Einsatz","Diese Wallet verbinden?","Testwallet"]}
+OK returnsheet-de-light-iphone fresh load: answer left the address http://localhost:3314/
+returnsheet-de-light-iphone-fresh-load-01-confirm-in-sheet.jpg layout ok
+returnsheet-de-light-iphone-fresh-load-02-scan-after-connect.jpg layout ok
+OK returnsheet-de-light-iphone fresh load: result still open after cancel 
+returnsheet-de-light-iphone fresh load: wallet me@mine.test errors []
+OK returnsheet-de-light-iphone profile path: one connect screen 
+returnsheet-de-light-iphone-profile-01-confirm-on-screen.jpg layout ok
+returnsheet-de-light-iphone-profile-02-connected.jpg layout ok
+OK returnsheet-de-light-iphone profile path: Fertig lands on Zahlungen {"result":false,"dialog":false,"headings":["Zahlungen","Testwallet"]}
+returnsheet-de-light-iphone-profile-03-after-fertig.jpg layout ok
+returnsheet-de-light-iphone profile path: wallet me@mine.test errors []
+returnsheet-de-light-iphone-tab2-01-confirm.jpg layout ok
+returnsheet-de-light-iphone-tab1-02-tab1-connected.jpg layout ok
+returnsheet-de-light-iphone two tabs: tab 1 shows Verbunden, wallet me@mine.test errors [] []
+switch-de-light-iphone-01-unknown.jpg layout ok
+switch-de-light-iphone paid by the first wallet 1 [{"id":"e872d1c0","action":"stake:44f0a71ccca2ab357c9638288b50a8ef","state":"unknown","problem":"no-answer","connection":"45601dbd"}]
+OK switch-de-light-iphone no Status prüfen through another wallet 
+OK switch-de-light-iphone by-hand row in view 
+switch-de-light-iphone-02-by-hand-other-wallet.jpg layout ok
+switch-de-light-iphone-03-confirm-by-hand.jpg layout ok
+switch-de-light-iphone-04-noted.jpg layout ok
+switch-de-light-iphone noted by hand [{"id":"e872d1c0","action":"stake:44f0a71ccca2ab357c9638288b50a8ef","state":"paid","byHand":true,"connection":"45601dbd"}]
+switch-de-light-iphone-05-result.jpg layout ok
+switch-de-light-iphone pay_invoice first 1 second 0 errors [] foreign []
+switch-en-dark-se-01-unknown.jpg layout ok
+switch-en-dark-se paid by the first wallet 1 [{"id":"cc0c2716","action":"stake:0fd979e2f760248a3e09fcaeca7e93ad","state":"unknown","problem":"no-answer","connection":"cc152799"}]
+OK switch-en-dark-se no Status prüfen through another wallet 
+OK switch-en-dark-se by-hand row in view 
+switch-en-dark-se-02-by-hand-other-wallet.jpg layout ok
+switch-en-dark-se-03-confirm-by-hand.jpg layout ok
+switch-en-dark-se-04-noted.jpg layout ok
+switch-en-dark-se noted by hand [{"id":"cc0c2716","action":"stake:0fd979e2f760248a3e09fcaeca7e93ad","state":"paid","byHand":true,"connection":"cc152799"}]
+switch-en-dark-se-05-result.jpg layout ok
+switch-en-dark-se pay_invoice first 1 second 0 errors [] foreign []
+address-de-dark-se-01-looking-up.jpg layout ok
+address-de-dark-se lookup given up after 11 s from opening the payment (lab value)
+address-de-dark-se-02-unreachable.jpg layout ok
+address-de-dark-se-03-review.jpg layout ok
+address-de-dark-se-04-requesting.jpg layout ok
+address-de-dark-se cancelled while requesting: journal [] pay_invoice 0 foreign []
+tabs-de-light-tab2-01-paid-meanwhile.jpg layout ok
+tabs-de-light tab 2 offers paying again: true pay_invoice 1
+guest start page: ["webpack-64c76f39d6cea979.js 2264","main-app-265be24eb1607d43.js 233","layout-79d660d73b2a744b.js 1955","8389-ea6e270b59cb71c3.js 6777","7340-145fb7bd8650e30d.js 17491 [texts]","error-536ee2a20824cba8.js 394","6815-75e8745ee771df86.js 7100","not-found-f02b706546c251b4.js 2939","global-error-3280f8d1608e690c.js 466","8506-3677bfebb832c769.js 11649","9269-feb6a975844a4356.js 46428","e622d8cb-dbf449b4cb7fe26d.js 54370","page-f6310c010067d8be.js 49698 [stakeRow]","7479-51cb24868f653cac.js 70397"]
+guest setup with two players: ["1144.7951d735cbf26ef0.js 1479 [stakeRow]"]
+guest game and result: []
+guest-result-no-stake.jpg layout ok
+guest sockets [] foreign []
+guest profile tab: ["4869.baedbce93fb6edfe.js 4450","7888.15301db677290300.js 2061","3576.24acdf38e8627b8c.js 7730 [journal,wallet]","7530.10df8c1beebd80a9.js 7936 [texts]"]
+OK guest Zahlungen row says no wallet 
+guest-profile-row.jpg layout ok
+guest-payments-no-wallet.jpg layout ok
+OK guest reaches Wallet verbinden 
+guest-connect-screen.jpg layout ok
+receive-en-dark-se-01-waiting-slow-wallet.jpg layout ok
+receive-en-dark-se relay connections opened while waiting 26 s with a slow wallet: 1
+OK notes-de-dark-se failed attempt: message in view Deine Wallet ist gerade nicht erreichbar. Prüfe die Internetverbindung.
+OK notes-de-dark-se failed attempt: message above the button 
+notes-de-dark-se-01-failed-attempt.jpg layout ok
+notes-de-dark-se after the failed attempt: journal [] pay_invoice 0
+notes-de-dark-se-02-paid-after-reconnect.jpg layout ok
+OK notes-de-dark-se offline: note in view Deine Wallet ist gerade nicht erreichbar. Prüfe die Internetverbindung.
+notes-de-dark-se-03-receive-offline.jpg layout ok
+notes-de-dark-se journal [{"id":"35793ed2","action":"single:57638a8247db205abcafebe61f7288dd","state":"waiting","connection":"2fbe3cb9"},{"id":"d78f182c","action":"stake:37604f87a3c5e028d77b20e81aec0e0d","state":"paid","connection":"2fbe3cb9"}] pay_invoice 1 errors [] foreign []
+OK landscape-de-dark-568 stake sheet: no description 
+OK landscape-de-dark-568 stake sheet: amounts and Übernehmen in view 
+landscape-de-dark-568-01-stake-sheet.jpg layout ok
+OK landscape-de-dark-568 row fits {"text":"500 sats an Mia","font":"17px","client":128,"scroll":128,"lines":1,"height":44,"fits":true}
+OK landscape-de-dark-568 choice: Vor Ort erledigt in view 
+landscape-de-dark-568-02-choice.jpg layout ok
+landscape-de-dark-568-03-connect-in-sheet.jpg layout ok
+landscape-de-dark-568-04-scan.jpg {"pageScroll":false,"offscreen":[],"ellipsis":[],"clipped":[],"small":[],"belowFold":["button:Öffnen"]}
+OK landscape-de-dark-568 review: amount, wallet row and pay button in view 
+landscape-de-dark-568-05-review.jpg layout ok
+landscape-de-dark-568-06-paid.jpg layout ok
+OK landscape-de-dark-568 row fits {"text":"500 sats an Mia","font":"14.4px","client":108,"scroll":108,"lines":1,"height":44,"fits":true}
+landscape-de-dark-568-07-result-paid.jpg {"pageScroll":false,"offscreen":[],"ellipsis":[],"clipped":[],"small":[],"belowFold":["button:Teilen","button:Statistik","button:Alle Aufnahmen ansehen","button:Rangliste"]}
+OK landscape-de-dark-568 code at least 160 px with its status in view {"x":57,"y":119.484375,"width":160,"height":160}
+landscape-de-dark-568-08-receive-waiting.jpg layout ok
+landscape-de-dark-568 pay_invoice 1 errors [] foreign []
+OK landscape-en-light-844 stake sheet: no description 
+OK landscape-en-light-844 stake sheet: amounts and Übernehmen in view 
+landscape-en-light-844-01-stake-sheet.jpg layout ok
+OK landscape-en-light-844 row fits {"text":"500 sats to Mia","font":"17px","client":252,"scroll":252,"lines":1,"height":44,"fits":true}
+OK landscape-en-light-844 choice: Vor Ort erledigt in view 
+landscape-en-light-844-02-choice.jpg layout ok
+landscape-en-light-844-03-connect-in-sheet.jpg {"pageScroll":false,"offscreen":[],"ellipsis":[],"clipped":[],"small":[],"belowFold":["button:Open"]}
+landscape-en-light-844-04-scan.jpg {"pageScroll":false,"offscreen":[],"ellipsis":[],"clipped":[],"small":[],"belowFold":["button:Open"]}
+OK landscape-en-light-844 review: amount, wallet row and pay button in view 
+landscape-en-light-844-05-review.jpg layout ok
+landscape-en-light-844-06-paid.jpg layout ok
+OK landscape-en-light-844 row fits {"text":"500 sats to Mia","font":"17px","client":232,"scroll":232,"lines":1,"height":44,"fits":true}
+landscape-en-light-844-07-result-paid.jpg layout ok
+OK landscape-en-light-844 code at least 160 px with its status in view {"x":195,"y":126.578125,"width":160,"height":160}
+landscape-en-light-844-08-receive-waiting.jpg layout ok
+landscape-en-light-844 pay_invoice 1 errors [] foreign []
+OK details-de-light-iphone before a code: Abbrechen, no Fertig 
+details-de-light-iphone-01-receive-amount.jpg layout ok
+OK details-de-light-iphone with a code: plain Fertig 
+details-de-light-iphone-02-receive-waiting.jpg layout ok
+OK details-de-light-iphone received: filled Fertig 
+details-de-light-iphone-03-received.jpg layout ok
+OK details-de-light-iphone no focus ring around the sheet after Enter {"active":true,"outline":"solid","color":"rgba(0, 0, 0, 0)"}
+OK details-de-light-iphone review from Zahlungen starts with the amount 
+details-de-light-iphone-04-review-from-payments.jpg layout ok
+OK details-de-light-iphone entry sheet titled by the payment {"rowTitle":"Zahlung","sheetTitle":"Zahlung"}
+details-de-light-iphone-05-history-entry.jpg layout ok
+details-de-light-iphone errors [] foreign []
+OK details-en-dark-se NIP‑47 on one line 
+details-en-dark-se-01-advanced.jpg layout ok

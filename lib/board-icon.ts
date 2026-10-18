@@ -1,7 +1,7 @@
 import { BOARD_COLORS, RADIUS, SEGMENTS } from "@/lib/board-geometry"
 
 export const ICON_BACKGROUND = "#020817"
-export const ICON_ACCENT = "#3b82f6"
+const ICON_ACCENT = "#3b82f6"
 
 // The app icon as SVG markup: the board inside the blue light ring on the app's dark
 // background. `fill` is how much of the icon's width the ring takes (smaller for maskable
