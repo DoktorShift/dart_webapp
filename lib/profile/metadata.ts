@@ -19,7 +19,10 @@ export interface ProfileMetadata {
 // Room enough for any real name; the 16-character limit of a seat name in setup doesn't apply.
 export const MAX_PROFILE_NAME = 50
 
-const text = (value: unknown) => (typeof value === "string" && value.trim() ? value.trim() : null)
+// Profile fields arrive from relays as whoever wrote them; a few hundred characters is all a
+// name, address or picture URL needs, longer only costs layout and memory.
+const MAX_FIELD = 300
+const text = (value: unknown, max = MAX_FIELD) => (typeof value === "string" && value.trim() ? value.trim().slice(0, max) : null)
 
 // The fields as written, or null when the content isn't a JSON object (damaged, another format).
 function fields(content: string): Record<string, unknown> | null {
@@ -33,7 +36,7 @@ function fields(content: string): Record<string, unknown> | null {
 
 export function readMetadata(event: Pick<NostrEvent, "content"> | null | undefined): ProfileMetadata {
   const f = event ? (fields(event.content) ?? {}) : {}
-  return { name: text(f.display_name) ?? text(f.name), picture: text(f.picture), lightningAddress: text(f.lud16), nip05: text(f.nip05) }
+  return { name: text(f.display_name, MAX_PROFILE_NAME) ?? text(f.name, MAX_PROFILE_NAME), picture: text(f.picture), lightningAddress: text(f.lud16), nip05: text(f.nip05) }
 }
 
 export interface MetadataChange {

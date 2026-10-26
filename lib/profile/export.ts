@@ -20,7 +20,14 @@ export interface HistoryLabels {
   mode: (match: ArchivedMatch) => string
 }
 
-const cell = (value: string) => (/[;"\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value)
+// A cell that starts like a formula (=, +, -, @, or a tab or return before one) would be run by
+// Excel, Numbers and LibreOffice; names come from other players over the network, so such a cell
+// gets a leading apostrophe, which spreadsheets read as "text follows".
+const FORMULA_START = /^[\t\r]*[=+\-@]/
+const cell = (value: string) => {
+  const safe = FORMULA_START.test(value) ? `'${value}` : value
+  return /[;"\r\n']/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe
+}
 
 // Newest game first, as the profile lists them. Numbers use the dot, dates are ISO: a file for
 // machines first, which every spreadsheet still reads.

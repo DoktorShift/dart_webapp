@@ -42,6 +42,16 @@ test("history csv: a name with a semicolon or a quote is quoted", () => {
   assert.ok(csv.includes('"Ben ""B""; Jr"'))
 })
 
+test("a name that starts like a formula is exported as text, not run by the spreadsheet", () => {
+  for (const name of ['=HYPERLINK("https://evil.example","x")', "+1+1", "-2", "@SUM(A1)", "\t=cmd"]) {
+    const match = { ...A, players: [{ ...A.players[0], name }, A.players[1]] }
+    const csv = historyCsv([{ match, seat: 0 }], labels)
+    const row = csv.split("\n")[1]
+    assert.ok(row.includes(`"'${name.trim().replace(/"/g, '""')}"`), `${JSON.stringify(name)} in ${row}`)
+    assert.ok(!row.split(";").some((c) => /^[=+\-@\t]/.test(c.replace(/^"/, ""))), row)
+  }
+})
+
 test("history json names its format and carries the games unchanged; file names carry the day", () => {
   const out = historyJson([{ match: A, seat: 0 }], new Date("2026-10-26T10:00:00Z"))
   assert.equal(out.format, "blueline-games")
