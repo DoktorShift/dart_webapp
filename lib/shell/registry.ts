@@ -59,10 +59,10 @@
 //                       button names as its description, for the words that say what waits, so
 //                       the tab keeps its name. A piece renders nothing for the other tabs and
 //                       while nothing waits.
-//     "profile.card"    On a profile (own or someone else's), below its figures: badges, a club
-//                       hint. Gets { pubkey, own }. Keep it to one line.
+//     "profile.card"    On a profile (own or someone else's), below its figures: the own friends
+//                       line, badges, a club hint. Gets { pubkey, own }. Keep it to one line.
 //     "profile.notices" On the own profile, below the sports card and before the form: one
-//                       card per note that asks for something (the backup hint), as iOS Settings
+//                       card per note that asks for something (a friend request, the backup hint), as iOS Settings
 //                       puts "Finish setting up" below the Apple Account row. Gets { pubkey }.
 //                       Nothing while there is nothing to say.
 //     "profile.actions" On another player's public profile, below "Profil teilen": e.g.

@@ -14,5 +14,5 @@ export default function FriendsTabBadge({ tab, id }: { tab: TabId; id: string })
   const { friends } = useFriends()
   if (tab !== "profile" || !friends) return null
   const requests = byState(friends, "received").length
-  return <CountBadge count={requests} label={tx.row.requests(requests)} id={id} />
+  return <CountBadge count={requests} label={tx.card.requests(requests)} id={id} />
 }

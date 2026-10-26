@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { UserRoundPlus, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -20,15 +20,19 @@ import { useProfileNames } from "@/components/profile/use-profile-names"
 import { byState, type FriendEntry } from "@/lib/friends/model"
 import { acceptFriendRequest } from "@/lib/friends/service"
 import { formatDate } from "@/lib/i18n"
+import { useMatchHistory } from "@/lib/leaderboard"
+import { recentPlayers } from "@/lib/profile/recent-players"
 import { ownRelaySettings } from "@/lib/profile/own-events"
 import { useSession } from "@/lib/profile/session"
-import { SCREENS } from "@/lib/shell/registry"
+import { SCREENS, type ScreenProps } from "@/lib/shell/registry"
 
-// Profil › Freunde: requests to answer first (Game Center lists them on top), then the friends,
-// then one's own requests on their way. Every row opens the person's profile, where the
-// friendship is declined, withdrawn or ended; "Annehmen" sits in the row. "Freund hinzufügen" is
-// the bar's button, as adding a contact is; it waits while the device can't keep the list yet.
-export default function FriendsScreen() {
+// Profil › Freunde: requests to answer first (Game Center lists them on top), then the friends
+// with the games played together here, then one's own requests on their way. Every row opens the
+// person's profile, where the friendship is declined, withdrawn or ended; "Annehmen" sits in the
+// row. "Freund hinzufügen" is the bar's button, as adding a contact is (opened at once with
+// params.add, from the card of a profile without friends); it waits while the device can't keep
+// the list yet.
+export default function FriendsScreen({ params }: ScreenProps) {
   const t = useT()
   const tx = useAreaT(FRIENDS_TEXTS)
   const nav = useNav()
@@ -39,7 +43,10 @@ export default function FriendsScreen() {
   const current = friends ? byState(friends, "friend") : []
   const sent = friends ? byState(friends, "sent") : []
   const names = useProfileNames([...received, ...current, ...sent].map((f) => f.pubkey))
-  const [addOpen, setAddOpen] = useState(false)
+  const { all: matches } = useMatchHistory()
+  const me = session?.pubkey ?? null
+  const together = useMemo(() => new Map(recentPlayers(matches, me, { withProfile: true, limit: Infinity }).map((p) => [p.pubkey, p])), [matches, me])
+  const [addOpen, setAddOpen] = useState(params.add === "1")
   const [codeOpen, setCodeOpen] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
   const [problem, setProblem] = useState<string | null>(null)
@@ -60,6 +67,10 @@ export default function FriendsScreen() {
     }
   }
   const empty = received.length + current.length + sent.length === 0
+  const lineOf = (f: FriendEntry) => {
+    const played = together.get(f.pubkey)
+    return played ? tx.together(played.games, formatDate(t, Date.parse(played.playedAt))) : tx.since(formatDate(t, f.since * 1000))
+  }
 
   return (
     <>
@@ -100,7 +111,7 @@ export default function FriendsScreen() {
           {current.length > 0 && (
             <Group title={tx.sections.friends}>
               {current.map((f) => (
-                <PersonRow key={f.pubkey} pubkey={f.pubkey} name={nameOf(f.pubkey)} picture={names(f.pubkey).picture} subtitle={tx.since(formatDate(t, f.since * 1000))} onClick={() => open(f)} />
+                <PersonRow key={f.pubkey} pubkey={f.pubkey} name={nameOf(f.pubkey)} picture={names(f.pubkey).picture} subtitle={lineOf(f)} onClick={() => open(f)} />
               ))}
             </Group>
           )}
