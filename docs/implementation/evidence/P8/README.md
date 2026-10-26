@@ -37,11 +37,11 @@ Lauf mit `MATRIX=1`, Relays auf 127.0.0.1:20350 und :20351, Server auf Port 3345
 
 | # | Step | Result | Checks | Notes | Time (lab) |
 | --- | --- | --- | --- | --- | --- |
-| 1–16 | wie bisher (Gast, Profil, Geräte, Sicherung, Club, Clubspiel, Turnier, Auszeichnung, Einsatz) | pass | 72/72 | 0 | 91.6 s |
+| 1–16 | wie bisher (Gast, Profil, Geräte, Sicherung, Club, Clubspiel, Turnier, Auszeichnung, Einsatz); Schritt 13 zeigt jetzt auch Bens Telefon mit „Gerade an den Boards“ | pass | 73/73 | 0 | 96.8 s |
 | 17 | Ben (Mitglied) lädt Carl per Code ein, Anna nimmt ihn auf | pass | 5/5 | 0 | 7.5 s |
 | 18 | Anna lädt Carla direkt an ihr Profil ein | pass | 6/6 | 0 | 11.0 s |
 | 19 | Ganzer Abend: nur lokale Verbindungen, keine Seitenfehler | pass | 15/15 | 0 | 0.2 s |
-| | Whole evening | pass | 83/83 | 0 | 110.3 s |
+| | Whole evening | pass | 84/84 | 0 | 115.5 s |
 
 HIG-Matrix: 154 von 154 Prüfungen halten. Layoutprüfung: 158 Screenshots, 2 mit Hinweisen (dieselbe Stelle wie bisher, Befund 8). Die Stufen 2 und 3 des Umbaus (Kurzcode, Einladung an ein Profil, gemeinsamer Linkcode der Leitung, Beitrittsregeln, „Zuletzt gespielt mit“, Live-Leiste im Turnier, schwebende Tableiste) laufen in diesem Abend mit; die beiden neuen Schritte prüfen sie von Ende zu Ende gegen die lokalen Relays.
 
@@ -112,4 +112,4 @@ Neu gesehen, nicht behoben: Auf dem Ergebnis bei 568×320 bricht in Englisch „
 - `scripts/darts-night.mjs` – der Abend
 - `scripts/hig-matrix.mjs` – der HIG-Durchgang (mit `MATRIX=1`)
 - `scripts/lib.mjs` – gemeinsame Helfer: Relays, Geräte mit Netzsperre, Bildschirmprüfung, Schritt-Tabelle
-- `screens/` – 34 repräsentative Screenshots (JPEG, Qualität 70) aus dem letzten Lauf, darunter 38 bis 44 für den Code eines Mitglieds, den getippten Code, „Eingeladen von“, die Einladung an ein Profil und ihr Ankommen
+- `screens/` – 43 repräsentative Screenshots (JPEG, Qualität 70) aus dem letzten Lauf, darunter 38 bis 44 für den Code eines Mitglieds, den getippten Code, „Eingeladen von“, die Einladung an ein Profil und ihr Ankommen

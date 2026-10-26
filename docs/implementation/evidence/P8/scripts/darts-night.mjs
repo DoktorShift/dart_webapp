@@ -387,7 +387,17 @@ async function playOnBoard(expect, n) {
   if (n === 1) await shot(board, "26-board-called")
   await tap(b, "Spiel starten")
   await b.getByRole("button", { name: "Spieloptionen" }).waitFor({ timeout: 30_000 })
-  await firstSeatWins301(b)
+  if (n === 1) {
+    // Ben's phone, on the tournament page: the strip "Gerade an den Boards" shows the match as
+    // it is played, with the legs.
+    await ben.page.goto(local(tournamentLink))
+    await seen(ben.page, "Gerade an den Boards", { timeout: 30_000 })
+    for (const [s, m] of [[20, 3], [20, 3], [20, 3]]) await dart(b, s, m)
+    await ben.page.waitForTimeout(1500)
+    await shot(ben, "29-tournament-live")
+    expect("a player's phone shows what is on the boards right now", true)
+    for (const [s, m] of [[1], [1], [1], [20, 3], [11, 3], [14, 2]]) await dart(b, s, m)
+  } else await firstSeatWins301(b)
   const back = b.locator("button:visible", { hasText: "Zurück zum Board" }).first()
   await back.waitFor({ timeout: 20_000 })
   if (n === 1) {
