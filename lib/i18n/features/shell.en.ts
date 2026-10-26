@@ -15,7 +15,7 @@ export const shellEn: Messages["shell"] = {
   screens: {
     clubCreate: "Create a club",
     clubInvite: "Invitation",
-    openInvite: "Open invitation",
+    scan: "Scan code",
     tournamentCreate: "Create tournament",
     tournament: "Tournament",
     publicProfile: "Player profile",
@@ -34,23 +34,32 @@ export const shellEn: Messages["shell"] = {
     emptyTitle: "No clubs yet",
     emptyText: "Create a club for your darts nights, or join one with an invitation.",
     create: "Create a club",
-    openInvite: "Open invitation",
+    openInvite: "Scan code",
   },
 
   tournaments: {
     emptyTitle: "No tournaments yet",
     emptyText: "Create a tournament, or sign up with an invitation.",
     create: "Create tournament",
-    openInvite: "Open invitation",
+    openInvite: "Scan code",
   },
 
-  openLink: {
-    intro: "Scan the invitation's code or paste its link.",
-    manualLabel: "Paste link",
-    manualPlaceholder: "Invitation link",
-    invalid: "That's not a BlueLine link. Check that it's complete.",
-    notClub: "That's not a club invitation.",
-    notTournament: "That's not a tournament invitation.",
+  bar: {
+    scan: "Scan code",
+    more: "More",
+    share: "Share",
+  },
+
+  scan: {
+    intro: "Point the camera at a BlueLine code, paste the link or type the club code.",
+    kinds: "Invitations to clubs and tournaments, player profiles and codes to watch or score a game open right away.",
+    manualLabel: "Enter link or club code",
+    manualPlaceholder: "Link or ABCD-EFGH",
+    codeLooking: "Looking up the code",
+    codeMissing: "There is no invitation for this code. Check the characters or ask for a new one.",
+    codeOffline: "No connection right now. Try again in a moment.",
+    invalid: "That's not a BlueLine code. Check that the link is complete.",
+    pair: "You connect a device of your own under Profile, not here.",
   },
 
   scanner: {

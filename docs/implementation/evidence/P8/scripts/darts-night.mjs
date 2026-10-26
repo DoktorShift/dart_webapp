@@ -17,7 +17,8 @@
 // with a tablet as Board 1: check-in, draw, calls, the board reports, Anna approves, finishes and
 // the badges go out; Ben's badge shows on his profile card. Last, a stake of 500 sats: Ben wins,
 // Anna pays it with her (simulated) wallet to the code Ben's phone shows, once, even when tapped
-// twice.
+// twice. Then Ben, a member, invites Carl by the spoken code (Anna confirms him), and Anna sends
+// Carla an invitation straight to her profile.
 //
 // Prints one PASS/FAIL line per check and the step table with lab timings (a loaded development
 // machine, local relays: not field values). Screenshots (JPEG) at each device's size go to OUT.
@@ -46,6 +47,13 @@ process.on("uncaughtException", async (error) => {
 process.on("SIGINT", () => shutdown(130))
 
 const profilePanel = (page) => page.locator('[data-tab-panel="profile"]')
+// Back to the tabs: a reload brings a finished game's result screen back (no tab bar there);
+// "Fertig" leaves it.
+const home = async (page) => {
+  await page.goto(BASE)
+  await page.waitForTimeout(600)
+  if (await isOnScreen(buttons(page, "Fertig"))) await tap(page, "Fertig")
+}
 const text = async (page) => (await page.locator("body").innerText()).replace(/\s+/g, " ")
 const panelText = async (page) => (await profilePanel(page).innerText()).replace(/\s+/g, " ")
 
@@ -203,16 +211,18 @@ await step("Club gründen und Ben per Link einladen", async (expect) => {
   expect("with a profile there is no name to type again", (await nameField.count()) === 0 || !(await nameField.isVisible()))
   await shot(anna, "13-club-create")
   await tap(page, "Club gründen")
-  await seen(page, "Dein Club steht", { timeout: 30_000 })
-  await tap(page, "Mitglieder einladen")
-  await tap(page, "Einladung erstellen")
+  // The invite sheet opens by itself over "Dein Club steht", with the code already on it: no
+  // form, no second tap.
   await button(page, "Link kopieren", 30_000)
+  expect("the founded club opens its invitation by itself", await isOnScreen(page.getByText("Mitglieder einladen")))
   await shot(anna, "14-club-invite")
   clubLink = await copiedLink(page)
   expect("the invitation is a link", /#club=C1\./.test(clubLink), clubLink.slice(0, 40))
+  expect("the code is there without an invitation form (no 'Einladung erstellen')", (await page.getByRole("button", { name: "Einladung erstellen" }).count()) === 0)
   await tap(page, "Fertig")
   await button(page, "Spiel starten", 15_000)
-  expect("the club opens with 'Spiel starten' as its action", true)
+  expect("the club opens with 'Spiel starten' as its first action", true)
+  taps.clubInvite = "Club gründen → (the code is on screen) → Link kopieren (1 tap after founding)"
 })
 
 // ---- 7. Ben joins as a guest and has a profile from then on ------------------------------------
@@ -312,13 +322,15 @@ await step("Turnier anlegen: 4 Plätze, ein Gast, Board 1", async (expect) => {
   await seen(page, "Schritt 4 von 4")
   await shot(anna, "21-tournament-preview")
   await tap(page, "Turnier veröffentlichen")
-  await seen(page, "Dein Turnier ist veröffentlicht", { timeout: 40_000 })
-  await tap(page, "Teilen")
+  // The share sheet opens by itself over "Dein Turnier ist veröffentlicht", with the code.
+  await button(page, "Link kopieren", 40_000)
+  expect("the published tournament opens its code by itself", await isOnScreen(page.getByText("Turnier teilen")))
   tournamentLink = await copiedLink(page)
   expect("the tournament link", /#tournament=T1\./.test(tournamentLink))
   await tap(page, "Fertig")
   await tap(page, "Zum Turnier")
-  await seen(page, "Turnierleitung")
+  await button(page, "Leiten", 15_000)
+  expect("the organizer's way in is 'Leiten' in the bar", true)
   await tap(page, "Selbst mitspielen")
   await seen(page, "Du bist angemeldet", { timeout: 30_000 })
   expect("Anna plays along", true)
@@ -335,7 +347,7 @@ await step("Ben und Carla melden sich an", async (expect) => {
   await tap(carla.page, "Anmelden")
   await seen(carla.page, "Du bist angemeldet", { timeout: 40_000 })
   expect("both are admitted without anyone tapping on Anna's phone", true)
-  await anna.page.getByRole("button", { name: /^Turnierleitung/ }).click()
+  await tap(anna.page, "Leiten")
   await seen(anna.page, "Angemeldet (4)", { timeout: 30_000 })
   await shot(anna, "23-organize-players")
   expect("Anna's workspace lists four players: Anna, Ben, Carla and the guest Mia", true)
@@ -375,7 +387,17 @@ async function playOnBoard(expect, n) {
   if (n === 1) await shot(board, "26-board-called")
   await tap(b, "Spiel starten")
   await b.getByRole("button", { name: "Spieloptionen" }).waitFor({ timeout: 30_000 })
-  await firstSeatWins301(b)
+  if (n === 1) {
+    // Ben's phone, on the tournament page: the strip "Gerade an den Boards" shows the match as
+    // it is played, with the legs.
+    await ben.page.goto(local(tournamentLink))
+    await seen(ben.page, "Gerade an den Boards", { timeout: 30_000 })
+    for (const [s, m] of [[20, 3], [20, 3], [20, 3]]) await dart(b, s, m)
+    await ben.page.waitForTimeout(1500)
+    await shot(ben, "29-tournament-live")
+    expect("a player's phone shows what is on the boards right now", true)
+    for (const [s, m] of [[1], [1], [1], [20, 3], [11, 3], [14, 2]]) await dart(b, s, m)
+  } else await firstSeatWins301(b)
   const back = b.locator("button:visible", { hasText: "Zurück zum Board" }).first()
   await back.waitFor({ timeout: 20_000 })
   if (n === 1) {
@@ -539,6 +561,111 @@ await step("Einsatz 500 sats: Anna zahlt Ben mit der Wallet, genau einmal", asyn
   expect("reopened, the sheet has no pay button", (await a.getByRole("dialog").getByRole("button", { name: "500 sats an Ben zahlen" }).count()) === 0)
   await a.keyboard.press("Escape")
   expect("still one payment in the wallet", payer.requests.filter((m) => m === "pay_invoice").length === 1)
+})
+
+// ---- 13. A member invites by the spoken code ----------------------------------------------------
+await step("Ben (Mitglied) lädt Carl per Code ein, Anna nimmt ihn auf", async (expect) => {
+  const b = ben.page
+  await home(b)
+  await tab(b, "Clubs")
+  await tap(b, /^Dartfreunde Nord/)
+  // The club lets its members invite (founded that way): Ben's tile says "Einladen", and his
+  // link carries the code to say aloud.
+  await tap(b, "Einladen", 20_000)
+  await seen(b, "Oder Code eingeben", { timeout: 30_000 })
+  const memberCode = (await text(b)).match(/\b[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}\b/)?.[0]
+  expect("a member's invitation shows a code to say aloud", !!memberCode, memberCode)
+  await seen(b, /ein Verantwortlicher bestätigt/, { timeout: 15_000 })
+  expect("the line says a leader confirms", true)
+  await shot(ben, "38-member-invite-code")
+  await tap(b, "Fertig")
+
+  // Carl has heard the code: Clubs → Code scannen → type it.
+  const carl = await device("carl-phone", { viewport: PHONE })
+  const c = carl.page
+  await c.goto(BASE)
+  await tab(c, "Clubs")
+  await tap(c, "Code scannen")
+  await c.getByLabel("Link oder Club-Code eingeben").fill(memberCode.toLowerCase().replace("-", " "))
+  await shot(carl, "39-code-typed")
+  await tap(c, "Öffnen")
+  await seen(c, "Einladung von Ben", { timeout: 30_000 })
+  expect("the typed code opens Ben's invitation", true)
+  await c.getByLabel("Dein Name").fill("Carl")
+  await tap(c, "Beitritt anfragen")
+  await seen(c, /Deine Anfrage wartet auf Bestätigung/, { timeout: 30_000 })
+  expect("a member's link only asks: Carl waits for a leader", true)
+  taps.codeJoin = "Clubs → Code scannen → Code tippen → Öffnen → Name → Beitritt anfragen"
+
+  // Anna sees the request as her club's task, with who invited him.
+  const a = anna.page
+  await home(a)
+  await tab(a, "Clubs")
+  await tap(a, /^Dartfreunde Nord/)
+  await tap(a, /Anfrage wartet/, 30_000)
+  await seen(a, "Eingeladen von Ben", { timeout: 30_000 })
+  await shot(anna, "40-request-invited-by")
+  await tap(a, "Aufnehmen")
+  await seen(c, /Du bist dabei/, { timeout: 30_000 })
+  expect("after Anna's OK Carl is in", true)
+})
+
+// ---- 14. An invitation straight to a profile ----------------------------------------------------
+await step("Anna lädt Carla direkt an ihr Profil ein", async (expect) => {
+  // Carla's profile code, as her phone would show it to Anna's camera.
+  const k = carla.page
+  await home(k)
+  await tab(k, "Profil")
+  await profilePanel(k).getByRole("button", { name: "Profil teilen" }).click()
+  const profileLink = await copiedLink(k)
+  expect("Carla's profile has a code to scan", /#p=|#profile=/.test(profileLink) || profileLink.includes("npub"), profileLink.slice(0, 40))
+  await tap(k, "Fertig")
+
+  const a = anna.page
+  await home(a)
+  await tab(a, "Clubs")
+  await tap(a, /^Dartfreunde Nord/)
+  await tap(a, "Einladen", 20_000)
+  await button(a, "Link kopieren", 30_000)
+  await tap(a, "An eine Person senden")
+  await seen(a, "Person einladen", { timeout: 15_000 })
+  await shot(anna, "41-invite-person")
+  await tap(a, "Profilcode scannen")
+  await a.getByLabel("Profilcode scannen").fill(profileLink)
+  await tap(a, "Öffnen")
+  // The scanned profile is confirmed by name before anything goes out.
+  await seen(a, "Gefundenes Profil", { timeout: 20_000 })
+  await seen(a, "Carla", { timeout: 20_000 })
+  await shot(anna, "42-person-found")
+  await tap(a, "Einladen")
+  await seen(a, /Einladung an .* gesendet/, { timeout: 30_000 })
+  expect("the invitation is sent to Carla's profile", true)
+  await shot(anna, "43-invitation-sent")
+  // "Fertig" leaves the person sheet for the invite sheet behind it; once more closes that.
+  await tap(a, "Fertig")
+  await button(a, "Link kopieren", 10_000)
+  await tap(a, "Fertig")
+  await button(a, "Spiel starten", 10_000)
+  taps.inviteToPerson = "Club → Einladen → An eine Person senden → Profilcode scannen (Code) → Einladen → 'Einladung gesendet' (4 taps after the club)"
+
+  // On Carla's phone the invitation is under Clubs, without a link or a scan.
+  await tab(k, "Clubs")
+  await seen(k, "Einladungen", { timeout: 45_000 })
+  await shot(carla, "44-invitation-arrived")
+  expect("Carla's Clubs tab shows the invitation by itself", true)
+  await tap(k, "Beitreten")
+  await seen(k, "Einladung von Anna", { timeout: 20_000 })
+  // A personal invitation asks a leader to confirm the person (club.md).
+  await tap(k, "Beitritt anfragen")
+  await seen(k, /Deine Anfrage wartet/, { timeout: 30_000 })
+  expect("Carla asks with one tap; Anna confirms", true)
+  await tap(a, /Anfrage wartet/, 30_000)
+  await tap(a, "Aufnehmen")
+  await seen(k, /Du bist dabei/, { timeout: 30_000 })
+  expect("Carla's phone says she is in as soon as Anna confirms", true)
+  await tap(a, /Zurück zu Dartfreunde Nord/)
+  await button(a, /Spieler\s*4$/, 30_000)
+  expect("Anna's club counts four players", true)
 })
 
 // ---- The whole evening --------------------------------------------------------------------------

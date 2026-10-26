@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, type FormEvent } from "react"
+import { useEffect, useRef, useState, type FormEvent } from "react"
 import { Button } from "@/components/ui/button"
 import { ChoiceList } from "@/components/ui/choice-list"
 import { TextField } from "@/components/ui/text-field"
@@ -38,7 +38,8 @@ export default function CreateScreen() {
     setProblem(null)
     try {
       if (!(await guest.ensure())) return
-      setFounded(await foundClub({ name, about, visibility }, await clubAuthor()))
+      // Members may invite from the start (E15): a member's link only asks, the founder confirms.
+      setFounded(await foundClub({ name, about, visibility, membersInvite: true }, await clubAuthor()))
     } catch (error) {
       setProblem(describe(error) === tx.club.noEncryption ? tx.club.noEncryption : c.failed)
     } finally {
@@ -84,13 +85,23 @@ function Founded({ club, name }: { club: string; name: string }) {
   const { view } = useClub(club)
   const [inviting, setInviting] = useState(false)
   const openClub = () => nav.replaceTop(CLUB_SCREENS.view, { club, name })
+  // The invite sheet opens by itself as soon as the club can be read: the code is the next
+  // thing the founder needs, with the friends standing right there.
+  const ready = !!view?.state
+  const opened = useRef(false)
+  useEffect(() => {
+    if (ready && !opened.current) {
+      opened.current = true
+      setInviting(true)
+    }
+  }, [ready])
   return (
     <div className="pb-4">
       <InlineStatus tone="success" className="mt-6">
         <span className="block font-semibold">{tx.create.foundedTitle}</span>
         {tx.create.foundedText}
       </InlineStatus>
-      <Button onClick={() => setInviting(true)} disabled={!view?.state} className="mt-6 h-14 w-full rounded-2xl text-[1.0625rem] font-semibold">
+      <Button onClick={() => setInviting(true)} disabled={!ready} className="mt-6 h-14 w-full rounded-2xl text-[1.0625rem] font-semibold">
         {tx.create.invite}
       </Button>
       <Button variant="ghost" onClick={openClub} className="mt-2 h-12 w-full rounded-2xl text-[1.0625rem] text-primary hover:bg-primary/10 hover:text-primary">

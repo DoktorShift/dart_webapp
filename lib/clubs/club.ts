@@ -2,7 +2,10 @@ import type { NostrEvent, Signer } from "../nostr/types.ts"
 import type { ClubRole } from "../protocol/club.ts"
 import type { ClubState, JoinRequest } from "../protocol/club-state.ts"
 import { reduceClub } from "../protocol/club-state.ts"
+import { parseEnvelope, wrapsFor } from "../protocol/seal.ts"
+import { inviteKey } from "../protocol/invite.ts"
 import { KIND_RECORD } from "../protocol/kinds.ts"
+import { RECORD_TYPES } from "../protocol/records.ts"
 import type { FoundingProblem } from "../protocol/replay.ts"
 import { readLabels, tagValue } from "../protocol/tags.ts"
 import { closedDates, publicDates, type ClubDate } from "./dates.ts"
@@ -56,7 +59,10 @@ export interface ClubView {
   dates: ClubDate[]
   games: ClubGame[]
   invite?: OpenedInvite
+  // The secrets of the invite links this device can show: made here, or shared sealed by the
+  // maker (club.invite.token), and the short codes among them.
   tokens: Record<string, string>
+  codes: Record<string, string>
   // Relays an invite link named, asked along with the usual ones.
   relays: string[]
   // Games of this device recorded for the club, by local match id.
@@ -72,11 +78,14 @@ export const isManager = (role: ClubRole | null) => role === "owner" || role ===
 
 const isClubRecord = (club: string) => (e: NostrEvent) => e.kind === KIND_RECORD && (e.id === club || tagValue(e.tags, "e") === club)
 
-function membership(state: ClubState | null, events: readonly NostrEvent[], club: string, pubkey: string | null): Membership {
+function membership(state: ClubState | null, events: readonly NostrEvent[], club: string, pubkey: string | null, opened: StoredClub["invite"]): Membership {
   if (!pubkey) return { pubkey, role: null, status: "none" }
   if (!state) {
+    // A closed club before it opens: the join went out. Whether it admitted or only asked, the
+    // invitation's preview says (invitation.ts invitationState); the state settles it later.
     const joined = events.some((e) => e.pubkey === pubkey && readLabels(e.tags)?.type === "club.join" && tagValue(e.tags, "e") === club)
-    return { pubkey, role: null, status: joined ? "joined" : "none" }
+    const asks = opened?.preview?.limited === true || opened?.preview?.kind === "personal"
+    return { pubkey, role: null, status: joined ? (asks ? "request" : "joined") : "none" }
   }
   const member = state.members[pubkey]
   if (member) return { pubkey, role: member.role, status: "member" }
@@ -98,7 +107,7 @@ export async function readClub(
   const state = reduced.state
   const games = state ? readGames(state, stored.events, await openGameRecords(stored.events, Object.values(state.games)), now) : []
   const dates = !state ? [] : state.info.visibility === "closed" ? closedDates(state) : await publicDates(stored.events, state)
-  const me = membership(state, records, club, reader)
+  const me = membership(state, records, club, reader, stored.invite)
   const preview = stored.invite?.preview
   const info: ClubInfo | null = state
     ? { name: state.info.name, about: state.info.about, picture: state.info.picture, visibility: state.info.visibility, archived: state.info.archived }
@@ -106,6 +115,7 @@ export async function readClub(
       ? { name: preview.name, about: preview.about, picture: preview.picture, visibility: "closed", archived: false }
       : null
   const fresh = Object.fromEntries(Object.entries(opened.keys).filter(([id]) => !(id in stored.keys)))
+  const shared = state && reader ? sharedTokens(records, opened.plaintexts, state, reader) : { tokens: {}, codes: {} }
   return {
     view: {
       id: club,
@@ -116,13 +126,45 @@ export async function readClub(
       dates,
       games,
       ...(stored.invite ? { invite: stored.invite } : {}),
-      tokens: stored.tokens,
+      tokens: { ...shared.tokens, ...stored.tokens },
+      codes: { ...shared.codes, ...stored.codes },
       relays: stored.relays,
       recorded: stored.recorded,
       access: state && reader && isManager(me.role) ? waitingAccess(state, records, reader) : [],
       loadedAt: stored.loadedAt,
     },
     keys: fresh,
+  }
+}
+
+// The link secrets other devices shared (club.invite.token), as far as this reader opened them.
+// A secret counts only if the record names this reader (its own wrap; a key that reached the
+// device another way opens nothing here) and if it really is the invite's: its invite key is
+// the one the invite names, so nobody can make a leader's device show a wrong link.
+function sharedTokens(records: readonly NostrEvent[], plaintexts: ReadonlyMap<string, string>, state: ClubState, reader: string): { tokens: Record<string, string>; codes: Record<string, string> } {
+  const tokens: Record<string, string> = {}
+  const codes: Record<string, string> = {}
+  for (const event of records) {
+    if (readLabels(event.tags)?.type !== "club.invite.token") continue
+    const text = plaintexts.get(event.id)
+    if (!text || !namesReader(event, reader)) continue
+    try {
+      const content = RECORD_TYPES["club.invite.token"].schema.check(JSON.parse(text), "")
+      if (state.invites[content.invite]?.key !== inviteKey(content.token)) continue
+      tokens[content.invite] = content.token
+      if (content.code) codes[content.invite] = content.code
+    } catch {
+      // Not a token record this reader can use.
+    }
+  }
+  return { tokens, codes }
+}
+
+function namesReader(event: NostrEvent, reader: string): boolean {
+  try {
+    return wrapsFor(parseEnvelope(event.content), reader).length > 0
+  } catch {
+    return false
   }
 }
 

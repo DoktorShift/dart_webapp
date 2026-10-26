@@ -1,6 +1,6 @@
 "use client"
 
-import { AboutScreen, OpenClubInvite, OpenTournamentInvite, SettingsEntry } from "@/components/shell/lazy"
+import { AboutScreen, ScanScreen, SettingsEntry } from "@/components/shell/lazy"
 import { PlaceholderScreen } from "@/components/shell/placeholder-screen"
 import type { Messages } from "@/lib/i18n"
 import { SCREENS, registerScreen } from "@/lib/shell/registry"
@@ -12,8 +12,9 @@ import { SCREENS, registerScreen } from "@/lib/shell/registry"
 registerScreen(SCREENS.settings, { title: (t) => t.settings.title, largeTitle: false, Component: SettingsEntry })
 registerScreen(SCREENS.about, { title: (t) => t.nav.about, largeTitle: false, Component: AboutScreen })
 
-registerScreen(SCREENS.clubOpenInvite, { title: (t) => t.shell.screens.openInvite, Component: OpenClubInvite })
-registerScreen(SCREENS.tournamentOpenInvite, { title: (t) => t.shell.screens.openInvite, Component: OpenTournamentInvite })
+// The same scanner in both tabs: it opens whatever the code is, in the tab where it belongs.
+registerScreen(SCREENS.clubOpenInvite, { title: (t) => t.shell.screens.scan, Component: ScanScreen })
+registerScreen(SCREENS.tournamentOpenInvite, { title: (t) => t.shell.screens.scan, Component: ScanScreen })
 
 const placeholders: [string, (t: Messages) => string][] = [
   [SCREENS.profileCreate, (t) => t.profile.guest.create],

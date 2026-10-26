@@ -12,7 +12,7 @@ import { clubAuthor } from "@/components/clubs/use-clubs"
 import { useProfileNames } from "@/components/profile/use-profile-names"
 import { shortKey } from "@/lib/nostr/pointers"
 import { acceptRequest, declineRequest } from "@/lib/clubs/membership"
-import type { ClubState } from "@/lib/protocol/club-state"
+import type { ClubState, JoinRequest } from "@/lib/protocol/club-state"
 
 // Requests waiting for a leader (PLAN.md: capacity and order are a leader's decision): each
 // with the person and two buttons. Shown wherever a leader looks: Spieler and Club verwalten.
@@ -20,7 +20,8 @@ export function RequestList({ state }: { state: ClubState }) {
   const tx = useAreaT(CLUBS_TEXTS)
   const describe = useChange()
   const requests = Object.values(state.requests).sort((a, b) => a.at - b.at)
-  const names = useProfileNames(requests.map((r) => r.pubkey))
+  const inviter = (request: JoinRequest) => (request.invite ? state.invites[request.invite]?.by : undefined)
+  const names = useProfileNames([...requests.map((r) => r.pubkey), ...requests.map(inviter).filter((p): p is string => !!p)])
   const [busy, setBusy] = useState<string | null>(null)
   const [problem, setProblem] = useState<string | null>(null)
   if (requests.length === 0) return null
@@ -51,8 +52,9 @@ export function RequestList({ state }: { state: ClubState }) {
               <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
                 <span className="block text-[1.0625rem] leading-snug">{info.name ?? tx.unnamed}</span>
                 <span className="block text-[0.8125rem] leading-snug text-muted-foreground">
-                  {info.name ? "" : `${tx.id(shortKey(request.pubkey))} · `}
-                  {request.check === "unverified" ? tx.members.unverified : ""}
+                  {[info.name ? null : tx.id(shortKey(request.pubkey)), request.check === "unverified" ? tx.members.unverified : null, inviter(request) ? tx.members.invitedBy(names(inviter(request) as string).name ?? tx.unnamed) : null]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </span>
               </span>
             </div>

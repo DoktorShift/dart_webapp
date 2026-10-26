@@ -15,7 +15,7 @@ export const shellDe = {
   screens: {
     clubCreate: "Club gründen",
     clubInvite: "Einladung",
-    openInvite: "Einladung öffnen",
+    scan: "Code scannen",
     tournamentCreate: "Turnier erstellen",
     tournament: "Turnier",
     publicProfile: "Spielerprofil",
@@ -35,24 +35,35 @@ export const shellDe = {
     emptyTitle: "Noch kein Club",
     emptyText: "Gründe einen Club für eure Dartabende oder tritt mit einer Einladung bei.",
     create: "Club gründen",
-    openInvite: "Einladung öffnen",
+    openInvite: "Code scannen",
   },
 
   tournaments: {
     emptyTitle: "Noch kein Turnier",
     emptyText: "Erstelle ein Turnier oder melde dich mit einer Einladung an.",
     create: "Turnier erstellen",
-    openInvite: "Einladung öffnen",
+    openInvite: "Code scannen",
   },
 
-  // Opening an invitation by scanning its code or pasting its link.
-  openLink: {
-    intro: "Scanne den Code der Einladung oder füge den Link ein.",
-    manualLabel: "Link einfügen",
-    manualPlaceholder: "Link der Einladung",
-    invalid: "Das ist kein BlueLine-Link. Prüfe, ob er vollständig ist.",
-    notClub: "Das ist keine Club-Einladung.",
-    notTournament: "Das ist keine Turnier-Einladung.",
+  // The buttons in the navigation bar of the Clubs and Tournaments tabs and of their screens.
+  bar: {
+    scan: "Code scannen",
+    more: "Mehr",
+    share: "Teilen",
+  },
+
+  // The one scanner for every BlueLine code: invitations to clubs and tournaments, player
+  // profiles, codes to watch or score a game. Opened from the Clubs or Tournaments tab.
+  scan: {
+    intro: "Richte die Kamera auf einen BlueLine-Code, füge den Link ein oder tipp den Club-Code.",
+    kinds: "Einladungen zu Clubs und Turnieren, Spielerprofile und Codes zum Zuschauen oder Mitspielen öffnen sich direkt.",
+    manualLabel: "Link oder Club-Code eingeben",
+    manualPlaceholder: "Link oder ABCD-EFGH",
+    codeLooking: "Code wird gesucht",
+    codeMissing: "Zu diesem Code gibt es keine Einladung. Prüfe die Zeichen oder bitte um einen neuen.",
+    codeOffline: "Gerade keine Verbindung. Versuch es gleich noch einmal.",
+    invalid: "Das ist kein BlueLine-Code. Prüfe, ob der Link vollständig ist.",
+    pair: "Ein eigenes Gerät verbindest du unter Profil, nicht hier.",
   },
 
   scanner: {
