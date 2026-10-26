@@ -16,6 +16,27 @@ export const GOAL_RANGE: Record<GameType, { min: number; max: number }> = {
   clock: { min: 0.01, max: 1 },
 }
 
+// One tap on − or +: a point of average, a quarter mark, five percent (Apple Fitness steps its
+// goals the same way: coarse enough to be set in a few taps).
+export const GOAL_STEP: Record<GameType, number> = { x01: 1, cricket: 0.25, clock: 0.05 }
+
+const clampGoal = (type: GameType, value: number) => {
+  const { min, max } = GOAL_RANGE[type]
+  return Math.round(Math.min(max, Math.max(min, value)) * 100) / 100
+}
+
+// A goal to start from when none is set: the month's figure rounded up to the next step, a
+// little above where the player stands; without a figure, the type's usual goal.
+export function suggestedGoal(type: GameType, current: number | null): number {
+  if (current === null) return type === "x01" ? 60 : type === "cricket" ? 2.5 : 0.5
+  const step = GOAL_STEP[type]
+  const up = Math.ceil(current / step - 1e-9) * step
+  return clampGoal(type, up - current < 1e-9 ? up + step : up)
+}
+
+// One step up or down from where the number stands, decimals kept, within the range.
+export const stepGoal = (type: GameType, value: number, direction: 1 | -1) => clampGoal(type, value + direction * GOAL_STEP[type])
+
 export async function readGoals(): Promise<TrainingGoals> {
   const goals = await kvGet<TrainingGoals>(GOALS_KEY).catch(() => undefined)
   return goals && typeof goals === "object" ? goals : {}

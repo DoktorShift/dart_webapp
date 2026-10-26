@@ -1,7 +1,7 @@
 import { beforeEach, test } from "node:test"
 import assert from "node:assert/strict"
 import { resetStorage } from "./storage-helpers.ts"
-import { goalText, parseGoal, reachedCount, readGoals, saveGoal } from "../lib/profile/goal.ts"
+import { goalText, parseGoal, reachedCount, readGoals, saveGoal, stepGoal, suggestedGoal } from "../lib/profile/goal.ts"
 
 // Profil › Training › Ziel: a figure the player wants to reach, kept on this device.
 
@@ -38,6 +38,20 @@ test("goals are kept per game type and removed on their own", async () => {
   assert.deepEqual(await readGoals(), { x01: 60, clock: 0.5 })
   await saveGoal("x01", null)
   assert.deepEqual(await readGoals(), { clock: 0.5 })
+})
+
+test("the stepper starts a little above this month's figure and moves in sensible steps within the range", () => {
+  assert.equal(suggestedGoal("x01", 50.1), 51)
+  assert.equal(suggestedGoal("x01", 50), 51)
+  assert.equal(suggestedGoal("x01", null), 60)
+  assert.equal(suggestedGoal("cricket", 2.1), 2.25)
+  assert.equal(suggestedGoal("clock", 0.47), 0.5)
+  assert.equal(stepGoal("x01", 60, 1), 61)
+  assert.equal(stepGoal("x01", 57.5, -1), 56.5)
+  assert.equal(stepGoal("x01", 180, 1), 180)
+  assert.equal(stepGoal("cricket", 2.5, 1), 2.75)
+  assert.equal(stepGoal("clock", 0.5, -1), 0.45)
+  assert.equal(stepGoal("clock", 0.03, -1), 0.01)
 })
 
 test("how many periods reached the goal", () => {

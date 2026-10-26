@@ -72,9 +72,9 @@ export async function renderFiguresImage(model: FiguresImage, iconSrc: string): 
   }
 
   if (model.bars && model.bars.values.some((v) => v !== null)) {
-    y += 40
+    y += 60
     drawBars(ctx, fonts, model.bars, { left, top: y, width, height: 230 })
-    y += 230 + 70
+    y += 230 + 56
   } else y += 40
 
   drawFigures(ctx, fonts, model.figures.slice(0, model.bars ? 3 : 6), left, y, width, CARD_BOTTOM - 40)

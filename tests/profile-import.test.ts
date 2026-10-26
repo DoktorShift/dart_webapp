@@ -6,7 +6,7 @@ import { gamesOf } from "../lib/profile/history.ts"
 import { historyCsv, historyJson } from "../lib/profile/export.ts"
 import { parseCsv, parseDate, parseMode, readHistoryFile } from "../lib/profile/import.ts"
 import { loadArchive } from "../lib/storage/archive.ts"
-import { importMatches } from "../lib/storage/data.ts"
+import { importMatches, removeMatches } from "../lib/storage/data.ts"
 import { assignImportedName, importedAliases, listPlayers, newPlayerRecord, savePlayers } from "../lib/storage/players.ts"
 import { computeStandings, playerKey, summarizePlayer } from "../lib/storage/stats.ts"
 
@@ -144,12 +144,33 @@ test("the app's JSON files come back whole, the device data file for its games",
   assert.deepEqual(newer, { ok: false, reason: "newer" })
 })
 
-test("what is no history file says so", () => {
+test("what is no history file says so; the right columns without rows are an empty table", () => {
   assert.deepEqual(readHistoryFile("{}"), { ok: false, reason: "format" })
   assert.deepEqual(readHistoryFile("hello"), { ok: false, reason: "format" })
   assert.deepEqual(readHistoryFile("Name;Punkte\nAnna;3"), { ok: false, reason: "format" })
-  assert.deepEqual(readHistoryFile(labelsDe.columns.join(";") + "\r\n"), { ok: false, reason: "format" })
+  assert.deepEqual(readHistoryFile(labelsDe.columns.join(";") + "\r\n"), { ok: false, reason: "empty" })
   assert.deepEqual(readHistoryFile(labelsDe.columns.join(";") + "\r\nnot;a;game;;;;;;\r\n"), { ok: false, reason: "empty" })
+})
+
+test("rows alike in every fact are one game, and the preview says how many were merged", () => {
+  const row = "26.10.2026;501;Anna;;Training;30;501"
+  const result = readHistoryFile(["Datum;Spielart;Spieler;Gegner;Ergebnis;Darts;Punkte", row, row, "27.10.2026;501;Anna;;Training;30;501"].join("\n"))
+  assert.ok(result.ok)
+  assert.equal(result.file.matches.length, 2)
+  assert.equal(result.file.merged, 1)
+  assert.equal(result.file.skipped, 0)
+})
+
+test("an import can be taken back: only the games it added go, nothing else", async () => {
+  await importMatches([A])
+  const csv = historyCsv(gamesOf([A, E], annaKey()), labelsDe)
+  const read = readHistoryFile(csv)
+  assert.ok(read.ok)
+  const merged = await importMatches(read.file.matches)
+  assert.equal(merged.ids.length, 1)
+  assert.equal(await removeMatches([...merged.ids, A.id]), 1)
+  const archive = await loadArchive()
+  assert.deepEqual(archive.map((m) => m.id), [A.id])
 })
 
 test("importing writes the games once, marks them imported, and the chosen name counts for the player", async () => {
@@ -158,9 +179,10 @@ test("importing writes the games once, marks them imported, and the chosen name 
   const read = readHistoryFile(csv)
   assert.ok(read.ok)
   const first = await importMatches(read.file.matches)
-  assert.deepEqual(first, { added: 2, completed: 0, known: 0 })
+  assert.partialDeepStrictEqual(first, { added: 2, completed: 0, known: 0 })
+  assert.deepEqual([...first.ids].sort(), read.file.matches.map((m) => m.id).sort())
   const again = await importMatches(read.file.matches)
-  assert.deepEqual(again, { added: 0, completed: 0, known: 2 })
+  assert.partialDeepStrictEqual(again, { added: 0, completed: 0, known: 2, ids: [] })
   const archive = await loadArchive()
   assert.equal(archive.length, 2)
   assert.ok(archive.every((m) => m.source === "imported-file"))
@@ -188,7 +210,7 @@ test("a game that is already here, played or synced, is not added again from a t
   const csv = historyCsv(gamesOf([A, E], annaKey()), labelsDe)
   const read = readHistoryFile(csv)
   assert.ok(read.ok)
-  assert.deepEqual(await importMatches(read.file.matches), { added: 1, completed: 0, known: 1 })
+  assert.partialDeepStrictEqual(await importMatches(read.file.matches), { added: 1, completed: 0, known: 1 })
   const archive = await loadArchive()
   assert.equal(archive.length, 2)
   assert.equal(archive.find((m) => m.id === A.id)?.source, "local")
@@ -201,7 +223,7 @@ test("games from another device's JSON go by their names here, so 'that's me' re
   assert.ok(A.players.every((p) => p.playerId && p.playerId !== HERE))
   const read = readHistoryFile(JSON.stringify(historyJson(gamesOf([A], annaKey()))))
   assert.ok(read.ok)
-  assert.deepEqual(await importMatches(read.file.matches), { added: 1, completed: 0, known: 0 })
+  assert.partialDeepStrictEqual(await importMatches(read.file.matches), { added: 1, completed: 0, known: 0 })
   const archive = await loadArchive()
   assert.ok(archive[0].players.every((p) => p.playerId === null))
   await assignImportedName("Anna", HERE)

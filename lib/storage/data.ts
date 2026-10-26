@@ -165,6 +165,8 @@ export function parseArchivedMatch(value: unknown): ArchivedMatch | null {
 export interface MergedMatches {
   // Games that weren't on this device.
   added: number
+  // The games added, so an import can be taken back (removeMatches).
+  ids: string[]
   // Imported totals replaced by the full game.
   completed: number
   // Games already here.
@@ -198,9 +200,21 @@ async function mergeMatches(incoming: Map<string, ArchivedMatch>, extra: WriteOp
     } else known++
   }
   await dbWrite(ops)
-  // Games new to this device also go to 1.0.0's history, like games played here.
-  mergeV1Records(fresh.filter((m) => m.players.length >= 2).map(toV1Record))
-  return { added: fresh.length, completed, known }
+  // Games new to this device also go to 1.0.0's history, like games played here; totals from a
+  // table stay in the archive alone, so taking the import back leaves nothing behind.
+  mergeV1Records(fresh.filter((m) => m.players.length >= 2 && m.source !== "imported-file").map(toV1Record))
+  return { added: fresh.length, ids: fresh.map((m) => m.id), completed, known }
+}
+
+// Takes games out again, by id: the way back from an import. Only games that came from a file
+// go; anything else is left alone.
+export async function removeMatches(ids: readonly string[]): Promise<number> {
+  return withArchive(async () => {
+    const stored = await dbGetAll<ArchivedMatch>("matches")
+    const gone = stored.filter((m) => ids.includes(m.id) && m.source === "imported-file")
+    if (gone.length > 0) await dbWrite(gone.map((m) => ({ store: "matches" as const, delete: m.id })))
+    return gone.length
+  })
 }
 
 // Games from a history file (lib/profile/import.ts): added where they aren't here yet. A seat's
@@ -255,8 +269,8 @@ export async function importData(text: string): Promise<ImportResult> {
       const directory = await listPlayers()
       const knownPlayers = new Set(directory.map((p) => p.id))
       const newPlayers = [...players.values()].filter((p) => !knownPlayers.has(p.id))
-      const merged = await mergeMatches(incoming, newPlayers.map((putNew) => ({ store: "players", putNew })))
-      return { ok: true as const, ...merged, playersAdded: newPlayers.length, playersKnown: players.size - newPlayers.length, skipped }
+      const { added, completed, known } = await mergeMatches(incoming, newPlayers.map((putNew) => ({ store: "players", putNew })))
+      return { ok: true as const, added, completed, known, playersAdded: newPlayers.length, playersKnown: players.size - newPlayers.length, skipped }
     })
   } catch {
     return { ok: false, reason: "storage" }

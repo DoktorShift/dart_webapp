@@ -106,7 +106,8 @@ export function TrainingCard({ matches, playerKey, aliases, sameAs, onOpen, onSt
           height={40}
           className="mt-2"
           goal={goal === null ? undefined : { value: goal, label: r.goalValue(measure(t, type, goal) ?? ""), text: measure(t, type, goal) ?? "" }}
-          summary={[r.summary(values.length, measure(t, type, Math.min(...values)) ?? "", measure(t, type, Math.max(...values)) ?? "", monthName(t, buckets.find((b) => b.value === best)?.start ?? now)), goal === null ? null : r.goalReachedIn(reachedCount(values, goal), values.length)].filter(Boolean).join(". ")}
+          range={goal === null ? undefined : r.goalValue(measure(t, type, goal) ?? "")}
+          summary={[r.summary(values.length, measure(t, type, Math.min(...values)) ?? "", measure(t, type, Math.max(...values)) ?? "", monthName(t, buckets.find((b) => b.value === best)?.start ?? now)), goal === null ? null : r.goalReachedIn(reachedCount(values, goal), values.length, r.periods.month)].filter(Boolean).join(". ")}
         />
       )}
     </section>

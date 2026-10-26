@@ -14,8 +14,8 @@ import { PROFILE_TEXTS, type ProfileTexts } from "@/lib/i18n/features/profile.sc
 import { Bars, type Bar } from "@/components/profile/bars"
 import { fixed, measure, measureDiff, shortDate } from "@/components/profile/format"
 import { PROFILE_SCREENS } from "@/components/profile/screens"
+import { ShareImageSheet } from "@/components/profile/share-image-sheet"
 import { Arrow, Direction } from "@/components/profile/trend"
-import { useShareImage } from "@/components/profile/use-share-image"
 import type { GameType } from "@/lib/game/types"
 import { addMonths, startOfYear } from "@/lib/calendar"
 import { formatDate, formatNumber, formatPercent, type Messages } from "@/lib/i18n"
@@ -137,8 +137,9 @@ export function StatsView({ matches, playerKey, aliases, sameAs, share }: { matc
     return {
       brand: SITE.name,
       date: formatDate(t, now, "long"),
-      title: range === "year" ? tx.picture.year(new Date(now).getFullYear()) : tx.picture.stats(p.modes[mode]),
-      subtitle: range === "year" ? `${shareName} · ${p.modes[mode]} · ${p.basisScopes[scope]}` : `${shareName} · ${p.basisScopes[scope]}, ${periodText}`,
+      // "Mein Dartjahr" is a recap: until December it says so.
+      title: range === "year" ? (new Date(now).getMonth() === 11 ? tx.picture.year(new Date(now).getFullYear()) : tx.picture.yearSoFar(new Date(now).getFullYear())) : tx.picture.stats(p.modes[mode]),
+      subtitle: [shareName, ...(range === "year" ? [p.modes[mode], p.basisScopes[scope]] : [`${p.basisScopes[scope]}, ${periodText}`])].filter(Boolean).join(" · "),
       headline: { value: measure(t, mode, value) ?? "", label: headlineLabel },
       sentence: directionText ?? undefined,
       bars: shown.length > 1 ? { values: points.map((g) => g.value), first: shortDate(t, points[0].match.finishedAt), last: shortDate(t, points[points.length - 1].match.finishedAt), best: measure(t, mode, Math.max(...shown)) ?? "" } : undefined,
@@ -148,13 +149,13 @@ export function StatsView({ matches, playerKey, aliases, sameAs, share }: { matc
     }
   }, [shareName, summary, value, recent, groups, headlineLabel, t, tx, p, now, range, mode, scope, periodText, directionText])
   const make = useMemo(() => (image ? () => renderFiguresImage(image, ICON) : null), [image])
-  const shareNow = useShareImage(make, tx.picture.fileName, image?.title ?? "")
+  const [shareOpen, setShareOpen] = useState(false)
 
   return (
     <>
       {image && (
         <NavBarItems>
-          <NavIconButton icon={Share} label={tx.picture.action} onClick={shareNow} className="-mr-1" />
+          <NavIconButton icon={Share} label={tx.picture.shareStats} onClick={() => setShareOpen(true)} className="-mr-1" />
         </NavBarItems>
       )}
       <div className="mt-4">
@@ -223,6 +224,7 @@ export function StatsView({ matches, playerKey, aliases, sameAs, share }: { matc
           secondary={range !== "last30" || scope !== "versus" ? { label: p.showAll, onClick: reset } : undefined}
         />
       )}
+      <ShareImageSheet open={shareOpen} onOpenChange={setShareOpen} make={make} fileName={tx.picture.fileName(new Date(now).toISOString().slice(0, 10))} title={image?.title ?? ""} />
     </>
   )
 }

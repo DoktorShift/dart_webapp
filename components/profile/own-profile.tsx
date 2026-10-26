@@ -81,7 +81,7 @@ function OwnProfileView({ own, onSignOut }: { own: OwnProfile; onSignOut: () => 
         action={<CardAction label={h.edit} onClick={() => setEdit((e) => ({ open: true, round: e.round + 1 }))} />}
       >
         {summary ? (
-          <Figures figures={sportFigures(t, tx, sportFiguresOf(summary))} caption={`${tx.card.scope} · ${elsewhere ? tx.card.allDevices : tx.card.thisDevice}`} />
+          <Figures figures={sportFigures(t, tx, sportFiguresOf(summary))} caption={[tx.card.scope, elsewhere ? tx.card.allDevices : tx.card.thisDevice, summary.includesImported ? tx.card.withImported : null].filter(Boolean).join(" · ")} />
         ) : (
           <p className="mt-4 border-t border-border pt-3 text-[0.9375rem] leading-snug text-muted-foreground">{noGames}</p>
         )}

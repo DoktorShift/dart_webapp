@@ -21,6 +21,8 @@ export interface HistoryFile {
   matches: ArchivedMatch[]
   // Rows or entries that weren't a game.
   skipped: number
+  // Rows alike in every fact, taken as one game.
+  merged: number
   // The names in the file with their games, most games first; empty seats left out.
   names: HistoryName[]
   // Oldest and newest game (ISO), null without games.
@@ -32,7 +34,7 @@ export type HistoryFileResult =
   | { ok: true; file: HistoryFile }
   // "format": neither a file of this app nor a CSV with the known columns. "empty": nothing in it
   // was a game. "newer": written by a newer version of this app.
-  | { ok: false; reason: "format" | "empty" | "newer" }
+  | { ok: false; reason: "format" | "empty" | "newer" | "large" }
 
 // A long history is some thousand games; a file beyond this isn't one.
 const MAX_ROWS = 50_000
@@ -42,9 +44,12 @@ export function readHistoryFile(text: string, now = new Date()): HistoryFileResu
   const trimmed = text.replace(/^﻿/, "").trimStart()
   const result = trimmed.startsWith("{") || trimmed.startsWith("[") ? readJson(trimmed) : readCsv(trimmed, now)
   if (!result.ok) return result
-  const { matches } = result.file
+  // One game per id: the same row twice (or two trainings alike in every fact) is one game.
+  const byId = new Map<string, ArchivedMatch>()
+  for (const match of result.file.matches) if (!byId.has(match.id)) byId.set(match.id, match)
+  const matches = [...byId.values()]
   if (matches.length === 0) return { ok: false, reason: "empty" }
-  return { ok: true, file: { ...result.file, names: namesIn(matches), ...span(matches) } }
+  return { ok: true, file: { ...result.file, matches, merged: result.file.matches.length - matches.length, names: namesIn(matches), ...span(matches) } }
 }
 
 // ---- JSON: the files this app writes ---------------------------------------------------------
@@ -64,13 +69,13 @@ function readJson(text: string): HistoryFileResult {
     if (typeof version !== "number" || version > EXPORT_VERSION) return { ok: false, reason: "newer" }
   } else return { ok: false, reason: "format" }
   const matches: ArchivedMatch[] = []
-  let skipped = 0
+  let skipped = Math.max(0, value.matches.length - MAX_ROWS)
   for (const raw of value.matches.slice(0, MAX_ROWS)) {
     const match = parseArchivedMatch(raw)
     if (match) matches.push(match)
     else skipped++
   }
-  return { ok: true, file: { kind: "json", matches, skipped, names: [], from: null, to: null } }
+  return { ok: true, file: { kind: "json", matches, skipped, merged: 0, names: [], from: null, to: null } }
 }
 
 // ---- CSV: the documented columns -------------------------------------------------------------
@@ -94,13 +99,14 @@ const TRAINING = new Set(["training", "solo", "allein", "alone", "practice", "ü
 
 function readCsv(text: string, now: Date): HistoryFileResult {
   const rows = parseCsv(text)
-  if (rows.length < 2) return { ok: false, reason: "format" }
+  if (rows.length === 0) return { ok: false, reason: "format" }
   const header = rows[0].map((h) => h.trim().toLowerCase())
   const index = (column: Column) => header.findIndex((h) => HEADERS[column].includes(h))
   const at: Record<Column, number> = { date: index("date"), mode: index("mode"), player: index("player"), opponents: index("opponents"), result: index("result"), darts: index("darts"), points: index("points") }
   if (at.date < 0 || at.mode < 0 || at.player < 0 || at.darts < 0) return { ok: false, reason: "format" }
+  // The right columns and no rows: a table without games, not a strange file.
   const matches: ArchivedMatch[] = []
-  let skipped = 0
+  let skipped = Math.max(0, rows.length - 1 - MAX_ROWS)
   for (const row of rows.slice(1, MAX_ROWS + 1)) {
     if (row.every((cell) => cell.trim() === "")) continue
     const cell = (column: Column) => (at[column] >= 0 ? (row[at[column]] ?? "").trim() : "")
@@ -108,7 +114,7 @@ function readCsv(text: string, now: Date): HistoryFileResult {
     if (match) matches.push(match)
     else skipped++
   }
-  return { ok: true, file: { kind: "csv", matches, skipped, names: [], from: null, to: null } }
+  return { ok: true, file: { kind: "csv", matches, skipped, merged: 0, names: [], from: null, to: null } }
 }
 
 // Fields split at the separator the header uses (semicolon, comma or tab), quotes respected,

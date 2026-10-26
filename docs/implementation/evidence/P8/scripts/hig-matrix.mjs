@@ -13,11 +13,11 @@ const SIZES = [SE, PHONE, SE_LANDSCAPE, TABLET, BOARD]
 const LOOKS = [
   {
     locale: "de", dark: false, tabs: { play: "Spielen", ranks: "Rangliste", clubs: "Clubs", tournaments: "Turniere", profile: "Profil" }, resume: /Weiterspielen/,
-    ranks: { device: "Hier gespielt", clubs: "Clubs", tournaments: "Turniere" }, profile: { stats: "Statistik", training: /^Training/, start: "Training starten", startGame: "Spiel starten", visibility: "Sichtbarkeit", history: /^Spielverlauf/, done: "Fertig", back: /^Zurück zu Profil$/, goal: /^Ziel/, goalSave: "Ziel setzen", cancel: "Abbrechen", share: "Teilen" },
+    ranks: { device: "Hier gespielt", clubs: "Clubs", tournaments: "Turniere" }, profile: { stats: "Statistik", training: /^Training/, start: "Training starten", startGame: "Spiel starten", visibility: "Sichtbarkeit", history: /^Spielverlauf/, done: "Fertig", back: /^Zurück zu Profil$/, goal: /^Ziel/, goalSave: "Ziel setzen", cancel: "Abbrechen", share: "Training als Bild teilen" },
   },
   {
     locale: "en", dark: true, tabs: { play: "Play", ranks: "Leaderboard", clubs: "Clubs", tournaments: "Tournaments", profile: "Profile" }, resume: /Continue|Resume/,
-    ranks: { device: "Played here", clubs: "Clubs", tournaments: "Tournaments" }, profile: { stats: "Statistics", training: /^Training/, start: "Start training", startGame: "Start game", visibility: "Visibility", history: /^Game history/, done: "Done", back: /^Back to Profile$/, goal: /^Goal/, goalSave: "Set goal", cancel: "Cancel", share: "Share" },
+    ranks: { device: "Played here", clubs: "Clubs", tournaments: "Tournaments" }, profile: { stats: "Statistics", training: /^Training/, start: "Start training", startGame: "Start game", visibility: "Visibility", history: /^Game history/, done: "Done", back: /^Back to Profile$/, goal: /^Goal/, goalSave: "Set goal", cancel: "Cancel", share: "Share training as a picture" },
   },
 ]
 // Words of the protocol that never belong in normal flows (NOSTR-DESIGN-RULES.md).
@@ -140,6 +140,14 @@ export async function runMatrix({ annaState }) {
       // The chart needs a month with enough trainings; the evening's import gives October three.
       note(`${tag} profile-training: the goal line is in the chart`, (await page.getByText(/^(Ziel|Goal) 60/).count()) >= 1)
       note(`${tag} profile-training: Teilen in the bar`, await isOnScreen(page.getByRole("button", { name: look.profile.share, exact: true })))
+      // The picture before it goes anywhere (M17): the sheet with the drawn card, then cancel.
+      await page.getByRole("button", { name: look.profile.share, exact: true }).click()
+      await page.getByRole("dialog").locator("img").waitFor({ timeout: 15_000 })
+      await page.waitForTimeout(500)
+      await shot(d, `m-profile-share-${tag}`)
+      note(`${tag} profile-share: the picture is shown before sharing`, (await page.getByRole("dialog").locator("img").count()) === 1)
+      await (await onScreen(page.getByRole("button", { name: look.profile.cancel, exact: true }))).click()
+      await page.waitForTimeout(500)
       await back()
       await (await onScreen(profile.getByRole("button", { name: look.profile.visibility }))).click()
       await visit("profile-visibility")
