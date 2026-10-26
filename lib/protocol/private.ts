@@ -83,7 +83,7 @@ export function parsePrivateEvent(event: unknown, author: string): { ok: true; s
   return { ok: true, slot: event.tags[0][1], event }
 }
 
-const recordType = () => str({ min: 1, max: 32, pattern: /^[a-z][a-z0-9.-]*$/, description: "match, players, settings, clubs, devices, badges, payments, …" })
+const recordType = () => str({ min: 1, max: 32, pattern: /^[a-z][a-z0-9.-]*$/, description: "match, players, settings, clubs, devices, friends, badges, payments, …" })
 const recordId = () => str({ min: 1, max: 80, pattern: /^[A-Za-z0-9_.:-]+$/ })
 
 // A whole record, or the head of one split into parts (then `parts` instead of `data`).

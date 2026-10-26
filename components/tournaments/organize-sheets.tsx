@@ -13,6 +13,8 @@ import { InlineStatus } from "@/components/common/inline-status"
 import { SheetCode } from "@/components/common/sheet-code"
 import { XSHORT, useMediaQuery } from "@/components/common/use-media-query"
 import { useRecentPlayers } from "@/components/common/use-recent-players"
+import { useFriends } from "@/components/friends/use-friends"
+import { byState } from "@/lib/friends/model"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { TOURNAMENTS_TEXTS } from "@/lib/i18n/features/tournaments.screens"
 import { PRIMARY, QUIET, scoreText, SECONDARY, useActions, useRoundLabel, type Names } from "@/components/tournaments/common"
@@ -135,10 +137,17 @@ export function GuestsSheet({ entry, open, onOpenChange }: { entry: Entry; open:
   const actions = useActions(entry.read.id)
   const [text, setText] = useState("")
   const names = cleanNames(text.split("\n")).slice(0, freePlaces(state))
-  // "Zuletzt gespielt mit": one tap adds a name instead of typing it (lib/profile/recent-players.ts).
+  // Friends first, then "Zuletzt gespielt mit": one tap adds a name instead of typing it
+  // (lib/profile/recent-players.ts). A friend's name comes from their profile.
   const recent = useRecentPlayers({ limit: 8 }).players
+  const { friends } = useFriends()
+  const friendKeys = friends ? byState(friends, "friend").map((f) => f.pubkey) : []
+  const friendNames = useProfileNames(friendKeys)
   const taken = new Set([...Object.values(entry.read.names), ...names].map((n) => n.toLowerCase()))
-  const suggestions = recent.filter((r) => !taken.has(r.name.toLowerCase()))
+  const suggestions = [
+    ...friendKeys.flatMap((pubkey) => (friendNames(pubkey).name ? [{ pubkey, name: friendNames(pubkey).name as string }] : [])),
+    ...recent.filter((r) => !friendKeys.includes(r.pubkey ?? "")),
+  ].filter((r) => !taken.has(r.name.toLowerCase()))
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title={p.addGuests} description={tx.create.guestsHint}>
       <label className="sr-only" htmlFor="guest-names">

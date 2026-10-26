@@ -80,6 +80,7 @@ Die vollständigen Inhaltsschemas stehen maschinenlesbar in [`schemas/`](schemas
 | Match (31180) | `match.live` |
 | Profil (31180) | `profile.stats` |
 | Zahlung (Rumor, 1180) | `payment.request` |
+| Freunde (Rumor, 1180) | `friend.request`, `friend.accept`, `friend.remove` (nur in einem Gift Wrap an die andere Person; [families/friends.md](families/friends.md)) |
 | Handshake (21180) | Bereich `pair` oder `board` als Label; der Nachrichtentyp steht im verschlüsselten Inhalt |
 | Auszeichnung | `badge.evidence` (1180); im NIP-58-Format `badge.definition` (30009), `badge.award` (8) |
 

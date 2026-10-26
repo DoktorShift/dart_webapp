@@ -7,7 +7,7 @@
 // NEXT_PUBLIC_BLUELINE_FEATURES names the areas that are on, comma separated ("profile,live");
 // unset, every area is on. No React and no browser APIs: the rule runs in the Node unit tests.
 
-export type Feature = "profile" | "payments" | "live" | "sync" | "clubs" | "badges" | "devices" | "tournaments"
+export type Feature = "profile" | "payments" | "live" | "sync" | "clubs" | "badges" | "devices" | "tournaments" | "friends"
 
 // What an area can't work without: everything but live games and payments builds on the profile
 // (its session, keys and relays), so with the profile off they are off too. Devices also carry
@@ -18,6 +18,8 @@ const REQUIRES: Partial<Record<Feature, readonly Feature[]>> = {
   badges: ["profile"],
   devices: ["profile", "sync"],
   tournaments: ["profile"],
+  // Friends live in a private record of the profile, which the sync area keeps.
+  friends: ["profile", "sync"],
 }
 
 // The variable spelled out literally, so Next.js inlines it at build time (as lib/nostr/relays.ts

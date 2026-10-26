@@ -1,21 +1,25 @@
 "use client"
 
 import { useState } from "react"
-import { Medal, Users } from "lucide-react"
+import { Medal, Smartphone, UserRound, Users } from "lucide-react"
 import { EmptyState } from "@/components/ui/empty-state"
-import { Segmented } from "@/components/ui/segmented"
+import { ScopeBar, type ScopeOption } from "@/components/ui/scope-bar"
 import { useNav } from "@/components/nav/nav-context"
 import { useRegistryVersion } from "@/components/nav/use-registry"
 import { SlotItems } from "@/components/shell/slot-items"
 import { useT } from "@/components/i18n-provider"
 import { DeviceSection } from "@/components/leaderboard/device-section"
+import { featureOn } from "@/lib/shell/features"
 import { getSlotItems } from "@/lib/shell/registry"
 
-// The Rangliste tab: one tab, three areas (E-decision 2026-10-26): the games on this device,
-// the season tables of the player's clubs, the player's tournament placings. Each area says
-// what it counts. The two latter come from their areas through the registry ("leaderboard.sections").
-type Section = "device" | "clubs" | "tournaments"
-const SECTIONS: Section[] = ["device", "clubs", "tournaments"]
+// The Rangliste tab: one tab, four areas (E-decision 2026-10-26, friends added E29): the games
+// on this device, the figures the player's friends share, the season tables of the player's
+// clubs, the player's tournament placings. Each area says what it counts. The three latter come
+// from their areas through the registry ("leaderboard.sections"). The areas are a row of pills
+// (ScopeBar): four words don't fit a segmented control on a phone without breaking one.
+type Section = "device" | "friends" | "clubs" | "tournaments"
+const ICONS: Record<Section, ScopeOption<Section>["icon"]> = { device: Smartphone, friends: UserRound, clubs: Users, tournaments: Medal }
+const SECTIONS: Section[] = (["device", "friends", "clubs", "tournaments"] as const).filter((s) => s !== "friends" || featureOn("friends"))
 
 export default function LeaderboardHome() {
   const t = useT()
@@ -26,10 +30,14 @@ export default function LeaderboardHome() {
   const provided = (id: Section) => getSlotItems("leaderboard.sections").some((item) => item.id === id)
   return (
     <>
-      <div className="mt-4">
-        <Segmented label={l.section} options={SECTIONS.map((s) => ({ value: s, label: l.sections[s] }))} value={section} onChange={setSection} />
-      </div>
+      <ScopeBar label={l.section} options={SECTIONS.map((s) => ({ value: s, label: l.sections[s], icon: ICONS[s] }))} value={section} onChange={setSection} className="mt-3" />
       {section === "device" && <DeviceSection />}
+      {section === "friends" &&
+        (provided("friends") ? (
+          <SlotItems list="leaderboard.sections" only={["friends"]} props={() => ({})} />
+        ) : (
+          <EmptyState icon={UserRound} title={l.friendsOffTitle} description={l.friendsOffText} />
+        ))}
       {section === "clubs" &&
         (provided("clubs") ? (
           <SlotItems list="leaderboard.sections" only={["clubs"]} props={() => ({})} />

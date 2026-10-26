@@ -3,6 +3,7 @@ import assert from "node:assert/strict"
 import { MESSAGES } from "../lib/i18n/index.ts"
 import { BADGES_TEXTS } from "../lib/i18n/features/badges.screens.ts"
 import { CLUBS_TEXTS } from "../lib/i18n/features/clubs.screens.ts"
+import { FRIENDS_TEXTS } from "../lib/i18n/features/friends.screens.ts"
 import { PROFILE_TEXTS } from "../lib/i18n/features/profile.screens.ts"
 import { SYNC_TEXTS } from "../lib/i18n/features/sync.screens.ts"
 
@@ -37,6 +38,7 @@ test("shell, profile, sync, badges and clubs texts use no protocol words, except
       ...texts(badges, `${locale}.badges.screens`, []),
       ...texts(t.clubs, `${locale}.clubs`, []),
       ...texts(clubs, `${locale}.clubs.screens`, []),
+      ...texts(FRIENDS_TEXTS[locale as keyof typeof FRIENDS_TEXTS], `${locale}.friends`, []),
     ]
     for (const [path, text] of all) assert.doesNotMatch(text, PROTOCOL, `${path}: ${text}`)
   }
