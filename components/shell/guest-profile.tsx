@@ -19,7 +19,7 @@ import { SCREENS, runAction, type ShellAction } from "@/lib/shell/registry"
 function DeviceCard() {
   const t = useT()
   const { matches, loaded } = useMatchHistory()
-  const leader = useMemo(() => computeStandings(matches).find((s) => s.wins > 0) ?? null, [matches])
+  const leader = useMemo(() => computeStandings(matches, { sortBy: "wins", minGames: 1 }).ranked.find((s) => s.wins > 0) ?? null, [matches])
 
   return (
     <section aria-labelledby="guest-name" className="mt-6 rounded-2xl border border-border bg-card px-4 py-4">
@@ -99,8 +99,9 @@ export function GuestProfile() {
       </section>
 
       <Group>
-        {/* Areas' rows that work without a profile too (registry "profile.rows"). */}
+        {/* Areas' rows that work without a profile too (registry "profile.rows", "profile.account"). */}
         <SlotItems list="profile.rows" props={() => ({})} />
+        <SlotItems list="profile.account" props={() => ({})} />
         <ListRow icon={Settings} iconTone="gray" title={t.settings.title} onClick={() => nav.push(SCREENS.settings)} />
         <ListRow icon={Info} iconTone="blue" title={t.nav.about} onClick={() => nav.push(SCREENS.about)} />
       </Group>

@@ -11,6 +11,8 @@ const tabHomes = () => import("@/components/shell/tab-homes")
 export const ClubsHome = lazyScreen<object>(() => tabHomes().then((m) => ({ default: m.ClubsHome })))
 export const TournamentsHome = lazyScreen<object>(() => tabHomes().then((m) => ({ default: m.TournamentsHome })))
 export const ProfileHome = lazyScreen<object>(() => tabHomes().then((m) => ({ default: m.ProfileHome })))
+// The Rangliste tab's content (its own chunk: the standings and their rows).
+export const LeaderboardHome = lazyScreen<object>(() => import("@/components/leaderboard/home"))
 export const SettingsEntry = lazyScreen<ScreenProps>(() => import("@/components/shell/settings-entry"))
 export const AboutScreen = lazyScreen<ScreenProps>(() => import("@/components/shell/about-screen"))
 // The one scanner for every BlueLine code (scan-screen.tsx), opened from the Clubs and the
@@ -22,5 +24,5 @@ export const ScanScreen = lazyScreen<ScreenProps>(() => import("@/components/she
 // and Profile tabs, Settings, About, and the QR code drawing of the install guide (both of the
 // last two show it). The scanner is left out: what it opens needs a connection anyway.
 export function warmOfflineScreens() {
-  return Promise.all([tabHomes(), SettingsEntry.preload(), AboutScreen.preload(), import("@/lib/qr")])
+  return Promise.all([tabHomes(), LeaderboardHome.preload(), SettingsEntry.preload(), AboutScreen.preload(), import("@/lib/qr")])
 }

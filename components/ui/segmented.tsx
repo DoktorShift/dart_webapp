@@ -31,7 +31,7 @@ export function Segmented<T extends string | number>({
           disabled={option.disabled}
           onClick={() => onChange(option.value)}
           className={cn(
-            "min-h-11 rounded-lg px-2 text-[0.9375rem] font-medium tabular-nums transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40",
+            "min-h-11 min-w-0 rounded-lg px-1.5 py-1 text-[0.9375rem] font-medium leading-tight tabular-nums transition-colors [overflow-wrap:anywhere] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40 [@media(max-width:359px)]:px-1 [@media(max-width:359px)]:text-[0.8125rem]",
             value === option.value ? "bg-background text-foreground shadow" : "text-muted-foreground",
           )}
         >

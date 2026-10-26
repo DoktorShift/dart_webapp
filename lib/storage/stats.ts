@@ -13,13 +13,17 @@ import { isUnnamed, nameKey } from "./players.ts"
 
 export type StatsFilter = "all" | GameType
 
+// Which games count: those against others ("versus"), those played alone ("training"), or every
+// game. Wins and the Rangliste only ever come from games against others; a player's own card and
+// form leave training out so that practice never moves the figures they compete with.
+export type GameScope = "all" | "versus" | "training"
+
 export interface StatsOptions {
   type?: StatsFilter
   // Games finished in this period (ISO times, "to" not included); open ends when left out.
   from?: string
   to?: string
-  // Solo games count for a player's own figures, never for wins or the Rangliste.
-  includeSolo?: boolean
+  scope?: GameScope
   // Imported 1.0.0 name groups the players assigned to someone: name key -> player id.
   aliases?: Map<string, string>
   // Players who are the same person: player id -> the id they count as. Several devices give one
@@ -156,13 +160,20 @@ export interface PlayerSummary {
 const ratio = (part: number, whole: number) => (whole > 0 ? part / whole : null)
 const perThree = (points: number, darts: number) => (darts > 0 ? (points / darts) * 3 : null)
 const time = (iso: string) => Date.parse(iso) || 0
+const byNewest = (a: ArchivedMatch, b: ArchivedMatch) => time(b.finishedAt) - time(a.finishedAt)
 
-function inSelection(match: ArchivedMatch, options: StatsOptions) {
+export const isTraining = (match: ArchivedMatch) => match.players.length < 2
+
+function inScope(match: ArchivedMatch, scope: GameScope = "all") {
+  return scope === "all" || (scope === "training") === isTraining(match)
+}
+
+export function inSelection(match: ArchivedMatch, options: StatsOptions) {
   if (options.type && options.type !== "all" && match.modeType !== options.type) return false
   const finished = time(match.finishedAt)
   if (options.from && finished < time(options.from)) return false
   if (options.to && finished >= time(options.to)) return false
-  return options.includeSolo !== false || match.players.length >= 2
+  return inScope(match, options.scope)
 }
 
 interface Tally {
@@ -328,8 +339,21 @@ function finish({ summary: s, legs, x01 }: Tally): PlayerSummary {
   return s
 }
 
-// Figures for every player in the archive (or the selection), most games first.
-export function summarizePlayers(matches: ArchivedMatch[], options: StatsOptions = {}): PlayerSummary[] {
+// Summaries are kept per archive array and selection: the profile tab asks for the same figures
+// from several places (card, form, stats card), and each full pass replays every throw log once.
+// The archive array is replaced, never mutated, when games are added, so identity is the key.
+const summaries = new WeakMap<readonly ArchivedMatch[], Map<string, PlayerSummary[]>>()
+const selectionKey = (o: StatsOptions) =>
+  JSON.stringify([o.type ?? "all", o.from ?? "", o.to ?? "", o.scope ?? "all", o.aliases ? [...o.aliases] : 0, o.sameAs ? [...o.sameAs] : 0])
+
+// Figures for every player in the archive (or the selection), most games first. The result is
+// shared between calls with the same archive and selection; treat it as read-only.
+export function summarizePlayers(matches: readonly ArchivedMatch[], options: StatsOptions = {}): PlayerSummary[] {
+  let cache = summaries.get(matches)
+  if (!cache) summaries.set(matches, (cache = new Map()))
+  const selection = selectionKey(options)
+  const cached = cache.get(selection)
+  if (cached) return cached
   const tallies = new Map<string, Tally>()
   for (const match of matches) {
     if (!inSelection(match, options)) continue
@@ -341,12 +365,95 @@ export function summarizePlayers(matches: ArchivedMatch[], options: StatsOptions
       addGame(tally, match, i)
     })
   }
-  return Array.from(tallies.values(), finish).sort((a, b) => b.games - a.games || a.name.localeCompare(b.name))
+  const result = Array.from(tallies.values(), finish).sort((a, b) => b.games - a.games || a.name.localeCompare(b.name))
+  cache.set(selection, result)
+  return result
 }
 
 // One player's figures, or null when they have no game in the selection.
-export function summarizePlayer(matches: ArchivedMatch[], key: string, options: StatsOptions = {}) {
+export function summarizePlayer(matches: readonly ArchivedMatch[], key: string, options: StatsOptions = {}) {
   return summarizePlayers(matches, options).find((s) => s.key === key) ?? null
+}
+
+// The figure a game type is known by: points per three darts in X01, marks per round in
+// Cricket, the hit rate in Around the Clock.
+export function headline(summary: PlayerSummary | null, type: GameType): number | null {
+  if (!summary) return null
+  if (type === "x01") return summary.x01?.average ?? null
+  if (type === "cricket") return summary.cricket?.marksPerRound ?? null
+  return summary.clock?.hitRate ?? null
+}
+
+// ---- Game by game ------------------------------------------------------------------------------
+
+export interface GamePoint {
+  match: ArchivedMatch
+  seat: number
+  // The game's headline figure (see headline) for this player; null when the data can't tell.
+  value: number | null
+  won: boolean
+}
+
+// One game's headline figure for a seat. X01 needs only totals; Cricket and Around the Clock
+// need the throw log.
+export function gameValue(match: ArchivedMatch, seat: number): number | null {
+  const player = match.players[seat]
+  if (!player) return null
+  const st = matchState(match)?.stats[seat]
+  if (match.modeType === "x01") return st ? perThree(st.points, st.darts) : perThree(player.points, player.darts)
+  if (!st) return null
+  return match.modeType === "cricket" ? perThree(st.marks, st.darts) : ratio(st.hits, st.darts)
+}
+
+// A player's games in the selection, newest first, each with its headline figure.
+export function gamePoints(matches: readonly ArchivedMatch[], key: string, options: StatsOptions = {}): GamePoint[] {
+  const points: GamePoint[] = []
+  for (const match of matches) {
+    if (!inSelection(match, options)) continue
+    const seat = match.players.findIndex((p) => playerKey(match, p, options.aliases, options.sameAs) === key)
+    if (seat < 0) continue
+    points.push({ match, seat, value: gameValue(match, seat), won: match.players[seat].won })
+  }
+  return points.sort((a, b) => byNewest(a.match, b.match))
+}
+
+// ---- Form -----------------------------------------------------------------------------------
+
+// The form compares the newest games with the same number before them, game by game rather
+// than by calendar, so a break never empties the window. Below FORM_MIN games there is no form
+// to speak of; the comparison needs a full window before the current one.
+export const FORM_MIN = 5
+
+export interface Form {
+  // The window's games, oldest first, as a chart reads them.
+  points: GamePoint[]
+  // The player's games in the selection, all time.
+  games: number
+  window: number
+  // Pooled headline figure over the window, and over the window before it (null without one).
+  value: number | null
+  before: number | null
+  // The player's figures over the window, for screens that show more than the headline.
+  summary: PlayerSummary | null
+  beforeSummary: PlayerSummary | null
+}
+
+export function formOf(matches: readonly ArchivedMatch[], key: string, window: number, options: StatsOptions & { type: GameType }): Form {
+  const points = gamePoints(matches, key, options)
+  const recent = points.slice(0, window)
+  const earlier = points.slice(window, window * 2)
+  const pooled = (part: GamePoint[]) => (part.length > 0 ? summarizePlayer(part.map((p) => p.match), key, options) : null)
+  const summary = recent.length >= FORM_MIN ? pooled(recent) : null
+  const beforeSummary = earlier.length === window ? pooled(earlier) : null
+  return {
+    points: recent.slice().reverse(),
+    games: points.length,
+    window,
+    value: headline(summary, options.type),
+    before: headline(beforeSummary, options.type),
+    summary,
+    beforeSummary,
+  }
 }
 
 export interface HeadToHead {
@@ -360,11 +467,11 @@ export interface HeadToHead {
 }
 
 // Two players' games against each other, by player key.
-export function headToHead(matches: ArchivedMatch[], a: string, b: string, options: StatsOptions = {}): HeadToHead {
+export function headToHead(matches: readonly ArchivedMatch[], a: string, b: string, options: StatsOptions = {}): HeadToHead {
   const result: HeadToHead = { games: 0, wins: [0, 0], detailedGames: 0, legs: null, lastPlayed: null }
   const legs: [number, number] = [0, 0]
   for (const match of matches) {
-    if (!inSelection(match, { ...options, includeSolo: false })) continue
+    if (!inSelection(match, { ...options, scope: "versus" })) continue
     const keys = match.players.map((p) => playerKey(match, p, options.aliases, options.sameAs))
     const ia = keys.indexOf(a)
     const ib = keys.indexOf(b)
@@ -386,48 +493,106 @@ export function headToHead(matches: ArchivedMatch[], a: string, b: string, optio
 
 // ---- Rangliste --------------------------------------------------------------------------------
 
+export type StandingsSort = "winRate" | "wins" | "average"
+
+export interface StandingsOptions {
+  type?: StatsFilter
+  from?: string
+  to?: string
+  // The rank order: win rate (the default), wins, or the X01 average. Ties are broken by the
+  // other two, then by name.
+  sortBy?: StandingsSort
+  // Games against others in the selection a player needs for a rank; below it they are listed
+  // apart, so one lucky game never tops the table.
+  minGames?: number
+  aliases?: Map<string, string>
+  sameAs?: Map<string, string>
+}
+
+export const STANDINGS_MIN_GAMES = 3
+
 export interface Standing {
   key: string
   name: string
   playerId: string | null
   // Imported 1.0.0 results under a name nobody was assigned.
   imported: boolean
-  // An empty seat's label ("Spieler 1"), not a person.
-  unnamed: boolean
   // Some of the games are imported totals (an assigned name group, or an imported row itself).
   includesImported: boolean
-  matches: number
+  games: number
   wins: number
   winRate: number
   // Points per three darts across X01 games (not rounded); null without X01 darts.
   average: number | null
   lastPlayed: string
+  // Competition rank ("1, 1, 3"); null below the minimum of games.
+  rank: number | null
 }
 
-// The Rangliste: games with two or more players, most wins first, then win rate, then average.
-// Built from each result's totals alone (no replay), so it stays quick with thousands of games.
-export function computeStandings(matches: ArchivedMatch[], filter: StatsFilter = "all", aliases?: Map<string, string>): Standing[] {
+export interface Standings {
+  ranked: Standing[]
+  // Players with fewer games than the minimum, most games first.
+  unranked: Standing[]
+  // Games against others in the selection, and how many of them had an empty seat.
+  games: number
+  withEmptySeat: number
+  sortBy: StandingsSort
+  minGames: number
+}
+
+const SORTS: Record<StandingsSort, (s: Standing) => number> = {
+  winRate: (s) => s.winRate,
+  wins: (s) => s.wins,
+  average: (s) => s.average ?? -1,
+}
+
+function compareStandings(sortBy: StandingsSort) {
+  const order: StandingsSort[] = [sortBy, ...(["winRate", "wins", "average"] as const).filter((k) => k !== sortBy)]
+  return (a: Standing, b: Standing) => {
+    for (const k of order) {
+      const d = SORTS[k](b) - SORTS[k](a)
+      if (d !== 0) return d
+    }
+    return 0
+  }
+}
+
+// The Rangliste: games with two or more players, built from each result's totals alone (no
+// replay), so it stays quick with thousands of games. One profile is one row (sameAs); empty
+// seats ("Spieler 2") are nobody and get no row, though the games they sat in still count for
+// the named players.
+export function computeStandings(matches: readonly ArchivedMatch[], options: StandingsOptions = {}): Standings {
+  const sortBy = options.sortBy ?? "winRate"
+  const minGames = options.minGames ?? STANDINGS_MIN_GAMES
   const rows = new Map<string, Standing>()
   const totals = new Map<string, { darts: number; points: number; at: number }>()
+  let games = 0
+  let withEmptySeat = 0
   for (const match of matches) {
-    if (match.players.length < 2 || (filter !== "all" && match.modeType !== filter)) continue
+    if (!inSelection(match, { ...options, scope: "versus" })) continue
+    games++
     const at = time(match.finishedAt)
+    let emptySeat = false
     for (const player of match.players) {
-      const key = playerKey(match, player, aliases)
+      const key = playerKey(match, player, options.aliases, options.sameAs)
       if (!key) continue
       const kind = keyKind(key)
+      if (kind === "unnamed") {
+        emptySeat = true
+        continue
+      }
       const row = rows.get(key) ?? {
         key,
         name: player.name.trim(),
         playerId: kind === "id" ? key.slice(3) : null,
         imported: kind === "imported",
-        unnamed: kind === "unnamed",
         includesImported: false,
-        matches: 0,
+        games: 0,
         wins: 0,
         winRate: 0,
         average: null,
         lastPlayed: match.finishedAt,
+        rank: null,
       }
       const sum = totals.get(key) ?? { darts: 0, points: 0, at }
       // The most recent game gives the spelling.
@@ -436,7 +601,7 @@ export function computeStandings(matches: ArchivedMatch[], filter: StatsFilter =
         row.name = player.name.trim()
         row.lastPlayed = match.finishedAt
       }
-      row.matches++
+      row.games++
       if (player.won) row.wins++
       if (match.source === "imported-v1") row.includesImported = true
       if (match.modeType === "x01") {
@@ -446,22 +611,32 @@ export function computeStandings(matches: ArchivedMatch[], filter: StatsFilter =
       rows.set(key, row)
       totals.set(key, sum)
     }
+    if (emptySeat) withEmptySeat++
   }
   for (const [key, row] of rows) {
     const sum = totals.get(key)!
-    row.winRate = row.matches > 0 ? row.wins / row.matches : 0
+    row.winRate = row.games > 0 ? row.wins / row.games : 0
     row.average = perThree(sum.points, sum.darts)
   }
-  return Array.from(rows.values()).sort(
-    (a, b) => b.wins - a.wins || b.winRate - a.winRate || (b.average ?? -1) - (a.average ?? -1) || a.name.localeCompare(b.name),
-  )
+  const compare = compareStandings(sortBy)
+  const byName = (a: Standing, b: Standing) => a.name.localeCompare(b.name)
+  const ranked = Array.from(rows.values())
+    .filter((r) => r.games >= minGames)
+    .sort((a, b) => compare(a, b) || byName(a, b))
+  ranked.forEach((row, i) => {
+    row.rank = i > 0 && compare(ranked[i - 1], row) === 0 ? ranked[i - 1].rank : i + 1
+  })
+  const unranked = Array.from(rows.values())
+    .filter((r) => r.games < minGames)
+    .sort((a, b) => b.games - a.games || compare(a, b) || byName(a, b))
+  return { ranked, unranked, games, withEmptySeat, sortBy, minGames }
 }
 
 // Names from recent games, most recent first, for quick picks in setup. Empty seats are left
 // out: "Spieler 2" is not somebody to pick.
-export function recentPlayerNames(matches: ArchivedMatch[], limit = 12) {
+export function recentPlayerNames(matches: readonly ArchivedMatch[], limit = 12) {
   const seen = new Map<string, string>()
-  for (const match of [...matches].sort((a, b) => time(b.finishedAt) - time(a.finishedAt)))
+  for (const match of [...matches].sort(byNewest))
     for (const player of match.players) {
       const key = nameKey(player.name)
       if (key && !player.unnamed && !isUnnamed(player.name) && !seen.has(key)) seen.set(key, player.name.trim())

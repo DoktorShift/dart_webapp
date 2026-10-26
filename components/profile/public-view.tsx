@@ -6,24 +6,38 @@ import { InlineStatus } from "@/components/common/inline-status"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { formatWhen } from "@/lib/i18n"
 import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
-import { Figures, ProfileCard, x01Figures } from "@/components/profile/profile-card"
+import { Figures, ProfileCard, sportFigures } from "@/components/profile/profile-card"
 import { useVerifiedNip05, type PublicProfileState } from "@/components/profile/use-profile"
 import { readMetadata } from "@/lib/profile/metadata"
-import { sharesNothing } from "@/lib/protocol/profile"
+import { sharesNothing, type StatsCard } from "@/lib/protocol/profile"
 import { readStatsCard } from "@/lib/protocol/stats-card"
 
 // A public profile exactly as relays have it: name, picture and, if the player shares one, the
 // stats card, labelled as the player's own figures with their date. Loading, partly loaded and
 // offline (with the last loaded version and its time) are told apart (PLAN.md "Profilansicht").
 // Used for other players and for "So sehen andere dein Profil".
+
+// The three card figures from a shared stats card's raw counts; what a card doesn't carry is "—".
+export const cardFigures = (x: NonNullable<StatsCard["x01"]>) => ({
+  average: x.darts > 0 ? (x.points / x.darts) * 3 : null,
+  checkoutRate: x.checkouts !== undefined && x.dartsAtDouble ? x.checkouts / x.dartsAtDouble : null,
+  checkouts: x.checkouts,
+  dartsAtDouble: x.dartsAtDouble,
+  wins: x.wins,
+  versus: x.versus,
+})
+
 export function PublicProfileView({
   pubkey,
   own,
+  preview,
   state,
   children,
 }: {
   pubkey: string
   own: boolean
+  // Under Profil › Sichtbarkeit the heading already says whose profile this is.
+  preview?: boolean
   state: PublicProfileState
   // Actions below the card; gets the name the profile shows.
   children?: (name: string | null) => ReactNode
@@ -72,7 +86,7 @@ export function PublicProfileView({
             (address || own) && (
               <>
                 {address && <span className="block">{address}</span>}
-                {own && <span className="block">{p.own}</span>}
+                {own && !preview && <span className="block">{p.own}</span>}
               </>
             )
           }
@@ -81,7 +95,7 @@ export function PublicProfileView({
           {card ? (
             <>
               {card.card.x01 ? (
-                <Figures figures={x01Figures(t, tx, card.card.x01)} caption={`${tx.figures.allTime} · ${caption}`} />
+                <Figures figures={sportFigures(t, tx, cardFigures(card.card.x01))} caption={`${tx.card.scope} · ${caption}`} />
               ) : (
                 <p className="mt-4 border-t border-border pt-3 text-[0.8125rem] text-muted-foreground">{caption}</p>
               )}

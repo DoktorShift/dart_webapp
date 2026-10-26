@@ -113,7 +113,7 @@ await step("Ergebnisse vom Ergebnisbildschirm in ein neues Profil", async (expec
   const t = await panelText(page)
   expect("the Profile tab shows Anna with her one game", /Anna/.test(t) && /1 Spiel|Spiele\s*1|1\s*Spiele/.test(t), t.slice(0, 160))
   expect("the profile asks to be backed up", t.includes("Noch nicht gesichert"))
-  expect("only Anna's seat came along: one game, one win", /Spiele 1 Gewonnen 1/.test(t))
+  expect("only Anna's seat came along: one game, one win, on the sports card", /Siege\s*100\s*%\s*1 von 1/.test(t) && /X01 gegen andere/.test(t), t.match(/Siege[^X]*/)?.[0] ?? "")
 })
 
 // ---- 3. A second own device, by the typed code -----------------------------------------------
@@ -296,7 +296,7 @@ await step("Ben bestätigt das Clubergebnis auf seinem Telefon", async (expect) 
   await tab(page, "Profil")
   await page.waitForTimeout(2000)
   const own = await panelText(page)
-  expect.note("Ben's confirmed club game shows in his own profile (games, statistics)", !own.includes("Noch keine X01-Spiele"), own.slice(0, 120))
+  expect.note("Ben's confirmed club game shows in his own profile (games, statistics)", !own.includes("Noch kein Spiel gegen andere"), own.slice(0, 120))
   await tab(page, "Clubs")
 })
 
@@ -472,7 +472,39 @@ await step("Auszeichnung erscheint auf Bens Profilkarte", async (expect) => {
   await shot(ben, "32-profile-card-badge")
   expect("the profile card shows the tournament badge", (await chip.count()) >= 1, (await chip.allTextContents()).join(", "))
   const card = await panelText(page)
-  expect.note("after three games tonight Ben's profile counts games", !card.includes("Noch keine X01-Spiele"), card.slice(0, 100))
+  expect.note("after three games tonight Ben's profile counts games", !card.includes("Noch kein Spiel gegen andere"), card.slice(0, 100))
+})
+
+// ---- 11b. The evening in the Rangliste ----------------------------------------------------------
+await step("Rangliste heute Abend: Hier gespielt, Clubs, Turniere auf Annas Telefon", async (expect) => {
+  const { page } = anna
+  await home(page)
+  await tab(page, "Rangliste")
+  const panel = page.locator('[data-tab-panel="leaderboard"]')
+  await seen(page, /Spiele gegen andere auf diesem Gerät/, { timeout: 20_000 })
+  // Two games against Ben tonight: within "Heute" that ranks both (2 games), over all time not yet.
+  await panel.getByRole("button", { name: /^Zeitraum: / }).click()
+  await page.getByRole("menuitemradio", { name: "Heute" }).click()
+  await page.waitForTimeout(600)
+  const today = await panel.innerText()
+  // seen() scrolled the sentence into view; the picture shows the list from its top.
+  await page.evaluate(() => document.querySelectorAll("*").forEach((el) => { if (el.scrollTop > 0) el.scrollTop = 0 }))
+  await shot(anna, "33-ranks-today")
+  expect("the list says what it counts: this device, today, games and players", /heute: \d+ Spiele?, \d+ Spieler\./.test(today), today.match(/auf diesem Gerät[^.]*\./)?.[0] ?? today.slice(0, 120))
+  expect("Anna and Ben stand in tonight's list, Anna marked as you", today.includes("Anna") && today.includes("Ben") && /\bDu\b/.test(today))
+  expect("a rank is a win rate with its games, not a point total", /\d+\s%/.test(today) && /\d Spiele?\s·\s\d Sieg/.test(today), today.match(/Anna.{0,60}/)?.[0] ?? "")
+  await panel.getByRole("radio", { name: "Clubs" }).click()
+  await seen(page, /Dartfreunde Nord/, { timeout: 20_000 })
+  const clubs = await panel.innerText()
+  await shot(anna, "34-ranks-clubs")
+  // The evening's club has no season yet: the card says so and offers no table into nothing.
+  expect("the Clubs area shows the club with its season state", /Dartfreunde Nord/.test(clubs) && (/Ganze Tabelle/.test(clubs) || /Keine laufende Saison/.test(clubs)), clubs.slice(0, 120))
+  await panel.getByRole("radio", { name: "Turniere" }).click()
+  await seen(page, /Pub Open/, { timeout: 20_000 })
+  const tournaments = await panel.innerText()
+  await shot(anna, "35-ranks-tournaments")
+  expect("the Turniere area lists tonight's tournament with Anna's place", /Pub Open/.test(tournaments) && /\d\. Platz|Sieg|Platz/.test(tournaments), tournaments.slice(0, 160))
+  await panel.getByRole("radio", { name: "Hier gespielt" }).click()
 })
 
 // ---- 12. A stake, paid once ---------------------------------------------------------------------

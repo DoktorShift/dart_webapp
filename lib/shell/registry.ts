@@ -39,12 +39,20 @@
 //     "setup.players"   Right below setup's player list: ways to fill seats (a profile's QR code,
 //                       saved rounds). Gets the seats and can add one or replace them all; a seat
 //                       may carry the pubkey of the profile it was filled from.
-//     "profile.rows"    Rows in the Profile tab's list: signed in after Statistik and Spiele, as
-//                       a guest above Einstellungen. Auszeichnungen, Geräte, Sicherung,
-//                       Zahlungen. No props; each piece is one ListRow (components/ui/list-row.tsx)
-//                       that pushes its area's screen. Rendered for guests and signed-in players
-//                       alike: a row that needs a profile (Geräte, Sicherung, Auszeichnungen)
-//                       renders nothing while useSession() (lib/profile/session.ts) is null.
+//     "profile.rows"    Rows about the player's game in the Profile tab's list: signed in with
+//                       Statistik and Spiele, as a guest above Einstellungen. Auszeichnungen. No
+//                       props; each piece is one ListRow (components/ui/list-row.tsx) that pushes
+//                       its area's screen. Rendered for guests and signed-in players alike: a row
+//                       that needs a profile renders nothing while useSession()
+//                       (lib/profile/session.ts) is null.
+//     "profile.account" Rows about the account, in the Profile tab's "Konto" group below the
+//                       game: Geräte, Sicherung, Zahlungen. Same rules as "profile.rows"; each
+//                       row carries its state in its subtitle, so nobody has to open it to know.
+//     "leaderboard.sections" The areas of the Rangliste tab beside the shell's own "Hier
+//                       gespielt": the clubs' season tables (piece id "clubs") and the player's
+//                       tournament placings (piece id "tournaments"). No props; the tab shows the
+//                       piece whose id matches the chosen segment, and its own empty state for a
+//                       segment without a piece (the area is switched off).
 //     "profile.card"    On a profile (own or someone else's), below its figures: badges, a club
 //                       hint. Gets { pubkey, own }. Keep it to one line.
 //     "profile.actions" On another player's public profile, below "Profil teilen": e.g.
@@ -337,6 +345,8 @@ export interface SlotListProps {
   "setup.extras": SetupExtraProps
   "setup.players": SetupPlayersProps
   "profile.rows": Record<string, never>
+  "profile.account": Record<string, never>
+  "leaderboard.sections": Record<string, never>
   "profile.card": { pubkey: string; own: boolean }
   "profile.actions": { pubkey: string; name: string }
   "profile.advanced": { pubkey: string }
@@ -355,6 +365,8 @@ const slotLists: { [K in SlotListId]: Map<string, ComponentType<SlotListProps[K]
   "setup.extras": new Map(),
   "setup.players": new Map(),
   "profile.rows": new Map(),
+  "profile.account": new Map(),
+  "leaderboard.sections": new Map(),
   "profile.card": new Map(),
   "profile.actions": new Map(),
   "profile.advanced": new Map(),

@@ -550,6 +550,18 @@ export const tournamentsScreensDe = {
   },
 
 
+  // The tournaments' area of the Rangliste tab: the profile's placings.
+  leaderboard: {
+    scope: "Deine Platzierungen in Turnieren, die du mit diesem Profil gespielt hast.",
+    tournaments: (n: number) => (n === 1 ? "Turnier" : "Turniere"),
+    won: "gewonnen",
+    podium: (n: number) => (n === 1 ? "Podiumsplatz" : "Podiumsplätze"),
+    players: (n: number) => (n === 1 ? "1 Spieler" : `${n} Spieler`),
+    place: (place: number, placeTo: number) => (place === placeTo ? `${place}.` : `${place}.–${placeTo}.`),
+    placeLabel: (place: number, placeTo: number) => (place === placeTo ? `Platz ${place}` : `Platz ${place} bis ${placeTo}`),
+    running: "Läuft noch",
+  },
+
   // The club's tournaments (registry slot "club.tournaments" of the clubs area).
   club: {
     none: "Noch kein Turnier",

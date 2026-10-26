@@ -30,7 +30,7 @@ if (featureOn("payments")) {
   )
   // Profil › Zahlungen is always there (the Profile tab is not the guest start path), so a wallet
   // can be connected calmly at home; the row says whether one is.
-  registerSlotItem("profile.rows", "payments", lazy(() => import("@/components/payments/payments-row")))
+  registerSlotItem("profile.account", "payments", lazy(() => import("@/components/payments/payments-row")))
   registerSlotItem("profile.actions", "payments.congratulate", lazy(() => import("@/components/payments/congratulate")))
 
   // A wallet app came back with a new connection ("Wallet-App öffnen"). It counts only as the

@@ -15,6 +15,7 @@ const screen = (load: () => Promise<{ default: ComponentType<ScreenProps> }>) =>
 
 const ProfileRoot = lazyScreen<{ fallback: ReactNode }>(() => import("@/components/profile/profile-root"))
 const StatsScreen = screen(() => import("@/components/profile/stats-screen"))
+const TrainingScreen = screen(() => import("@/components/profile/training-screen"))
 const GamesScreen = screen(() => import("@/components/profile/games-screen"))
 const MatchScreen = screen(() => import("@/components/profile/match-screen"))
 const PlayerScreen = screen(() => import("@/components/profile/player-screen"))
@@ -29,10 +30,11 @@ if (featureOn("profile")) {
   registerScreen(SCREENS.profileFromApp, { title: (t) => t.profile.guest.fromApp, Component: screen(() => import("@/components/profile/connect-screen")) })
   registerScreen(SCREENS.profilePublic, { title: (t) => t.shell.screens.publicProfile, Component: screen(() => import("@/components/profile/public-screen")) })
   registerScreen(PROFILE_SCREENS.stats, { title: (t) => t.profile.titles.stats, Component: StatsScreen })
+  registerScreen(PROFILE_SCREENS.training, { title: (t) => t.profile.titles.training, Component: TrainingScreen })
   registerScreen(PROFILE_SCREENS.games, { title: (t) => t.profile.titles.games, Component: GamesScreen })
   registerScreen(PROFILE_SCREENS.match, { title: (t) => t.profile.titles.game, largeTitle: false, Component: MatchScreen })
   registerScreen(PROFILE_SCREENS.player, { title: (t, params) => params.name || t.profile.titles.player, largeTitle: false, Component: PlayerScreen })
-  registerScreen(PROFILE_SCREENS.preview, { title: (t) => t.profile.titles.preview, Component: screen(() => import("@/components/profile/preview-screen")) })
+  registerScreen(PROFILE_SCREENS.visibility, { title: (t) => t.profile.titles.visibility, Component: screen(() => import("@/components/profile/visibility-screen")) })
   registerScreen(PROFILE_SCREENS.advanced, { title: (t) => t.profile.titles.advanced, Component: AdvancedScreen })
 
   registerLinkHandler("signer-return", (link, nav) => {
@@ -42,9 +44,9 @@ if (featureOn("profile")) {
 
 // Fetches the screens a signed-in profile can show from this device's data alone, so they open
 // offline too, as the shell does for its own tab roots (components/shell/lazy.ts): Statistik,
-// Spiele, a game's details, a player here and Erweitert (with "Diagnose kopieren", which is for
+// Training, Spiele, a game's details, a player here and Erweitert (with "Diagnose kopieren", which is for
 // exactly such moments). Called once a profile is here (./profile-root.tsx). The public preview
 // and other players' profiles need a connection anyway.
 export function warmProfileScreens() {
-  return Promise.all([StatsScreen, GamesScreen, MatchScreen, PlayerScreen, AdvancedScreen].map((screen) => screen.preload()))
+  return Promise.all([StatsScreen, TrainingScreen, GamesScreen, MatchScreen, PlayerScreen, AdvancedScreen].map((screen) => screen.preload()))
 }

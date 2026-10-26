@@ -23,7 +23,7 @@ export function ImportedSheet({
   onClose,
 }: {
   // An imported row, or a player's row that counts imported games; null when closed.
-  standing: Standing | null
+  standing: Pick<Standing, "key" | "name" | "imported" | "playerId"> | null
   matches: ArchivedMatch[]
   players: PlayerRecord[]
   onClose: () => void

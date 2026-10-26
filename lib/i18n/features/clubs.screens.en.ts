@@ -2,6 +2,9 @@ import type { Widen } from "../index"
 import type { clubsScreensDe } from "./clubs.screens.de.ts"
 
 // English texts of the clubs area's screens. Same shape as clubs.screens.de.ts.
+// "1st", "2nd", "3rd", "11th".
+const ordinal = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? "th" : (["th", "st", "nd", "rd"][n % 10] ?? "th")}`
+
 export const clubsScreensEn: Widen<typeof clubsScreensDe> = {
   unnamed: "No name",
   you: "You",
@@ -451,6 +454,22 @@ export const clubsScreensEn: Widen<typeof clubsScreensDe> = {
     recent: "Recent games",
     none: "No club game yet.",
     noneHint: "Start a game from the club; its result ends up here.",
+  },
+
+  leaderboard: {
+    scope: "Season tables of your clubs, by each season's rules. Only confirmed club games count.",
+    season: (name, players) => `${name} · ${players === 1 ? "1 player" : `${players} players`}`,
+    asOf: (time) => `As of ${time}`,
+    you: (rank) => `You: ${ordinal(rank)}`,
+    youUnranked: (min) => `You: from ${min} games`,
+    youNoGame: "You: no game yet",
+    loading: "Loading table",
+    sealed: "Visible to members only",
+    noSeason: "No running season. Once the club starts one, the table appears here.",
+    noGames: "No counted games yet",
+    gamesWins: (games, wins) => `${games === 1 ? "1 game" : `${games} games`} · ${wins === 1 ? "1 win" : `${wins} wins`}`,
+    points: "Points",
+    fullTable: "Full table",
   },
 
   discover: {

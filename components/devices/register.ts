@@ -17,8 +17,8 @@ import { dbGet, dbKeys, onStorageChange } from "@/lib/storage/db"
 // feature switch (lib/shell/features.ts), nothing here is registered.
 
 if (featureOn("devices")) {
-  registerSlotItem("profile.rows", "devices", lazy(() => import("@/components/devices/devices-row")))
-  registerSlotItem("profile.rows", "backup", lazy(() => import("@/components/devices/backup-row")))
+  registerSlotItem("profile.account", "devices", lazy(() => import("@/components/devices/devices-row")))
+  registerSlotItem("profile.account", "backup", lazy(() => import("@/components/devices/backup-row")))
   registerSlotItem("profile.card", "backup.hint", lazy(() => import("@/components/devices/backup-hint")))
 
   registerScreen(SCREENS.profileFromDevice, { title: (t) => t.profile.guest.fromDevice, Component: lazyScreen(() => import("@/components/devices/new-device-screen")) })

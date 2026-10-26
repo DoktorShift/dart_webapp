@@ -149,7 +149,7 @@ export const local = (url) => url.replace(/^https?:\/\/[^/]+/, BASE)
 
 // A dart on the keypad: Double or Triple first, then the key ("T20", "D14", "20", "Bull, 50").
 export async function dart(page, segment, multiplier = 1) {
-  if (multiplier === 3) await page.getByRole("button", { name: "Triple", exact: true }).first().click()
+  if (multiplier === 3) await page.getByRole("button", { name: /^(Triple|Treble)$/ }).first().click()
   if (multiplier === 2) await page.getByRole("button", { name: "Double", exact: true }).first().click()
   const prefix = multiplier === 3 ? "T" : multiplier === 2 ? "D" : ""
   await page.getByRole("button", { name: new RegExp(`^${prefix}\\s?${segment}$`) }).locator("visible=true").first().click()

@@ -1,0 +1,882 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Profil und Rangliste</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&display=swap">
+<style>
+/* Layout: ein ruhiges Dokument mit Telefon-Mockups in Paaren (Ist | Vorschlag); Mockups folgen den
+   Farbtokens der App (app/globals.css), das Dokument selbst einem neutralen Blaugrau. */
+:root{
+  --bg:#f6f7fa; --fg:#121826; --mute:#5b667a; --line:#dde2ea; --card:#ffffff; --accent:#2563eb; --accent-ink:#1d4ed8;
+  --tint:#e8efff; --soft:#eef1f6; --good:#157a4f; --warn:#9a5b00; --bad:#b42318;
+  --m-bg:#f2f2f7; --m-card:#ffffff; --m-line:#dcdce1; --m-ink:#0b1020; --m-mute:#4a5568; --m-blue:#2563eb; --m-tint:#dbe6fd; --m-gray:#e5e5ea; --m-green:#15803d; --m-red:#c81e1e;
+  --display:"Barlow Condensed",ui-sans-serif,system-ui,sans-serif; --body:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Helvetica,Arial,sans-serif; --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0d1117; --fg:#e7ebf2; --mute:#98a3b5; --line:#263041; --card:#141b26; --accent:#5b8dff; --accent-ink:#8fb0ff;
+  --tint:#17233d; --soft:#1a2231; --good:#4ade80; --warn:#fbbf24; --bad:#f87171;
+  --m-bg:#000000; --m-card:#1c1c1e; --m-line:#2c2c2e; --m-ink:#f5f5f7; --m-mute:#a1a1aa; --m-blue:#3b82f6; --m-tint:#1e2a44; --m-gray:#2c2c2e; --m-green:#34d399; --m-red:#f87171;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0d1117; --fg:#e7ebf2; --mute:#98a3b5; --line:#263041; --card:#141b26; --accent:#5b8dff; --accent-ink:#8fb0ff;
+  --tint:#17233d; --soft:#1a2231; --good:#4ade80; --warn:#fbbf24; --bad:#f87171;
+  --m-bg:#000000; --m-card:#1c1c1e; --m-line:#2c2c2e; --m-ink:#f5f5f7; --m-mute:#a1a1aa; --m-blue:#3b82f6; --m-tint:#1e2a44; --m-gray:#2c2c2e; --m-green:#34d399; --m-red:#f87171;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font:16px/1.55 var(--body);padding-block:0 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+a{color:var(--accent-ink)}
+.wrap{max-width:1120px;margin:0 auto}
+header.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:baseline;justify-content:space-between;padding:28px 0 18px;border-bottom:1px solid var(--line)}
+.brand{font-family:var(--display);font-weight:600;font-size:22px;letter-spacing:.2px}
+.meta{font-size:13px;color:var(--mute)}
+h1{font-family:var(--display);font-weight:600;font-size:clamp(34px,5vw,54px);line-height:1.05;margin:34px 0 10px;text-wrap:balance}
+.lead{font-size:18px;color:var(--mute);max-width:62ch;margin:0 0 8px}
+h2{font-family:var(--display);font-weight:600;font-size:30px;line-height:1.1;margin:56px 0 14px;text-wrap:balance;scroll-margin-top:16px}
+h3{font-size:18px;margin:26px 0 8px}
+p{max-width:72ch}
+ul,ol{max-width:72ch;padding-left:22px}
+li{margin:4px 0}
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 0;padding:0;list-style:none;max-width:none}
+.toc a{display:inline-block;padding:7px 12px;border:1px solid var(--line);border-radius:999px;font-size:13px;text-decoration:none;color:var(--fg);background:var(--card)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:22px 0}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.kpi b{display:block;font-family:var(--display);font-size:40px;line-height:1;font-weight:600;font-variant-numeric:tabular-nums}
+.kpi span{font-size:13px;color:var(--mute)}
+.kpi .vs{font-size:13px;color:var(--good);font-weight:600}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);font-weight:600;background:var(--soft)}
+tr:last-child td{border-bottom:0}
+td.n{font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--mute)}
+.sev{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600}
+.sev.h{background:#fde8e6;color:#9f1d13}.sev.m{background:#fff2d6;color:#8a5200}.sev.l{background:var(--soft);color:var(--mute)}
+:root[data-theme="dark"] .sev.h,:root[data-theme="dark"] .sev.m{background:var(--soft)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .sev.h,:root:not([data-theme="light"]) .sev.m{background:var(--soft)}}
+.stage{display:inline-block;min-width:26px;text-align:center;padding:2px 7px;border-radius:7px;font-size:12px;font-weight:700;background:var(--tint);color:var(--accent-ink)}
+code{font:13px var(--mono);background:var(--soft);padding:1px 5px;border-radius:5px}
+blockquote{margin:10px 0;padding:10px 16px;border-left:3px solid var(--accent);background:var(--card);border-radius:0 10px 10px 0;max-width:72ch}
+blockquote cite{display:block;font-size:12.5px;color:var(--mute);margin-top:6px;font-style:normal}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+.box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.box h3{margin-top:0}
+
+/* Vergleichspaare */
+.cmp{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:22px;margin:18px 0 10px}
+.pane{min-width:0}
+.pane .tag{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:7px;margin-bottom:10px}
+.pane.ist .tag{background:var(--soft);color:var(--mute)}
+.pane.neu .tag{background:var(--tint);color:var(--accent-ink)}
+.pane .inner{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:760px){.pane .inner{grid-template-columns:1fr}}
+.notes{font-size:14px;color:var(--fg);margin:0;padding:0;list-style:none}
+.notes li{position:relative;padding-left:28px;margin:0 0 9px}
+.notes li i{position:absolute;left:0;top:1px;width:20px;height:20px;border-radius:50%;font:700 12px/20px var(--body);text-align:center;font-style:normal;color:#fff;background:var(--mute)}
+.pane.neu .notes li i{background:var(--accent)}
+
+/* Telefon-Mockup, 300 px breit, Maßstab ~0,77 zu iPhone-Punkten */
+.ph{width:300px;max-width:100%;height:628px;background:var(--m-bg);color:var(--m-ink);border:1px solid var(--line);border-radius:34px;overflow:hidden;position:relative;display:flex;flex-direction:column;font:12.5px/1.35 var(--body);box-shadow:0 10px 30px -18px rgba(0,0,0,.35)}
+.ph.tall{height:auto;min-height:628px}
+.ph .nav{height:38px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 12px;font-size:13px;color:var(--m-blue)}
+.ph .nav .mid{color:var(--m-ink);font-weight:600}
+.ph .nav .r{display:flex;gap:10px;align-items:center}
+.ph .nav svg{width:22px;height:22px;stroke:var(--m-blue);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ph .nav .pill{background:var(--m-blue);color:#fff;font-weight:600;font-size:12px;padding:4px 10px;border-radius:999px}
+.ph .scr{flex:1;min-height:0;overflow:hidden;padding:0 12px 12px;display:flex;flex-direction:column;gap:10px}
+.ph .scr>*{flex:none}
+.ph .lt{font-family:var(--display);font-weight:600;font-size:28px;line-height:1;margin:2px 0 4px}
+.ph .sec{font-size:11px;color:var(--m-mute);margin:6px 0 -4px 4px}
+.ph .card{background:var(--m-card);border:1px solid var(--m-line);border-radius:12px;overflow:hidden}
+.ph .rw{display:flex;align-items:center;gap:9px;padding:9px 11px;min-height:38px;border-top:1px solid var(--m-line)}
+.ph .rw:first-child{border-top:0}
+.ph .rw .ic{width:22px;height:22px;border-radius:6px;flex:none;background:#0a7aff}
+.ph .rw .ic.g{background:#8e8e93}.ph .rw .ic.gr{background:#2fb553}.ph .rw .ic.o{background:#f08a00}.ph .rw .ic.t{background:#1e9fbf}.ph .rw .ic.p{background:#9b51e0}
+.ph .rw .t{flex:1;min-width:0}
+.ph .rw .t b{display:block;font-weight:600;font-size:13px}
+.ph .rw .t small{display:block;color:var(--m-mute);font-size:11px}
+.ph .rw .v{color:var(--m-mute);font-size:12px;white-space:nowrap}
+.ph .rw .chev{width:7px;height:7px;border-right:1.6px solid var(--m-mute);border-top:1.6px solid var(--m-mute);transform:rotate(45deg);opacity:.6;flex:none}
+.ph .rw.red b{color:var(--m-red);font-weight:500}
+.ph .btn{display:flex;align-items:center;justify-content:center;gap:6px;height:38px;border-radius:10px;font-weight:600;font-size:13px}
+.ph .btn.p{background:var(--m-blue);color:#fff}
+.ph .btn.s{background:var(--m-tint);color:var(--m-blue)}
+.ph .btn.g{color:var(--m-blue);height:32px;font-weight:500}
+.ph .btn.dis{opacity:.45}
+.ph .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ph .seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;background:var(--m-gray);border-radius:9px;padding:2px;font-size:12px;font-weight:600;text-align:center}
+.ph .seg span{padding:6px 2px;border-radius:7px;color:var(--m-mute)}
+.ph .seg span.on{background:var(--m-card);color:var(--m-ink);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.ph .av{width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;color:#fff;font-weight:700;font-size:13px;background:linear-gradient(145deg,#38bdf8,#1d4ed8)}
+.ph .av.lg{width:52px;height:52px;font-size:19px}
+.ph .av.xl{width:68px;height:68px;font-size:26px}
+.ph .av.o{background:linear-gradient(145deg,#fb923c,#c2410c)}
+.ph .av.g{background:linear-gradient(145deg,#4ade80,#15803d)}
+.ph .av.v{background:linear-gradient(145deg,#c084fc,#7e22ce)}
+.ph .av.k{background:linear-gradient(145deg,#94a3b8,#475569)}
+.ph .stack{display:flex;align-items:center}
+.ph .stack .av{width:22px;height:22px;font-size:9px;border:2px solid var(--m-card);margin-left:-7px}
+.ph .stack .av:first-child{margin-left:0}
+.ph .stack small{margin-left:6px;color:var(--m-mute);font-size:11px}
+.ph .chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:600;background:var(--m-gray);color:var(--m-mute)}
+.ph .chip.b{background:var(--m-tint);color:var(--m-blue)}
+.ph .chip.gr{background:#dcfce7;color:#166534}
+.ph .chip.live{background:#fee2e2;color:#991b1b}
+.ph .chip.live::before{content:"";width:6px;height:6px;border-radius:50%;background:#dc2626}
+.ph .hero{padding:12px 11px 10px;display:flex;gap:10px;align-items:center}
+.ph .hero .t b{display:block;font-size:15px;font-weight:700}
+.ph .hero .t small{display:block;color:var(--m-mute);font-size:11px}
+.ph .hero.c{flex-direction:column;text-align:center;gap:6px;padding-top:6px}
+.ph .hero.c .t b{font-family:var(--display);font-size:24px;font-weight:600;line-height:1}
+.ph .acts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.ph .acts div{background:var(--m-card);border:1px solid var(--m-line);border-radius:12px;padding:8px 4px 6px;text-align:center;font-size:10.5px;font-weight:600;color:var(--m-blue)}
+.ph .acts svg{width:20px;height:20px;stroke:var(--m-blue);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;display:block;margin:0 auto 3px}
+.ph .task{display:flex;align-items:center;gap:8px;background:var(--m-tint);color:var(--m-blue);border-radius:12px;padding:10px 11px;font-weight:600;font-size:12.5px}
+.ph .rank{display:flex;gap:12px;align-items:center;padding:10px 11px}
+.ph .rank b{font-family:var(--display);font-size:32px;font-weight:600;line-height:1}
+.ph .status{padding:9px 11px;border-radius:10px;font-size:12px;background:#dcfce7;color:#14532d}
+.ph .status.i{background:var(--m-tint);color:var(--m-blue)}
+.ph .status.e{background:#fee2e2;color:#7f1d1d}
+.ph .field{background:var(--m-card);border:1px solid var(--m-line);border-radius:10px;padding:9px 11px;color:var(--m-mute);font-size:13px}
+.ph .fl{font-size:11px;color:var(--m-mute);margin:2px 0 -6px 4px}
+.ph .tabbar{flex:none;height:56px;border-top:1px solid var(--m-line);background:var(--m-card);display:grid;grid-template-columns:repeat(5,1fr);align-items:center;font-size:9.5px;color:var(--m-mute);text-align:center}
+.ph .tabbar .on{color:var(--m-blue)}
+.ph .tabbar svg{width:20px;height:20px;display:block;margin:0 auto 2px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.ph .tabbar.float{position:absolute;left:12px;right:12px;bottom:10px;height:52px;border:1px solid var(--m-line);border-radius:26px;background:color-mix(in srgb,var(--m-card) 78%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 6px 20px -10px rgba(0,0,0,.4)}
+.ph .sheet{position:absolute;left:0;right:0;bottom:0;background:var(--m-bg);border-radius:18px 18px 0 0;padding:8px 12px 14px;box-shadow:0 -8px 30px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:9px}
+.ph .sheet::before{content:"";width:34px;height:4px;border-radius:2px;background:var(--m-line);margin:0 auto 2px}
+.ph .sheet h4{margin:0;font-size:16px;font-weight:700}
+.ph .sheet p{margin:0;font-size:12px;color:var(--m-mute)}
+.ph .dim{position:absolute;inset:0;background:rgba(0,0,0,.32)}
+.ph .qrcard{background:#fff;border-radius:14px;padding:12px;display:grid;place-items:center;position:relative}
+.ph .qr{width:150px;height:150px;display:block}
+.ph .qrcard .av{position:absolute;border:3px solid #fff}
+.ph .code{font-family:var(--mono);font-size:20px;letter-spacing:.14em;font-weight:600;text-align:center;font-variant-numeric:tabular-nums}
+.ph .cam{background:#0b0f19;border-radius:14px;height:210px;position:relative;color:#cbd5e1;display:grid;place-items:center;font-size:11px}
+.ph .cam::before{content:"";position:absolute;inset:34px 44px;border:2px solid transparent;border-radius:16px;background:
+  linear-gradient(#fff,#fff) top left/26px 2px no-repeat,linear-gradient(#fff,#fff) top left/2px 26px no-repeat,
+  linear-gradient(#fff,#fff) top right/26px 2px no-repeat,linear-gradient(#fff,#fff) top right/2px 26px no-repeat,
+  linear-gradient(#fff,#fff) bottom left/26px 2px no-repeat,linear-gradient(#fff,#fff) bottom left/2px 26px no-repeat,
+  linear-gradient(#fff,#fff) bottom right/26px 2px no-repeat,linear-gradient(#fff,#fff) bottom right/2px 26px no-repeat}
+.ph .cam.small{height:150px}
+.ph .steps{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;font-size:9px;text-align:center;color:var(--m-mute)}
+.ph .steps span{padding-top:5px;border-top:3px solid var(--m-gray)}
+.ph .steps span.done{border-color:var(--m-blue);color:var(--m-blue)}
+.ph .steps span.now{border-color:var(--m-blue);color:var(--m-ink);font-weight:700}
+.ph .match{display:flex;align-items:center;gap:8px;padding:9px 11px;border-top:1px solid var(--m-line)}
+.ph .match:first-child{border-top:0}
+.ph .match .sc{font-family:var(--display);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;min-width:34px;text-align:center}
+.ph .match .n{flex:1;font-size:12.5px;font-weight:600}
+.ph .match small{color:var(--m-mute);font-size:10.5px;display:block;font-weight:400}
+.ph .menu{position:absolute;right:12px;top:40px;background:var(--m-card);border:1px solid var(--m-line);border-radius:12px;box-shadow:0 10px 30px -10px rgba(0,0,0,.4);min-width:180px;overflow:hidden;z-index:2}
+.ph .menu div{padding:9px 12px;font-size:13px;border-top:1px solid var(--m-line);display:flex;justify-content:space-between;align-items:center}
+.ph .menu div:first-child{border-top:0}
+.ph .menu div.red{color:var(--m-red)}
+.ph .menu svg{width:17px;height:17px;stroke:var(--m-ink);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ph .menu div.red svg{stroke:var(--m-red)}
+.ph .caption{font-size:11px;color:var(--m-mute);text-align:center}
+
+/* Flussdiagramm */
+.flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}
+.flow .st{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:14px;position:relative}
+.flow .st b{display:block;font-family:var(--display);font-size:22px;font-weight:600;color:var(--accent-ink);line-height:1;margin-bottom:4px}
+.flow .st small{display:block;color:var(--mute);font-size:12.5px;margin-top:4px}
+.tree{font:13.5px/1.6 var(--mono);background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;overflow-x:auto;white-space:pre;margin:0}
+.tree .x{color:var(--bad);text-decoration:line-through}
+.tree .y{color:var(--good);font-weight:600}
+.tree .k{color:var(--mute)}
+.swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.sw{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;font-size:13px}
+.sw .demo{height:54px;border-radius:9px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:6px}
+footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);font-size:13px;color:var(--mute)}
+.src{font-size:13.5px;columns:2;column-gap:28px;max-width:none}
+@media (max-width:720px){.src{columns:1}}
+.src li{break-inside:avoid}
+.src a,footer code,td code{overflow-wrap:anywhere}
+@media (prefers-reduced-motion:no-preference){.ph .chip.live::before{animation:pulse 1.4s ease-in-out infinite}}
+@keyframes pulse{50%{opacity:.35}}
+
+/* Zusätze für Profil und Rangliste */
+.ph .nav svg{width:22px;height:22px}
+.ph .fig3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:9px 11px 10px;border-top:1px solid var(--m-line)}
+.ph .fig3 div b{display:block;font-family:var(--display);font-size:24px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+.ph .fig3 div small{display:block;color:var(--m-mute);font-size:10.5px;margin-top:3px;line-height:1.2}
+.ph .cap{padding:0 11px 9px;font-size:10.5px;color:var(--m-mute)}
+.ph .spark{display:flex;align-items:flex-end;gap:3px;height:44px}
+.ph .spark i{flex:1;background:var(--m-blue);border-radius:2px 2px 0 0;opacity:.72;min-height:3px}
+.ph .spark i.hi{opacity:1}.ph .spark i.lo{opacity:.4}.ph .spark i.pb{background:#f08a00;opacity:1}
+.ph .spark.big{height:120px;gap:5px}
+.ph .spark.big i{border-radius:3px 3px 0 0}
+.ph .chartbox{position:relative;padding:8px 11px 6px}
+.ph .chartbox .goal{position:absolute;left:11px;right:11px;border-top:1.5px dashed #f08a00;font-size:9.5px;color:#b45309;text-align:right;padding-right:2px}
+.ph .axis{display:flex;justify-content:space-between;font-size:9.5px;color:var(--m-mute);padding:0 11px 8px}
+.ph .trend{font-size:12px;padding:9px 11px 0}
+.ph .trend b{font-weight:700}
+.ph .up{color:var(--m-green)}.ph .dn{color:var(--m-red)}
+.ph .chips{display:flex;gap:6px;flex-wrap:wrap}
+.ph .chip.pick{background:var(--m-card);border:1px solid var(--m-line);color:var(--m-ink);padding:4px 9px;font-size:11.5px}
+.ph .chip.pick::after{content:"";width:5px;height:5px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg);margin:-3px 0 0 3px;opacity:.7}
+.ph .foot{font-size:10.5px;color:var(--m-mute);padding:0 4px;line-height:1.3}
+.ph .lrow{display:flex;align-items:center;gap:9px;padding:8px 11px;min-height:44px;border-top:1px solid var(--m-line)}
+.ph .lrow:first-child{border-top:0}
+.ph .lrow .rk{width:24px;flex:none;font-family:var(--display);font-size:20px;font-weight:600;text-align:center;font-variant-numeric:tabular-nums;color:var(--m-mute)}
+.ph .lrow .rk.g{color:#b8860b}.ph .lrow .rk.s{color:#8e8e93}.ph .lrow .rk.b{color:#b06a2b}
+.ph .lrow .t{flex:1;min-width:0}.ph .lrow .t b{display:block;font-size:13px;font-weight:600}.ph .lrow .t small{display:block;color:var(--m-mute);font-size:11px}
+.ph .lrow .f{text-align:right;font-variant-numeric:tabular-nums;flex:none}
+.ph .lrow .f b{display:block;font-family:var(--display);font-size:21px;font-weight:600;line-height:1}
+.ph .lrow .f small{color:var(--m-mute);font-size:10.5px}
+.ph .lrow.me{background:var(--m-tint)}
+.ph .pin{position:absolute;left:12px;right:12px;bottom:70px;background:var(--m-card);border:1.5px solid var(--m-blue);border-radius:12px;box-shadow:0 6px 20px -10px rgba(0,0,0,.45);overflow:hidden}
+.ph .bars{padding:8px 11px 10px;display:grid;gap:7px}
+.ph .bars .hd{display:grid;grid-template-columns:1fr 1fr;font-size:11.5px;font-weight:700;text-align:center}
+.ph .bars .b{display:grid;grid-template-columns:30px 1fr 1fr 30px;gap:6px;align-items:center;font-size:11px;font-variant-numeric:tabular-nums}
+.ph .bars .b span:first-child{text-align:right}
+.ph .bars .b i{height:7px;border-radius:4px;background:var(--m-gray);position:relative;display:block}
+.ph .bars .b i::after{content:"";position:absolute;top:0;bottom:0;background:#b4b4bb;border-radius:4px;width:var(--w)}
+.ph .bars .b i.l::after{right:0}.ph .bars .b i.r::after{left:0}
+.ph .bars .b i.win::after{background:var(--m-blue)}
+.ph .bars .b small{grid-column:1/-1;text-align:center;color:var(--m-mute);font-size:10px;margin-top:-4px}
+.ph .rw .ic.tl{background:#1e9fbf}
+.ph .hero .chip{flex:none;white-space:nowrap;margin-left:auto}
+.ph .hero .t{flex:1;min-width:0}
+.ph .badges{display:flex;gap:6px;padding:0 11px 9px}
+.ph .badges span{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12px;background:var(--m-tint)}
+.ph .big{font-family:var(--display);font-size:40px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums;padding:6px 11px 0}
+.ph .empty{padding:22px 14px;text-align:center;color:var(--m-mute);font-size:12px}
+.ph .empty b{display:block;color:var(--m-ink);font-size:14px;margin-bottom:3px}
+.shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:14px 0}
+.shots figure{margin:0;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px}
+.shots img{width:100%;height:auto;border-radius:8px;display:block}
+.shots figcaption{font-size:12px;color:var(--mute);margin-top:6px}
+.defs td b{font-variant-numeric:tabular-nums}
+.yes{color:var(--good);font-weight:700}.no{color:var(--bad);font-weight:700}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-scan" viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><rect x="8.5" y="8.5" width="7" height="7" rx="1"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="8" cy="12" r=".9"/><circle cx="12" cy="12" r=".9"/><circle cx="16" cy="12" r=".9"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 3v12M8 7l4-4 4 4M5 11v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2-1.2L14.2 3h-4l-.4 2.6a7 7 0 0 0-2 1.2l-2.3-.9-2 3.4 2 1.5a7 7 0 0 0 0 2.4l-2 1.5 2 3.4 2.3-.9a7 7 0 0 0 2 1.2l.4 2.6h4l.4-2.6a7 7 0 0 0 2-1.2l2.3.9 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/></symbol>
+  <symbol id="i-invite" viewBox="0 0 24 24"><circle cx="10" cy="8" r="3.5"/><path d="M3.5 20a6.5 6.5 0 0 1 13 0M19 8v6M16 11h6"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+  <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 21h8M10 17h4"/></symbol>
+  <symbol id="i-people" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.3"/><circle cx="17" cy="9" r="2.6"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M15 20a5 5 0 0 1 6.5-4.6"/></symbol>
+  <symbol id="i-medal" viewBox="0 0 24 24"><circle cx="12" cy="15" r="5"/><path d="M8.5 10.5 6 3h4l2 5 2-5h4l-2.5 7.5"/></symbol>
+  <symbol id="i-person" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="10" r="3"/><path d="M6.5 18.5a6 6 0 0 1 11 0"/></symbol>
+  <symbol id="i-pen" viewBox="0 0 24 24"><path d="M4 20h4l10-10-4-4L4 16zM13 7l4 4"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></symbol>
+  <symbol id="i-out" viewBox="0 0 24 24"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9"/></symbol>
+</svg>
+
+<div class="wrap">
+<header class="top">
+  <div class="brand">BlueLine Darts · UX-Vorschlag</div>
+  <div class="meta">Profil und Rangliste · Ist-Stand <code>ux/clubs-turniere-einladen</code> 3b85d1c · 26. Oktober 2026 · zur Entscheidung</div>
+</header>
+
+<h1>Profil und Rangliste: Sportkarte, Form, Training und eine ehrliche Rangliste</h1>
+<p class="lead">Gegenüberstellung des heutigen Stands mit einem Vorschlag für beide Tabs. Grundlage: der Code auf dem Zweig, die Nachweis-Screenshots, die großen Dart-Apps (DartCounter, Autodarts, Scolia, DartConnect, n01, Dart Tracker), Strava und Apple Fitness, und die Apple Human Interface Guidelines (Stand iOS 26). Die drei Recherchen liegen daneben: <a href="profil-rangliste/audit-ist.md">Audit des Ist-Stands</a>, <a href="profil-rangliste/research-hig.md">HIG-Muster</a>, <a href="profil-rangliste/research-dart-apps.md">Dart-Apps</a>.</p>
+<div class="box" style="margin:16px 0 20px"><strong>Was schon entschieden ist (deine Antworten vom 26. Oktober):</strong> Die Rangliste wird <b>ein Tab mit drei Bereichen</b> (Hier gespielt · Clubs · Turniere), jeder sagt, was er zählt. <b>Alle vier Wege der Interoperabilität</b> (profilweit statt geräteweit, mit Freunden vergleichbar, Import aus anderen Apps, Export), ohne dass die Oberfläche komplizierter wird. Das Profil beginnt mit <b>Sportkarte und Form</b>; Kontodinge wandern in einen eigenen Abschnitt weiter unten. Und, neu dazu: <b>Spiele allein werden getrennt als Training geführt</b>, damit jemand sich über die Zeit wachsen sieht. Dieser Vorschlag setzt diese Entscheidungen um und stellt die noch offenen Fragen am Ende (E19 bis E28).</div>
+<div class="box" style="margin:0 0 20px;border-color:#16a34a"><strong>Stand 26. Oktober 2026, Zweig <code>ux/profil-rangliste</code>:</strong> Die Empfehlungen E19 bis E28 sind angenommen und gebaut. Stufe 1 (M1 bis M14) und Stufe 2 (M15: Karte mit optionalen Checkout-Zählern, Sichtbarkeit mit zwei Stufen) sind fertig; Training ist als eigener Bereich mit Karte, Bildschirm und strikter Trennung umgesetzt. Nachweis: <code>lint</code>, <code>typecheck</code>, <code>npm test</code> 688 von 688, Spielabend P8.01 20 von 20 Schritten, 89 von 89 Prüfungen mit neuem Schritt „Rangliste heute Abend“, HIG-Matrix 204 von 204 (dazu die drei Ranglistenbereiche sowie Statistik, Training, Sichtbarkeit und Spielverlauf), zwei unabhängige Reviews (Korrektheit: 6 Befunde, HIG: 25 Befunde; alle bis auf die unten genannten behoben). <b>Offen:</b> Stufe 3 (M16 Import aus anderen Dart-Apps, M17 Bild zum Teilen, M18 Trainingsziel), Prüfung auf echten Geräten mit VoiceOver, öffentliche Relays; aus dem HIG-Review verschoben: Sicherungshinweis und Auszeichnungs-Chip in der Sportkarte (gehören den Bereichen Sicherung und Auszeichnungen), Querformat 568×320 der Rangliste (Steuerung füllt den ersten Bildschirm).</div>
+<ul class="toc">
+  <li><a href="#kurz">Kurzfassung</a></li><li><a href="#befunde">Befunde</a></li><li><a href="#prinzipien">Prinzipien</a></li><li><a href="#zahlen">Zahlen und Begriffe</a></li>
+  <li><a href="#profil">Profil</a></li><li><a href="#training">Training</a></li><li><a href="#rangliste">Rangliste</a></li><li><a href="#interop">Interoperabilität</a></li>
+  <li><a href="#leer">Leerzustände</a></li><li><a href="#massnahmen">Maßnahmen</a></li><li><a href="#entscheidungen">Entscheidungen</a></li><li><a href="#quellen">Quellen</a></li>
+</ul>
+
+<h2 id="kurz">Kurzfassung</h2>
+<div class="kpis">
+  <div class="kpi"><b>1 → 3</b><span>Bereiche in der Rangliste. Heute nur die Spiele dieses Geräts; künftig dazu die Saisontabellen deiner Clubs und deine Turnierplatzierungen.</span></div>
+  <div class="kpi"><b>15 → 5</b><span>Spiele, bis die Form sichtbar wird. Heute eine Zeile tief in der Statistik ab 15 Spielen; künftig eine Karte mit Verlauf direkt unter dem Namen.</span></div>
+  <div class="kpi"><b>0 → 1</b><span>Trainingsstatistik. Heute zählen Solo-Spiele still in die Profilzahlen; künftig ein eigener Bereich, der das Wachsen zeigt.</span></div>
+  <div class="kpi"><b>7 → 0</b><span>Konto-Zeilen (Geräte, Sicherung, Zahlungen, Einstellungen …) zwischen Spielerkarte und Falte auf dem iPhone SE.</span></div>
+</div>
+<div class="cols">
+  <div class="box"><h3>Was heute stört</h3>
+    <ul>
+      <li>Die Profilkarte zeigt drei Zahlen aller Zeiten und sonst nichts über die Form. Der einzige Trend ist eine Zeile „Ø der letzten 10 Spiele“ tief in der Statistik, erst ab 15 Spielen, ohne Richtung.</li>
+      <li>Solo-Spiele und Spiele gegen andere laufen in denselben Durchschnitt. Wer allein übt, verschiebt seine Wettkampfzahlen; wer sich beim Üben verbessern will, sieht es nirgends.</li>
+      <li>Die Rangliste zählt rohe Siege über alle Spielarten, ohne Zeitraum, ohne Mindestzahl; ein Profil mit Spielen von zwei Geräten steht zweimal drin; nichts lässt sich antippen.</li>
+      <li>Nirgends steht, was gezählt wird: „Alle Zeiten“ auf der Karte, „Auf diesem Gerät gespeichert“ in der Rangliste, obwohl Spiele vom anderen Gerät längst mitzählen.</li>
+    </ul></div>
+  <div class="box"><h3>Was der Vorschlag ändert</h3>
+    <ul>
+      <li><b>Sportkarte + Form:</b> Bild, Name, Auszeichnungen, drei Zahlen (Ø 3 Darts, Checkout, Siege) und darunter die Form als Satz mit Verlauf: „Ø 54,0 in den letzten 10 Spielen, 1,9 besser als davor“.</li>
+      <li><b>Training als Königsdisziplin:</b> eigener Bereich mit großem Verlauf Monat für Monat, Bestleistungen im Training und Serie. Solo zählt nie in Siege oder Ranglisten.</li>
+      <li><b>Eine Rangliste, drei Bereiche:</b> Hier gespielt · Clubs · Turniere. Unter jedem Bereich ein Satz, was er zählt. Eigene Zeile hervorgehoben und angeheftet, Zeilen führen zum Spieler.</li>
+      <li><b>Interoperabilität ohne neue Oberfläche:</b> profilweit durch die bestehende Synchronisierung, Vergleich auf der Spielerseite, Import und Export als eine Zeile „Spielverlauf“ im Konto.</li>
+    </ul></div>
+</div>
+<p style="margin-top:18px">Drei Stufen: <span class="stage">1</span> reines Frontend ohne Protokolländerung (Profil, Training, Rangliste mit drei Bereichen, Export), <span class="stage">2</span> eine kleine Protokollerweiterung der öffentlichen Statistikkarte für den Vergleich mit Freunden, <span class="stage">3</span> Import aus Dateien anderer Apps und eine teilbare Bilanz als Bild.</p>
+
+<h3>Der Ist-Stand in Screenshots</h3>
+<div class="shots">
+  <figure><img src="profil-rangliste/ist/m-profile-390x844-de.jpg" alt="Profil heute: Karte mit drei Zahlen, zwei Buttons, letzte Spiele" loading="lazy"><figcaption>Profil heute (390×844)</figcaption></figure>
+  <figure><img src="profil-rangliste/ist/profile-stats-390.jpg" alt="Statistik heute: zwei Segmentreihen, Gruppen Ergebnisse und Punkte" loading="lazy"><figcaption>Statistik heute</figcaption></figure>
+  <figure><img src="profil-rangliste/ist/profile-stats-scrolled-390.jpg" alt="Statistik heute, gescrollt: Bestleistungen und der Verlauf als eine Zeile mit Strich" loading="lazy"><figcaption>Statistik, gescrollt: der „Verlauf“ ist ein Strich</figcaption></figure>
+  <figure><img src="profil-rangliste/ist/m-ranks-390x844-de.jpg" alt="Rangliste heute: Podium und Tabelle" loading="lazy"><figcaption>Rangliste heute (390×844)</figcaption></figure>
+  <figure><img src="profil-rangliste/ist/m-ranks-320x548-en-dark.jpg" alt="Rangliste heute auf dem iPhone SE, dunkel: das Podium füllt den Bildschirm" loading="lazy"><figcaption>Rangliste auf dem SE: erste Zeile unter der Falte</figcaption></figure>
+  <figure><img src="profil-rangliste/ist/profile-game-390.jpg" alt="Spiel heute: Vergleichstabelle zweier Spieler" loading="lazy"><figcaption>Spiel heute: Vergleichstabelle, bleibt</figcaption></figure>
+</div>
+
+<h2 id="befunde">Befunde am Ist-Stand</h2>
+<p>Aus Code (<code>components/profile</code>, <code>components/leaderboard-screen.tsx</code>, <code>lib/storage/stats.ts</code>, <code>lib/clubs/table.ts</code>, <code>lib/tournaments</code>) und den Nachweis-Screenshots. Schwere nach dem Dartabend-Test: „Könnte jemand das sofort in einer lauten Kneipe bedienen, Pfeile in der Hand, ohne Anleitung?“ Die Nummern laufen mit dem <a href="profil-rangliste/audit-ist.md">Audit</a>.</p>
+<div class="tbl"><table>
+<thead><tr><th>Nr.</th><th>Befund</th><th>Wo</th><th>Schwere</th></tr></thead>
+<tbody>
+<tr><td class="n">B1</td><td>Die Rangliste sortiert nach rohen Siegen über alle Spielarten: 12 von 30 schlägt 5 von 5, ein Cricket-Sieg wiegt wie ein X01-Sieg, keine Mindestzahl. Wer am meisten anwesend ist, führt.</td><td>stats.ts:455</td><td><span class="sev h">hoch</span></td></tr>
+<tr><td class="n">B2</td><td>Kein Zeitraum: eine Liste aller Zeiten. „Wer war heute Abend der Beste?“ lässt sich nicht beantworten.</td><td>leaderboard-screen.tsx</td><td><span class="sev h">hoch</span></td></tr>
+<tr><td class="n">B3</td><td>Ein Profil, das unter mehreren Spieler-Einträgen gespielt hat (anderes Gerät, neu angelegt), steht mehrfach drin: die Rangliste übergibt <code>sameAs</code> nicht, obwohl das Profil es nutzt.</td><td>lib/leaderboard.ts</td><td><span class="sev h">hoch</span></td></tr>
+<tr><td class="n">B4</td><td>Importierte „Anna“ (1.0.0) und lokale „Anna“ bleiben zwei Zeilen, bis jemand die dritte, getönte Textzeile entdeckt und zuordnet.</td><td>imported-sheet.tsx</td><td><span class="sev m">mittel</span></td></tr>
+<tr><td class="n">B5</td><td>Leere Plätze („Spieler 2“) bekommen eigene Zeilen in der Rangliste.</td><td>stats.ts:37</td><td><span class="sev m">mittel</span></td></tr>
+<tr><td class="n">B6</td><td>Das Podium wiederholt die ersten drei Zeilen und kostet auf dem SE 130 pt; die Zeilen tragen vier Textzeilen und zwei große Ziffern. Kein iOS-Listenbild.</td><td>leaderboard-screen.tsx</td><td><span class="sev m">mittel</span></td></tr>
+<tr><td class="n">B7</td><td>Nichts öffnet sich: keine Spielerseite, kein direkter Vergleich, die „Letzten Spiele“ sind nicht antippbar, obwohl Spieler- und Spielseite im Profil existieren.</td><td>leaderboard-screen.tsx</td><td><span class="sev m">mittel</span></td></tr>
+<tr><td class="n">B8</td><td>Der Tab ist kein Screen-Rahmen wie die anderen: kein Titel, der beim Scrollen schrumpft, keine Leistenaktionen, kein Slot, über den Clubs oder Turniere beitragen könnten.</td><td>app/page.tsx:370</td><td><span class="sev m">mittel</span></td></tr>
+<tr><td class="n">B9</td><td>Unbekannter Durchschnitt: „–“ in der Rangliste, „—“ mit vorgelesenem „nicht erfasst“ im Profil.</td><td>beide</td><td><span class="sev l">niedrig</span></td></tr>
+<tr><td class="n">B10</td><td>Die HIG-Matrix prüft auf diesen Tabs nur Protokollwörter; kein Scroll- und Ellipsen-Audit, keine Komponententests.</td><td>hig-matrix.mjs</td><td><span class="sev l">niedrig</span></td></tr>
+<tr><td class="n">B11</td><td>Die Profilkarte ist X01 aller Zeiten und sonst nichts; keine Form, kein Trend. Der einzige Verlauf ist eine Zeile tief in der Statistik, ab 15 Spielen, ohne Richtung und ohne Reihe.</td><td>own-profile.tsx, stats-view.tsx</td><td><span class="sev h">hoch</span></td></tr>
+<tr><td class="n">B12</td><td>Solo-Spiele zählen in Ø, First 9, Bestleistungen und „Spiele“ des Profils mit (nur nicht in Siege). Übung verschiebt die Wettkampfzahlen; das Üben selbst hat keinen Ort.</td><td>stats.ts:165</td><td><span class="sev h">hoch</span></td></tr>
+<tr><td class="n">B13</td><td>Interoperabilität: kein Import aus anderen Apps; der Spielverlauf verlässt das Gerät nur als Gesamtsicherung (JSON); keine CSV. Die Profilsicherung enthält den Schlüssel, nicht die Spiele.</td><td>lib/storage/data.ts</td><td><span class="sev h">hoch</span></td></tr>
+<tr><td class="n">B14</td><td>Vergleichen: nur der lokale Direktvergleich auf der Spielerseite. Die öffentliche Statistikkarte trägt nur Rohsummen (Spiele, Siege, Darts, Punkte); First 9, Checkout, Legs fehlen.</td><td>lib/protocol/profile.ts</td><td><span class="sev m">mittel</span></td></tr>
+<tr><td class="n">B15</td><td>Kontodinge (Vorschau, Einstellungen, Info, Erweitert, Geräte, Sicherung, Zahlungen, Abmelden) stehen direkt unter drei Spielen: zwölf und mehr Zeilen vor der Falte auf dem SE.</td><td>own-profile.tsx</td><td><span class="sev m">mittel</span></td></tr>
+<tr><td class="n">B16</td><td>Geltungsbereich unklar: „Alle Zeiten“ auf der Karte sagt nicht, dass Spiele von anderen Geräten mitzählen; die Rangliste sagt „Auf diesem Gerät gespeichert“, der Gast-Text ebenso.</td><td>profile.screens.de.ts</td><td><span class="sev m">mittel</span></td></tr>
+<tr><td class="n">B17</td><td>Kosten: Karte, Statistikkarte (drei Spielarten) und Statistikseite laufen je einmal durch alle Spiele und spielen beim ersten Öffnen jeden Wurf nach.</td><td>stats.ts:348</td><td><span class="sev m">mittel</span></td></tr>
+<tr><td class="n">B18</td><td>Zeiträume sind rollierende 30 oder 365 Tage; kein „Heute“, keine Saison, keine letzten N Spiele. „Statistik im Profil zeigen“ versteckt sich in der Vorschau.</td><td>stats-view.tsx, preview-screen.tsx</td><td><span class="sev l">niedrig</span></td></tr>
+</tbody></table></div>
+
+<h2 id="prinzipien">Prinzipien aus HIG und Recherche</h2>
+<div class="cols">
+  <div class="box"><h3>Apple HIG und Apples eigene Apps</h3>
+    <blockquote>Leaderboards: Spieler- und Zeitbereich als Filter über der Liste; die eigene Zeile wird getrennt geliefert und bleibt sichtbar, auch auf Platz 400.<cite>HIG › Game Center, GameKit <code>localPlayerEntry</code></cite></blockquote>
+    <blockquote>„Your last 90 days of activity are compared to the last 365.“ Pfeil hoch oder runter, ein Satz dazu, und erst ab genug Daten.<cite>Apple Fitness › Trends</cite></blockquote>
+    <blockquote>Highlights beschreiben den Zustand, Trends die Richtung. Kleine Diagramme öffnen das große im selben Stil.<cite>Apple Health; HIG › Charting data</cite></blockquote>
+    <blockquote>„Convey information with more than color alone.“ Pfeil + Wort + Farbe, nie Farbe allein.<cite>HIG › Accessibility</cite></blockquote>
+    <blockquote>Segmented Controls: Substantive, höchstens fünf, für eng verwandte Ansichten. Zeitbereich und Sortierung gehören in ein Menü, nicht in eine zweite Segmentreihe.<cite>HIG › Segmented controls, Toolbars</cite></blockquote>
+    <blockquote>Export über das Teilen-Blatt, Import über die Dateiauswahl, beides abseits des Hauptwegs (Health: Profilbild › „Alle Gesundheitsdaten exportieren“).<cite>Apple Health; HIG › Activity views</cite></blockquote>
+    <blockquote>„Unobtrusively let people know that changes they make won't be available on other devices.“<cite>HIG › iCloud</cite></blockquote>
+  </div>
+  <div class="box"><h3>Was die Dart-Apps gleich machen</h3>
+    <ul>
+      <li><b>Die Kopfzahl ist der 3-Dart-Durchschnitt,</b> daneben First 9 und Checkout-Quote (DartCounter, Autodarts, Scolia, Dart Tracker, DartConnect).</li>
+      <li><b>„Jetzt gegen davor“:</b> Autodarts zeigt zu jeder Zahl den Wert der 100 Legs davor („Prev.“); DartCounter „% verbessert im Zeitraum“; Fitness Pfeile.</li>
+      <li><b>Letzte N Spiele statt Kalender</b> als Formfenster (Autodarts 100 Legs; für Gelegenheitsspieler etwa 10 Spiele), weil Kalenderlücken die Form nicht löschen sollen.</li>
+      <li><b>Ranglisten mit Mindestzahl und wählbarem Schlüssel</b> (DartConnect: Ø mit „mind. 5 Spiele“; Dart Tracker; die Community baute sich für Autodarts genau das).</li>
+      <li><b>Gäste dürfen die eigenen Zahlen nicht verwässern,</b> sollen aber später zugeordnet werden können (DartConnect Merge, Dart Tracker Übernahme, Autodarts-Rezension „ohne meine Statistik zu beeinflussen“).</li>
+      <li><b>Direktvergleich als Balkenpaar</b> mit der führenden Seite hervorgehoben (Autodarts H2H, DartCounter).</li>
+      <li><b>Keine Weltrangliste:</b> Autodarts verweigert sie wegen Schummelns; Scolia führt nur Turnierpunkte. Scope klar benennen (Strava: Overall / Following / Clubs / My Results).</li>
+      <li><b>Warnungen aus Rezensionen:</b> Zahlen hinter der Bezahlschranke, Durchschnitt aus Leg-Durchschnitten gemittelt (DartCounter musste es 9.5 korrigieren), unbenannte Checkout-Quote (dart- oder visitbasiert, Faktor 2 bis 3), stille Doppelprofile nach Wiederherstellung.</li>
+    </ul>
+  </div>
+</div>
+
+<h2 id="zahlen">Zahlen und Begriffe</h2>
+<p>Damit niemand fragt „warum ist mein Durchschnitt hier anders?“: BlueLine rechnet wie die Szene und sagt es. Die Formeln sind heute schon so im Code (<code>stats.ts</code>, Summen vor dem Teilen); neu sind die Benennung auf dem Bildschirm und die Trennung Training / gegen andere.</p>
+<div class="tbl"><table class="defs">
+<thead><tr><th>Zahl</th><th>Formel (wie DartConnect, Autodarts, Wikipedia)</th><th>Wo sie steht</th><th>Wenn unbekannt</th></tr></thead>
+<tbody>
+<tr><td><b>Ø 3 Darts</b></td><td>Punkte gesamt ÷ Darts gesamt × 3 über alle Legs; Bust zählt 3 Darts und 0 Punkte; die Siegaufnahme zählt nur geworfene Darts. Nie Mittel aus Leg-Durchschnitten.</td><td>Karte, Form, Rangliste (X01), Vergleich</td><td>„—“ mit vorgelesenem „nicht erfasst“; importierte 1.0.0-Ergebnisse haben Summen, also Ø ja, First 9 nein</td></tr>
+<tr><td><b>First 9</b></td><td>Dieselbe Formel über die ersten 9 Darts jedes Legs.</td><td>Statistik, Vergleich</td><td>nur Spiele mit allen Würfen</td></tr>
+<tr><td><b>Checkout</b></td><td>Checkouts ÷ Darts aufs Doppel (dartbasiert). Steht so dabei: „Darts aufs Doppel“. Zählt nur Spiele, in denen die Darts aufs Doppel bekannt sind.</td><td>Karte, Statistik, Vergleich</td><td>„—“, Fußnote „zählt nur Spiele mit bekannten Darts aufs Doppel“</td></tr>
+<tr><td><b>Siege</b></td><td>Gewonnene Spiele ÷ Spiele gegen andere. Einheit „Spiele“, nicht Legs. Solo-Spiele zählen nie.</td><td>Karte, Rangliste</td><td>unter 1 Spiel gegen andere: „—“</td></tr>
+<tr><td><b>Bestes Leg</b></td><td>Wenigste Darts bis zum Finish eines gewonnenen Legs (9 ist das Minimum bei 501).</td><td>Bestleistungen</td><td>nur Spiele mit allen Würfen</td></tr>
+<tr><td><b>Höchstes Finish</b></td><td>Größter Checkout in einer Aufnahme (170 ist das Maximum).</td><td>Bestleistungen, öffentliche Karte</td><td>wie oben</td></tr>
+<tr><td><b>Form</b></td><td>Ø der letzten 10 Spiele gegen andere, verglichen mit den 10 davor. Pfeil + Wort + Farbe („1,9 besser“). Ab 5 Spielen, der Vergleich ab 20.</td><td>Profil-Karte „Form“, Statistik</td><td>„Form ab 5 Spielen gegen andere“ als Satz, kein leerer Platz</td></tr>
+<tr><td><b>Training</b></td><td>Spiele allein (ein Spieler): X01 solo mit Ø, Around the Clock mit Trefferquote, Cricket solo mit Marks pro Aufnahme. Je Spiel ein Punkt, im Diagramm nach Woche oder Monat gemittelt.</td><td>Profil „Training“, Trainingsseite</td><td>„Noch kein Training“ mit der Aktion „Allein spielen“</td></tr>
+</tbody></table></div>
+
+<h2 id="profil">Profil</h2>
+<h3>Der Profil-Tab</h3>
+<div class="cmp">
+  <div class="pane ist"><span class="tag">Ist</span>
+    <div class="inner">
+      <div class="ph">
+        <div class="nav"><span></span><span></span><span></span></div>
+        <div class="scr">
+          <div class="lt">Profil</div>
+          <div class="card"><div class="hero"><div class="av xl">A</div><div class="t"><b>Anna</b></div></div>
+            <div class="fig3"><div><b>5</b><small>Spiele</small></div><div><b>3</b><small>Gewonnen</small></div><div><b>101,3</b><small>Ø Punkte pro 3 Darts</small></div></div>
+            <div class="cap">X01 · Alle Zeiten</div></div>
+          <div class="btn p">Profil teilen</div>
+          <div class="btn s">Bearbeiten</div>
+          <div class="sec">Letzte Spiele</div>
+          <div class="card"><div class="rw"><div class="t"><b>Verloren gegen Ben</b><small>301 · Heute, 03:30</small></div><div class="chev"></div></div><div class="rw"><div class="t"><b>Verloren gegen Mia</b><small>301 · Heute, 03:30</small></div><div class="chev"></div></div><div class="rw"><div class="t"><b>Gewonnen gegen Carla</b><small>301 · Heute, 03:30</small></div><div class="chev"></div></div></div>
+          <div class="card"><div class="rw"><div class="ic"></div><div class="t"><b>Statistik</b></div><div class="chev"></div></div><div class="rw"><div class="ic g"></div><div class="t"><b>Spiele</b></div><span class="v">5</span><div class="chev"></div></div><div class="rw"><div class="ic o"></div><div class="t"><b>Auszeichnungen</b></div><div class="chev"></div></div><div class="rw"><div class="ic tl"></div><div class="t"><b>Geräte</b></div><div class="chev"></div></div></div>
+        </div>
+        <div class="tabbar"><div><svg><use href="#i-play"/></svg>Spielen</div><div><svg><use href="#i-trophy"/></svg>Rangliste</div><div><svg><use href="#i-people"/></svg>Clubs</div><div><svg><use href="#i-medal"/></svg>Turniere</div><div class="on"><svg><use href="#i-person"/></svg>Profil</div></div>
+      </div>
+      <ul class="notes">
+        <li><i>1</i>Drei Zahlen aller Zeiten, darunter „Spiele“ und „Gewonnen“, die vor allem sagen, wie oft jemand da war (B11).</li>
+        <li><i>2</i>Zwei Buttons voller Breite, obwohl Teilen eine Leistenaktion ist und Bearbeiten selten vorkommt.</li>
+        <li><i>3</i>Nach drei Spielen beginnt die Konto-Liste: Statistik, Spiele, Auszeichnungen, Geräte, Sicherung, Zahlungen, Vorschau, Einstellungen, Info, Erweitert, Abmelden (B15).</li>
+        <li><i>4</i>„Alle Zeiten“ sagt nicht, ob Solo-Spiele oder andere Geräte mitzählen (B12, B16).</li>
+      </ul>
+    </div>
+  </div>
+  <div class="pane neu"><span class="tag">Vorschlag</span>
+    <div class="inner">
+      <div class="ph">
+        <div class="nav"><span></span><span></span><span class="r"><svg><use href="#i-share"/></svg></span></div>
+        <div class="scr">
+          <div class="lt">Profil</div>
+          <div class="card">
+            <div class="hero"><div class="av xl">A</div><div class="t"><b>Anna</b><small>Am Board: Anna · Dartfreunde Nord</small></div><span class="btn g" style="height:auto;padding:0;font-size:12px">Bearbeiten</span></div>
+            <div class="badges"><span>🏆</span><span>🎯</span><span>🥈</span><small style="align-self:center;color:var(--m-mute);font-size:10.5px">3 Auszeichnungen</small></div>
+            <div class="fig3"><div><b>52,1</b><small>Ø 3 Darts</small></div><div><b>38 %</b><small>Checkout</small></div><div><b>60 %</b><small>Siege · 3 von 5</small></div></div>
+            <div class="cap">X01 gegen andere · alle deine Geräte</div>
+          </div>
+          <div class="sec">Form</div>
+          <div class="card">
+            <div class="trend"><b>Ø 54,0 in den letzten 10 Spielen</b><br><span class="up">↑ 1,9 besser</span> als in den 10 davor</div>
+            <div class="chartbox"><div class="spark"><i style="height:50%"></i><i style="height:42%"></i><i class="lo" style="height:30%"></i><i style="height:55%"></i><i style="height:48%"></i><i style="height:62%"></i><i class="pb" style="height:92%"></i><i style="height:58%"></i><i style="height:66%"></i><i class="hi" style="height:70%"></i></div></div>
+            <div class="rw"><div class="t"><b>Statistik</b><small>Zeiträume, First 9, Bestleistungen</small></div><div class="chev"></div></div>
+          </div>
+          <div class="sec">Training</div>
+          <div class="card"><div class="rw"><div class="t"><b>Ø 49,8 im Oktober</b><small><span class="up">↑ 2,3</span> gegenüber September · 12 Trainings</small></div><div class="spark" style="width:64px;height:26px"><i style="height:40%"></i><i style="height:55%"></i><i style="height:48%"></i><i style="height:70%"></i><i class="hi" style="height:85%"></i></div><div class="chev"></div></div></div>
+          <div class="sec">Letzte Spiele</div>
+          <div class="card"><div class="rw"><div class="t"><b>Gewonnen gegen Carla</b><small>501 · Heute · Ø 58,2</small></div><div class="chev"></div></div><div class="rw"><div class="t"><b>Verloren gegen Ben</b><small>301 · Gestern · Ø 51,0</small></div><div class="chev"></div></div></div>
+        </div>
+        <div class="tabbar float"><div><svg><use href="#i-play"/></svg>Spielen</div><div><svg><use href="#i-trophy"/></svg>Rangliste</div><div><svg><use href="#i-people"/></svg>Clubs</div><div><svg><use href="#i-medal"/></svg>Turniere</div><div class="on"><svg><use href="#i-person"/></svg>Profil</div></div>
+      </div>
+      <ul class="notes">
+        <li><i>1</i><b>Sportkarte:</b> Bild, Name, Boardname und Club, die Auszeichnungen als Reihe, dann die drei Zahlen, die jeder Dartspieler kennt: Ø 3 Darts, Checkout, Siege. Die Bildunterschrift sagt den Geltungsbereich (gegen andere, alle Geräte).</li>
+        <li><i>2</i><b>Form</b> als Satz mit Richtung (Pfeil + Wort + Farbe) und zehn Balken, einer je Spiel, Bestwert orange. Antippen öffnet die Statistik im selben Stil (HIG Charting data).</li>
+        <li><i>3</i><b>Training</b> als eigene Karte: Monatsdurchschnitt gegen den Vormonat und die Zahl der Trainings. Führt zur Trainingsseite.</li>
+        <li><i>4</i>Teilen sitzt in der Leiste, Bearbeiten in der Karte. Letzte Spiele mit Ø je Spiel; „Alle Spiele“ als Zeile darunter.</li>
+        <li><i>5</i>Darunter (hier abgeschnitten): „Auszeichnungen“ als Streifen und der Abschnitt <b>Konto</b>: Geräte, Sicherung, Zahlungen, Spielverlauf (Import/Export), Sichtbarkeit, Einstellungen, Info, Erweitert, Abmelden.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<h3>Die Statistik (Form im Detail)</h3>
+<div class="cmp">
+  <div class="pane ist"><span class="tag">Ist</span>
+    <div class="inner">
+      <div class="ph">
+        <div class="nav"><span>‹ Profil</span><span></span><span></span></div>
+        <div class="scr">
+          <div class="lt">Statistik</div>
+          <div class="seg"><span class="on">X01</span><span>Cricket</span><span>Clock</span></div>
+          <div class="seg"><span class="on">Gesamt</span><span>1 Jahr</span><span>30 Tage</span></div>
+          <div class="foot">X01 · Gesamt · aus 5 Spielen</div>
+          <div class="sec">Ergebnisse</div>
+          <div class="card"><div class="rw"><div class="t"><b>Spiele</b></div><span class="v">5</span></div><div class="rw"><div class="t"><b>Gewonnen</b></div><span class="v">3 von 5</span></div><div class="rw"><div class="t"><b>Siegquote</b></div><span class="v">60 %</span></div></div>
+          <div class="sec">Punkte</div>
+          <div class="card"><div class="rw"><div class="t"><b>Ø Punkte pro 3 Darts</b></div><span class="v">101,3</span></div><div class="rw"><div class="t"><b>First-9-Average</b></div><span class="v">101,3</span></div><div class="rw"><div class="t"><b>Checkout-Quote</b></div><span class="v">100 %</span></div></div>
+          <div class="sec">Verlauf</div>
+          <div class="card"><div class="rw"><div class="t"><b>Ø der letzten 10 Spiele</b></div><span class="v">—</span></div></div>
+          <div class="foot">Ab 15 Spielen.</div>
+        </div>
+        <div class="tabbar"><div><svg><use href="#i-play"/></svg>Spielen</div><div><svg><use href="#i-trophy"/></svg>Rangliste</div><div><svg><use href="#i-people"/></svg>Clubs</div><div><svg><use href="#i-medal"/></svg>Turniere</div><div class="on"><svg><use href="#i-person"/></svg>Profil</div></div>
+      </div>
+      <ul class="notes">
+        <li><i>1</i>Zwei Segmentreihen übereinander; die zweite misst rollierende Tage, die für Gelegenheitsspieler oft leer sind (B18).</li>
+        <li><i>2</i>Zahlen ohne Bezug: kein „davor“, keine Richtung, kein Diagramm. Der Verlauf ist ein Strich bis 15 Spiele (B11).</li>
+        <li><i>3</i>Solo-Spiele stecken in „aus 5 Spielen“ (B12).</li>
+      </ul>
+    </div>
+  </div>
+  <div class="pane neu"><span class="tag">Vorschlag</span>
+    <div class="inner">
+      <div class="ph tall">
+        <div class="nav"><span>‹ Profil</span><span class="mid">Statistik</span><span class="r"><svg><use href="#i-share"/></svg></span></div>
+        <div class="scr">
+          <div class="seg"><span class="on">X01</span><span>Cricket</span><span>Clock</span></div>
+          <div class="chips"><span class="chip pick">Letzte 30 Spiele</span><span class="chip pick">Gegen andere</span></div>
+          <div class="card">
+            <div class="trend"><b>Ø 53,4 in den letzten 30 Spielen</b><br><span class="up">↑ 2,6 besser</span> als in den 30 davor</div>
+            <div class="chartbox"><div class="spark big"><i style="height:40%"></i><i style="height:46%"></i><i class="lo" style="height:28%"></i><i style="height:52%"></i><i style="height:50%"></i><i style="height:44%"></i><i style="height:58%"></i><i style="height:61%"></i><i style="height:49%"></i><i style="height:66%"></i><i class="pb" style="height:92%"></i><i style="height:60%"></i><i style="height:63%"></i><i style="height:70%"></i><i class="hi" style="height:68%"></i></div></div>
+            <div class="axis"><span>12. Sept.</span><span>Heute</span></div>
+          </div>
+          <div class="sec">Ergebnisse</div>
+          <div class="card"><div class="rw"><div class="t"><b>Siege</b><small>davor 55 %</small></div><span class="v" style="color:var(--m-ink);font-weight:600">63 %</span></div><div class="rw"><div class="t"><b>Spiele</b><small>19 gewonnen</small></div><span class="v">30</span></div><div class="rw"><div class="t"><b>Legs</b><small>davor 58 %</small></div><span class="v">61 %</span></div></div>
+          <div class="sec">Punkte</div>
+          <div class="card"><div class="rw"><div class="t"><b>Ø 3 Darts</b><small>davor 50,8</small></div><span class="v" style="color:var(--m-ink);font-weight:600">53,4 <span class="up">↑</span></span></div><div class="rw"><div class="t"><b>First 9</b><small>davor 55,1</small></div><span class="v">57,9 <span class="up">↑</span></span></div><div class="rw"><div class="t"><b>Checkout</b><small>Darts aufs Doppel · davor 34 %</small></div><span class="v">38 % <span class="up">↑</span></span></div></div>
+          <div class="sec">Bestleistungen in diesem Zeitraum</div>
+          <div class="card"><div class="rw"><div class="t"><b>Höchstes Finish</b><small>gegen Ben · 14. Okt.</small></div><span class="v">121</span><div class="chev"></div></div><div class="rw"><div class="t"><b>Bestes Leg</b><small>gegen Carla · 20. Okt.</small></div><span class="v">15 Darts</span><div class="chev"></div></div><div class="rw"><div class="t"><b>180er</b></div><span class="v">3</span></div><div class="rw"><div class="t"><b>100+ · 140+</b></div><span class="v">41 · 9</span></div></div>
+          <div class="foot">Aus 30 Spielen gegen andere, 28 davon mit allen Würfen. Checkout zählt nur Spiele mit bekannten Darts aufs Doppel.</div>
+        </div>
+      </div>
+      <ul class="notes">
+        <li><i>1</i>Eine Segmentreihe (Spielart). Zeitraum und Gegner als Menü-Chips: „Letzte 10 · 30 · 100 · Alle Spiele · Dieses Jahr“ und „Gegen andere · Training“. HIG: Zeitbereich ins Menü, nicht in eine zweite Segmentreihe.</li>
+        <li><i>2</i>Oben der Satz, darunter das Diagramm im Stil der kleinen Karte: ein Balken je Spiel, Bestwert orange, schwächstes blass. Für VoiceOver eine Zusammenfassung („30 Spiele, 44 bis 61, steigend“) und eine verborgene Tabelle.</li>
+        <li><i>3</i>Jede Zahl mit „davor“ in der zweiten Zeile (Autodarts „Prev.“), Pfeil nur wenn der Vergleich steht. Bestleistungen nennen Gegner und Datum und führen zum Spiel.</li>
+        <li><i>4</i>Die Fußzeile sagt, woraus gerechnet wurde. „Teilen“ in der Leiste gibt die Zahlen als Bild ins Teilen-Blatt (Stufe 3).</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<h2 id="training">Training: die Königsdisziplin</h2>
+<p>Deine Vorgabe: Wer allein spielt, soll seine Zahlen getrennt geführt bekommen und sich über die Zeit wachsen sehen. Das ist im Datenmodell billig (ein Spiel mit einem Spieler ist heute schon erkennbar, <code>includeSolo</code> existiert) und in der Oberfläche der emotionalste Bildschirm der App. Die Regel ist einfach und steht überall dabei: <b>Training zählt nie in Siege, Form oder Ranglisten. Spiele gegen andere zählen nie ins Training.</b></p>
+<div class="cmp">
+  <div class="pane ist"><span class="tag">Ist</span>
+    <div class="inner">
+      <div class="box" style="max-width:300px">
+        <h3>Kein Ort fürs Üben</h3>
+        <p style="font-size:14px">Ein Solo-501 landet unter „Letzte Spiele“ als „501 · Heute“, zählt in „Spiele“, Ø, First 9, Bestes Leg und Höchstes Finish der Karte mit, nur nicht in Siege. Die Statistik hat keinen Schalter dafür. Wer eine Woche lang Doppel übt, sieht seine Checkout-Quote auf der Karte sinken, weil Übungsdoppel zählen, und sieht nirgends, dass er beim Üben besser wird.</p>
+        <p style="font-size:14px;margin-bottom:0">In der FAQ steht heute schon: „Allein ist es ein Training mit deiner Statistik.“ Das Versprechen gibt es, der Bildschirm fehlt.</p>
+      </div>
+      <ul class="notes">
+        <li><i>1</i>Solo-Spiele verwässern die Wettkampfzahlen (B12).</li>
+        <li><i>2</i>Fortschritt beim Üben ist unsichtbar (B11).</li>
+      </ul>
+    </div>
+  </div>
+  <div class="pane neu"><span class="tag">Vorschlag</span>
+    <div class="inner">
+      <div class="ph tall">
+        <div class="nav"><span>‹ Profil</span><span class="mid">Training</span><span class="r"><svg><use href="#i-share"/></svg></span></div>
+        <div class="scr">
+          <div class="seg"><span class="on">X01</span><span>Clock</span><span>Cricket</span></div>
+          <div class="chips"><span class="chip pick">Monate</span><span class="chip pick">Dieses Jahr</span></div>
+          <div class="card">
+            <div class="trend"><b>Ø 49,8 im Oktober</b><br><span class="up">↑ 2,3 besser</span> als im September · bestes Jahr bisher</div>
+            <div class="big">49,8</div>
+            <div class="cap">Ø 3 Darts im Training, Monatsmittel</div>
+            <div class="chartbox"><div class="goal" style="top:38px">Ziel 55</div><div class="spark big"><i class="lo" style="height:30%"></i><i style="height:36%"></i><i style="height:34%"></i><i style="height:41%"></i><i style="height:45%"></i><i style="height:43%"></i><i style="height:50%"></i><i style="height:54%"></i><i style="height:58%"></i><i class="hi" style="height:64%"></i><i style="height:0"></i><i style="height:0"></i></div></div>
+            <div class="axis"><span>Jan.</span><span>Okt.</span><span>Dez.</span></div>
+          </div>
+          <div class="sec">Dieser Monat</div>
+          <div class="card"><div class="rw"><div class="t"><b>Trainings</b><small>an 9 Tagen · Serie: 4 Tage in Folge</small></div><span class="v">12</span></div><div class="rw"><div class="t"><b>Checkout</b><small>Darts aufs Doppel · September 29 %</small></div><span class="v">33 % <span class="up">↑</span></span></div><div class="rw"><div class="t"><b>Darts pro Leg</b><small>September 26,4</small></div><span class="v">24,9 <span class="up">↑</span></span></div></div>
+          <div class="sec">Bestleistungen im Training</div>
+          <div class="card"><div class="rw"><div class="t"><b>Bestes Training</b><small>Ø 61,2 · 18. Okt.</small></div><div class="chev"></div></div><div class="rw"><div class="t"><b>Bestes Leg</b><small>13 Darts · 18. Okt.</small></div><div class="chev"></div></div><div class="rw"><div class="t"><b>Höchstes Finish</b><small>116 · 3. Okt.</small></div><div class="chev"></div></div></div>
+          <div class="sec">Letzte Trainings</div>
+          <div class="card"><div class="rw"><div class="t"><b>501 · 3 Legs</b><small>Heute · 18 Min.</small></div><span class="v">Ø 52,7</span><div class="chev"></div></div><div class="rw"><div class="t"><b>501 · 5 Legs</b><small>Gestern · 31 Min.</small></div><span class="v">Ø 48,1</span><div class="chev"></div></div></div>
+          <div class="btn p" style="margin-top:4px">Training starten</div>
+        </div>
+      </div>
+      <ul class="notes">
+        <li><i>1</i><b>Das Diagramm ist der Held:</b> Monatsmittel über das Jahr, Bestmonat orange, kommende Monate leer. Menü-Chips wechseln Wochen/Monate und das Jahr. Spielart als Segmente (Clock mit Trefferquote, Cricket mit Marks pro Aufnahme).</li>
+        <li><i>2</i>Ein Satz sagt die Richtung gegen den Vormonat (Fitness-Muster), der große Wert darunter ist die Zahl des Monats.</li>
+        <li><i>3</i><b>Ziellinie</b> (gestrichelt, optional): „Ziel 55“ setzt die Spielerin selbst über das Teilen-Menü oder einen Zeilen-Tipp. Entscheidung E23.</li>
+        <li><i>4</i>Dieser Monat: Trainings und Serie (Tage in Folge) als Motivation, Checkout und Darts pro Leg mit Vormonat. Bestleistungen im Training getrennt von denen gegen andere, jede führt zum Spiel.</li>
+        <li><i>5</i>„Training starten“ führt in die Aufstellung mit einem Spieler. Leerzustand: „Noch kein Training. Spiel allein ein 501, dann beginnt hier dein Verlauf.“</li>
+      </ul>
+    </div>
+  </div>
+</div>
+<div class="cols" style="margin-top:16px">
+  <div class="box"><h3>Was Training trennt, Zeile für Zeile</h3>
+    <ul style="font-size:14.5px">
+      <li><b>Karte (Ø, Checkout, Siege):</b> nur gegen andere. Bildunterschrift „X01 gegen andere“.</li>
+      <li><b>Form:</b> nur gegen andere. Der Chip „Training“ in der Statistik zeigt dieselbe Seite für Solo-Spiele.</li>
+      <li><b>Rangliste, Clubs, Turniere:</b> nie Training.</li>
+      <li><b>Öffentliche Statistikkarte:</b> Training bleibt privat (Standard); Entscheidung E24.</li>
+      <li><b>Auszeichnungen:</b> Meilensteine (180, Finish) gelten in beiden Welten, mit dem Wort „im Training“ auf der Auszeichnung.</li>
+      <li><b>Letzte Spiele im Profil:</b> gegen andere; Trainings stehen auf der Trainingsseite.</li>
+    </ul></div>
+  <div class="box"><h3>Wachsen sichtbar machen</h3>
+    <ul style="font-size:14.5px">
+      <li><b>Zeitachse statt Spielliste:</b> Wochen- oder Monatsmittel glätten einzelne Ausreißer; „Bester Monat bisher“ und „Serie“ belohnen Beständigkeit.</li>
+      <li><b>Schwellen ehrlich:</b> Monatsmittel ab 3 Trainings, sonst „noch zu wenig“ als Text im Balken-Slot, nie eine Null.</li>
+      <li><b>Ein Satz pro Zeitraum:</b> „2,3 besser als im September“, „so gut wie nie“, „nach 3 Wochen Pause wieder da“ (Fitness-Coaching-Satz, nur positiv oder neutral formuliert).</li>
+      <li><b>Später, nicht jetzt:</b> Trainingsziele (Ziellinie), Trainingsspiele wie Doppel-Training oder 121, Erinnerung an die Serie. Jedes ein eigener Schritt mit Entscheidung.</li>
+    </ul></div>
+</div>
+
+<h2 id="rangliste">Rangliste</h2>
+<h3>Der Rangliste-Tab: Hier gespielt</h3>
+<div class="cmp">
+  <div class="pane ist"><span class="tag">Ist</span>
+    <div class="inner">
+      <div class="ph">
+        <div class="nav"><span></span><span></span><span></span></div>
+        <div class="scr">
+          <div class="lt">Rangliste</div>
+          <div class="foot" style="font-size:12px">Sortiert nach Siegen, dann Siegquote. Auf diesem Gerät gespeichert.</div>
+          <div class="seg"><span class="on">Alle</span><span>X01</span><span>Cricket</span><span>Clock</span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;align-items:end;height:118px;text-align:center;font-size:11px">
+            <div><b>Mia</b><br>1 Sieg<div style="background:var(--m-gray);height:52px;border-radius:8px 8px 0 0;font-family:var(--display);font-size:26px;line-height:52px;color:var(--m-mute)">2</div></div>
+            <div><b>Anna</b><br>3 Siege<div style="background:var(--m-tint);height:78px;border-radius:8px 8px 0 0;font-family:var(--display);font-size:26px;line-height:78px;color:var(--m-blue)">1</div></div>
+            <div><b>Ben</b><br><span style="color:var(--m-mute)">Kennung 10f2 a6c7</span><br>1 Sieg<div style="background:var(--m-gray);height:36px;border-radius:8px 8px 0 0;font-family:var(--display);font-size:26px;line-height:36px;color:var(--m-mute)">3</div></div>
+          </div>
+          <div class="card"><div class="rw" style="font-size:10.5px;color:var(--m-mute);min-height:28px"><span style="width:14px">#</span><span style="flex:1">Spieler</span><span>Ø</span><span style="width:34px;text-align:right">Siege</span></div>
+            <div class="rw"><span style="width:14px;color:var(--m-mute)">1</span><div class="t"><b>Anna</b><small>5 Spiele, 60 % Siege</small></div><span class="v">101,3</span><b style="width:34px;text-align:right;font-size:18px">3</b></div>
+            <div class="rw"><span style="width:14px;color:var(--m-mute)">2</span><div class="t"><b>Mia</b><small>1 Spiel, 100 % Siege</small></div><span class="v">150,5</span><b style="width:34px;text-align:right;font-size:18px">1</b></div>
+            <div class="rw"><span style="width:14px;color:var(--m-mute)">3</span><div class="t"><b>Ben</b><small>Kennung 10f2 a6c7</small><small>2 Spiele, 50 % Siege</small></div><span class="v">101,3</span><b style="width:34px;text-align:right;font-size:18px">1</b></div>
+            <div class="rw"><span style="width:14px;color:var(--m-mute)">4</span><div class="t"><b>Ben</b><small>1 Spiel, 0 % Siege</small></div><span class="v">3</span><b style="width:34px;text-align:right;font-size:18px">0</b></div>
+          </div>
+        </div>
+        <div class="tabbar"><div><svg><use href="#i-play"/></svg>Spielen</div><div class="on"><svg><use href="#i-trophy"/></svg>Rangliste</div><div><svg><use href="#i-people"/></svg>Clubs</div><div><svg><use href="#i-medal"/></svg>Turniere</div><div><svg><use href="#i-person"/></svg>Profil</div></div>
+      </div>
+      <ul class="notes">
+        <li><i>1</i>Podium und Tabelle sagen dasselbe; auf dem SE liegt die erste Zeile unter der Falte (B6).</li>
+        <li><i>2</i>Mia führt mit „1 Spiel, 100 %“ vor Ben mit zwei Spielen; zwei Bens, weil ein Profil zweimal zählt (B1, B3).</li>
+        <li><i>3</i>Kein Zeitraum, keine Clubs, keine Turniere, nichts antippbar (B2, B7).</li>
+      </ul>
+    </div>
+  </div>
+  <div class="pane neu"><span class="tag">Vorschlag</span>
+    <div class="inner">
+      <div class="ph">
+        <div class="nav"><span></span><span></span><span class="r"><svg><use href="#i-more"/></svg></span></div>
+        <div class="scr">
+          <div class="lt">Rangliste</div>
+          <div class="seg"><span class="on">Hier gespielt</span><span>Clubs</span><span>Turniere</span></div>
+          <div class="chips"><span class="chip pick">Alle Spielarten</span><span class="chip pick">Heute</span></div>
+          <div class="foot">Spiele gegen andere auf diesem iPhone, heute Abend: 14 Spiele, 5 Spieler. Mindestens 3 Spiele für einen Platz.</div>
+          <div class="card">
+            <div class="lrow"><span class="rk g">1</span><div class="av o">B</div><div class="t"><b>Ben</b><small>6 Spiele · 5 Siege</small></div><div class="f"><b>83 %</b><small>Ø 56,4</small></div><div class="chev"></div></div>
+            <div class="lrow me"><span class="rk s">2</span><div class="av">A</div><div class="t"><b>Anna <span class="chip b" style="font-size:9.5px;padding:1px 6px">Du</span></b><small>7 Spiele · 4 Siege</small></div><div class="f"><b>57 %</b><small>Ø 54,0</small></div><div class="chev"></div></div>
+            <div class="lrow"><span class="rk b">3</span><div class="av g">M</div><div class="t"><b>Mia</b><small>5 Spiele · 2 Siege</small></div><div class="f"><b>40 %</b><small>Ø 48,9</small></div><div class="chev"></div></div>
+            <div class="lrow"><span class="rk">4</span><div class="av v">C</div><div class="t"><b>Carla</b><small>6 Spiele · 2 Siege</small></div><div class="f"><b>33 %</b><small>Ø 45,1</small></div><div class="chev"></div></div>
+          </div>
+          <div class="sec">Noch nicht eingestuft</div>
+          <div class="card"><div class="lrow"><span class="rk">–</span><div class="av k">J</div><div class="t"><b>Jonas</b><small>2 Spiele · 1 Sieg · ab 3 Spielen dabei</small></div><div class="chev"></div></div></div>
+          <div class="sec">Letzte Spiele</div>
+          <div class="card"><div class="rw"><div class="t"><b>Ben gegen Anna</b><small>501 · vor 10 Min. · 3:2</small></div><div class="chev"></div></div></div>
+        </div>
+        <div class="tabbar float"><div><svg><use href="#i-play"/></svg>Spielen</div><div class="on"><svg><use href="#i-trophy"/></svg>Rangliste</div><div><svg><use href="#i-people"/></svg>Clubs</div><div><svg><use href="#i-medal"/></svg>Turniere</div><div><svg><use href="#i-person"/></svg>Profil</div></div>
+      </div>
+      <ul class="notes">
+        <li><i>1</i><b>Drei Bereiche</b> als Segmente (Substantive, drei Stück). Darunter zwei Menü-Chips: Spielart (Alle · X01 · Cricket · Clock) und Zeitraum (Heute · 30 Tage · Dieses Jahr · Alle Zeiten). Kein Podium.</li>
+        <li><i>2</i><b>Der Satz darunter sagt, was gezählt wird:</b> Gerät, Zeitraum, Spiele, Spieler, Mindestzahl. Mit synchronisierten Spielen: „Deine Spiele von anderen Geräten zählen mit.“</li>
+        <li><i>3</i><b>Rang als Siegquote mit Mindestzahl,</b> Gleichstand nach Siegen, dann Ø, dann Name. Wer darunter liegt, steht unter „Noch nicht eingestuft“ mit dem Grund (DartConnect-Muster). Sortierung nach Siegen oder Ø im „⋯“-Menü. Entscheidung E19.</li>
+        <li><i>4</i>Zeile: Rang (Gold/Silber/Bronze als Farbe der Ziffer, nicht als Bild), Avatar, Name, „Spiele · Siege“, rechts die Quote groß und Ø klein (nur X01). Eigene Zeile getönt mit „Du“. Jede Zeile führt zur Spielerseite mit Direktvergleich.</li>
+        <li><i>5</i>Ein Profil ist eine Zeile (<code>sameAs</code>), leere Plätze fallen weg, importierte Namen tragen den Chip „Importiert“ und die Zuordnung bleibt ein Tipp entfernt. Rutscht die eigene Zeile aus dem Bild, hängt sie als „Du · Platz 7“ über der Tab-Leiste (Game Center).</li>
+        <li><i>6</i>„⋯“-Menü: Sortieren, Importierte zuordnen, Rangliste zurücksetzen (wie heute in den Einstellungen, mit Bestätigung).</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<h3>Die Bereiche Clubs und Turniere</h3>
+<div class="cmp">
+  <div class="pane neu"><span class="tag">Vorschlag · Clubs</span>
+    <div class="inner">
+      <div class="ph">
+        <div class="nav"><span></span><span></span><span class="r"><svg><use href="#i-more"/></svg></span></div>
+        <div class="scr">
+          <div class="lt">Rangliste</div>
+          <div class="seg"><span>Hier gespielt</span><span class="on">Clubs</span><span>Turniere</span></div>
+          <div class="foot">Saisontabellen deiner Clubs, nach den Regeln jeder Saison. Nur bestätigte Clubspiele zählen.</div>
+          <div class="card">
+            <div class="hero" style="padding-bottom:4px"><div class="av lg">D</div><div class="t"><b>Dartfreunde Nord</b><small>Herbst 2026 · 12 Spieler · Stand 20:14</small></div><span class="chip b">Du: 3.</span></div>
+            <div class="lrow"><span class="rk g">1</span><div class="av o">O</div><div class="t"><b>Olaf</b><small>14 Spiele · 11 Siege</small></div><div class="f"><b>33</b><small>Punkte</small></div></div>
+            <div class="lrow"><span class="rk s">2</span><div class="av g">M</div><div class="t"><b>Mia</b><small>12 Spiele · 9 Siege</small></div><div class="f"><b>27</b><small>Punkte</small></div></div>
+            <div class="lrow me"><span class="rk b">3</span><div class="av">A</div><div class="t"><b>Anna</b><small>11 Spiele · 8 Siege</small></div><div class="f"><b>24</b><small>Punkte</small></div></div>
+            <div class="rw" style="color:var(--m-blue);font-weight:600;font-size:12.5px">Ganze Tabelle <span style="margin-left:auto" class="chev"></span></div>
+          </div>
+          <div class="card">
+            <div class="hero" style="padding-bottom:4px"><div class="av o">P</div><div class="t"><b>Pfeilwerfer Süd</b><small>Winter 2026 · 8 Spieler</small></div><span class="chip">Du: noch kein Spiel</span></div>
+            <div class="lrow"><span class="rk g">1</span><div class="av v">J</div><div class="t"><b>Jo</b><small>4 Spiele · 4 Siege</small></div><div class="f"><b>12</b><small>Punkte</small></div></div>
+            <div class="rw" style="color:var(--m-blue);font-weight:600;font-size:12.5px">Ganze Tabelle <span style="margin-left:auto" class="chev"></span></div>
+          </div>
+        </div>
+        <div class="tabbar float"><div><svg><use href="#i-play"/></svg>Spielen</div><div class="on"><svg><use href="#i-trophy"/></svg>Rangliste</div><div><svg><use href="#i-people"/></svg>Clubs</div><div><svg><use href="#i-medal"/></svg>Turniere</div><div><svg><use href="#i-person"/></svg>Profil</div></div>
+      </div>
+      <ul class="notes">
+        <li><i>1</i>Eine Karte je Club mit laufender Saison: die ersten drei und die eigene Zeile, Punkte groß (die Saisonregeln bestimmen den Schlüssel, wie heute in <code>seasonTable</code>). „Ganze Tabelle“ öffnet die Clubtabelle, die dieselbe Zeilenform bekommt.</li>
+        <li><i>2</i>Der Chip rechts sagt sofort, wo du stehst: „Du: 3.“, „noch kein Spiel“, „ab 3 Spielen“.</li>
+        <li><i>3</i>Nicht geladen oder versiegelt: die Karte zeigt „Tabelle wird geladen“ bzw. „Nur für Mitglieder sichtbar“ statt leerer Zeilen (HIG Loading).</li>
+        <li><i>4</i>Datenquelle: <code>storedClubs</code> + <code>seasonTable</code>; keine Protokolländerung.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="pane neu"><span class="tag">Vorschlag · Turniere</span>
+    <div class="inner">
+      <div class="ph">
+        <div class="nav"><span></span><span></span><span class="r"><svg><use href="#i-more"/></svg></span></div>
+        <div class="scr">
+          <div class="lt">Rangliste</div>
+          <div class="seg"><span>Hier gespielt</span><span>Clubs</span><span class="on">Turniere</span></div>
+          <div class="foot">Deine Platzierungen in Turnieren, die du mit diesem Profil gespielt hast.</div>
+          <div class="card"><div class="fig3" style="border-top:0"><div><b>7</b><small>Turniere</small></div><div><b>1</b><small>gewonnen</small></div><div><b>3</b><small>mal Podium</small></div></div></div>
+          <div class="sec">2026</div>
+          <div class="card">
+            <div class="lrow"><span class="rk s">2.</span><div class="t"><b>Herbstcup</b><small>Dartfreunde Nord · 18. Okt. · 16 Spieler</small></div><div class="f"><b>🥈</b></div><div class="chev"></div></div>
+            <div class="lrow"><span class="rk g">1.</span><div class="t"><b>Kneipenturnier Oktober</b><small>Zum Anker · 4. Okt. · 8 Spieler</small></div><div class="f"><b>🏆</b></div><div class="chev"></div></div>
+            <div class="lrow"><span class="rk">5.</span><div class="t"><b>Sommerliga Finale</b><small>Pfeilwerfer Süd · 30. Aug. · 12 Spieler</small></div><div class="f"><small>5. bis 8.</small></div><div class="chev"></div></div>
+            <div class="lrow"><span class="rk b">3.</span><div class="t"><b>Vereinsmeisterschaft</b><small>Dartfreunde Nord · 14. Juni · 20 Spieler</small></div><div class="f"><b>🥉</b></div><div class="chev"></div></div>
+          </div>
+          <div class="sec">2025</div>
+          <div class="card"><div class="lrow"><span class="rk">9.</span><div class="t"><b>Weihnachtsturnier</b><small>Dartfreunde Nord · 20. Dez. · 24 Spieler</small></div><div class="f"><small>9. bis 16.</small></div><div class="chev"></div></div></div>
+        </div>
+        <div class="tabbar float"><div><svg><use href="#i-play"/></svg>Spielen</div><div class="on"><svg><use href="#i-trophy"/></svg>Rangliste</div><div><svg><use href="#i-people"/></svg>Clubs</div><div><svg><use href="#i-medal"/></svg>Turniere</div><div><svg><use href="#i-person"/></svg>Profil</div></div>
+      </div>
+      <ul class="notes">
+        <li><i>1</i>Oben die Bilanz in drei Zahlen, dann die Platzierungen nach Jahr, neueste zuerst. Platz als Ziffer mit Farbe, Medaille rechts; geteilte Plätze als „5. bis 8.“ (<code>placeTo</code>).</li>
+        <li><i>2</i>Jede Zeile öffnet das Turnier (Baum, Ergebnisse). Turniere, die nie auf diesem Gerät geöffnet wurden, kommen aus den Auszeichnungen mit grobem Platz und dem Hinweis „Details auf dem Gerät, auf dem du gespielt hast“.</li>
+        <li><i>3</i>Keine Turnier-Weltrangliste und keine Punkte über Turniere hinweg (Autodarts-Lektion); nur, was wirklich geschehen ist.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<h3>Die Spielerseite aus der Rangliste: Direktvergleich</h3>
+<div class="cmp">
+  <div class="pane ist"><span class="tag">Ist</span>
+    <div class="inner">
+      <div class="box" style="max-width:300px">
+        <h3>Vorhanden, aber unerreichbar</h3>
+        <p style="font-size:14px;margin-bottom:0">Die Spielerseite (<code>player-screen.tsx</code>) mit Bilanz gegen dich und Spieleliste existiert, aber nur über Profil › Spiele › Spiel › Spieler. Aus der Rangliste führt kein Weg dorthin (B7). Die Bilanz ist eine Textzeile, kein Vergleich der Zahlen.</p>
+      </div>
+    </div>
+  </div>
+  <div class="pane neu"><span class="tag">Vorschlag</span>
+    <div class="inner">
+      <div class="ph">
+        <div class="nav"><span>‹ Rangliste</span><span class="mid">Ben</span><span class="r"><svg><use href="#i-share"/></svg></span></div>
+        <div class="scr">
+          <div class="card"><div class="hero"><div class="av xl o">B</div><div class="t"><b>Ben</b><small>Profil · zuletzt heute gespielt</small></div></div><div class="fig3"><div><b>56,4</b><small>Ø 3 Darts</small></div><div><b>41 %</b><small>Checkout</small></div><div><b>83 %</b><small>Siege · 5 von 6</small></div></div><div class="cap">Heute Abend auf diesem iPhone</div></div>
+          <div class="sec">Ben gegen dich</div>
+          <div class="card">
+            <div class="bars">
+              <div class="hd"><span>Ben</span><span>Anna</span></div>
+              <div class="b"><span>5</span><i class="l win" style="--w:71%"></i><i class="r" style="--w:29%"></i><span>2</span><small>Siege · 7 Spiele</small></div>
+              <div class="b"><span>58,1</span><i class="l win" style="--w:60%"></i><i class="r" style="--w:55%"></i><span>53,2</span><small>Ø 3 Darts</small></div>
+              <div class="b"><span>61,0</span><i class="l" style="--w:58%"></i><i class="r win" style="--w:62%"></i><span>63,9</span><small>First 9</small></div>
+              <div class="b"><span>44 %</span><i class="l win" style="--w:44%"></i><i class="r" style="--w:38%"></i><span>38 %</span><small>Checkout</small></div>
+              <div class="b"><span>121</span><i class="l win" style="--w:71%"></i><i class="r" style="--w:56%"></i><span>96</span><small>Höchstes Finish</small></div>
+            </div>
+          </div>
+          <div class="sec">Spiele gegeneinander</div>
+          <div class="card"><div class="rw"><div class="t"><b>Ben gewinnt 3:2</b><small>501 · vor 10 Min.</small></div><div class="chev"></div></div><div class="rw"><div class="t"><b>Du gewinnst 3:1</b><small>501 · Gestern</small></div><div class="chev"></div></div></div>
+        </div>
+      </div>
+      <ul class="notes">
+        <li><i>1</i>Kopf wie die eigene Sportkarte, mit demselben Geltungssatz wie die Liste, aus der man kam.</li>
+        <li><i>2</i><b>Balkenpaar</b> (Autodarts-Muster): die führende Seite blau, die andere grau; Werte an beiden Enden, Name der Zahl darunter. Nie nur Farbe.</li>
+        <li><i>3</i>Hat die Person ein Profil mit öffentlicher Statistikkarte, erscheint darunter „Ben insgesamt“ mit den geteilten Zahlen und „Stand: …“ (heute schon in <code>public-view.tsx</code>; Stufe 2 erweitert die Karte um First 9, Checkout, Legs).</li>
+        <li><i>4</i>Ohne Profil (Gastname) fehlt der Block; stattdessen „Gast auf diesem Gerät“ und die Zuordnung, falls ein Import gleichen Namens existiert.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<h2 id="interop">Interoperabilität, ohne dass jemand das Wort sieht</h2>
+<p>Deine vier Wege, je mit der Frage: Was sieht die Spielerin, was braucht es darunter, und bleibt die Oberfläche so einfach wie vorher? Die Regel aus deiner Antwort: Komplexität hinter Apple-Mustern, nicht in neuen Bildschirmen.</p>
+<div class="tbl"><table>
+<thead><tr><th>Weg</th><th>Was die Spielerin sieht</th><th>Darunter</th><th>Stufe</th></tr></thead>
+<tbody>
+<tr><td><b>Profilweit statt geräteweit</b></td><td>Nichts Neues zu bedienen. Die Karte sagt „alle deine Geräte“, sobald Spiele von anderen Geräten da sind, sonst „dieses iPhone“. „Hier gespielt“ zeigt ein Profil als eine Zeile und sagt „Deine Spiele von anderen Geräten zählen mit“.</td><td>Die Synchronisierung je Spiel gibt es (<code>lib/sync/history.ts</code>, zusammengeführt über die Spiel-ID). Fehlt nur <code>sameAs</code> in der Rangliste und ein ehrlicher Satz. Kein Protokoll.</td><td><span class="stage">1</span></td></tr>
+<tr><td><b>Mit Freunden vergleichbar</b></td><td>Auf jeder Spielerseite „gegen dich“ als Balkenpaar; bei Profilen mit geteilter Statistik zusätzlich „insgesamt“. Die Sichtbarkeit der eigenen Zahlen ist <b>eine</b> Auswahl im Konto: „Statistik zeigen: Niemandem · Allen, die mein Profil öffnen“ (Game Center: Everyone / Only You).</td><td>Lokaler Direktvergleich existiert (<code>headToHead</code>). Die öffentliche Karte (Kind 31180, unverschlüsselt, vom Spieler signiert) bekommt First 9, Checkout, Legs; Training bleibt draußen. Kleine Erweiterung in <code>lib/protocol/profile.ts</code> über nostr-core, abwärtskompatibel (fehlende Felder = „—“).</td><td><span class="stage">1</span> lokal, <span class="stage">2</span> Karte</td></tr>
+<tr><td><b>Import aus anderen Apps</b></td><td>Konto › Spielverlauf › „Importieren“ öffnet die Dateiauswahl. BlueLine-Dateien (JSON, 1.0.0) und eine dokumentierte CSV werden erkannt; die Vorschau sagt „38 Spiele, 2023 bis 2026, 3 Namen“, dann „Importieren“. Importierte Spiele tragen überall den Chip „Importiert“ und zählen wie 1.0.0-Ergebnisse: Ø ja, First 9 und Checkout nein.</td><td>Ehrlich: DartCounter und Autodarts bieten heute <b>keinen</b> Export; n01 schreibt CSV, DartConnect schickt Berichte per Mail. Ein „DartCounter-Import“ hätte nichts zu lesen. Deshalb: CSV mit festen Spalten (Datum; Spielart; Spieler; Sieger; Darts; Punkte), die Zuordnung von Spaltennamen der n01-CSV als erster Adapter, Namen über <code>importedAliases</code> zuordenbar wie heute.</td><td><span class="stage">3</span></td></tr>
+<tr><td><b>Export für andere Apps</b></td><td>Konto › Spielverlauf › „Exportieren“: CSV oder JSON, ins Teilen-Blatt (Health-Muster). Auf der Statistik- und Trainingsseite „Teilen“ als Bild der Zahlen (Stufe 3).</td><td>CSV nach dem Muster des Turnier-Exports (Semikolon, <code>lib/tournaments/export.ts</code>), JSON = die Spiele des Profils aus dem Gesamtexport (<code>buildExport</code> mit Abschnitt). Kein Protokoll.</td><td><span class="stage">1</span> Dateien, <span class="stage">3</span> Bild</td></tr>
+</tbody></table></div>
+<div class="cmp" style="margin-top:18px">
+  <div class="pane neu"><span class="tag">Vorschlag · Konto-Abschnitt</span>
+    <div class="inner">
+      <div class="ph">
+        <div class="nav"><span></span><span class="mid">Profil</span><span class="r"><svg><use href="#i-share"/></svg></span></div>
+        <div class="scr">
+          <div class="sec">Auszeichnungen</div>
+          <div class="card"><div class="rw"><div class="badges" style="padding:0"><span>🏆</span><span>🎯</span><span>🥈</span><span style="background:var(--m-gray);opacity:.6">🔒</span><span style="background:var(--m-gray);opacity:.6">🔒</span></div><div class="t"></div><span class="v">3 von 12</span><div class="chev"></div></div></div>
+          <div class="sec">Konto</div>
+          <div class="card">
+            <div class="rw"><div class="ic tl"></div><div class="t"><b>Geräte</b><small>2 Geräte · zuletzt 20:14</small></div><div class="chev"></div></div>
+            <div class="rw"><div class="ic gr"></div><div class="t"><b>Sicherung</b><small>Gesichert am 12. Okt.</small></div><div class="chev"></div></div>
+            <div class="rw"><div class="ic o"></div><div class="t"><b>Zahlungen</b></div><div class="chev"></div></div>
+            <div class="rw"><div class="ic"></div><div class="t"><b>Spielverlauf</b><small>Exportieren, importieren</small></div><div class="chev"></div></div>
+            <div class="rw"><div class="ic p"></div><div class="t"><b>Sichtbarkeit</b><small>Statistik: niemandem</small></div><div class="chev"></div></div>
+          </div>
+          <div class="card">
+            <div class="rw"><div class="ic g"></div><div class="t"><b>Einstellungen</b></div><div class="chev"></div></div>
+            <div class="rw"><div class="ic g"></div><div class="t"><b>Info</b></div><div class="chev"></div></div>
+            <div class="rw"><div class="ic g"></div><div class="t"><b>Erweitert</b></div><div class="chev"></div></div>
+          </div>
+          <div class="card"><div class="rw red"><div class="t"><b>Abmelden</b></div></div></div>
+        </div>
+        <div class="sheet"><h4>Spielverlauf</h4><p>Deine Spiele gegen andere und Trainings, 184 Spiele seit März 2025.</p><div class="btn p">Exportieren …</div><div class="btn s">Importieren …</div><div class="caption">Export als CSV oder JSON über das Teilen-Blatt. Importierte Spiele werden so markiert.</div></div>
+        <div class="dim" style="bottom:170px"></div>
+      </div>
+      <ul class="notes">
+        <li><i>1</i>Der Konto-Abschnitt kommt nach Form, Training, Spielen und Auszeichnungen; jede Zeile trägt ihren Zustand als Untertitel (Geräte, Sicherung), damit niemand hineinmuss, um Bescheid zu wissen.</li>
+        <li><i>2</i>„Spielverlauf“ bündelt Export und Import als Blatt: ein Satz, zwei Buttons, eine Erklärung. Import erst Stufe 3, dann erscheint der zweite Button.</li>
+        <li><i>3</i>„Sichtbarkeit“ ersetzt den versteckten Schalter in der Vorschau (B18); die Vorschau „So sehen andere dein Profil“ liegt in diesem Blatt.</li>
+        <li><i>4</i>Auszeichnungen als Streifen mit gesperrten Plätzen (HIG Game Center: vier Zustände), „3 von 12“ als Wert, Tipp öffnet das Raster.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<h2 id="leer">Leerzustände und Schwellen</h2>
+<p>Jeder Bereich hat drei Zustände: nichts da, zu wenig für eine Zahl, genug. Die Texte benennen die eine Aktion, die Daten erzeugt (HIG Tab bars: „If a section is empty, explain why“).</p>
+<div class="tbl"><table>
+<thead><tr><th>Ort</th><th>Nichts da</th><th>Zu wenig</th><th>Genug</th></tr></thead>
+<tbody>
+<tr><td>Sportkarte</td><td>Drei „—“ mit Bildunterschrift „Spiel gegen jemanden, dann stehen hier deine Zahlen.“</td><td>Ø ab 1 Spiel, Checkout „—“ bis Darts aufs Doppel bekannt, Siege ab 1 Spiel</td><td>drei Zahlen, Geltungssatz</td></tr>
+<tr><td>Form</td><td>Karte mit Satz „Form ab 5 Spielen gegen andere“, kein leeres Diagramm</td><td>5 bis 19 Spiele: Satz und Balken ohne Vergleich („noch kein Davor“)</td><td>Satz mit Richtung, Balken, Vergleich</td></tr>
+<tr><td>Training</td><td>„Noch kein Training“ + „Allein spielen“</td><td>unter 3 Trainings im Monat: Monat als „zu wenig“, Satz ohne Richtung</td><td>Monatsmittel, Vormonat, Serie</td></tr>
+<tr><td>Hier gespielt</td><td>„Noch kein Spiel gegen andere auf diesem iPhone“ + „Spiel starten“</td><td>Spieler unter der Mindestzahl unter „Noch nicht eingestuft“ mit Grund</td><td>Liste, eigene Zeile, Satz</td></tr>
+<tr><td>Clubs</td><td>„Du bist in keinem Club“ + „Clubs ansehen“; Segment bleibt wählbar</td><td>Saison ohne bestätigte Spiele: „Noch keine gezählten Spiele“; versiegelt: „Nur für Mitglieder“</td><td>Karte je Club</td></tr>
+<tr><td>Turniere</td><td>„Noch kein Turnier gespielt“ + „Turniere ansehen“</td><td>nur Auszeichnung bekannt: Platz grob, Hinweis auf das andere Gerät</td><td>Bilanz und Liste nach Jahr</td></tr>
+</tbody></table></div>
+
+<h2 id="massnahmen">Maßnahmen</h2>
+<p>Stufe 1 braucht keine Protokolländerung und keine neuen Events; sie lässt sich mit Tests, dem Spielabend-Lauf (P8.01) und der HIG-Matrix absichern. Stufe 2 ist eine kleine, abwärtskompatible Erweiterung der öffentlichen Statistikkarte. Stufe 3 sind Dateien anderer Apps und Bilder.</p>
+<div class="tbl"><table>
+<thead><tr><th>Nr.</th><th>Maßnahme</th><th>Löst</th><th>Stufe</th><th>Aufwand</th><th>Braucht</th></tr></thead>
+<tbody>
+<tr><td class="n">M1</td><td>Profil-Tab neu geordnet: Sportkarte (Bild, Name, Auszeichnungsreihe, Ø 3 Darts · Checkout · Siege, Geltungssatz), Form, Training, Letzte Spiele, Auszeichnungen, Konto. Teilen in die Leiste, Bearbeiten in die Karte.</td><td>B11, B15, B16</td><td><span class="stage">1</span></td><td>mittel</td><td>Slots <code>profile.rows</code> in zwei Slots teilen (Sport / Konto)</td></tr>
+<tr><td class="n">M2</td><td>Form-Karte: Satz mit Richtung, ein Balken je Spiel (letzte 10), Bestwert markiert; Schwellen 5 und 20; VoiceOver-Zusammenfassung.</td><td>B11</td><td><span class="stage">1</span></td><td>mittel</td><td>Reihe je Spiel aus <code>gamesOf</code> + <code>matchState</code>; neuer Baustein „Verlauf“ (reine CSS-Balken, keine Bibliothek)</td></tr>
+<tr><td class="n">M3</td><td>Statistik: eine Segmentreihe (Spielart), Menü-Chips für Zeitraum (letzte 10 / 30 / 100 / alle, dieses Jahr) und Gegner (gegen andere / Training), großes Diagramm im selben Stil, „davor“-Zeile unter jeder Zahl, Bestleistungen mit Gegner und Datum, Fußzeile mit Basis.</td><td>B11, B18</td><td><span class="stage">1</span></td><td>mittel</td><td><code>StatsOptions.from/to</code> um „letzte N“ ergänzen; Menü-Chip-Baustein</td></tr>
+<tr><td class="n">M4</td><td>Training: Solo-Spiele aus Karte, Form, Rangliste und Statistik „gegen andere“ heraus; eigene Trainingsseite mit Monats-/Wochenmittel, Vormonat, Serie, Bestleistungen im Training, letzten Trainings, „Training starten“; Trainingskarte im Profil.</td><td>B12</td><td><span class="stage">1</span></td><td>groß</td><td><code>includeSolo:false</code> überall, neue Aggregation nach Zeitfenster; Texte in <code>profile.screens</code></td></tr>
+<tr><td class="n">M5</td><td>Konto-Abschnitt: Geräte, Sicherung, Zahlungen, Spielverlauf, Sichtbarkeit (mit Vorschau), Einstellungen, Info, Erweitert, Abmelden; Zeilen mit Zustand als Untertitel.</td><td>B15, B18</td><td><span class="stage">1</span></td><td>klein</td><td>Registrierungen in <code>devices/register.ts</code>, <code>payments/register.ts</code> auf den Konto-Slot</td></tr>
+<tr><td class="n">M6</td><td>Rangliste als Screen-Rahmen mit Slot: drei Segmente (Hier gespielt · Clubs · Turniere), Menü-Chips Spielart und Zeitraum, „⋯“-Menü, Geltungssatz je Bereich.</td><td>B2, B8</td><td><span class="stage">1</span></td><td>mittel</td><td>Slot <code>leaderboard.sections</code> in <code>registry.ts</code>; Clubs und Turniere registrieren ihre Bereiche</td></tr>
+<tr><td class="n">M7</td><td>Hier gespielt: Rang nach Siegquote mit Mindestzahl, Gleichstand Siege › Ø › Name; „Noch nicht eingestuft“; <code>sameAs</code>; leere Plätze raus; Chip „Importiert“; Zeilen mit Rang, Avatar, Name, Spiele · Siege, Quote groß, Ø klein; eigene Zeile getönt und angeheftet; kein Podium; Zeitraum „Heute“.</td><td>B1, B3, B4, B5, B6</td><td><span class="stage">1</span></td><td>mittel</td><td><code>computeStandings</code> um Sortierschlüssel, Mindestzahl, Zeitraum erweitern (eine Funktion, Tests)</td></tr>
+<tr><td class="n">M8</td><td>Zeilen und letzte Spiele führen zur Spielerseite bzw. zum Spiel; Spielerseite mit Balkenpaar „gegen dich“ und, wenn vorhanden, „insgesamt“ aus der öffentlichen Karte.</td><td>B7, B14</td><td><span class="stage">1</span></td><td>mittel</td><td><code>profile.player</code> im Rangliste-Stapel öffnen; Balken-Baustein</td></tr>
+<tr><td class="n">M9</td><td>Bereich Clubs: Karte je Club mit laufender Saison (Top 3 + eigene Zeile, Chip „Du: 3.“), Lade- und Versiegelt-Zustand, „Ganze Tabelle“; Clubtabelle in derselben Zeilenform.</td><td>neu</td><td><span class="stage">1</span></td><td>mittel</td><td><code>seasonTable</code>, <code>currentSeason</code>, <code>useClubs</code></td></tr>
+<tr><td class="n">M10</td><td>Bereich Turniere: Bilanz (Turniere, gewonnen, Podium), Platzierungen nach Jahr mit „5. bis 8.“, Turniere aus Auszeichnungen mit grobem Platz.</td><td>neu</td><td><span class="stage">1</span></td><td>mittel</td><td><code>placements</code>, <code>BadgeOccasion.places</code></td></tr>
+<tr><td class="n">M11</td><td>Export: Konto › Spielverlauf › Exportieren (CSV, JSON) ins Teilen-Blatt; Spalten dokumentiert in <code>docs/</code>.</td><td>B13</td><td><span class="stage">1</span></td><td>klein</td><td>CSV-Schreiber nach <code>tournamentCsv</code>, <code>buildExport</code>-Abschnitt</td></tr>
+<tr><td class="n">M12</td><td>Leerzustände und Schwellen nach der Tabelle oben; „—“ einheitlich mit vorgelesenem „nicht erfasst“.</td><td>B9</td><td><span class="stage">1</span></td><td>klein</td><td><code>EmptyState</code>, <code>Figures</code></td></tr>
+<tr><td class="n">M13</td><td>Rechnen einmal: Zusammenfassungen je Schlüssel und Zeitraum zwischenspeichern, Reihen je Spiel aus demselben Durchlauf; Profil-Tab darf nicht alle Spiele dreimal durchlaufen.</td><td>B17</td><td><span class="stage">1</span></td><td>mittel</td><td>Cache in <code>lib/profile</code>, Tests mit 500 Spielen</td></tr>
+<tr><td class="n">M14</td><td>Nachweis: HIG-Matrix auf Profil, Statistik, Training, Rangliste (drei Bereiche) mit Scroll- und Ellipsen-Audit; Spielabend-Szene „Rangliste heute Abend“; Komponententests für Standings und Form.</td><td>B10</td><td><span class="stage">1</span></td><td>mittel</td><td><code>hig-matrix.mjs</code>, <code>darts-night.mjs</code></td></tr>
+<tr><td class="n">M15</td><td>Öffentliche Statistikkarte um First 9, Checkout (Checkouts, Darts aufs Doppel), Legs erweitern; Training bleibt draußen; alte Karten lesbar (fehlend = „—“). Sichtbarkeit als eine Auswahl im Konto.</td><td>B14, B18</td><td><span class="stage">2</span></td><td>klein</td><td><code>lib/protocol/profile.ts</code>, <code>stats-card.ts</code>, Testvektor; Entscheidung E24</td></tr>
+<tr><td class="n">M16</td><td>Import: Konto › Spielverlauf › Importieren mit Dateiauswahl, Vorschau, Chip „Importiert“; BlueLine-JSON, dokumentierte CSV, n01-CSV als erster Adapter.</td><td>B13</td><td><span class="stage">3</span></td><td>mittel</td><td>Entscheidung E26; <code>importedAliases</code>, <code>fromV1Record</code>-Muster</td></tr>
+<tr><td class="n">M17</td><td>Teilen als Bild: Statistik- und Trainingsseite rendern die Zahlen als Karte (Canvas) ins Teilen-Blatt; DartCounter-„Jahresbilanz“ als Dezember-Variante.</td><td>Recherche</td><td><span class="stage">3</span></td><td>mittel</td><td>Entscheidung E27</td></tr>
+<tr><td class="n">M18</td><td>Trainingsziel: Ziellinie im Diagramm, vom Spieler gesetzt, lokal gespeichert, nie veröffentlicht.</td><td>Training</td><td><span class="stage">3</span></td><td>klein</td><td>Entscheidung E23</td></tr>
+</tbody></table></div>
+<p style="margin-top:14px">Reihenfolge, wenn alles gebaut wird: M4 zuerst (die Trennung Training / gegen andere ändert, was alle anderen Zahlen bedeuten), dann M1, M2, M3, M5 (Profil), dann M6, M7, M8 (Rangliste Hier gespielt), M9, M10 (Clubs, Turniere), M11, M12, M13, M14. Stufe 2 und 3 danach, jedes Stück mit Testvektor. Jede Stufe endet mit Lint, Typecheck, Tests, dem P8.01-Spielabend und der Viewport-Matrix; ein unabhängiger HIG-Prüfer sieht jede Oberfläche vor dem Merge.</p>
+
+<h2 id="entscheidungen">Entscheidungen für dich</h2>
+<p>E1 bis E18 sind aus den früheren Vorschlägen vergeben; hier geht es mit E19 weiter. Zu jeder Frage steht mein Vorschlag; ohne Antwort baue ich den Vorschlag.</p>
+<div class="tbl"><table>
+<thead><tr><th>Nr.</th><th>Frage</th><th>Vorschlag</th></tr></thead>
+<tbody>
+<tr><td class="n">E19</td><td>Rang in „Hier gespielt“: Siegquote mit Mindestzahl (3 Spiele im Zeitraum), oder rohe Siege wie heute? Siege belohnen Anwesenheit, die Quote Können; beide bleiben im Menü wählbar.</td><td>Siegquote mit Mindestzahl 3 als Standard; „Siege“ und „Ø“ im „⋯“-Menü. Bei „Heute“ reicht Mindestzahl 2.</td></tr>
+<tr><td class="n">E20</td><td>Podium behalten (verkleinert) oder streichen?</td><td>Streichen. Die Ziffern 1 bis 3 in Gold, Silber, Bronze sagen es in der Liste, und die erste Zeile steht auf dem SE über der Falte.</td></tr>
+<tr><td class="n">E21</td><td>Zeitachse der Form: letzte N Spiele (10 / 30 / 100 / alle) wie Autodarts, oder Kalender (30 Tage / Jahr) wie heute? Die Rangliste braucht ohnehin „Heute“.</td><td>Form und Statistik nach Spielen (robust bei Pausen), zusätzlich „Dieses Jahr“; Rangliste nach Kalender (Heute · 30 Tage · Dieses Jahr · Alle Zeiten).</td></tr>
+<tr><td class="n">E22</td><td>Training: zählt jedes Spiel mit einem Spieler (X01, Clock, Cricket solo) als Training? Oder nur X01?</td><td>Jedes Solo-Spiel, je Spielart mit seiner Zahl (Ø, Trefferquote, Marks pro Aufnahme). X01 ist Standardsegment.</td></tr>
+<tr><td class="n">E23</td><td>Trainingsziel (Ziellinie) schon in Stufe 1 oder später?</td><td>Später (M18, Stufe 3). Erst das Wachsen zeigen, dann Ziele.</td></tr>
+<tr><td class="n">E24</td><td>Öffentliche Statistikkarte: um First 9, Checkout, Legs erweitern (Protokoll, Stufe 2)? Bleibt Training privat?</td><td>Ja erweitern, abwärtskompatibel. Training nie in der Karte; wer es zeigen will, teilt das Bild (M17).</td></tr>
+<tr><td class="n">E25</td><td>Sichtbarkeit: zwei Stufen „Niemandem · Allen, die mein Profil öffnen“ reichen? Eine Stufe „Freunde“ gibt es ohne Freundesliste nicht ehrlich.</td><td>Zwei Stufen, als eine Auswahl im Konto, Standard „Niemandem“ wie heute.</td></tr>
+<tr><td class="n">E26</td><td>Import: nur BlueLine-Dateien und eine dokumentierte CSV (plus n01), da DartCounter und Autodarts keinen Export anbieten? Oder auf deren Export warten?</td><td>Dokumentierte CSV + BlueLine + n01 in Stufe 3; weitere Adapter, wenn ein Export existiert. In der App nie „DartCounter-Import“ versprechen.</td></tr>
+<tr><td class="n">E27</td><td>Teilen als Bild (Statistik, Training, Jahresbilanz): Stufe 3 oder gar nicht?</td><td>Stufe 3; Jahresbilanz zuerst (hoher Reiz, DartCounter-Muster).</td></tr>
+<tr><td class="n">E28</td><td>Was mit den Spielen heute: Gäste ohne Profil in „Hier gespielt“ bleiben wie heute Zeilen; leere Plätze („Spieler 2“) verschwinden aus der Rangliste und werden nur im Satz gezählt?</td><td>Ja. Gäste bleiben, leere Plätze raus, Satz „2 Spiele ohne Namen nicht gezählt“.</td></tr>
+</tbody></table></div>
+
+<h2 id="quellen">Quellen</h2>
+<ol class="src">
+  <li>Apple HIG, Game Center: <a href="https://developer.apple.com/design/human-interface-guidelines/game-center">developer.apple.com/…/game-center</a>; GameKit <code>GKLeaderboard</code>: <a href="https://developer.apple.com/documentation/gamekit/gkleaderboard">documentation/gamekit/gkleaderboard</a></li>
+  <li>Apple HIG, Charting data: <a href="https://developer.apple.com/design/human-interface-guidelines/charting-data">developer.apple.com/…/charting-data</a>; WWDC22 „Design an effective chart“ <a href="https://developer.apple.com/videos/play/wwdc2022/110340/">110340</a>, „Design app experiences with charts“ <a href="https://developer.apple.com/videos/play/wwdc2022/110342/">110342</a>; WWDC21 „Bring accessibility to charts“ <a href="https://developer.apple.com/videos/play/wwdc2021/10122/">10122</a></li>
+  <li>Apple HIG, Segmented controls: <a href="https://developer.apple.com/design/human-interface-guidelines/segmented-controls">…/segmented-controls</a>; Lists and tables: <a href="https://developer.apple.com/design/human-interface-guidelines/lists-and-tables">…/lists-and-tables</a>; Toolbars: <a href="https://developer.apple.com/design/human-interface-guidelines/toolbars">…/toolbars</a>; Tab bars: <a href="https://developer.apple.com/design/human-interface-guidelines/tab-bars">…/tab-bars</a></li>
+  <li>Apple HIG, Materials: <a href="https://developer.apple.com/design/human-interface-guidelines/materials">…/materials</a>; Color: <a href="https://developer.apple.com/design/human-interface-guidelines/color">…/color</a>; iCloud: <a href="https://developer.apple.com/design/human-interface-guidelines/icloud">…/icloud</a>; Loading: <a href="https://developer.apple.com/design/human-interface-guidelines/loading">…/loading</a>; Activity views: <a href="https://developer.apple.com/design/human-interface-guidelines/activity-views">…/activity-views</a>; Typography: <a href="https://developer.apple.com/design/human-interface-guidelines/typography">…/typography</a></li>
+  <li>WWDC25: „Get started with Game Center“ <a href="https://developer.apple.com/videos/play/wwdc2025/214/">214</a>, „Meet Liquid Glass“ <a href="https://developer.apple.com/videos/play/wwdc2025/219/">219</a>, „Build a SwiftUI app with the new design“ <a href="https://developer.apple.com/videos/play/wwdc2025/323/">323</a>; WWDC24 „Get started with Dynamic Type“ <a href="https://developer.apple.com/videos/play/wwdc2024/10074/">10074</a></li>
+  <li>Apple Fitness, Trends: <a href="https://support.apple.com/108359">support.apple.com/108359</a>; Activity summary: <a href="https://support.apple.com/guide/iphone/see-your-activity-summary-iph4c34a8a95/ios">iPhone User Guide</a>; Share your activity: <a href="https://support.apple.com/guide/iphone/share-your-activity-iph0b826155d/ios">iPhone User Guide</a></li>
+  <li>Apple Health, View your data / Export: <a href="https://support.apple.com/guide/iphone/view-your-health-data-iphe3d379c32/ios">view-your-health-data</a>, <a href="https://support.apple.com/guide/iphone/share-your-health-data-iph5ede58c3d/ios">share-your-health-data</a>; Game Center profile: <a href="https://support.apple.com/guide/iphone/set-up-your-game-center-profile-iphd26b2beaa/ios">set-up-your-game-center-profile</a></li>
+  <li>DartCounter, Statistik-Handbuch: <a href="https://dartcounter.net/darts-manual/dartcounter-statistics">dartcounter.net/darts-manual/dartcounter-statistics</a>; Release Notes <a href="https://dartcounter.net/release-notes/release-notes-dartcounter-v9-0-0">9.0.0</a>, <a href="https://dartcounter.net/release-notes/release-notes-dartcounter-v9-5-0">9.5.0</a> (gewichtete Durchschnitte); Local Tournaments: <a href="https://dartcounter.net/press/local-tournaments">press/local-tournaments</a></li>
+  <li>Autodarts, Stats page: <a href="https://autodarts-docs.pages.dev/statistics/stats-page/">autodarts-docs.pages.dev/statistics/stats-page</a>; Player cards und H2H: <a href="https://autodarts-docs.pages.dev/statistics/player-cards/">statistics/player-cards</a>; Community-Leaderboard: <a href="https://github.com/TimHasenkamp/autodarts-stats">github.com/TimHasenkamp/autodarts-stats</a></li>
+  <li>Scolia, FAQ: <a href="https://scoliadarts.com/faq/">scoliadarts.com/faq</a>; n01: <a href="https://nakka.com/soft/n01/index_eng.html">nakka.com/soft/n01</a>; Dart Tracker: <a href="https://apps.apple.com/mt/app/dart-tracker/id6759006910">App Store</a></li>
+  <li>DartConnect, Leaderboard-Legende: <a href="https://leaderboard.dartconnect.com/leaderboard?x=1639858385808">leaderboard.dartconnect.com</a>; How-to: <a href="https://dartconnect.wpengine.com/how-to/">dartconnect.wpengine.com/how-to</a></li>
+  <li>Strava, Segment leaderboard filters: <a href="https://support.strava.com/en-us/articles/15401771-segment-leaderboard-filters">support.strava.com</a>; Progress chart: <a href="https://support.strava.com/en-us/articles/15401618-progress-summary-chart">support.strava.com</a></li>
+  <li>Three-dart average: <a href="https://en.wikipedia.org/wiki/Three-dart_average">en.wikipedia.org/wiki/Three-dart_average</a>; Checkout-Quoten erklärt: <a href="https://cswdarts.co.uk/dartcounter-stats">cswdarts.co.uk/dartcounter-stats</a>; Durchschnitt richtig rechnen: <a href="https://pandataps.com/darts-scorer/guides/how-to-calculate-darts-averages">pandataps.com</a></li>
+  <li>BlueLine, Audit und Recherchen: <a href="profil-rangliste/audit-ist.md">audit-ist.md</a>, <a href="profil-rangliste/research-hig.md">research-hig.md</a>, <a href="profil-rangliste/research-dart-apps.md">research-dart-apps.md</a>; Plan: <code>docs/implementation/PLAN.md</code> (Ranglisten nennen Scope und Bestätigungsstatus, keine manipulationssichere Weltrangliste)</li>
+</ol>
+<footer>Mockups sind Skizzen im Maßstab 300 px ≈ 390 pt; Zahlen darin sind erfunden. Die Formeln in „Zahlen und Begriffe“ entsprechen dem heutigen Code in <code>lib/storage/stats.ts</code>. Die Entscheidungen E19 bis E28 schließen an E1 bis E18 aus den früheren Vorschlägen an.</footer>
+</div>
+</body>
+</html>

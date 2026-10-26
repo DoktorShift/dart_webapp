@@ -7,12 +7,18 @@
 //
 // Not run by itself: darts-night.mjs calls it at the end of the evening when MATRIX=1, while the
 // evening's relays are still up.
-import { BASE, OUT, PHONE, SE, SE_LANDSCAPE, TABLET, BOARD, audit, device, isOnScreen, onScreen, shot, tab } from "./lib.mjs"
+import { BASE, OUT, PHONE, SE, SE_LANDSCAPE, TABLET, BOARD, audit, dart as throwDart, device, isOnScreen, onScreen, shot, tab } from "./lib.mjs"
 
 const SIZES = [SE, PHONE, SE_LANDSCAPE, TABLET, BOARD]
 const LOOKS = [
-  { locale: "de", dark: false, tabs: { play: "Spielen", ranks: "Rangliste", clubs: "Clubs", tournaments: "Turniere", profile: "Profil" }, resume: /Weiterspielen/ },
-  { locale: "en", dark: true, tabs: { play: "Play", ranks: "Leaderboard", clubs: "Clubs", tournaments: "Tournaments", profile: "Profile" }, resume: /Continue|Resume/ },
+  {
+    locale: "de", dark: false, tabs: { play: "Spielen", ranks: "Rangliste", clubs: "Clubs", tournaments: "Turniere", profile: "Profil" }, resume: /Weiterspielen/,
+    ranks: { device: "Hier gespielt", clubs: "Clubs", tournaments: "Turniere" }, profile: { stats: "Statistik", training: /^Training/, start: "Training starten", startGame: "Spiel starten", visibility: "Sichtbarkeit", history: /^Spielverlauf/, done: "Fertig", back: /^Zurück zu Profil$/ },
+  },
+  {
+    locale: "en", dark: true, tabs: { play: "Play", ranks: "Leaderboard", clubs: "Clubs", tournaments: "Tournaments", profile: "Profile" }, resume: /Continue|Resume/,
+    ranks: { device: "Played here", clubs: "Clubs", tournaments: "Tournaments" }, profile: { stats: "Statistics", training: /^Training/, start: "Start training", startGame: "Start game", visibility: "Visibility", history: /^Game history/, done: "Done", back: /^Back to Profile$/ },
+  },
 ]
 // Words of the protocol that never belong in normal flows (NOSTR-DESIGN-RULES.md).
 const PROTOCOL = /\b(relay|relays|nostr|npub|nsec|invoice|bolt11|preimage|NWC|NIP-\d+|event|zap request|Schlüssel|private key)\b/i
@@ -73,6 +79,13 @@ export async function runMatrix({ annaState }) {
       await visit("play")
       await tab(page, look.tabs.ranks)
       await visit("ranks")
+      // The tab's three areas: each says what it counts.
+      const ranks = page.locator('[data-tab-panel="leaderboard"]')
+      await ranks.getByRole("radio", { name: look.ranks.clubs }).click()
+      await visit("ranks-clubs")
+      await ranks.getByRole("radio", { name: look.ranks.tournaments }).click()
+      await visit("ranks-tournaments")
+      await ranks.getByRole("radio", { name: look.ranks.device }).click()
       await tab(page, look.tabs.clubs)
       await visit("clubs")
       await (await onScreen(page.getByRole("button", { name: /Dartfreunde Nord/ }))).click()
@@ -87,7 +100,41 @@ export async function runMatrix({ annaState }) {
         await visit("tournament")
       } else note(`${tag}: the finished tournament is listed on the Tournaments tab`, false)
       await tab(page, look.tabs.profile)
+      const profile = page.locator('[data-tab-panel="profile"]')
+      // Anna has played only against others tonight: one training first (from the card's own
+      // button, Anna alone, a 301 in six darts), so the training screen has something to show.
+      await page.waitForTimeout(900)
+      const startTraining = await onScreen(profile.getByRole("button", { name: look.profile.start, exact: true }), 5_000).catch(() => null)
+      if (startTraining) {
+        await startTraining.click()
+        await (await onScreen(page.getByRole("button", { name: look.profile.startGame, exact: true }))).click()
+        await page.getByRole("button", { name: /Spieloptionen|Game options/ }).waitFor({ timeout: 15_000 })
+        for (const [s, m] of [[20, 3], [20, 3], [20, 3], [20, 3], [11, 3], [14, 2]]) await throwDart(page, s, m)
+        await (await onScreen(page.getByRole("button", { name: look.profile.done, exact: true }), 20_000)).click()
+        await page.waitForTimeout(800)
+        await tab(page, look.tabs.profile)
+      }
       await visit("profile")
+      // The profile's own screens: statistics with a figure and its "before", the training as
+      // growth over time, the visibility choice, and the history export sheet.
+      const back = async () => {
+        await (await onScreen(page.getByRole("button", { name: look.profile.back }))).click()
+        await page.waitForTimeout(500)
+      }
+      await (await onScreen(profile.getByRole("button", { name: look.profile.stats, exact: true }))).click()
+      await visit("profile-stats")
+      await back()
+      await (await onScreen(profile.getByRole("button", { name: look.profile.training }).first())).click()
+      await visit("profile-training")
+      await back()
+      await (await onScreen(profile.getByRole("button", { name: look.profile.visibility }))).click()
+      await visit("profile-visibility")
+      await back()
+      await (await onScreen(profile.getByRole("button", { name: look.profile.history }))).click()
+      await page.waitForTimeout(700)
+      await shot(d, `m-profile-history-${tag}`)
+      await (await onScreen(page.getByRole("button", { name: look.profile.done, exact: true }))).click()
+      await page.waitForTimeout(400)
 
       // The result with several pieces: the stake, the badges, the club or offer rows.
       await tab(page, look.tabs.play)

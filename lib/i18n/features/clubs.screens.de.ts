@@ -478,6 +478,23 @@ export const clubsScreensDe = {
     noneHint: "Starte ein Spiel aus dem Club; das Ergebnis landet hier.",
   },
 
+  // The clubs' area of the Rangliste tab: one card per club with its running season.
+  leaderboard: {
+    scope: "Saisontabellen deiner Clubs, nach den Regeln jeder Saison. Nur bestätigte Clubspiele zählen.",
+    season: (name: string, players: number) => `${name} · ${players === 1 ? "1 Spieler" : `${players} Spieler`}`,
+    asOf: (time: string) => `Stand ${time}`,
+    you: (rank: number) => `Du: ${rank}.`,
+    youUnranked: (min: number) => `Du: ab ${min} Spielen`,
+    youNoGame: "Du: noch kein Spiel",
+    loading: "Tabelle wird geladen",
+    sealed: "Nur für Mitglieder sichtbar",
+    noSeason: "Keine laufende Saison. Sobald der Club eine startet, steht die Tabelle hier.",
+    noGames: "Noch keine gezählten Spiele",
+    gamesWins: (games: number, wins: number) => `${games === 1 ? "1 Spiel" : `${games} Spiele`} · ${wins === 1 ? "1 Sieg" : `${wins} Siege`}`,
+    points: "Punkte",
+    fullTable: "Ganze Tabelle",
+  },
+
   // Public clubs: best effort, no index.
   discover: {
     intro: "Öffentliche Clubs, die zuletzt gegründet wurden, soweit bekannt. Ein vollständiges Verzeichnis gibt es nicht.",
