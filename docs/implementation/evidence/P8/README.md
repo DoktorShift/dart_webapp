@@ -14,11 +14,11 @@ Ein zusammenhängender Playwright-Lauf (Chromium) spielt einen ganzen Abend mit 
 | carl-phone | 390×844, DE, hell | kommt über den gesagten Code eines Mitglieds in den Club |
 | board-tablet | 1024×768, DE, hell | Board 1 des Turniers |
 
-Die Schritte: ein 301 als Gast (ohne Profil und ohne Verbindung) → „Deine Ergebnisse mitnehmen“ → zweites Gerät koppeln → Sicherungsdatei → Wiederherstellung auf einem dritten Gerät → Club gründen und per Link einladen → Beitritt als Gast → Clubspiel aus dem Club, live mit Zuschauerin → Ben bestätigt auf seinem Telefon → Turnier mit 4 Plätzen (Anna, Ben, Carla, Gast Mia), K.-o., Board-Gerät: Check-in, Auslosung, Aufruf, Meldung vom Board, Freigabe, Finale, Ende mit Auszeichnungen → Auszeichnung von der Turnierseite auf Bens Profilkarte → Einsatz 500 sats: Bens Telefon zeigt den Zahlungscode, Anna zahlt mit Doppeltipp, die Wallet zahlt genau einmal → Ben (Mitglied) zeigt seinen Einladelink mit Code, Carl tippt den Code unter „Code scannen“, fragt an, Anna sieht „Eingeladen von Ben“ und nimmt ihn auf → Anna schickt Carla eine Einladung direkt an ihr Profil (Profilcode, Name bestätigen, senden), die bei Carla unter Clubs erscheint; Carla fragt an, Anna bestätigt, Carlas Telefon sagt „Du bist dabei“ ohne Neuladen. Geprüft wird jeweils, was die Spieler sehen; pro Schritt entsteht ein Screenshot in Gerätegröße.
+Die Schritte: ein 301 als Gast (ohne Profil und ohne Verbindung) → „Deine Ergebnisse mitnehmen“ → zweites Gerät koppeln → Sicherungsdatei → Wiederherstellung auf einem dritten Gerät → Club gründen und per Link einladen → Beitritt als Gast → Clubspiel aus dem Club, live mit Zuschauerin → Ben bestätigt auf seinem Telefon → Turnier mit 4 Plätzen (Anna, Ben, Carla, Gast Mia), K.-o., Board-Gerät: Check-in, Auslosung, Aufruf, Meldung vom Board, Freigabe, Finale, Ende mit Auszeichnungen → Auszeichnung von der Turnierseite auf Bens Profilkarte → Rangliste auf Annas Telefon: „Hier gespielt“ mit Zeitraum „Heute“ (Anna und Ben in der Wertung, Siegquote mit Spielen), Bereich Clubs mit der Saisontabelle, Bereich Turniere mit Annas Platz → Einsatz 500 sats: Bens Telefon zeigt den Zahlungscode, Anna zahlt mit Doppeltipp, die Wallet zahlt genau einmal → Ben (Mitglied) zeigt seinen Einladelink mit Code, Carl tippt den Code unter „Code scannen“, fragt an, Anna sieht „Eingeladen von Ben“ und nimmt ihn auf → Anna schickt Carla eine Einladung direkt an ihr Profil (Profilcode, Name bestätigen, senden), die bei Carla unter Clubs erscheint; Carla fragt an, Anna bestätigt, Carlas Telefon sagt „Du bist dabei“ ohne Neuladen. Geprüft wird jeweils, was die Spieler sehen; pro Schritt entsteht ein Screenshot in Gerätegröße.
 
 `expect` prüft den Ablauf (ein Fehler hält den Abend an). `expect.note` hält Befunde an der App fest, ohne den Abend anzuhalten (NOTE).
 
-Mit `MATRIX=1` folgt der HIG-Durchgang (`hig-matrix.mjs`): Spielen, Rangliste, Clubs, Club, Turniere, Turnier, Profil und der Ergebnisbildschirm mit Einsatz, in DE hell und EN dunkel, bei 320×548, 390×844, 568×320, 768×1024 und 1024×768, aus Annas Zustand nach dem Abend. Dazu kommen der Spielbildschirm mit 1 bis 6 Spielern als ein fester Bildschirm und die leeren und Offline-Zustände eines Gastgeräts. Jeder Screenshot bekommt die Layoutprüfung aus `lib.mjs` (Auslassungspunkte, abgeschnitten, waagerechtes Scrollen, Ziele unter 44 pt) und eine Suche nach Protokollwörtern.
+Mit `MATRIX=1` folgt der HIG-Durchgang (`hig-matrix.mjs`): Spielen, Rangliste mit ihren drei Bereichen (Hier gespielt, Clubs, Turniere), Clubs, Club, Turniere, Turnier, Profil mit Statistik, Training (nach einem ersten Training allein), Sichtbarkeit und Spielverlauf, und der Ergebnisbildschirm mit Einsatz, in DE hell und EN dunkel, bei 320×548, 390×844, 568×320, 768×1024 und 1024×768, aus Annas Zustand nach dem Abend. Dazu kommen der Spielbildschirm mit 1 bis 6 Spielern als ein fester Bildschirm und die leeren und Offline-Zustände eines Gastgeräts. Jeder Screenshot bekommt die Layoutprüfung aus `lib.mjs` (Auslassungspunkte, abgeschnitten, waagerechtes Scrollen, Ziele unter 44 pt) und eine Suche nach Protokollwörtern.
 
 ## Ausführen
 
@@ -31,7 +31,37 @@ MATRIX=1 node docs/implementation/evidence/P8/scripts/darts-night.mjs   # mit HI
 
 Optional: `BASE`, `OUT` (Screenshots, Standard `$TMPDIR/blueline-p8`), `RELAY_PORTS`. Das Skript startet seine Relays selbst und bricht ab, wenn ein Port schon belegt ist (alte Daten). Am Ende beendet es Browser, Wallets und Relays. Exit-Code 0 heißt: jeder Schritt bestanden.
 
-## Letztes Ergebnis (2026-10-26, Arbeitsstand des Zweigs `ux/clubs-turniere-einladen` nach Stufe 1 bis 3 des UX-Umbaus, Skript wie in diesem Stand, Laborwerte auf einem ausgelasteten Entwicklungsrechner)
+## Letztes Ergebnis (2026-10-26, Arbeitsstand des Zweigs `ux/profil-rangliste` nach dem UX-Umbau von Profil und Rangliste, Skript wie in diesem Stand, Laborwerte auf einem ausgelasteten Entwicklungsrechner)
+
+Lauf mit `MATRIX=1`, Relays auf 127.0.0.1:20350 und :20351, Server auf Port 3345.
+
+| # | Step | Result | Checks | Notes | Time (lab) |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Gast spielt 301 ohne Profil und ohne Netz | pass | 4/4 | 0 | 5.2 s |
+| 2 | Ergebnisse vom Ergebnisbildschirm in ein neues Profil | pass | 5/5 | 0 | 4.2 s |
+| 3 | Zweites eigenes Gerät koppeln (Code getippt) | pass | 4/4 | 0 | 7.3 s |
+| 4 | Profil in eine Sicherungsdatei sichern | pass | 4/4 | 0 | 2.6 s |
+| 5 | Sicherung auf einem dritten Gerät öffnen (Englisch, dunkel) | pass | 2/2 | 0 | 3.4 s |
+| 6 | Club gründen und Ben per Link einladen | pass | 5/5 | 0 | 2.7 s |
+| 7 | Ben tritt per Link als Gast bei und hat danach ein Profil | pass | 3/3 | 0 | 2.5 s |
+| 8 | Clubspiel aus dem Club, live mit Zuschauerin | pass | 5/5 | 0 | 8.4 s |
+| 9 | Ben bestätigt das Clubergebnis auf seinem Telefon | pass | 1/1 | 0 | 4.9 s |
+| 10 | Turnier anlegen: 4 Plätze, ein Gast, Board 1 | pass | 4/4 | 0 | 4.1 s |
+| 11 | Ben und Carla melden sich an | pass | 2/2 | 0 | 3.0 s |
+| 12 | Check-in und Auslosung | pass | 1/1 | 0 | 3.6 s |
+| 13 | Board-Gerät: Aufruf, Spiel, Meldung, Freigabe (2 Halbfinals) | pass | 4/4 | 0 | 14.6 s |
+| 14 | Finale, Turnier beenden mit Auszeichnungen | pass | 4/4 | 0 | 8.9 s |
+| 15 | Auszeichnung erscheint auf Bens Profilkarte | pass | 2/2 | 0 | 4.2 s |
+| 16 | Rangliste heute Abend: Hier gespielt, Clubs, Turniere auf Annas Telefon | pass | 5/5 | 0 | 4.1 s |
+| 17 | Einsatz 500 sats: Anna zahlt Ben mit der Wallet, genau einmal | pass | 8/8 | 0 | 17.6 s |
+| 18 | Ben (Mitglied) lädt Carl per Code ein, Anna nimmt ihn auf | pass | 5/5 | 0 | 7.7 s |
+| 19 | Anna lädt Carla direkt an ihr Profil ein | pass | 6/6 | 0 | 11.4 s |
+| 20 | Ganzer Abend: nur lokale Verbindungen, keine Seitenfehler | pass | 15/15 | 0 | 0.2 s |
+| | Whole evening | pass | 89/89 | 0 | 120.4 s |
+
+HIG-Matrix: 204 von 204 Prüfungen halten. Layoutprüfung: 222 Screenshots, 2 mit Hinweisen (dieselbe Stelle in DE und EN: Spielerkacheln 145×29 bei 6 Spielern auf 320×548, Befund 8). Neu im Abend: Schritt 16 (Rangliste heute Abend) prüft die drei Bereiche des Tabs auf Annas Telefon; Schritt 2 prüft die Sportkarte des neuen Profils („Siege 100 % · 1 von 1“, „X01 gegen andere“). Neu in der Matrix: die Bereiche Clubs und Turniere der Rangliste, die Profilbildschirme Statistik, Training (Anna spielt dafür ein 301 allein), Sichtbarkeit und das Blatt Spielverlauf, je Sprache und Größe. Alle Screenshots ohne Auslassungspunkte, abgeschnittenen Text oder waagerechtes Scrollen; der eine Hinweis ist die bekannte Stelle (Spielerkacheln bei 6 Spielern auf 320×548, Befund 8).
+
+### Ergebnis vom 2026-10-26 (Zweig `ux/clubs-turniere-einladen` nach Stufe 1 bis 3 des UX-Umbaus, Skript wie in diesem Stand, Laborwerte auf einem ausgelasteten Entwicklungsrechner)
 
 Lauf mit `MATRIX=1`, Relays auf 127.0.0.1:20350 und :20351, Server auf Port 3345.
 

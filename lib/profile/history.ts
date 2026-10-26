@@ -14,3 +14,11 @@ export function gamesOf(matches: readonly ArchivedMatch[], key: string, options:
     return seat < 0 ? [] : [{ match, seat }]
   })
 }
+
+// Whether the archive holds games the profile played on another device: a seat with the
+// profile's key but a player id that is not the profile's player here. Screens then say "all
+// your devices" instead of "this device".
+export function playedElsewhere(matches: readonly ArchivedMatch[], pubkey: string | null, playerId: string | null | undefined): boolean {
+  if (!pubkey) return false
+  return matches.some((m) => m.players.some((p) => p.pubkey === pubkey && p.playerId !== playerId))
+}

@@ -11,7 +11,7 @@ import { importedAliases } from "@/lib/storage/players"
 // apart by their stable id; results taken over from version 1.0.0 know only names and stay
 // marked as imported until someone assigns them.
 
-export { computeStandings, recentPlayerNames, type Standing, type StatsFilter as StandingsFilter } from "@/lib/storage/stats"
+export { computeStandings, recentPlayerNames, STANDINGS_MIN_GAMES, type Standing, type Standings, type StandingsOptions, type StandingsSort, type StatsFilter as StandingsFilter } from "@/lib/storage/stats"
 export type { V1MatchRecord as MatchRecord, V1PlayerResult as MatchPlayerResult } from "@/lib/storage/v1"
 export type { ArchivedMatch } from "@/lib/storage/archive"
 

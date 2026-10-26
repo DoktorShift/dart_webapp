@@ -1,7 +1,7 @@
 import type { RecordSpec } from "./common.ts"
 import { KIND_STATE } from "./kinds.ts"
 import type { Infer } from "./schema.ts"
-import { arr, hex, int, nullable, obj, refine } from "./schema.ts"
+import { arr, hex, int, nullable, obj, opt, refine } from "./schema.ts"
 
 // The stats card (docs/protocol/families/profile.md): totals a player chose to show in their
 // public profile, signed by themselves. Addressable kind 31180 with "d" = "stats", so relays
@@ -30,8 +30,12 @@ const x01 = refine(
     highestFinish: nullable(int(1, 180, "Highest checkout; null when no leg was won with a known checkout")),
     bestLeg: nullable(int(1, 100_000, "Fewest darts in a leg won")),
     visits180: nullable(int(0, 10_000_000, "Visits of 180; null when no game has its throws")),
+    // Since 2026-10: the checkout rate's counts, from games whose darts at a double are known.
+    // Optional, so cards of the first version stay valid; absent reads as "not recorded".
+    checkouts: opt(int(0, 10_000_000, "Legs won with a known number of darts at a double")),
+    dartsAtDouble: opt(int(0, 100_000_000, "Darts thrown at a double in those legs")),
   }),
-  winsWithinGames,
+  (c) => winsWithinGames(c) ?? ((c.checkouts === undefined) === (c.dartsAtDouble === undefined) && (c.checkouts ?? 0) <= (c.dartsAtDouble ?? 0) ? null : "checkouts ≤ dartsAtDouble, both or neither"),
 )
 
 const cricket = refine(obj({ ...counts, marks: int(0, 1_000_000_000, "Marks scored") }), winsWithinGames)

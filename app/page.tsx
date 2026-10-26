@@ -5,7 +5,6 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import { AppShell } from "@/components/app-shell"
 import { PlayScreen, type AgainInfo, type ResumeInfo } from "@/components/play-screen"
 import { SetupScreen } from "@/components/setup-screen"
-import { LeaderboardScreen } from "@/components/leaderboard-screen"
 import { GameScreen } from "@/components/game/game-screen"
 import { UndoBanner } from "@/components/undo-banner"
 import { FallbackScreen } from "@/components/fallback-screen"
@@ -17,7 +16,7 @@ import { TabsLayer } from "@/components/nav/tabs-layer"
 import { replaceUrl, useHistorySync } from "@/components/nav/use-history-sync"
 import { AppSettingsProvider } from "@/components/shell/app-settings"
 import { warmOfflineScreens } from "@/components/shell/lazy"
-import { ClubsRoot, ProfileRoot, TournamentsRoot } from "@/components/shell/tab-roots"
+import { ClubsRoot, LeaderboardRoot, ProfileRoot, TournamentsRoot } from "@/components/shell/tab-roots"
 import "@/components/shell/extensions"
 import { useT } from "@/components/i18n-provider"
 import { modeName, type Messages } from "@/lib/i18n"
@@ -366,8 +365,7 @@ export default function DartScorer() {
           />
         ),
       },
-      // As in 1.0.0, a game started from the empty leaderboard comes back to Play.
-      leaderboard: { title: t.leaderboard.title, content: <LeaderboardScreen onPlay={() => openSetup("x01", "play")} /> },
+      leaderboard: { title: t.shell.tabs.leaderboard, content: <LeaderboardRoot /> },
       clubs: { title: t.shell.tabs.clubs, content: <ClubsRoot /> },
       tournaments: { title: t.shell.tabs.tournaments, content: <TournamentsRoot /> },
       profile: { title: t.shell.tabs.profile, content: <ProfileRoot /> },

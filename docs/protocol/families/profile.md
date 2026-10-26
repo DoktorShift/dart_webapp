@@ -23,12 +23,13 @@ Kind **31180**, `d` = `stats`, Pflicht-Tags nach [kinds.md](../kinds.md), kein `
 
 | Feld | Bedeutung |
 | --- | --- |
-| `x01` | `games`, `versus`, `wins`, `darts`, `points`, `highestFinish`, `bestLeg`, `visits180`, oder `null` |
+| `x01` | `games`, `versus`, `wins`, `darts`, `points`, `highestFinish`, `bestLeg`, `visits180`, optional `checkouts` und `dartsAtDouble` (seit 2026-10, nur gemeinsam; Checkout-Quote = `checkouts` / `dartsAtDouble`), oder `null` |
 | `cricket` | `games`, `versus`, `wins`, `darts`, `marks`, oder `null` |
 | `clock` | `games`, `versus`, `wins`, `darts`, `hits`, oder `null` |
 | `refs` | IDs öffentlicher `match.result`, die in den Zahlen stecken (höchstens 100; heute leer) |
 
-- `games` zählt alle Spiele der Spielart einschließlich Training, `versus` die Spiele gegen andere, `wins` die davon gewonnenen; es gilt `wins ≤ versus ≤ games`.
+- `games` zählt alle Spiele der Spielart einschließlich Training, `versus` die Spiele gegen andere, `wins` die davon gewonnenen; es gilt `wins ≤ versus ≤ games`. Seit 2026-10 schreibt BlueLine nur noch Spiele gegen andere in die Karte (`games` = `versus`): Training bleibt privat.
+- Optionale Felder fehlen in älteren Karten; ein Leser zeigt dann „nicht erfasst“, nie 0. `checkouts` und `dartsAtDouble` stehen nur gemeinsam in einer Karte, und `checkouts ≤ dartsAtDouble`.
 - Nur Zähler und Summen, nie Durchschnitte oder Quoten: Leser rechnen selbst (Punkte pro drei Darts = `points` / `darts` × 3), damit jede Anzeige gleich rechnet und große Spiele mehr wiegen als kleine.
 - `null` heißt „nicht erfasst“ (etwa 180er ohne vollständige Würfe), nie 0.
 - Die Karte ist eine Selbstauskunft. Leser zeigen sie als „Vom Spieler geteilt“ mit ihrem Datum, nie als bestätigte Statistik. Öffentliche Ergebnisse, auf die `refs` zeigt, kann ein Leser selbst nachrechnen.

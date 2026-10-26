@@ -527,6 +527,17 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
   },
 
 
+  leaderboard: {
+    scope: "Your placings in tournaments you played with this profile.",
+    tournaments: (n) => (n === 1 ? "tournament" : "tournaments"),
+    won: "won",
+    podium: (n) => (n === 1 ? "podium" : "podiums"),
+    players: (n) => (n === 1 ? "1 player" : `${n} players`),
+    place: (place, placeTo) => (place === placeTo ? ordinal(place) : `${ordinal(place)}–${ordinal(placeTo)}`),
+    placeLabel: (place, placeTo) => (place === placeTo ? `${ordinal(place)} place` : `${ordinal(place)} to ${ordinal(placeTo)} place`),
+    running: "Still running",
+  },
+
   club: {
     none: "No tournament yet",
     noneLeader: "Create one for the next club night.",

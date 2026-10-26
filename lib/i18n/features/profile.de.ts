@@ -29,7 +29,8 @@ export const profileDe = {
     games: "Spiele",
     game: "Spiel",
     player: "Spieler",
-    preview: "So sehen andere dein Profil",
+    training: "Training",
+    visibility: "Sichtbarkeit",
     advanced: "Erweitert",
   },
 
