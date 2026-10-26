@@ -136,7 +136,7 @@ export function profileRecords(pubkey: string, matches: readonly ArchivedMatch[]
 export function decideMatch(local: LocalRecord | undefined, copy: Version | undefined, remote: (Version & { source?: unknown }) | undefined): "take" | "write" | "keep" {
   if (local === undefined && copy) return "keep"
   const record = local === "deleted" ? undefined : local
-  const importedHere = record?.data.source === "imported-v1"
+  const importedHere = record !== undefined && record.data.source !== "local"
   const changedHere = record ? !copy || copy.deleted || copy.hash !== record.hash : local === "deleted" && !copy?.deleted
   if (remote && (!copy || compareVersions(remote, copy) > 0)) {
     if (!changedHere) return "take"

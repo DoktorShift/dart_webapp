@@ -1,23 +1,27 @@
 "use client"
 
 import { useMemo, useState, type ReactNode } from "react"
-import { Target } from "lucide-react"
+import { Share, Target } from "lucide-react"
 import { EmptyState } from "@/components/ui/empty-state"
 import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
 import { ChipMenu, ChipMenus } from "@/components/ui/menu"
 import { Segmented } from "@/components/ui/segmented"
+import { NavBarItems, NavIconButton } from "@/components/nav/nav-bar-items"
 import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { PROFILE_TEXTS, type ProfileTexts } from "@/lib/i18n/features/profile.screens"
 import { Bars, type Bar } from "@/components/profile/bars"
 import { fixed, measure, measureDiff, shortDate } from "@/components/profile/format"
 import { PROFILE_SCREENS } from "@/components/profile/screens"
+import { ShareImageSheet } from "@/components/profile/share-image-sheet"
 import { Arrow, Direction } from "@/components/profile/trend"
 import type { GameType } from "@/lib/game/types"
 import { addMonths, startOfYear } from "@/lib/calendar"
-import { formatNumber, formatPercent, type Messages } from "@/lib/i18n"
+import { formatDate, formatNumber, formatPercent, type Messages } from "@/lib/i18n"
 import { bestsOf, type Best } from "@/lib/profile/bests"
+import { renderFiguresImage, type FiguresImage } from "@/lib/profile/figures-image"
+import { SITE } from "@/lib/site"
 import type { ArchivedMatch } from "@/lib/storage/archive"
 import { gamePoints, headline, isTraining, summarizePlayer, type GamePoint, type GameScope, type PlayerSummary, type StatsOptions } from "@/lib/storage/stats"
 
@@ -25,7 +29,8 @@ import { gamePoints, headline, isTraining, summarizePlayer, type GamePoint, type
 // one game type at a time, never mixed into one seeming overall figure; a window of games
 // rather than a calendar (a break never empties it; E21) or this year; against others or in
 // training, never both. Every figure says what it was before, with an arrow and a word, and
-// the footer says what it was worked out from. "—" is explained, never 0.
+// the footer says what it was worked out from. "—" is explained, never 0. On the own profile
+// "Teilen" gives the period as a picture, the year as "Mein Dartjahr" (M17).
 
 type Window = "last10" | "last30" | "last100" | "all" | "year"
 const WINDOWS: Window[] = ["last10", "last30", "last100", "all", "year"]
@@ -34,6 +39,7 @@ const MODES: GameType[] = ["x01", "cricket", "clock"]
 const SCOPES: Exclude<GameScope, "all">[] = ["versus", "training"]
 // The chart shows at most this many games; more would be too thin to read.
 const CHART_MAX = 30
+const ICON = "/icon/192"
 
 interface Row {
   label: string
@@ -71,7 +77,7 @@ function selectGames(points: GamePoint[], range: Window, now: number): { recent:
   return { recent: points, earlier: [] }
 }
 
-export function StatsView({ matches, playerKey, aliases, sameAs }: { matches: readonly ArchivedMatch[]; playerKey: string } & Pick<StatsOptions, "aliases" | "sameAs">) {
+export function StatsView({ matches, playerKey, aliases, sameAs, share }: { matches: readonly ArchivedMatch[]; playerKey: string; share?: { name: string } } & Pick<StatsOptions, "aliases" | "sameAs">) {
   const t = useT()
   const tx = useAreaT(PROFILE_TEXTS)
   const p = tx.stats
@@ -116,11 +122,42 @@ export function StatsView({ matches, playerKey, aliases, sameAs }: { matches: re
   }))
   const trend = values.length > 1 ? (values[values.length - 1] > values[0] ? tx.formCard.trends.up : values[values.length - 1] < values[0] ? tx.formCard.trends.down : tx.formCard.trends.flat) : tx.formCard.trends.flat
 
-  const groups = summary ? statGroups(t, tx, mode, scope, summary, before, bests, (match) => nav.push(PROFILE_SCREENS.match, { id: match.id })) : []
+  const groups = useMemo(() => (summary ? statGroups(t, tx, mode, scope, summary, before, bests, (match) => nav.push(PROFILE_SCREENS.match, { id: match.id })) : []), [t, tx, mode, scope, summary, before, bests, nav])
   const unknown = groups.some((g) => g.rows.some((r) => r.value === null))
+  const directionText = diff === null || !beforeText ? null : diff === 0 ? p.same(beforeText) : diff > 0 ? p.better(measureDiff(t, mode, diff), beforeText) : p.worse(measureDiff(t, mode, diff), beforeText)
+
+  // The period as a picture: the headline, its direction, the chart and three figures of it.
+  const headlineLabel = mode === "x01" ? tx.card.average : tx.training.measure[mode]
+  const shareName = share?.name
+  const image = useMemo<FiguresImage | null>(() => {
+    if (shareName === undefined || !summary || value === null) return null
+    const points = recent.slice(0, CHART_MAX).slice().reverse()
+    const shown = points.map((g) => g.value).filter((v): v is number => v !== null)
+    const rows = groups.flatMap((g) => g.rows).filter((r): r is Row & { value: string } => r.value !== null && r.label !== headlineLabel).slice(0, 3)
+    return {
+      brand: SITE.name,
+      date: formatDate(t, now, "long"),
+      // "Mein Dartjahr" is a recap: until December it says so.
+      title: range === "year" ? (new Date(now).getMonth() === 11 ? tx.picture.year(new Date(now).getFullYear()) : tx.picture.yearSoFar(new Date(now).getFullYear())) : tx.picture.stats(p.modes[mode]),
+      subtitle: [shareName, ...(range === "year" ? [p.modes[mode], p.basisScopes[scope]] : [`${p.basisScopes[scope]}, ${periodText}`])].filter(Boolean).join(" · "),
+      headline: { value: measure(t, mode, value) ?? "", label: headlineLabel },
+      sentence: directionText ?? undefined,
+      bars: shown.length > 1 ? { values: points.map((g) => g.value), first: shortDate(t, points[0].match.finishedAt), last: shortDate(t, points[points.length - 1].match.finishedAt), best: measure(t, mode, Math.max(...shown)) ?? "" } : undefined,
+      figures: rows.map((r) => ({ label: r.label, value: r.value })),
+      footer: tx.picture.footer,
+      site: new URL(SITE.url).host,
+    }
+  }, [shareName, summary, value, recent, groups, headlineLabel, t, tx, p, now, range, mode, scope, periodText, directionText])
+  const make = useMemo(() => (image ? () => renderFiguresImage(image, ICON) : null), [image])
+  const [shareOpen, setShareOpen] = useState(false)
 
   return (
     <>
+      {image && (
+        <NavBarItems>
+          <NavIconButton icon={Share} label={tx.picture.shareStats} onClick={() => setShareOpen(true)} className="-mr-1" />
+        </NavBarItems>
+      )}
       <div className="mt-4">
         <Segmented label={p.mode} options={MODES.map((m) => ({ value: m, label: p.modes[m] }))} value={mode} onChange={setMode} />
       </div>
@@ -138,7 +175,7 @@ export function StatsView({ matches, playerKey, aliases, sameAs }: { matches: re
                 {diff === null ? (
                   <span className="text-muted-foreground">{noBeforeText}</span>
                 ) : (
-                  <Direction diff={diff}>{diff === 0 ? p.same(beforeText) : diff > 0 ? p.better(measureDiff(t, mode, diff), beforeText) : p.worse(measureDiff(t, mode, diff), beforeText)}</Direction>
+                  <Direction diff={diff}>{directionText}</Direction>
                 )}
               </p>
             )}
@@ -187,6 +224,7 @@ export function StatsView({ matches, playerKey, aliases, sameAs }: { matches: re
           secondary={range !== "last30" || scope !== "versus" ? { label: p.showAll, onClick: reset } : undefined}
         />
       )}
+      <ShareImageSheet open={shareOpen} onOpenChange={setShareOpen} make={make} fileName={tx.picture.fileName(new Date(now).toISOString().slice(0, 10))} title={image?.title ?? ""} />
     </>
   )
 }

@@ -53,24 +53,23 @@ export const dataDe = {
   hide: "Hinweis ausblenden",
   saved: "Dein Spiel ist gespeichert.",
 
-  // Rangliste: results from the earlier version, which kept only names.
+  // Rangliste: imported results (the earlier version, or a file), which know only names.
   importedTag: "Importiert",
   unnamedTag: "Ohne Namen",
-  withImportedTag: "Mit früheren Spielen",
-  importedTitle: (name: string) => `Frühere Spiele als ${name}`,
+  withImportedTag: "Mit importierten Spielen",
+  importedTitle: (name: string) => `Importierte Spiele als ${name}`,
   importedText: (n: number) =>
     n === 1
-      ? "Dieses Spiel stammt aus der früheren Version der App. Sie hat nur Namen gespeichert, deshalb ist es noch keinem Spieler zugeordnet."
-      : `Diese ${n} Spiele stammen aus der früheren Version der App. Sie hat nur Namen gespeichert, deshalb sind sie noch keinem Spieler zugeordnet.`,
+      ? "Dieses Spiel ist importiert, aus der früheren Version der App oder aus einer Datei. Davon ist nur der Name bekannt, deshalb ist es noch keinem Spieler zugeordnet."
+      : `Diese ${n} Spiele sind importiert, aus der früheren Version der App oder aus einer Datei. Davon ist nur der Name bekannt, deshalb sind sie noch keinem Spieler zugeordnet.`,
   assignTo: (name: string) => `Zu ${name} zählen`,
   assignChoose: "Mehrere Spieler heißen so. Wähle, zu wem die Spiele gehören.",
   assignHint: "Nur zuordnen, wenn es dieselbe Person ist. Du kannst das später wieder trennen.",
   lastPlayed: (when: string) => `Zuletzt gespielt: ${when}`,
   assignNobody: (name: string, n: number) =>
     `Sobald ${name} auf diesem Gerät ein Spiel beendet hat, kannst du ${n === 1 ? "das Spiel" : "die Spiele"} zuordnen.`,
-  mergedTitle: (name: string) => `Frühere Spiele bei ${name}`,
-  mergedText: (name: string, n: number) =>
-    n === 1 ? `Auch 1 Spiel aus der früheren Version der App zählt für ${name}.` : `Auch ${n} Spiele aus der früheren Version der App zählen für ${name}.`,
+  mergedTitle: (name: string) => `Importierte Spiele bei ${name}`,
+  mergedText: (name: string, n: number) => (n === 1 ? `Auch 1 importiertes Spiel zählt für ${name}.` : `Auch ${n} importierte Spiele zählen für ${name}.`),
   separate: "Wieder trennen",
   assignFailed: "Das hat nicht geklappt. Versuche es noch einmal.",
 }

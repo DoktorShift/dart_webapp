@@ -8,16 +8,18 @@ import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
 import { Bars, type Bar } from "@/components/profile/bars"
 import { measure, measureDiff, monthName } from "@/components/profile/format"
 import { Direction } from "@/components/profile/trend"
+import { useTrainingGoals } from "@/components/profile/use-goals"
 import type { GameType } from "@/lib/game/types"
 import { addMonths, startOfMonth } from "@/lib/calendar"
+import { reachedCount } from "@/lib/profile/goal"
 import { trainingBuckets, trainingOf, TRAINING_MIN, type Training } from "@/lib/profile/training"
 import type { ArchivedMatch } from "@/lib/storage/archive"
 import { gamePoints, type StatsOptions } from "@/lib/storage/stats"
 
 // The training on the Profile tab: this month against the one before, in the game type the
-// player trains most, and the last six months as bars. The head is the button into the
-// training screen; the chart sits beside it. Without any training it says what starts the
-// record and offers to start one.
+// player trains most, and the last six months as bars with the player's goal line, when one is
+// set. The head is the button into the training screen; the chart sits beside it. Without any
+// training it says what starts the record and offers to start one.
 const CARD_MONTHS = 6
 
 // The type with the most trainings, X01 when none.
@@ -45,6 +47,7 @@ export function TrainingCard({ matches, playerKey, aliases, sameAs, onOpen, onSt
   const lineId = useId()
   const now = useMemo(() => Date.now(), [])
   const type = useMemo(() => trainedMost(matches, playerKey, { aliases, sameAs }), [matches, playerKey, aliases, sameAs])
+  const goal = useTrainingGoals()[type] ?? null
   const training = useMemo(() => trainingOf(matches, playerKey, { type, aliases, sameAs, now }), [matches, playerKey, type, aliases, sameAs, now])
   const buckets = useMemo(
     () => trainingBuckets(training.points, playerKey, { type, aliases, sameAs }, "month", addMonths(startOfMonth(now), 1 - CARD_MONTHS), addMonths(startOfMonth(now), 1)),
@@ -98,7 +101,14 @@ export function TrainingCard({ matches, playerKey, aliases, sameAs, onOpen, onSt
         <ChevronRight className="-mr-1 h-5 w-5 shrink-0 text-muted-foreground/70" aria-hidden="true" />
       </button>
       {values.length > 0 && (
-        <Bars bars={bars} height={40} className="mt-2" summary={r.summary(values.length, measure(t, type, Math.min(...values)) ?? "", measure(t, type, Math.max(...values)) ?? "", monthName(t, buckets.find((b) => b.value === best)?.start ?? now))} />
+        <Bars
+          bars={bars}
+          height={40}
+          className="mt-2"
+          goal={goal === null ? undefined : { value: goal, label: r.goalValue(measure(t, type, goal) ?? ""), text: measure(t, type, goal) ?? "" }}
+          range={goal === null ? undefined : r.goalValue(measure(t, type, goal) ?? "")}
+          summary={[r.summary(values.length, measure(t, type, Math.min(...values)) ?? "", measure(t, type, Math.max(...values)) ?? "", monthName(t, buckets.find((b) => b.value === best)?.start ?? now)), goal === null ? null : r.goalReachedIn(reachedCount(values, goal), values.length, r.periods.month)].filter(Boolean).join(". ")}
+        />
       )}
     </section>
   )

@@ -53,20 +53,19 @@ export const dataEn: Messages["data"] = {
 
   importedTag: "Imported",
   unnamedTag: "No name",
-  withImportedTag: "With earlier games",
-  importedTitle: (name) => `Earlier games as ${name}`,
+  withImportedTag: "With imported games",
+  importedTitle: (name) => `Imported games as ${name}`,
   importedText: (n) =>
     n === 1
-      ? "This game comes from the earlier version of the app. It saved only names, so the game isn’t assigned to a player yet."
-      : `These ${n} games come from the earlier version of the app. It saved only names, so they aren’t assigned to a player yet.`,
+      ? "This game was imported, from the earlier version of the app or from a file. Only the name is known, so the game isn’t assigned to a player yet."
+      : `These ${n} games were imported, from the earlier version of the app or from a file. Only the names are known, so they aren’t assigned to a player yet.`,
   assignTo: (name) => `Count for ${name}`,
   assignChoose: "More than one player has this name. Choose who the games belong to.",
   assignHint: "Only if it’s the same person. You can separate them again later.",
   lastPlayed: (when) => `Last played: ${when}`,
   assignNobody: (name, n) => `Once ${name} finishes a game on this device, you can assign ${n === 1 ? "this game" : "these games"}.`,
-  mergedTitle: (name) => `Earlier games for ${name}`,
-  mergedText: (name, n) =>
-    n === 1 ? `1 game from the earlier version of the app also counts for ${name}.` : `${n} games from the earlier version of the app also count for ${name}.`,
+  mergedTitle: (name) => `Imported games for ${name}`,
+  mergedText: (name, n) => (n === 1 ? `1 imported game also counts for ${name}.` : `${n} imported games also count for ${name}.`),
   separate: "Separate again",
   assignFailed: "That didn’t work. Please try again.",
 }

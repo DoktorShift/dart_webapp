@@ -4,6 +4,7 @@ import type { MatchConfig, Throw } from "../game/types.ts"
 import {
   ARCHIVE_SCHEMA,
   importV1Matches,
+  isImported,
   loadArchive,
   toV1Record,
   V1_SNAPSHOT_KEY,
@@ -14,7 +15,7 @@ import {
 } from "./archive.ts"
 import { announce, announceElsewhere, dbClear, dbGetAll, dbWrite, kvGet, STORES, type WriteOp } from "./db.ts"
 import { exportSections } from "./export-sections.ts"
-import { listPlayers, parsePlayerRecord, type PlayerRecord } from "./players.ts"
+import { listPlayers, nameKey, parsePlayerRecord, type PlayerRecord } from "./players.ts"
 import { isV1Record, mergeV1Records, readAllRaw, removeAllV1Data } from "./v1.ts"
 
 // "Daten exportieren", "Daten importieren" and "Alle Daten auf diesem Gerät löschen". Loaded only
@@ -23,7 +24,7 @@ import { isV1Record, mergeV1Records, readAllRaw, removeAllV1Data } from "./v1.ts
 // The export is one readable JSON file: every archived game, the player directory and the raw
 // text of every key version 1.0.0 keeps (settings, the running game, its history), so nothing
 // on this device is missing from it. Importing merges by id and never overwrites what is here,
-// except an imported 1.0.0 total that the file has in full.
+// except imported totals (from 1.0.0 or a file) of a game the file has in full.
 
 export const EXPORT_FORMAT = "blueline-data"
 export const EXPORT_VERSION = 1
@@ -118,7 +119,7 @@ function parsePlayer(value: unknown): ArchivedPlayer | null {
 export function parseArchivedMatch(value: unknown): ArchivedMatch | null {
   if (!isV1Record(value)) return null
   const v = value as unknown as Record<string, unknown>
-  if (v.schemaVersion !== ARCHIVE_SCHEMA || (v.source !== "local" && v.source !== "imported-v1")) return null
+  if (v.schemaVersion !== ARCHIVE_SCHEMA || (v.source !== "local" && v.source !== "imported-v1" && v.source !== "imported-file")) return null
   if (value.id.length === 0 || value.id.length > 200 || !isDate(value.finishedAt) || typeof v.modeId !== "string") return null
   if (value.players.length < 1 || value.players.length > 6) return null
   const players = value.players.map(parsePlayer)
@@ -161,6 +162,78 @@ export function parseArchivedMatch(value: unknown): ArchivedMatch | null {
   }
 }
 
+export interface MergedMatches {
+  // Games that weren't on this device.
+  added: number
+  // The games added, so an import can be taken back (removeMatches).
+  ids: string[]
+  // Imported totals replaced by the full game.
+  completed: number
+  // Games already here.
+  known: number
+}
+
+// A game's facts without its id: when, what, who. Totals from a file have ids of their own, so
+// this is how one of them is recognised as a game that is already here (played here, or synced).
+const facts = (m: ArchivedMatch) => `${m.finishedAt}|${m.modeId}|${m.players.map((p) => nameKey(p.name)).sort().join(",")}`
+
+// Writes the games that aren't here yet, in one write with `extra`. A full game replaces imported
+// totals of the same game; nothing else here is overwritten. Runs inside withArchive.
+async function mergeMatches(incoming: Map<string, ArchivedMatch>, extra: WriteOp[] = []): Promise<MergedMatches> {
+  const stored = await dbGetAll<ArchivedMatch>("matches")
+  const here = new Map(stored.map((m) => [m.id, m]))
+  const knownFacts = new Set(stored.map(facts))
+  const ops: WriteOp[] = [...extra]
+  const fresh: ArchivedMatch[] = []
+  let completed = 0
+  let known = 0
+  for (const match of incoming.values()) {
+    const have = here.get(match.id)
+    if (!have && match.source === "imported-file" && knownFacts.has(facts(match))) known++
+    else if (!have) {
+      fresh.push(match)
+      knownFacts.add(facts(match))
+      ops.push({ store: "matches", putNew: match })
+    } else if (isImported(have) && match.source === "local") {
+      completed++
+      ops.push({ store: "matches", put: match })
+    } else known++
+  }
+  await dbWrite(ops)
+  // Games new to this device also go to 1.0.0's history, like games played here; totals from a
+  // table stay in the archive alone, so taking the import back leaves nothing behind.
+  mergeV1Records(fresh.filter((m) => m.players.length >= 2 && m.source !== "imported-file").map(toV1Record))
+  return { added: fresh.length, ids: fresh.map((m) => m.id), completed, known }
+}
+
+// Takes games out again, by id: the way back from an import. Only games that came from a file
+// go; anything else is left alone.
+export async function removeMatches(ids: readonly string[]): Promise<number> {
+  return withArchive(async () => {
+    const stored = await dbGetAll<ArchivedMatch>("matches")
+    const gone = stored.filter((m) => ids.includes(m.id) && m.source === "imported-file")
+    if (gone.length > 0) await dbWrite(gone.map((m) => ({ store: "matches" as const, delete: m.id })))
+    return gone.length
+  })
+}
+
+// Games from a history file (lib/profile/import.ts): added where they aren't here yet. A seat's
+// player id from another device means nothing here: such seats go by their name, like imported
+// totals, so "that's me" and the Rangliste's assignment reach them. Rejects when nothing could
+// be written; then nothing was changed.
+export async function importMatches(matches: readonly ArchivedMatch[]): Promise<MergedMatches> {
+  await importV1Matches().catch(() => 0)
+  return withArchive(async () => {
+    const directory = new Set((await listPlayers()).map((p) => p.id))
+    const incoming = new Map<string, ArchivedMatch>()
+    for (const raw of matches) {
+      const match = { ...raw, players: raw.players.map((p) => (p.playerId && !directory.has(p.playerId) ? { ...p, playerId: null } : p)) }
+      if (!incoming.has(match.id) || (match.source === "local" && incoming.get(match.id)!.source !== "local")) incoming.set(match.id, match)
+    }
+    return mergeMatches(incoming)
+  })
+}
+
 export async function importData(text: string): Promise<ImportResult> {
   let file: unknown
   try {
@@ -193,37 +266,11 @@ export async function importData(text: string): Promise<ImportResult> {
   let result: ImportResult
   try {
     result = await withArchive(async () => {
-      const [stored, directory] = await Promise.all([dbGetAll<ArchivedMatch>("matches"), listPlayers()])
-      const here = new Map(stored.map((m) => [m.id, m]))
-      const ops: WriteOp[] = []
-      const fresh: ArchivedMatch[] = []
-      let completed = 0
-      let known = 0
-      for (const match of incoming.values()) {
-        const have = here.get(match.id)
-        if (!have) {
-          fresh.push(match)
-          ops.push({ store: "matches", putNew: match })
-        } else if (have.source === "imported-v1" && match.source === "local") {
-          completed++
-          ops.push({ store: "matches", put: match })
-        } else known++
-      }
+      const directory = await listPlayers()
       const knownPlayers = new Set(directory.map((p) => p.id))
       const newPlayers = [...players.values()].filter((p) => !knownPlayers.has(p.id))
-      for (const putNew of newPlayers) ops.push({ store: "players", putNew })
-      await dbWrite(ops)
-      // Games new to this device also go to 1.0.0's history, like games played here.
-      mergeV1Records(fresh.filter((m) => m.players.length >= 2).map(toV1Record))
-      return {
-        ok: true as const,
-        added: fresh.length,
-        completed,
-        known,
-        playersAdded: newPlayers.length,
-        playersKnown: players.size - newPlayers.length,
-        skipped,
-      }
+      const { added, completed, known } = await mergeMatches(incoming, newPlayers.map((putNew) => ({ store: "players", putNew })))
+      return { ok: true as const, added, completed, known, playersAdded: newPlayers.length, playersKnown: players.size - newPlayers.length, skipped }
     })
   } catch {
     return { ok: false, reason: "storage" }

@@ -366,7 +366,7 @@ export const en: Messages = {
     periods: { today: "Today", days30: "30 days", year: "This year", all: "All time" },
     more: "More",
     sorts: { winRate: "By win rate", wins: "By wins", average: "By 3-dart average" },
-    scope: (period, games, players) => `Games against others on this device, ${period}: ${games === 1 ? "1 game" : `${games} games`}, ${players === 1 ? "1 player" : `${players} players`}.`,
+    scope: (period, games, players, imported = false) => `Games against others on this device${imported ? " and imported ones" : ""}, ${period}: ${games === 1 ? "1 game" : `${games} games`}, ${players === 1 ? "1 player" : `${players} players`}.`,
     scopePeriods: { today: "today", days30: "last 30 days", year: "this year", all: "all time" },
     minGames: (n) => `Ranked after ${n} games.`,
     rankedBy: { winRate: "Ranked by win rate.", wins: "Ranked by wins.", average: "Ranked by 3-dart average." },

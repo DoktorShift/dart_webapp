@@ -81,7 +81,7 @@ export default function MatchScreen({ params }: ScreenProps) {
         </>
       ) : (
         <>
-          <InlineStatus className="mt-6">{tx.games.imported}</InlineStatus>
+          <InlineStatus className="mt-6">{match.source === "imported-file" ? tx.games.importedFile : tx.games.imported}</InlineStatus>
           <Group title={tx.games.totals}>
             {match.players.map((player, i) => (
               <ListRow

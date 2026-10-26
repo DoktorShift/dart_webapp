@@ -397,8 +397,8 @@ export const de = {
     more: "Mehr",
     sorts: { winRate: "Nach Siegquote", wins: "Nach Siegen", average: "Nach Ø 3 Darts" },
     // The sentence under the controls says what the list counts: where, when, how many, from when on.
-    scope: (period: string, games: number, players: number) =>
-      `Spiele gegen andere auf diesem Gerät, ${period}: ${games === 1 ? "1 Spiel" : `${games} Spiele`}, ${players === 1 ? "1 Spieler" : `${players} Spieler`}.`,
+    scope: (period: string, games: number, players: number, imported = false) =>
+      `Spiele gegen andere auf diesem Gerät${imported ? " und importierte" : ""}, ${period}: ${games === 1 ? "1 Spiel" : `${games} Spiele`}, ${players === 1 ? "1 Spieler" : `${players} Spieler`}.`,
     scopePeriods: { today: "heute", days30: "letzte 30 Tage", year: "dieses Jahr", all: "alle Zeiten" },
     minGames: (n: number) => `In der Wertung ab ${n} Spielen.`,
     rankedBy: { winRate: "Platz nach Siegquote.", wins: "Platz nach Siegen.", average: "Platz nach Ø 3 Darts." },
