@@ -148,7 +148,7 @@ Unter „Erweitert“ sichtbar, nie in normalen Ansichten.
 | `club_full` | Höchstzahl erreicht (bei der Annahme); einen Club mit mehr als 100 Mitgliedern schließen |
 | `club_archived` | Club archiviert |
 | `invite_unknown` | Einladung unbekannt, ungültig oder später datiert als der Beitritt |
-| `invite_expired` / `invite_revoked` / `invite_exhausted` | Einladung abgelaufen / beendet oder ihr Ersteller war seit ihr nicht durchgehend Eigentümer oder Admin / persönliche Einladung schon verwendet |
+| `invite_expired` / `invite_revoked` / `invite_exhausted` | Einladung abgelaufen / beendet, ihr Ersteller war seit ihr nicht durchgehend Eigentümer oder Admin (ein Mitglied: nicht durchgehend Mitglied) oder Mitglieder dürfen nicht mehr einladen / persönliche Einladung schon verwendet |
 | `invite_proof_invalid` | Nachweis gilt nicht für diesen Schlüssel; Link öffnet die Vorschau nicht |
 | `request_unknown` | keine solche wartende Anfrage |
 | `owner_cannot_leave` | Eigentümer übergibt erst |

@@ -1,7 +1,7 @@
 import { nowSeconds } from "../nostr/time.ts"
 import type { Signer } from "../nostr/types.ts"
 import { readClub, isManager, type ClubView } from "./club.ts"
-import { limitMembers, needsCapacity, shareAccess } from "./membership.ts"
+import { limitMembers, needsCapacity, shareAccess, shareTokens, waitingTokens } from "./membership.ts"
 import { fetchClub, fetchOwnClubs, type ClubExtras } from "./relays.ts"
 import type { Author, Sent } from "./send.ts"
 import { loadStoredClub, storedClubs, updateClub, type StoredClub } from "./store.ts"
@@ -69,8 +69,15 @@ export async function maintainClub(club: string, reader: Reader): Promise<ClubVi
 
 async function upkeep(view: ClubView, stored: StoredClub, author: Author): Promise<boolean> {
   const { state, me } = view
-  if (!state || state.info.archived || !isManager(me.role) || !author.signer.nip44) return false
+  if (!state || state.info.archived || me.status !== "member" || !author.signer.nip44) return false
   let changed = false
+  // Whoever holds a link's secret gives it to the leaders who lack it (club.md, "Geteilter Link").
+  const tokens = waitingTokens(state, stored.events, stored.tokens, nowSeconds())
+  if (tokens.length > 0) {
+    await shareTokens(state, tokens, stored.tokens, stored.codes, author)
+    changed = true
+  }
+  if (!isManager(me.role)) return changed
   if (view.access.length > 0) {
     await shareAccess(state, stored.events, stored.keys, author, view.access)
     changed = true
@@ -89,6 +96,7 @@ export async function grantAccess(club: string, author: Author): Promise<Sent> {
   if (!stored) throw new Error("this club is not kept here")
   const view = await viewClub(stored, author)
   if (!view.state) throw new Error("the club's records can't be read here")
+  await shareTokens(view.state, waitingTokens(view.state, stored.events, stored.tokens, nowSeconds()), stored.tokens, stored.codes, author)
   return shareAccess(view.state, stored.events, stored.keys, author, view.access)
 }
 

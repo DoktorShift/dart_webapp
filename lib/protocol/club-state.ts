@@ -19,6 +19,11 @@ import { applied, copyLog, foundingProblem, prepare, reject, settle, settleHando
 // admin's record that treats the person as a member accepts it for that reader. An invite ends
 // for good when its maker stops being owner or admin.
 //
+// Joining rules (club.found / club.update `approval`, `membersInvite`): with `approval` a
+// group link only files a request. With `membersInvite` every member may invite; a member's
+// invite files requests only, ends when the member leaves or is removed, and for good when the
+// setting is turned off.
+//
 // Ends of authority (replay.ts, docs/protocol/conflicts.md "Übergaben"): an ownership hand-over
 // holds only when the replay applies its acceptance. The former owner's hand-over records in
 // their tenure count only up to the accepted offer, and up to the acceptance the club details
@@ -44,12 +49,16 @@ export interface ClubInvite {
   // Public key of the invite key: checks join proofs (invite.ts).
   key: string
   by: string
+  // Made by an owner or admin (admits at once as a group link), or by a member under
+  // `membersInvite` (files requests only).
+  maker: "manager" | "member"
   at: number
   expires: number
   label?: string
-  // Why it admits no one any more: ended by an owner or admin (club.invite.revoke), or because
-  // its maker stopped being owner or admin, for good.
-  ended: "revoked" | "maker_role" | null
+  // Why it admits no one any more: ended by a manager or its maker (club.invite.revoke), because
+  // its maker stopped being owner or admin (a member's: stopped being a member), or because
+  // members may no longer invite; each for good.
+  ended: "revoked" | "maker_role" | "members_off" | null
   // Group link: everyone it admitted. Personal invite: the one accepted use.
   uses: { pubkey: string; event: string; at: number }[]
 }
@@ -116,7 +125,7 @@ export interface ClubState {
   id: string
   founder: string
   owner: string
-  info: { name: string; about?: string; picture?: string; visibility: "closed" | "public"; capacity?: number; archived: boolean }
+  info: { name: string; about?: string; picture?: string; visibility: "closed" | "public"; capacity?: number; archived: boolean; approval: boolean; membersInvite: boolean }
   members: Record<string, ClubMember>
   invites: Record<string, ClubInvite>
   // Waiting requests by pubkey.
@@ -193,7 +202,7 @@ function replay(env: Env, handovers: Handovers, demotions: readonly Pin[]) {
     id: founding.id,
     founder: founding.pubkey,
     owner: founding.pubkey,
-    info: { name: f.name, about: f.about, picture: f.picture, visibility: f.visibility, capacity: f.capacity, archived: false },
+    info: { name: f.name, about: f.about, picture: f.picture, visibility: f.visibility, capacity: f.capacity, archived: false, approval: f.approval === true, membersInvite: f.membersInvite === true },
     members: { [founding.pubkey]: { pubkey: founding.pubkey, role: "owner", since: founding.created_at, via: "founder", head: founding.id } },
     invites: {},
     requests: {},
@@ -258,13 +267,20 @@ const full = (s: ClubState) => {
 
 function setRole(s: ClubState, r: AnyRecord, pubkey: string, role: ClubRole | null) {
   s.history.push({ pubkey, role, at: r.created_at, event: r.id })
-  // An invite ends with its maker's role as owner or admin, and stays ended if they get the role
-  // back: a link that leaked was often the reason for the demotion.
-  if (role !== "owner" && role !== "admin") for (const invite of Object.values(s.invites)) if (invite.by === pubkey && !invite.ended) invite.ended = "maker_role"
+  // An invite ends with its maker's role, and stays ended if they get the role back: a link that
+  // leaked was often the reason for the demotion. A manager's with the role as owner or admin, a
+  // member's with the membership.
+  const manager = role === "owner" || role === "admin"
+  for (const invite of Object.values(s.invites)) {
+    if (invite.by !== pubkey || invite.ended) continue
+    if (invite.maker === "manager" ? !manager : role === null) invite.ended = "maker_role"
+  }
 }
 
 const inviteEnded = (invite: ClubInvite): Problem =>
-  invite.ended === null ? null : ["invite_revoked", invite.ended === "revoked" ? "the invite was ended" : "its maker no longer manages the club"]
+  invite.ended === null
+    ? null
+    : ["invite_revoked", invite.ended === "revoked" ? "the invite was ended" : invite.ended === "members_off" ? "members may no longer invite" : "its maker no longer manages the club"]
 
 function addMember(s: ClubState, r: AnyRecord, pubkey: string, via: ClubMember["via"], head: string) {
   s.members[pubkey] = { pubkey, role: "member", since: r.created_at, via, head }
@@ -311,7 +327,7 @@ function apply(s: ClubState, r: AnyRecord, ctx: Context): Problem {
   if (s.info.archived && ARCHIVED_BLOCKS.includes(r.type)) return ["club_archived", "the club is archived"]
   if (s.info.visibility === "closed" && r.encryption !== "seal" && !CLUB_PLAIN_TYPES.includes(r.type)) return ["sealing_required", "a closed club's records are sealed for its members"]
   // Every reader of a public club checks the same records (docs/protocol/families/club.md).
-  if (s.info.visibility === "public" && r.encryption === "seal" && r.type !== "club.keys") return ["invalid_tags", "a public club's records travel in the clear; only key shares are sealed"]
+  if (s.info.visibility === "public" && r.encryption === "seal" && r.type !== "club.keys" && r.type !== "club.invite.token") return ["invalid_tags", "a public club's records travel in the clear; only key shares and link secrets are sealed"]
 
   switch (r.type) {
     case "club.found":
@@ -329,28 +345,46 @@ function apply(s: ClubState, r: AnyRecord, ctx: Context): Problem {
       if (c.visibility !== undefined) s.info.visibility = c.visibility
       if (c.capacity !== undefined) s.info.capacity = c.capacity ?? undefined
       if (c.archived !== undefined) s.info.archived = c.archived
+      if (c.approval !== undefined) s.info.approval = c.approval
+      if (c.membersInvite !== undefined) {
+        // Turned off, the members' invites end for good: a link that went round is the usual reason.
+        if (s.info.membersInvite && !c.membersInvite) for (const invite of Object.values(s.invites)) if (invite.maker === "member" && !invite.ended) invite.ended = "members_off"
+        s.info.membersInvite = c.membersInvite
+      }
       s.heads.info = r.id
       return null
     }
 
     case "club.invite": {
       const c = r.content
-      if (!manager) return ["not_authorized", "only the owner or an admin invites"]
+      if (!manager && !(s.info.membersInvite && role !== null)) return ["not_authorized", s.info.membersInvite ? "only members invite" : "only the owner or an admin invites"]
       if (c.expires <= r.created_at) return ["invite_expired", "expires before it is made"]
       // A label may name the invited person: never in the clear (docs/protocol/privacy.md).
       if (c.label !== undefined && r.encryption !== "seal") return ["invalid_content", "an invite's label only travels sealed, in a closed club"]
-      s.invites[r.id] = { id: r.id, kind: c.kind, key: c.key, by: r.pubkey, at: r.created_at, expires: c.expires, ...(c.label ? { label: c.label } : {}), ended: null, uses: [] }
+      s.invites[r.id] = { id: r.id, kind: c.kind, key: c.key, by: r.pubkey, maker: manager ? "manager" : "member", at: r.created_at, expires: c.expires, ...(c.label ? { label: c.label } : {}), ended: null, uses: [] }
       return null
     }
 
     case "club.invite.revoke": {
-      if (!manager) return ["not_authorized", "only the owner or an admin ends invites"]
       const invite = s.invites[r.content.invite]
       if (!invite) return ctx.parsed.has(r.content.invite) ? ["invite_unknown", "no such invite"] : ["waiting", "names an invite this reader cannot open or has not loaded"]
+      if (!manager && invite.by !== r.pubkey) return ["not_authorized", "only the owner, an admin or the invite's maker ends it"]
       if (invite.ended) return ["invite_revoked", "already ended"]
       invite.ended = "revoked"
       return null
     }
+
+    case "club.invite.token": {
+      // Changes no state: the secret only lets a leader's device show the link (lib/clubs checks
+      // it against the invite's key before trusting it).
+      const invite = s.invites[r.content.invite]
+      if (!invite) return ctx.parsed.has(r.content.invite) ? ["invite_unknown", "no such invite"] : ["waiting", "names an invite this reader cannot open or has not loaded"]
+      if (!manager && invite.by !== r.pubkey) return ["not_authorized", "only the owner, an admin or the invite's maker shares its secret"]
+      return null
+    }
+
+    case "club.invitation":
+      return ["wrong_kind", "an invitation travels only gift-wrapped"]
 
     case "club.join":
       return join(s, r, ctx)
@@ -622,8 +656,9 @@ function join(s: ClubState, r: BlueLineRecord<"club.join">, ctx: Context): Probl
   }
   // A group link admits at once, unless a member limit makes it a question of order: then an
   // owner or admin decides (docs/decisions/0001, point 10). A closed club's own limit
-  // (MAX_CLUB_MEMBERS) counts once it is reached.
-  if (s.info.capacity !== undefined || full(s)) {
+  // (MAX_CLUB_MEMBERS) counts once it is reached. A club that confirms new members, and a
+  // member's link, file a request as well.
+  if (s.info.capacity !== undefined || full(s) || s.info.approval || invite.maker === "member") {
     request(s, r, "ok", invite.id)
     return null
   }

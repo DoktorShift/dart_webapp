@@ -24,6 +24,10 @@ import { TOURNAMENT_TYPES } from "./tournament.ts"
 // event into a typed record (or say exactly why not). Signatures are checked by lib/nostr
 // before parsing; authority is checked by the state reducers after it.
 
+// Rumors that only ever travel inside a NIP-59 gift wrap to one person; signed and published as
+// events they are refused.
+export const GIFT_WRAPPED_ONLY: readonly string[] = ["payment.request", "club.invitation"]
+
 export const RECORD_TYPES = { ...CLUB_TYPES, ...TOURNAMENT_TYPES, ...MATCH_TYPES, ...LIVE_TYPES, ...PAYMENT_TYPES, ...PROFILE_TYPES, ...BADGE_TYPES }
 export type RecordType = keyof typeof RECORD_TYPES
 export type ContentOf<T extends RecordType> = Infer<(typeof RECORD_TYPES)[T]["schema"]>
@@ -217,7 +221,7 @@ export function parseRecord(event: unknown, opts: { now?: number; plaintext?: st
   const spec = specOf(type)
   if (!spec || version !== FORMAT_VERSION) return { status: "unknown", event, type, version }
   if (event.kind !== spec.kind) return invalid("wrong_kind", `${type} is kind ${spec.kind}`, type)
-  if (type === "payment.request") return invalid("wrong_kind", "payment requests travel only gift-wrapped", type)
+  if (GIFT_WRAPPED_ONLY.includes(type)) return invalid("wrong_kind", `${type} travels only gift-wrapped`, type)
 
   const roots = tagValues(event.tags, "e")
   if (roots.length > 1) return invalid("invalid_tags", "more than one root", type)

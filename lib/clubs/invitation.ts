@@ -51,9 +51,10 @@ export function invitationState(view: ClubView, now: number): InvitationState | 
   if (expires !== undefined && expires < now) return "expired"
   if (invite?.ended) return "ended"
   if (invite?.kind === "personal" && invite.uses.length > 0) return "used"
-  // A group link admits at once, unless the club has a member limit: then a leader decides. A
-  // closed club's records say so only once they open; until then the preview does.
-  const limited = view.state ? view.state.info.capacity !== undefined : opened.preview?.limited === true
+  // A group link admits at once, unless the club has a member limit or confirms new members, or
+  // a member made it: then a leader decides. A closed club's records say so only once they open;
+  // until then the preview does.
+  const limited = view.state ? view.state.info.capacity !== undefined || view.state.info.approval || invite?.maker === "member" : opened.preview?.limited === true
   return kind === "group" && !limited ? "open" : "request"
 }
 

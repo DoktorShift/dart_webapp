@@ -1,6 +1,6 @@
 # Familie: Club
 
-Stand: P0.05 (nach Review Runde 3). Code: [`club.ts`](../../../lib/protocol/club.ts) (Typen und Schemas), [`club-state.ts`](../../../lib/protocol/club-state.ts) (Zustand), [`invite.ts`](../../../lib/protocol/invite.ts) (Einladungen), [`seal.ts`](../../../lib/protocol/seal.ts) (geschlossene Clubs). Schema: [`schemas/club.schema.json`](../schemas/club.schema.json). Vektoren: [`vectors/club.json`](../vectors/club.json), [`vectors/invite.json`](../vectors/invite.json), [`vectors/seal.json`](../vectors/seal.json). Rechte: [permissions.md](../permissions.md).
+Stand: P0.05 (nach Review Runde 3), Beitrittsregeln, Kurzcode, geteilter Link und Einladung an ein Profil ergänzt am 26. Oktober 2026 (Entscheidungen E14, E15). Code: [`club.ts`](../../../lib/protocol/club.ts) (Typen und Schemas), [`club-state.ts`](../../../lib/protocol/club-state.ts) (Zustand), [`invite.ts`](../../../lib/protocol/invite.ts) (Einladungen), [`seal.ts`](../../../lib/protocol/seal.ts) (geschlossene Clubs). Schema: [`schemas/club.schema.json`](../schemas/club.schema.json). Vektoren: [`vectors/club.json`](../vectors/club.json), [`vectors/invite.json`](../vectors/invite.json), [`vectors/seal.json`](../vectors/seal.json). Rechte: [permissions.md](../permissions.md).
 
 ## Zweck
 
@@ -23,10 +23,12 @@ Versiegelt wird nach dem Umschlag in [kinds.md](../kinds.md#versiegelter-umschla
 
 | Typ | Autor | Inhalt | Regeln |
 | --- | --- | --- | --- |
-| `club.found` | Gründer (wird Eigentümer) | `name`, `about?`, `picture?` (https), `visibility`, `capacity?` (2–100) | Event-ID = Club-ID; geschlossen nur versiegelt, öffentlich nur im Klartext |
-| `club.update` | Eigentümer, Admin | `prev`, geänderte Felder (`name`, `about`, `picture` oder `null`, `visibility`, `capacity` oder `null`, `archived`) | `visibility` und `archived` nur Eigentümer; `prev` = letzte Club-Änderung oder Club-ID; schließen nur mit höchstens 100 Mitgliedern |
-| `club.invite` | Eigentümer, Admin | `kind` (`group` / `personal`), `key` (öffentlicher Einladungsschlüssel), `expires`, `label?` | Einladungs-ID = Event-ID; `expires` nach `created_at`; öffentlicher Club: Klartext ohne `label`; geschlossener Club: versiegelt, der Umschlag trägt die Vorschau `p`; endet endgültig mit der Rolle der erstellenden Person |
-| `club.invite.revoke` | Eigentümer, Admin | `invite` (Event-ID) | einmal; kann der Leser die Einladung nicht öffnen: wartet |
+| `club.found` | Gründer (wird Eigentümer) | `name`, `about?`, `picture?` (https), `visibility`, `capacity?` (2–100), `approval?`, `membersInvite?` ([Beitrittsregeln](#beitrittsregeln)) | Event-ID = Club-ID; geschlossen nur versiegelt, öffentlich nur im Klartext |
+| `club.update` | Eigentümer, Admin | `prev`, geänderte Felder (`name`, `about`, `picture` oder `null`, `visibility`, `capacity` oder `null`, `archived`, `approval`, `membersInvite`) | `visibility` und `archived` nur Eigentümer; `prev` = letzte Club-Änderung oder Club-ID; schließen nur mit höchstens 100 Mitgliedern; `membersInvite: false` beendet die Einladungen der Mitglieder endgültig |
+| `club.invite` | Eigentümer, Admin; mit `membersInvite` jedes Mitglied | `kind` (`group` / `personal`), `key` (öffentlicher Einladungsschlüssel), `expires`, `label?`; Tag `c` für den [Kurzcode](#kurzcode) | Einladungs-ID = Event-ID; `expires` nach `created_at`; öffentlicher Club: Klartext ohne `label`; geschlossener Club: versiegelt, der Umschlag trägt die Vorschau `p`; endet endgültig mit der Rolle der erstellenden Person (Mitglied: mit der Mitgliedschaft oder der Einstellung) |
+| `club.invite.token` | Eigentümer, Admin, Ersteller der Einladung | `invite` (Event-ID), `token` (Geheimnis des Links), `code?` | immer versiegelt, auch im öffentlichen Club; ändert keinen Zustand ([Geteilter Link](#geteilter-link)) |
+| `club.invitation` | Eigentümer, Admin, einladendes Mitglied | `invite`, `token`, `relays`, `name`, `hostName?` | nur als Rumor in einem NIP-59-Gift-Wrap an die eingeladene Person; als Event abgelehnt (`wrong_kind`) ([Einladung an ein Profil](#einladung-an-ein-profil)) |
+| `club.invite.revoke` | Eigentümer, Admin, Ersteller der Einladung | `invite` (Event-ID) | einmal; kann der Leser die Einladung nicht öffnen: wartet |
 | `club.join` | Beitretende | `invite?` (Event-ID), `proof?` (Signatur, beide zusammen) | nie versiegelt; siehe Beitritt |
 | `club.accept` | Eigentümer, Admin | `request` (Event-ID des `club.join`), `member` | Kapazität wird hier geprüft |
 | `club.decline` | Eigentümer, Admin | `request` | |
@@ -73,7 +75,8 @@ Der Datensatz nennt nur `key`, nie den Token. Prüfen kann jeder, der den Datens
 
 | Art | Wirkung eines gültigen `club.join` | Kapazität, Ablauf, Reihenfolge |
 | --- | --- | --- |
-| **Gruppenlink** (`group`) | sofort Mitglied (`via: "group"`), solange der Club **keine Höchstzahl** hat; mit Höchstzahl eine Anfrage (`check: "ok"`), über die ein Eigentümer oder Admin entscheidet. Ein geschlossener Club ohne eigene Höchstzahl nimmt bis 100 Mitglieder sofort auf, danach werden Beitritte Anfragen | Ablauf: `created_at` des Beitritts ≤ `expires`; Widerruf und Ende der Rolle des Erstellers: Beitritte danach werden abgelehnt |
+| **Gruppenlink** (`group`) eines Eigentümers oder Admins | sofort Mitglied (`via: "group"`), solange der Club **keine Höchstzahl** hat und **neue Mitglieder nicht bestätigt** (`approval`); sonst eine Anfrage (`check: "ok"`), über die ein Eigentümer oder Admin entscheidet. Ein geschlossener Club ohne eigene Höchstzahl nimmt bis 100 Mitglieder sofort auf, danach werden Beitritte Anfragen | Ablauf: `created_at` des Beitritts ≤ `expires`; Widerruf und Ende der Rolle des Erstellers: Beitritte danach werden abgelehnt |
+| **Gruppenlink eines Mitglieds** (`membersInvite`) | immer eine Anfrage (`check: "ok"`); entscheidet ein Eigentümer oder Admin (Vektor `members-invite`) | wie oben; endet außerdem mit der Mitgliedschaft des Erstellers und endgültig mit `membersInvite: false` (Vektor `members-invite-ends`) |
 | **Persönliche Einladung** (`personal`) | Anfrage (`check: "ok"`); Mitglied erst mit `club.accept`, einmalig | entscheidet die annehmende Person; eine zweite Nutzung wird abgelehnt (`invite_exhausted`) |
 | **Ohne Einladung** | Anfrage (`check: "none"`) | entscheidet die annehmende Person |
 
@@ -89,6 +92,35 @@ Weitere Regeln beim Abspielen:
 - Ein Gruppenlink ist ein Inhaber-Token: Wer ihn hat, kann bis zum Ablauf beitreten. Ablauf, Widerruf und das Ende der Rolle des Erstellers wirken gegenüber ehrlichen Uhren; einen rückdatierten Beitritt mit gültigem Token erkennt niemand ([conflicts.md](../conflicts.md#einladungen)). Das Gegenmittel ist `club.remove`; wer das nicht will, nutzt persönliche Einladungen oder eine Höchstzahl.
 - Wer eine Anfrage stellt, kann sie mit `club.leave` zurückziehen.
 
+### Beitrittsregeln
+
+Zwei Felder in `club.found` und `club.update`, beide fehlend = aus (so stehen alle Clubs von vor diesen Feldern):
+
+Bevor ein geschlossener Club auf dem Gerät der beitretenden Person offen ist, sagt die Vorschau der Einladung (`limited`, oder eine persönliche Einladung), ob der Beitritt sofort galt oder nur anfragt; die Oberfläche zeigt entsprechend „Du bist dabei“ oder „Deine Anfrage wartet“ (`lib/clubs/club.ts` `membership`).
+
+- `approval`: Neue Mitglieder erst nach Bestätigung. Gruppenlinks der Verantwortlichen stellen nur Anfragen, wie bei einer Höchstzahl; die Vorschau sagt es (`limited`). Vektor `approval`.
+- `membersInvite`: Jedes Mitglied darf einladen (`club.invite`), seine eigenen Einladungen beenden und deren Geheimnis teilen. Die Einladung eines Mitglieds (`maker: "member"`) stellt immer nur eine Anfrage, die ein Verantwortlicher bestätigt; so kann ein Mitglied niemanden ohne Entscheidung der Leitung hereinholen (E15). Sie endet endgültig, wenn das Mitglied austritt oder entfernt wird, und wenn die Einstellung ausgeschaltet wird (`ended: "members_off"`); ein späteres Einschalten belebt sie nicht wieder. Vektoren `members-invite`, `members-invite-ends`.
+
+### Kurzcode
+
+Ein Gruppenlink hat zusätzlich einen Code, den man sagen kann: acht Zeichen aus `ABCDEFGHJKLMNPQRSTUVWXYZ23456789` (ohne 0, O, 1, I), angezeigt als `ABCD-EFGH`. Der Code ist ein Inhaber-Geheimnis von 40 Bit; deshalb wird nichts Schnelles daraus abgeleitet:
+
+```
+k      = scrypt(passwort = code, salz = "blueline-code-v1", N = 2^15, r = 8, p = 1, 32 Byte)
+lookup = sha256("blueline-code-lookup-v1" ‖ k)[0..16] als hex
+wrap   = base64(nonce ‖ XChaCha20-Poly1305(schlüssel = sha256("blueline-code-wrap-v1" ‖ k), nonce (24 Byte), token, aad = "blueline-code-v1"))
+```
+
+Der `club.invite` trägt den Tag `["c", lookup, wrap]`; Inhalt und Versiegelung bleiben, wie sie sind. Wer den Code tippt, fragt die Standard-Relays nach `#c = lookup`, öffnet `wrap` mit dem Code und hat den Token: derselbe Beitritt wie über den Link (Nachweis, Vorschau). Ein Relay sieht einen Lookup-Wert, aus dem sich der Code nicht zurückrechnen lässt; Raten gegen die Tags kostet je Versuch ein scrypt (etwa 0,2 s und 32 MiB), und ein Zurücksetzen des Links macht jeden Code wertlos. Codes gibt es nur für Gruppenlinks; der Beitritt ist nur an Standard-Relays sichtbar, ein Club auf eigenen Relays braucht zusätzlich den Link (E14). Vektoren: [`vectors/invite.json`](../vectors/invite.json) (`code`, `codeLookup`, `codeTag`).
+
+### Geteilter Link
+
+Wer einen Link erstellt, teilt sein Geheimnis mit `club.invite.token` versiegelt für Eigentümer und Admins (plus sich selbst), auch im öffentlichen Club, wo sonst nur `club.keys` versiegelt ist. Jedes Leitungsgerät zeigt so denselben Code und Link; später ernannte Admins bekommen ihn, sobald ein Gerät mit dem Geheimnis den Club öffnet (`lib/clubs` `waitingTokens`). Der Datensatz ändert keinen Zustand; ein Leser verwendet den Token nur, wenn sein Einladungsschlüssel der im `club.invite` genannte ist (`inviteKey(token) = key`), ein falscher Token wird so nie angezeigt. Teilen darf ein Verantwortlicher jeden, ein Mitglied nur das Geheimnis seiner eigenen Einladung. Ein Leser verwendet außerdem nur Datensätze, die ihn selbst als Leser nennen (eigener Wrap), und eine Zugriffsfreigabe `club.keys` trägt nie den Inhaltsschlüssel eines `club.invite.token`: Der Link eines Verantwortlichen nimmt sofort auf und bleibt deshalb bei den Verantwortlichen; ein Mitglied zeigt nur seinen eigenen Link, der nur anfragt. Vektor `shared-link-secret`; Relay-Test „members may invite“ in `tests/relay/clubs.test.ts`.
+
+### Einladung an ein Profil
+
+Eine persönliche Einladung kann direkt an ein Profil gehen: `club.invitation` ist ein Rumor (Kind 1180, Tags `l`, `v`, `e` = Club-ID, `p` = eingeladene Person) mit `invite`, `token`, `relays`, `name` und `hostName?`, versiegelt (NIP-59 Kind 13) mit dem Schlüssel der einladenden Person und als Gift Wrap (Kind 1059) an die eingeladene Person gesendet, an die Standard-Relays und die Relays ihres Profil-Links. Als signiertes Event ist der Typ ungültig (`wrong_kind`), wie `payment.request`. Die App der eingeladenen Person liest ihre Gift Wraps an den Standard-Relays (nur mit einem Schlüssel auf dem Gerät, ein Signer-Programm würde bei jedem Wrap fragen), prüft Autor des Siegels = Autor des Rumors, `p` = eigener Pubkey, und öffnet die Einladung wie einen gescannten Link. Relays sehen weder Absender noch Club.
+
 ## Übergabe des Eigentums
 
 Es gelten die Übergaberegeln Ü1 bis Ü6 in [conflicts.md](../conflicts.md#übergaben-turnierleitung-club-eigentum). Die erste rechtzeitige Annahme der angebotenen Person, die mindestens den Stand des Angebots nennt, beendet das Eigentum, wenn das Abspielen sie annimmt. Bis zur Annahme folgen die Clubangaben und die Mitgliedschaft der übernehmenden Person dem Stand, den sie nennt: Eine Entfernung oder Rollenänderung, die davon abzweigt, gilt nicht, auch wenn ein Admin sie später vor die Annahme oder das Angebot datiert (Vektor `admin-backdates-around-handover`); Datensätze über eine frühere Mitgliedschaft bleiben (Vektor `owner-transfer-after-rejoin`).
@@ -97,7 +129,7 @@ Vorgaben für `lib/clubs`: Angebote gelten 24 Stunden; angeboten und angenommen 
 
 ## Zustand
 
-`reduceClub(events, clubId, { now, open })` liefert `ClubState`: Eigentümer, Angaben, Mitglieder mit Rolle, Seit und Weg (`founder`, `group` = dieser Leser hat den Nachweis selbst geprüft, `accepted`), Einladungen mit Einladungsschlüssel, Nutzungen und Ende (`ended`: `revoked` oder `maker_role`), wartende Anfragen mit Prüfstatus, ehemalige Mitglieder (`left` / `removed`), offenes Eigentümerangebot, Saisons mit allen Regelversionen, Ergebnisentscheidungen je Saison und Match, Termine mit Antworten, Clubspiele, Schlüsselfreigaben, Rollenverlauf (`clubRoleAt` für Club-Turniere) und das Protokoll (`applied`, `rejected` mit Grund, `unapplied` als „versiegelt“, „unbekannte Version“ oder „wartet“). Einladungs-Tokens kommen in keinem Datensatz vor.
+`reduceClub(events, clubId, { now, open })` liefert `ClubState`: Eigentümer, Angaben, Mitglieder mit Rolle, Seit und Weg (`founder`, `group` = dieser Leser hat den Nachweis selbst geprüft, `accepted`), Einladungen mit Einladungsschlüssel, Ersteller-Art (`maker`: `manager` oder `member`), Nutzungen und Ende (`ended`: `revoked`, `maker_role` oder `members_off`), wartende Anfragen mit Prüfstatus, ehemalige Mitglieder (`left` / `removed`), offenes Eigentümerangebot, Saisons mit allen Regelversionen, Ergebnisentscheidungen je Saison und Match, Termine mit Antworten, Clubspiele, Schlüsselfreigaben, Rollenverlauf (`clubRoleAt` für Club-Turniere) und das Protokoll (`applied`, `rejected` mit Grund, `unapplied` als „versiegelt“, „unbekannte Version“ oder „wartet“). Einladungs-Tokens kommen in keinem Datensatz vor.
 
 ## Aufbewahrung und Löschung
 
@@ -105,8 +137,8 @@ Club-Datensätze sind regulär und werden nicht ersetzt; die Rollenhistorie blei
 
 ## Ablehnungen
 
-`not_authorized`, `stale_predecessor`, `superseded`, `sealing_required`, `invalid_tags` (versiegelter Datensatz außer `club.keys` in einem öffentlichen Club), `invalid_content` (Einladungsbezeichnung im Klartext, Herabstufung eines Admins ohne `info`, Angebot länger als 7 Tage offen, Annahme mit älterem Stand als das Angebot), `already_member`, `not_member`, `duplicate`, `request_unknown`, `club_full`, `club_archived`, `invite_unknown`, `invite_expired`, `invite_revoked`, `invite_exhausted`, `invite_proof_invalid`, `removed_requires_new_invite`, `owner_cannot_leave`, `no_open_offer`, `season_unknown`, `season_exists`, `season_version_mismatch`, `season_ended`, `rules_change_needs_reason`, dazu die allgemeinen Gründe ([conflicts.md](../conflicts.md#ablehnungsgründe)).
+`not_authorized`, `stale_predecessor`, `superseded`, `sealing_required`, `invalid_tags` (versiegelter Datensatz außer `club.keys` und `club.invite.token` in einem öffentlichen Club), `invalid_content` (Einladungsbezeichnung im Klartext, Herabstufung eines Admins ohne `info`, Angebot länger als 7 Tage offen, Annahme mit älterem Stand als das Angebot), `already_member`, `not_member`, `duplicate`, `request_unknown`, `club_full`, `club_archived`, `invite_unknown`, `invite_expired`, `invite_revoked`, `invite_exhausted`, `invite_proof_invalid`, `removed_requires_new_invite`, `owner_cannot_leave`, `no_open_offer`, `season_unknown`, `season_exists`, `season_version_mismatch`, `season_ended`, `rules_change_needs_reason`, dazu die allgemeinen Gründe ([conflicts.md](../conflicts.md#ablehnungsgründe)).
 
 ## Vektoren
 
-[`vectors/club.json`](../vectors/club.json) liest jeden Fall aus Sicht von `reader` (geöffnet mit dessen Schlüssel über `openSealedEvents`): `group-link`, `replayed-proof`, `group-link-with-limit`, `personal-invite`, `expired-and-revoked`, `requests`, `roles`, `role-conflict`, `owner-transfer`, `leave-and-rejoin`, `new-member-reads-history`, `removed-member`, `closed-club-in-clear`, `closed-founding-in-clear`, `season-rules`, `results-and-dates`, `unknown-version-and-time`, `archived`, `public-club-read-by-owner`, `public-club-read-by-mallory`, `public-club-read-by-carol` (mit dem Clubturnier des Turnierleiters), `closed-club-partial-reader`, `former-owner-backdates`, `ex-admin-backdates`, `member-limit`, `backdated-join`, `owner-accept-names-older-info`, `offer-recipient-left`, `admin-backdates-around-handover`, `owner-transfer-after-rejoin`, `public-club-sealed-invite-read-by-owner`, `public-club-sealed-invite-read-by-mallory`, `invite-ends-with-role`, `invite-ends-for-good`, `member-limit-displacement`, `missing-predecessor`. Die Grenze beim Schließen eines Clubs mit mehr als 100 Mitgliedern prüft [`tests/protocol-state.test.ts`](../../../tests/protocol-state.test.ts).
+[`vectors/club.json`](../vectors/club.json) liest jeden Fall aus Sicht von `reader` (geöffnet mit dessen Schlüssel über `openSealedEvents`): `group-link`, `replayed-proof`, `group-link-with-limit`, `personal-invite`, `expired-and-revoked`, `requests`, `roles`, `role-conflict`, `owner-transfer`, `leave-and-rejoin`, `new-member-reads-history`, `removed-member`, `closed-club-in-clear`, `closed-founding-in-clear`, `season-rules`, `results-and-dates`, `unknown-version-and-time`, `archived`, `members-invite`, `members-invite-ends`, `approval`, `shared-link-secret`, `public-club-read-by-owner`, `public-club-read-by-mallory`, `public-club-read-by-carol` (mit dem Clubturnier des Turnierleiters), `closed-club-partial-reader`, `former-owner-backdates`, `ex-admin-backdates`, `member-limit`, `backdated-join`, `owner-accept-names-older-info`, `offer-recipient-left`, `admin-backdates-around-handover`, `owner-transfer-after-rejoin`, `public-club-sealed-invite-read-by-owner`, `public-club-sealed-invite-read-by-mallory`, `invite-ends-with-role`, `invite-ends-for-good`, `member-limit-displacement`, `missing-predecessor`. Die Grenze beim Schließen eines Clubs mit mehr als 100 Mitgliedern prüft [`tests/protocol-state.test.ts`](../../../tests/protocol-state.test.ts).

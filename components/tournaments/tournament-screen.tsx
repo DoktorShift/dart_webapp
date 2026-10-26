@@ -2,20 +2,23 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useReducedMotion } from "framer-motion"
-import { Medal, MonitorPlay, Printer, Settings, Share, WifiOff } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Medal, MonitorPlay, Printer, Share, WifiOff } from "lucide-react"
+import { Chip, Chips } from "@/components/ui/chip"
 import { EmptyState } from "@/components/ui/empty-state"
 import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
 import { Segmented } from "@/components/ui/segmented"
+import { TaskRow } from "@/components/common/task-row"
 import { Waiting } from "@/components/common/waiting"
 import { readPayload } from "@/components/live/link-payload"
+import { NavBarItems, NavIconButton, NavProminentButton } from "@/components/nav/nav-bar-items"
 import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { formatDateTime } from "@/lib/i18n"
 import { TOURNAMENTS_TEXTS } from "@/lib/i18n/features/tournaments.screens"
 import { BracketView } from "@/components/tournaments/bracket-view"
-import { rulesLine, SECONDARY, SyncLine, useParticipantNames } from "@/components/tournaments/common"
+import { LiveStrip } from "@/components/tournaments/live-strip"
+import { PHASE_TONES, rulesLine, SyncLine, useParticipantNames } from "@/components/tournaments/common"
 import { MatchesList } from "@/components/tournaments/matches-list"
 import { PhaseCard } from "@/components/tournaments/phase-card"
 import { TOURNAMENT_SCREENS } from "@/components/tournaments/screens"
@@ -26,16 +29,17 @@ import { useAutoAdmission, useTournament, type Entry } from "@/components/tourna
 import { nowSeconds } from "@/lib/nostr/time"
 import { nextMatch } from "@/lib/tournaments/engine"
 import { shortKey } from "@/lib/nostr/pointers"
-import { awaitingApproval, admitted, requests } from "@/lib/tournaments/read"
+import { awaitingApproval, admitted, freePlaces, registrationOpen, requests } from "@/lib/tournaments/read"
 import type { ScreenProps } from "@/lib/shell/registry"
 
 type Tab = "matches" | "bracket" | "info"
 
-// A tournament as players, spectators and the organizer see it first: what is played, when and
-// where, then the one thing to do in this phase (PhaseCard), then "Spiele" (the default on
-// phones), the bracket or the tables, and "Infos". Opened from the tab (params.tournament) or a
-// link (/#tournament=T1…, params.payload); the navigation bar names it once it is loaded.
-// Viewing needs no profile.
+// A tournament as players, spectators and the organizer see it first: its state in chips, what
+// is played, when and where, then the one thing to do in this phase (PhaseCard), then "Spiele"
+// (the default on phones), the bracket or the tables, and "Infos". "Teilen" sits in the bar, and
+// for the organizer the prominent "Leiten". Opened from the tab (params.tournament) or a link
+// (/#tournament=T1…, params.payload); the navigation bar names it once it is loaded. Viewing
+// needs no profile.
 export default function TournamentScreen({ params, setParams }: ScreenProps) {
   const tx = useAreaT(TOURNAMENTS_TEXTS)
   const link = useMemo(() => readPayload("tournament", params.payload), [params.payload])
@@ -96,10 +100,23 @@ function TournamentView({ entry, onRefresh }: { entry: Entry; onRefresh: () => v
   )
   const bracketLabel = s.format === "roundRobin" || (s.format === "groups" && !read.view?.matches.some((m) => m.bracket === "main" && m.state !== "pending")) ? tx.tournament.tabs.groups : tx.tournament.tabs.bracket
 
+  const places = registrationOpen(state, now) ? tx.home.free(freePlaces(state)) : null
+  const standing = read.me.organizer ? tx.home.organizer : read.me.participant?.status === "registered" ? (read.me.participant.checkedIn ? tx.home.checkedIn : tx.home.registered) : read.me.participant?.status === "pending" ? tx.home.pending : read.me.participant?.status === "waitlist" ? tx.home.waitlist : null
+  const organize = () => nav.push(TOURNAMENT_SCREENS.organize, { tournament: read.id })
+
   return (
     <div className="pb-4">
+      <NavBarItems>
+        <NavIconButton icon={Share} label={t.shell.bar.share} onClick={() => setSharing(true)} />
+        {read.me.organizer && <NavProminentButton label={tx.tournament.organizeShort} onClick={organize} />}
+      </NavBarItems>
       {urgent && phaseCard}
       <header className="mt-2">
+        <Chips className="mb-2">
+          <Chip tone={PHASE_TONES[state.phase]}>{tx.phase[state.phase]}</Chip>
+          {places && <Chip>{places}</Chip>}
+          {standing && <Chip tone={read.me.organizer ? "accent" : "success"}>{standing}</Chip>}
+        </Chips>
         <p className="text-[1.0625rem] leading-snug text-muted-foreground [overflow-wrap:anywhere]">
           {[rulesLine(state, tx), tx.formats[s.format].name].join(" · ")}
           {s.final && ` · ${tx.finalLine(s.final.legsToWin, s.final.setsToWin)}`}
@@ -114,11 +131,9 @@ function TournamentView({ entry, onRefresh }: { entry: Entry; onRefresh: () => v
 
       {!urgent && phaseCard}
 
-      {read.me.organizer && (
-        <Group>
-          <ListRow icon={Settings} iconTone="gray" title={tx.tournament.organize} subtitle={tasks > 0 ? tx.tournament.organizeTasks(tasks) : undefined} onClick={() => nav.push(TOURNAMENT_SCREENS.organize, { tournament: read.id })} />
-        </Group>
-      )}
+      {state.phase === "running" && <LiveStrip read={read} names={names} className="mt-4" />}
+
+      {read.me.organizer && tasks > 0 && <TaskRow label={tx.tournament.organizeTasks(tasks)} onClick={organize} className="mt-4" />}
 
       <div className="mt-6">
         <Segmented
@@ -158,10 +173,6 @@ function TournamentView({ entry, onRefresh }: { entry: Entry; onRefresh: () => v
         </>
       )}
 
-      <Button variant="secondary" onClick={() => setSharing(true)} className={`${SECONDARY} mt-6 gap-2`}>
-        <Share className="h-5 w-5" aria-hidden="true" />
-        {tx.tournament.share}
-      </Button>
       <ShareSheet open={sharing} onOpenChange={setSharing} tournament={read.id} name={s.name} relays={read.relays} />
     </div>
   )

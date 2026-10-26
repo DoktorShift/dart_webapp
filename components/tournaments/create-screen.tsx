@@ -401,7 +401,9 @@ function Preview({ draft, stopSaving, onPublished }: { draft: TournamentDraft; s
 function PublishedView({ id, name, incomplete }: Published) {
   const tx = useAreaT(TOURNAMENTS_TEXTS)
   const nav = useNav()
-  const [sharing, setSharing] = useState(false)
+  // The code is what the organizer needs next, with the players standing there: the sheet
+  // opens by itself, once; not over the message that part of the tournament wasn't published.
+  const [sharing, setSharing] = useState(!incomplete)
   const open = () => nav.replaceTop(SCREENS.tournamentView, { tournament: id, name })
   return (
     <div className="pb-4">

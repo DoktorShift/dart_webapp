@@ -13,15 +13,14 @@ export const TournamentsHome = lazyScreen<object>(() => tabHomes().then((m) => (
 export const ProfileHome = lazyScreen<object>(() => tabHomes().then((m) => ({ default: m.ProfileHome })))
 export const SettingsEntry = lazyScreen<ScreenProps>(() => import("@/components/shell/settings-entry"))
 export const AboutScreen = lazyScreen<ScreenProps>(() => import("@/components/shell/about-screen"))
-export const OpenClubInvite = lazyScreen<ScreenProps>(() => import("@/components/shell/open-link-screen").then((m) => ({ default: m.OpenClubInvite })))
-export const OpenTournamentInvite = lazyScreen<ScreenProps>(() =>
-  import("@/components/shell/open-link-screen").then((m) => ({ default: m.OpenTournamentInvite })),
-)
+// The one scanner for every BlueLine code (scan-screen.tsx), opened from the Clubs and the
+// Tournaments tab.
+export const ScanScreen = lazyScreen<ScreenProps>(() => import("@/components/shell/scan-screen"))
 
 // Fetches the screens a guest can open without a connection, once the app is idle, so the
 // service worker caches them like the old Settings tab and About page: the Clubs, Tournaments
 // and Profile tabs, Settings, About, and the QR code drawing of the install guide (both of the
-// last two show it). The invitation scanner is left out: invitations need a connection anyway.
+// last two show it). The scanner is left out: what it opens needs a connection anyway.
 export function warmOfflineScreens() {
   return Promise.all([tabHomes(), SettingsEntry.preload(), AboutScreen.preload(), import("@/lib/qr")])
 }

@@ -27,9 +27,11 @@ export interface StoredClub extends Keyed {
   events: NostrEvent[]
   // Content keys of sealed records this profile opened, by event id: the signer is asked once.
   keys: Record<string, string>
-  // Tokens of the invite links made on this device, by invite id. Only the maker's devices know
-  // a link (docs/protocol/families/club.md); the records never carry it.
+  // Tokens of the invite links made on this device, by invite id, and the short codes of those
+  // that have one. A link made elsewhere reaches a leader's device sealed (club.invite.token,
+  // read in club.ts); the invite records themselves never carry it.
   tokens: Record<string, string>
+  codes: Record<string, string>
   invite?: OpenedInvite
   // Relays the invite link named, read along with the usual ones.
   relays: string[]
@@ -43,7 +45,7 @@ export interface StoredClub extends Keyed {
 
 const clubObjectId = (club: string) => `${CLUB_OBJECT_PREFIX}${club}`
 
-const empty = (club: string): StoredClub => ({ id: clubObjectId(club), club, events: [], keys: {}, tokens: {}, relays: [], recorded: {}, loadedAt: null })
+const empty = (club: string): StoredClub => ({ id: clubObjectId(club), club, events: [], keys: {}, tokens: {}, codes: {}, relays: [], recorded: {}, loadedAt: null })
 
 export async function loadStoredClub(club: string): Promise<StoredClub | null> {
   const stored = await dbGet<StoredClub>("objects", clubObjectId(club))
@@ -60,7 +62,7 @@ export async function storedClubs(): Promise<StoredClub[]> {
 export interface ClubChange {
   events?: readonly NostrEvent[]
   keys?: Readonly<Record<string, string>>
-  token?: { invite: string; token: string }
+  token?: { invite: string; token: string; code?: string }
   invite?: OpenedInvite | null
   relays?: readonly string[]
   recorded?: Readonly<Record<string, string>>
@@ -91,6 +93,7 @@ function merge(stored: StoredClub, change: ClubChange): StoredClub {
     ...addToCopy(stored, change),
     keys: { ...stored.keys, ...change.keys },
     tokens: change.token ? { ...stored.tokens, [change.token.invite]: change.token.token } : stored.tokens,
+    codes: change.token?.code ? { ...stored.codes, [change.token.invite]: change.token.code } : stored.codes,
     invite: change.invite === null ? undefined : (change.invite ?? stored.invite),
     recorded: { ...stored.recorded, ...change.recorded },
     loadedAt: change.loadedAt ?? stored.loadedAt,

@@ -2,6 +2,7 @@ import { query, subscribe, type Closer } from "../nostr/client.ts"
 import { generalRelays, mergeRelays } from "../nostr/relays.ts"
 import { nowSeconds } from "../nostr/time.ts"
 import type { Filter, NostrEvent } from "../nostr/types.ts"
+import { CODE_TAG } from "../protocol/invite.ts"
 import { KIND_CALENDAR_RSVP, KIND_CALENDAR_TIME, KIND_RECORD } from "../protocol/kinds.ts"
 import { tagValue } from "../protocol/tags.ts"
 
@@ -55,6 +56,13 @@ export function watchClub(club: string, hints: readonly string[], extras: ClubEx
 // and the start of a public club's records.
 export async function fetchInvite(club: string, invite: string, hints: readonly string[]): Promise<Fetched> {
   const result = await query([{ ids: [club, invite] }, { kinds: [KIND_RECORD], "#e": [club] }], clubRelays(hints))
+  return { events: result.events, answered: result.answered.length > 0 }
+}
+
+// The invite records that carry a short code's lookup value (invite.ts codeLookup), at the usual
+// relays: a code says nothing about where else the club is.
+export async function fetchInviteByCode(lookup: string): Promise<Fetched> {
+  const result = await query([{ kinds: [KIND_RECORD], "#l": ["club.invite"], [`#${CODE_TAG}`]: [lookup] }], clubRelays())
   return { events: result.events, answered: result.answered.length > 0 }
 }
 

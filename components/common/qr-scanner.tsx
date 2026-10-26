@@ -75,6 +75,7 @@ export function QRScanner({
   onResult,
   manualLabel,
   manualPlaceholder,
+  checkingText,
   inputMode = "url",
   typeFirst = false,
   className,
@@ -83,6 +84,8 @@ export function QRScanner({
   // The fallback field: "Code eingeben" (default) or "Link einfügen".
   manualLabel?: string
   manualPlaceholder?: string
+  // Shown while a typed entry is being looked up, where that takes a moment.
+  checkingText?: string
   inputMode?: "url" | "text" | "numeric"
   // The person chose to type the code: the field is focused (and so scrolled into view), and the
   // camera waits for "Code scannen" even where it is allowed.
@@ -102,6 +105,8 @@ export function QRScanner({
   const liveRef = useRef(false)
   const onResultRef = useRef(onResult)
   const [state, setState] = useState<ScanState>("idle")
+  // A typed code is being looked up (a verdict that takes a moment).
+  const [checking, setChecking] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [typed, setTyped] = useState("")
 
@@ -243,17 +248,22 @@ export function QRScanner({
   const submit = async (event: FormEvent) => {
     event.preventDefault()
     const text = typed.trim()
-    if (!text) return
+    if (!text || checking) return
     if (containsSecretKey(text)) {
       setTyped("")
       setMessage(t.shell.secretKey)
       return
     }
-    const verdict = await onResult(text, "typed")
-    if (typeof verdict === "string") setMessage(verdict)
-    else {
-      stop()
-      setMessage(null)
+    setChecking(true)
+    try {
+      const verdict = await onResult(text, "typed")
+      if (typeof verdict === "string") setMessage(verdict)
+      else {
+        stop()
+        setMessage(null)
+      }
+    } finally {
+      setChecking(false)
     }
   }
 
@@ -361,10 +371,15 @@ export function QRScanner({
             enterKeyHint="go"
             className="h-11 min-w-0 flex-1 bg-transparent text-[1.0625rem] outline-none placeholder:text-muted-foreground/70"
           />
-          <Button type="submit" variant="secondary" disabled={!typed.trim()} className="h-11 shrink-0 rounded-xl px-4 text-[1.0625rem] font-semibold text-primary">
+          <Button type="submit" variant="secondary" disabled={!typed.trim() || checking} className="h-11 shrink-0 rounded-xl px-4 text-[1.0625rem] font-semibold text-primary">
             {t.shell.scanner.submit}
           </Button>
         </div>
+        {checkingText && (
+          <p role="status" aria-live="polite" className="mt-2 min-h-5 px-4 text-[0.8125rem] text-muted-foreground">
+            {checking ? checkingText : ""}
+          </p>
+        )}
       </form>
     </div>
   )

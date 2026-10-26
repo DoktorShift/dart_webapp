@@ -32,7 +32,9 @@ function TabIcon({ id, icon: Icon, selected, className }: { id: Tab; icon: typeo
 
 // Top-level navigation, following the HIG: a tab bar at the bottom on phones and iPads in
 // portrait, a sidebar on wide screens (iPad in landscape, desktop). Game setup and games hide
-// both. The open tab is marked by colour, a heavier symbol and bold text, and for VoiceOver.
+// both. The open tab is marked by colour, a heavier symbol and bold text, and for VoiceOver. On
+// phones the bar floats as a glass capsule above the page's edge (iOS 26); in landscape, where
+// every point of height counts, it sits flush.
 export function AppShell({ tab, onTabChange, children }: { tab: Tab; onTabChange: (tab: Tab) => void; children: ReactNode }) {
   const t = useT()
   return (
@@ -66,9 +68,9 @@ export function AppShell({ tab, onTabChange, children }: { tab: Tab; onTabChange
 
       <nav
         aria-label={t.nav.sections}
-        className="shrink-0 border-t border-border/70 bg-background/85 pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] backdrop-blur-xl lg:hidden"
+        className="shrink-0 pb-[max(env(safe-area-inset-bottom),0.625rem)] pl-[max(env(safe-area-inset-left),0.75rem)] pr-[max(env(safe-area-inset-right),0.75rem)] pt-1.5 lg:hidden xshort:border-t xshort:border-border/70 xshort:bg-background/85 xshort:p-0 xshort:pb-[env(safe-area-inset-bottom)] xshort:pl-[env(safe-area-inset-left)] xshort:pr-[env(safe-area-inset-right)] xshort:backdrop-blur-xl"
       >
-        <ul className="mx-auto grid h-[3.0625rem] max-w-2xl grid-cols-5 xshort:h-11">
+        <ul className="mx-auto grid h-[3.0625rem] max-w-2xl grid-cols-5 rounded-[1.625rem] border border-border/70 bg-background/80 shadow-[0_10px_30px_-14px_rgba(0,0,0,0.45)] backdrop-blur-2xl xshort:h-11 xshort:rounded-none xshort:border-0 xshort:bg-transparent xshort:shadow-none xshort:backdrop-blur-none">
           {TABS.map(({ id, label, icon }) => (
             <li key={id} className="min-w-0">
               <button
@@ -76,7 +78,7 @@ export function AppShell({ tab, onTabChange, children }: { tab: Tab; onTabChange
                 onClick={() => onTabChange(id)}
                 aria-current={tab === id ? "page" : undefined}
                 className={cn(
-                  "flex h-full w-full flex-col items-center justify-center gap-0.5 px-0.5 text-[0.625rem] transition-colors xshort:flex-row xshort:gap-1.5 xshort:text-[0.8125rem]",
+                  "flex h-full w-full flex-col items-center justify-center gap-0.5 rounded-[1.625rem] px-0.5 text-[0.625rem] transition-colors xshort:flex-row xshort:gap-1.5 xshort:rounded-none xshort:text-[0.8125rem]",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
                   tab === id ? "font-semibold text-primary" : "font-medium text-muted-foreground",
                 )}

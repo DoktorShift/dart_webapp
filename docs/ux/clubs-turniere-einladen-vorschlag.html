@@ -1,0 +1,818 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Clubs, Turniere, Einladen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&display=swap">
+<style>
+/* Layout: ein ruhiges Dokument mit Telefon-Mockups in Paaren (Ist | Vorschlag); Mockups folgen den
+   Farbtokens der App (app/globals.css), das Dokument selbst einem neutralen Blaugrau. */
+:root{
+  --bg:#f6f7fa; --fg:#121826; --mute:#5b667a; --line:#dde2ea; --card:#ffffff; --accent:#2563eb; --accent-ink:#1d4ed8;
+  --tint:#e8efff; --soft:#eef1f6; --good:#157a4f; --warn:#9a5b00; --bad:#b42318;
+  --m-bg:#f2f2f7; --m-card:#ffffff; --m-line:#dcdce1; --m-ink:#0b1020; --m-mute:#4a5568; --m-blue:#2563eb; --m-tint:#dbe6fd; --m-gray:#e5e5ea; --m-green:#15803d; --m-red:#c81e1e;
+  --display:"Barlow Condensed",ui-sans-serif,system-ui,sans-serif; --body:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Helvetica,Arial,sans-serif; --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0d1117; --fg:#e7ebf2; --mute:#98a3b5; --line:#263041; --card:#141b26; --accent:#5b8dff; --accent-ink:#8fb0ff;
+  --tint:#17233d; --soft:#1a2231; --good:#4ade80; --warn:#fbbf24; --bad:#f87171;
+  --m-bg:#000000; --m-card:#1c1c1e; --m-line:#2c2c2e; --m-ink:#f5f5f7; --m-mute:#a1a1aa; --m-blue:#3b82f6; --m-tint:#1e2a44; --m-gray:#2c2c2e; --m-green:#34d399; --m-red:#f87171;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0d1117; --fg:#e7ebf2; --mute:#98a3b5; --line:#263041; --card:#141b26; --accent:#5b8dff; --accent-ink:#8fb0ff;
+  --tint:#17233d; --soft:#1a2231; --good:#4ade80; --warn:#fbbf24; --bad:#f87171;
+  --m-bg:#000000; --m-card:#1c1c1e; --m-line:#2c2c2e; --m-ink:#f5f5f7; --m-mute:#a1a1aa; --m-blue:#3b82f6; --m-tint:#1e2a44; --m-gray:#2c2c2e; --m-green:#34d399; --m-red:#f87171;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font:16px/1.55 var(--body);padding-block:0 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+a{color:var(--accent-ink)}
+.wrap{max-width:1120px;margin:0 auto}
+header.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:baseline;justify-content:space-between;padding:28px 0 18px;border-bottom:1px solid var(--line)}
+.brand{font-family:var(--display);font-weight:600;font-size:22px;letter-spacing:.2px}
+.meta{font-size:13px;color:var(--mute)}
+h1{font-family:var(--display);font-weight:600;font-size:clamp(34px,5vw,54px);line-height:1.05;margin:34px 0 10px;text-wrap:balance}
+.lead{font-size:18px;color:var(--mute);max-width:62ch;margin:0 0 8px}
+h2{font-family:var(--display);font-weight:600;font-size:30px;line-height:1.1;margin:56px 0 14px;text-wrap:balance;scroll-margin-top:16px}
+h3{font-size:18px;margin:26px 0 8px}
+p{max-width:72ch}
+ul,ol{max-width:72ch;padding-left:22px}
+li{margin:4px 0}
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 0;padding:0;list-style:none;max-width:none}
+.toc a{display:inline-block;padding:7px 12px;border:1px solid var(--line);border-radius:999px;font-size:13px;text-decoration:none;color:var(--fg);background:var(--card)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:22px 0}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.kpi b{display:block;font-family:var(--display);font-size:40px;line-height:1;font-weight:600;font-variant-numeric:tabular-nums}
+.kpi span{font-size:13px;color:var(--mute)}
+.kpi .vs{font-size:13px;color:var(--good);font-weight:600}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);font-weight:600;background:var(--soft)}
+tr:last-child td{border-bottom:0}
+td.n{font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--mute)}
+.sev{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600}
+.sev.h{background:#fde8e6;color:#9f1d13}.sev.m{background:#fff2d6;color:#8a5200}.sev.l{background:var(--soft);color:var(--mute)}
+:root[data-theme="dark"] .sev.h,:root[data-theme="dark"] .sev.m{background:var(--soft)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .sev.h,:root:not([data-theme="light"]) .sev.m{background:var(--soft)}}
+.stage{display:inline-block;min-width:26px;text-align:center;padding:2px 7px;border-radius:7px;font-size:12px;font-weight:700;background:var(--tint);color:var(--accent-ink)}
+code{font:13px var(--mono);background:var(--soft);padding:1px 5px;border-radius:5px}
+blockquote{margin:10px 0;padding:10px 16px;border-left:3px solid var(--accent);background:var(--card);border-radius:0 10px 10px 0;max-width:72ch}
+blockquote cite{display:block;font-size:12.5px;color:var(--mute);margin-top:6px;font-style:normal}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+.box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.box h3{margin-top:0}
+
+/* Vergleichspaare */
+.cmp{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:22px;margin:18px 0 10px}
+.pane{min-width:0}
+.pane .tag{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:7px;margin-bottom:10px}
+.pane.ist .tag{background:var(--soft);color:var(--mute)}
+.pane.neu .tag{background:var(--tint);color:var(--accent-ink)}
+.pane .inner{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:760px){.pane .inner{grid-template-columns:1fr}}
+.notes{font-size:14px;color:var(--fg);margin:0;padding:0;list-style:none}
+.notes li{position:relative;padding-left:28px;margin:0 0 9px}
+.notes li i{position:absolute;left:0;top:1px;width:20px;height:20px;border-radius:50%;font:700 12px/20px var(--body);text-align:center;font-style:normal;color:#fff;background:var(--mute)}
+.pane.neu .notes li i{background:var(--accent)}
+
+/* Telefon-Mockup, 300 px breit, Maßstab ~0,77 zu iPhone-Punkten */
+.ph{width:300px;max-width:100%;height:628px;background:var(--m-bg);color:var(--m-ink);border:1px solid var(--line);border-radius:34px;overflow:hidden;position:relative;display:flex;flex-direction:column;font:12.5px/1.35 var(--body);box-shadow:0 10px 30px -18px rgba(0,0,0,.35)}
+.ph.tall{height:auto;min-height:628px}
+.ph .nav{height:38px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 12px;font-size:13px;color:var(--m-blue)}
+.ph .nav .mid{color:var(--m-ink);font-weight:600}
+.ph .nav .r{display:flex;gap:10px;align-items:center}
+.ph .nav svg{width:22px;height:22px;stroke:var(--m-blue);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ph .nav .pill{background:var(--m-blue);color:#fff;font-weight:600;font-size:12px;padding:4px 10px;border-radius:999px}
+.ph .scr{flex:1;min-height:0;overflow:hidden;padding:0 12px 12px;display:flex;flex-direction:column;gap:10px}
+.ph .scr>*{flex:none}
+.ph .lt{font-family:var(--display);font-weight:600;font-size:28px;line-height:1;margin:2px 0 4px}
+.ph .sec{font-size:11px;color:var(--m-mute);margin:6px 0 -4px 4px}
+.ph .card{background:var(--m-card);border:1px solid var(--m-line);border-radius:12px;overflow:hidden}
+.ph .rw{display:flex;align-items:center;gap:9px;padding:9px 11px;min-height:38px;border-top:1px solid var(--m-line)}
+.ph .rw:first-child{border-top:0}
+.ph .rw .ic{width:22px;height:22px;border-radius:6px;flex:none;background:#0a7aff}
+.ph .rw .ic.g{background:#8e8e93}.ph .rw .ic.gr{background:#2fb553}.ph .rw .ic.o{background:#f08a00}.ph .rw .ic.t{background:#1e9fbf}.ph .rw .ic.p{background:#9b51e0}
+.ph .rw .t{flex:1;min-width:0}
+.ph .rw .t b{display:block;font-weight:600;font-size:13px}
+.ph .rw .t small{display:block;color:var(--m-mute);font-size:11px}
+.ph .rw .v{color:var(--m-mute);font-size:12px;white-space:nowrap}
+.ph .rw .chev{width:7px;height:7px;border-right:1.6px solid var(--m-mute);border-top:1.6px solid var(--m-mute);transform:rotate(45deg);opacity:.6;flex:none}
+.ph .rw.red b{color:var(--m-red);font-weight:500}
+.ph .btn{display:flex;align-items:center;justify-content:center;gap:6px;height:38px;border-radius:10px;font-weight:600;font-size:13px}
+.ph .btn.p{background:var(--m-blue);color:#fff}
+.ph .btn.s{background:var(--m-tint);color:var(--m-blue)}
+.ph .btn.g{color:var(--m-blue);height:32px;font-weight:500}
+.ph .btn.dis{opacity:.45}
+.ph .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ph .seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;background:var(--m-gray);border-radius:9px;padding:2px;font-size:12px;font-weight:600;text-align:center}
+.ph .seg span{padding:6px 2px;border-radius:7px;color:var(--m-mute)}
+.ph .seg span.on{background:var(--m-card);color:var(--m-ink);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.ph .av{width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;color:#fff;font-weight:700;font-size:13px;background:linear-gradient(145deg,#38bdf8,#1d4ed8)}
+.ph .av.lg{width:52px;height:52px;font-size:19px}
+.ph .av.xl{width:68px;height:68px;font-size:26px}
+.ph .av.o{background:linear-gradient(145deg,#fb923c,#c2410c)}
+.ph .av.g{background:linear-gradient(145deg,#4ade80,#15803d)}
+.ph .av.v{background:linear-gradient(145deg,#c084fc,#7e22ce)}
+.ph .av.k{background:linear-gradient(145deg,#94a3b8,#475569)}
+.ph .stack{display:flex;align-items:center}
+.ph .stack .av{width:22px;height:22px;font-size:9px;border:2px solid var(--m-card);margin-left:-7px}
+.ph .stack .av:first-child{margin-left:0}
+.ph .stack small{margin-left:6px;color:var(--m-mute);font-size:11px}
+.ph .chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:600;background:var(--m-gray);color:var(--m-mute)}
+.ph .chip.b{background:var(--m-tint);color:var(--m-blue)}
+.ph .chip.gr{background:#dcfce7;color:#166534}
+.ph .chip.live{background:#fee2e2;color:#991b1b}
+.ph .chip.live::before{content:"";width:6px;height:6px;border-radius:50%;background:#dc2626}
+.ph .hero{padding:12px 11px 10px;display:flex;gap:10px;align-items:center}
+.ph .hero .t b{display:block;font-size:15px;font-weight:700}
+.ph .hero .t small{display:block;color:var(--m-mute);font-size:11px}
+.ph .hero.c{flex-direction:column;text-align:center;gap:6px;padding-top:6px}
+.ph .hero.c .t b{font-family:var(--display);font-size:24px;font-weight:600;line-height:1}
+.ph .acts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.ph .acts div{background:var(--m-card);border:1px solid var(--m-line);border-radius:12px;padding:8px 4px 6px;text-align:center;font-size:10.5px;font-weight:600;color:var(--m-blue)}
+.ph .acts svg{width:20px;height:20px;stroke:var(--m-blue);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;display:block;margin:0 auto 3px}
+.ph .task{display:flex;align-items:center;gap:8px;background:var(--m-tint);color:var(--m-blue);border-radius:12px;padding:10px 11px;font-weight:600;font-size:12.5px}
+.ph .rank{display:flex;gap:12px;align-items:center;padding:10px 11px}
+.ph .rank b{font-family:var(--display);font-size:32px;font-weight:600;line-height:1}
+.ph .status{padding:9px 11px;border-radius:10px;font-size:12px;background:#dcfce7;color:#14532d}
+.ph .status.i{background:var(--m-tint);color:var(--m-blue)}
+.ph .status.e{background:#fee2e2;color:#7f1d1d}
+.ph .field{background:var(--m-card);border:1px solid var(--m-line);border-radius:10px;padding:9px 11px;color:var(--m-mute);font-size:13px}
+.ph .fl{font-size:11px;color:var(--m-mute);margin:2px 0 -6px 4px}
+.ph .tabbar{flex:none;height:56px;border-top:1px solid var(--m-line);background:var(--m-card);display:grid;grid-template-columns:repeat(5,1fr);align-items:center;font-size:9.5px;color:var(--m-mute);text-align:center}
+.ph .tabbar .on{color:var(--m-blue)}
+.ph .tabbar svg{width:20px;height:20px;display:block;margin:0 auto 2px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.ph .tabbar.float{position:absolute;left:12px;right:12px;bottom:10px;height:52px;border:1px solid var(--m-line);border-radius:26px;background:color-mix(in srgb,var(--m-card) 78%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 6px 20px -10px rgba(0,0,0,.4)}
+.ph .sheet{position:absolute;left:0;right:0;bottom:0;background:var(--m-bg);border-radius:18px 18px 0 0;padding:8px 12px 14px;box-shadow:0 -8px 30px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:9px}
+.ph .sheet::before{content:"";width:34px;height:4px;border-radius:2px;background:var(--m-line);margin:0 auto 2px}
+.ph .sheet h4{margin:0;font-size:16px;font-weight:700}
+.ph .sheet p{margin:0;font-size:12px;color:var(--m-mute)}
+.ph .dim{position:absolute;inset:0;background:rgba(0,0,0,.32)}
+.ph .qrcard{background:#fff;border-radius:14px;padding:12px;display:grid;place-items:center;position:relative}
+.ph .qr{width:150px;height:150px;display:block}
+.ph .qrcard .av{position:absolute;border:3px solid #fff}
+.ph .code{font-family:var(--mono);font-size:20px;letter-spacing:.14em;font-weight:600;text-align:center;font-variant-numeric:tabular-nums}
+.ph .cam{background:#0b0f19;border-radius:14px;height:210px;position:relative;color:#cbd5e1;display:grid;place-items:center;font-size:11px}
+.ph .cam::before{content:"";position:absolute;inset:34px 44px;border:2px solid transparent;border-radius:16px;background:
+  linear-gradient(#fff,#fff) top left/26px 2px no-repeat,linear-gradient(#fff,#fff) top left/2px 26px no-repeat,
+  linear-gradient(#fff,#fff) top right/26px 2px no-repeat,linear-gradient(#fff,#fff) top right/2px 26px no-repeat,
+  linear-gradient(#fff,#fff) bottom left/26px 2px no-repeat,linear-gradient(#fff,#fff) bottom left/2px 26px no-repeat,
+  linear-gradient(#fff,#fff) bottom right/26px 2px no-repeat,linear-gradient(#fff,#fff) bottom right/2px 26px no-repeat}
+.ph .cam.small{height:150px}
+.ph .steps{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;font-size:9px;text-align:center;color:var(--m-mute)}
+.ph .steps span{padding-top:5px;border-top:3px solid var(--m-gray)}
+.ph .steps span.done{border-color:var(--m-blue);color:var(--m-blue)}
+.ph .steps span.now{border-color:var(--m-blue);color:var(--m-ink);font-weight:700}
+.ph .match{display:flex;align-items:center;gap:8px;padding:9px 11px;border-top:1px solid var(--m-line)}
+.ph .match:first-child{border-top:0}
+.ph .match .sc{font-family:var(--display);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;min-width:34px;text-align:center}
+.ph .match .n{flex:1;font-size:12.5px;font-weight:600}
+.ph .match small{color:var(--m-mute);font-size:10.5px;display:block;font-weight:400}
+.ph .menu{position:absolute;right:12px;top:40px;background:var(--m-card);border:1px solid var(--m-line);border-radius:12px;box-shadow:0 10px 30px -10px rgba(0,0,0,.4);min-width:180px;overflow:hidden;z-index:2}
+.ph .menu div{padding:9px 12px;font-size:13px;border-top:1px solid var(--m-line);display:flex;justify-content:space-between;align-items:center}
+.ph .menu div:first-child{border-top:0}
+.ph .menu div.red{color:var(--m-red)}
+.ph .menu svg{width:17px;height:17px;stroke:var(--m-ink);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ph .menu div.red svg{stroke:var(--m-red)}
+.ph .caption{font-size:11px;color:var(--m-mute);text-align:center}
+
+/* Flussdiagramm */
+.flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}
+.flow .st{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:14px;position:relative}
+.flow .st b{display:block;font-family:var(--display);font-size:22px;font-weight:600;color:var(--accent-ink);line-height:1;margin-bottom:4px}
+.flow .st small{display:block;color:var(--mute);font-size:12.5px;margin-top:4px}
+.tree{font:13.5px/1.6 var(--mono);background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;overflow-x:auto;white-space:pre;margin:0}
+.tree .x{color:var(--bad);text-decoration:line-through}
+.tree .y{color:var(--good);font-weight:600}
+.tree .k{color:var(--mute)}
+.swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.sw{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;font-size:13px}
+.sw .demo{height:54px;border-radius:9px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:6px}
+footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);font-size:13px;color:var(--mute)}
+.src{font-size:13.5px;columns:2;column-gap:28px;max-width:none}
+@media (max-width:720px){.src{columns:1}}
+.src li{break-inside:avoid}
+.src a,footer code,td code{overflow-wrap:anywhere}
+@media (prefers-reduced-motion:no-preference){.ph .chip.live::before{animation:pulse 1.4s ease-in-out infinite}}
+@keyframes pulse{50%{opacity:.35}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-scan" viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><rect x="8.5" y="8.5" width="7" height="7" rx="1"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="8" cy="12" r=".9"/><circle cx="12" cy="12" r=".9"/><circle cx="16" cy="12" r=".9"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 3v12M8 7l4-4 4 4M5 11v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2-1.2L14.2 3h-4l-.4 2.6a7 7 0 0 0-2 1.2l-2.3-.9-2 3.4 2 1.5a7 7 0 0 0 0 2.4l-2 1.5 2 3.4 2.3-.9a7 7 0 0 0 2 1.2l.4 2.6h4l.4-2.6a7 7 0 0 0 2-1.2l2.3.9 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/></symbol>
+  <symbol id="i-invite" viewBox="0 0 24 24"><circle cx="10" cy="8" r="3.5"/><path d="M3.5 20a6.5 6.5 0 0 1 13 0M19 8v6M16 11h6"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+  <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 21h8M10 17h4"/></symbol>
+  <symbol id="i-people" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.3"/><circle cx="17" cy="9" r="2.6"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M15 20a5 5 0 0 1 6.5-4.6"/></symbol>
+  <symbol id="i-medal" viewBox="0 0 24 24"><circle cx="12" cy="15" r="5"/><path d="M8.5 10.5 6 3h4l2 5 2-5h4l-2.5 7.5"/></symbol>
+  <symbol id="i-person" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="10" r="3"/><path d="M6.5 18.5a6 6 0 0 1 11 0"/></symbol>
+  <symbol id="i-pen" viewBox="0 0 24 24"><path d="M4 20h4l10-10-4-4L4 16zM13 7l4 4"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></symbol>
+  <symbol id="i-out" viewBox="0 0 24 24"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9"/></symbol>
+</svg>
+
+<div class="wrap">
+<header class="top">
+  <div class="brand">BlueLine Darts · UX-Vorschlag</div>
+  <div class="meta">Clubs, Turniere und Einladen · Ist-Stand <code>dev</code> be6bbf6 · 26. Oktober 2026 · Vorschlag, inzwischen gebaut (Stand unten)</div>
+</header>
+
+<h1>Clubs, Turniere, Einladen: vom Listenstapel zur Dartabend-App</h1>
+<p class="lead">Gegenüberstellung des heutigen Stands mit einem Vorschlag für Menüführung, Einladen per Scan und die Optik. Grundlage: der Code auf <code>dev</code>, die Nachweis-Screenshots, moderne Dart-Apps und die Apple Human Interface Guidelines (Stand iOS 26).</p>
+<div class="box" style="margin:16px 0 20px"><strong>Stand 26. Oktober 2026:</strong> Stufe 1 (M1 bis M9, reine Oberfläche) ist auf dem Zweig <code>ux/clubs-turniere-einladen</code> gebaut: ein Scanner für jeden Code, die zwei Wege hinein in der Navigationsleiste, das Einladeblatt mit fertigem Code, Clubkopf mit Schnellaktionen und Menü „Mehr“, Turnierseite mit „Teilen“ und „Leiten“ in der Leiste, Phasenschritte und Board-Codes in der Turnierleitung, Chips auf den Karten, Blätter öffnen sich nach Gründung und Veröffentlichung von selbst. Der Spielabend-Lauf P8.01 ist damit grün (70 von 70). Stufe 2 (M10 bis M14) und Stufe 3 (M15, M16) sind am selben Tag gebaut: Kurzcode unter jedem Gruppen-QR und seine Eingabe unter „Code scannen“, „An eine Person senden“ mit Profilcode und „Zuletzt gespielt mit“ (die Einladung erscheint bei der Person von selbst unter Clubs), ein Linkcode für alle Leitungsgeräte, die Clubregeln „Neue Mitglieder bestätigen“ und „Mitglieder dürfen einladen“ (Standard an; der Link eines Mitglieds fragt nur an, die Anfrage nennt, wer eingeladen hat), Vorschläge für Turniergäste, die Live-Leiste „Gerade an den Boards“ und die schwebende Glas-Tableiste auf Telefonen. Abweichungen vom Entwurf: der Code hat 8 statt 7 Zeichen (4+4) und einen scrypt-geschützten Nachschlagewert statt eines eigenen Datensatzes; persönliche Einladungen und Mitgliederlinks fragen immer an. Nachweis: Spielabend P8.01 83 von 83 mit zwei neuen Schritten, HIG-Matrix 154 von 154, 678 Tests, 10 Relay-Tests.</div>
+<ul class="toc">
+  <li><a href="#kurz">Kurzfassung</a></li><li><a href="#befunde">Befunde</a></li><li><a href="#prinzipien">Prinzipien</a></li><li><a href="#ia">Navigation</a></li>
+  <li><a href="#clubs">Clubs</a></li><li><a href="#einladen">Einladen</a></li><li><a href="#turniere">Turniere</a></li><li><a href="#kneipe">Der Kneipen-Moment</a></li>
+  <li><a href="#optik">Optik</a></li><li><a href="#massnahmen">Maßnahmen</a></li><li><a href="#entscheidungen">Entscheidungen</a></li><li><a href="#quellen">Quellen</a></li>
+</ul>
+
+<h2 id="kurz">Kurzfassung</h2>
+<div class="kpis">
+  <div class="kpi"><b>9 → 3</b><span>Tipps, bis der Freund neben dir im Club ist (beide Handys zusammen).</span></div>
+  <div class="kpi"><b>2 → 1</b><span>Scanner. Heute einer je Tab, der die jeweils andere Einladung ablehnt. Künftig einer für alle Codes.</span></div>
+  <div class="kpi"><b>0 → 1</b><span>Einladewege für normale Mitglieder. Heute dürfen nur Eigentümer und Admins einladen.</span></div>
+  <div class="kpi"><b>7 → 4</b><span>Gruppen auf der Club-Seite, bevor man scrollen muss.</span></div>
+</div>
+<div class="cols">
+  <div class="box"><h3>Was heute stört</h3>
+    <ul>
+      <li>Einladen ist ein Formular (Art, Gültigkeit, „Erstellen“), erst dann kommt der QR-Code. Und nur die Leitung darf es.</li>
+      <li>Zwei Tabs, zwei „Einladung öffnen“-Screens, zwei Scanner. Der Club-Scanner lehnt Turnier-Codes ab und umgekehrt.</li>
+      <li>Club- und Turnierseite sind Stapel aus Gruppen und Buttons ohne Hierarchie. „Teilen“ steht beim Turnier ganz unten, die Leitung ist eine Listenzeile mitten im Inhalt.</li>
+      <li>Der Board-Code für ein Turniergerät liegt vier Ebenen tief. Der Einladelink, den die Leitung in der Anmeldephase braucht, liegt auf einer anderen Seite.</li>
+    </ul></div>
+  <div class="box"><h3>Was der Vorschlag ändert</h3>
+    <ul>
+      <li><b>Nav-Bar-Aktionen statt Button-Reihen:</b> auf jedem Tab oben rechts „Scannen“ und „+“ (Menü), wie Erinnerungen, Dateien, Kalender.</li>
+      <li><b>Ein Einladen-Sheet:</b> öffnet sofort mit großem QR-Code, Kurzcode und Teilen. Optionen eingeklappt. Zweite Richtung: den Profil-Code des Freundes scannen.</li>
+      <li><b>Ein Scanner für alles:</b> Einladung, Turnier, Profil, Live-Spiel, Board, Gerät. Erreichbar aus jedem Tab und aus dem Spielmenü.</li>
+      <li><b>Seiten mit Kopf, Aktionsreihe und Status-Chips:</b> Club und Turnier bekommen einen Hero, vier Schnellaktionen, Verwaltung ins „⋯“-Menü. Turnierleitung mit Phasen-Stepper.</li>
+    </ul></div>
+</div>
+<p style="margin-top:18px">Drei Stufen: <span class="stage">1</span> reines Frontend ohne Protokolländerung (Großteil), <span class="stage">2</span> kleine Protokollerweiterungen über nostr-core (Kurzcode, Einladung an ein Profil, Club-Code für alle Leitungsgeräte), <span class="stage">3</span> Optik-Anleihen bei iOS 26 (schwebende Tab-Leiste, Glas-Buttons), nur wenn der Spielbildschirm unberührt bleibt.</p>
+
+<h2 id="befunde">Befunde am Ist-Stand</h2>
+<p>Aus Code (<code>components/clubs</code>, <code>components/tournaments</code>, <code>components/shell</code>) und den Nachweis-Screenshots unter <code>docs/implementation/evidence</code>. Schwere nach dem Dartabend-Test der Arbeitsregeln: „Könnte jemand das sofort in einer lauten Kneipe bedienen, Pfeile in der Hand, ohne Anleitung?“</p>
+<div class="tbl"><table>
+<thead><tr><th>Nr.</th><th>Befund</th><th>Wo</th><th>Schwere</th></tr></thead>
+<tbody>
+<tr><td class="n">B1</td><td>Normale Mitglieder haben keinen Einladeweg. „Mitglieder einladen“ erscheint nur für Eigentümer und Admin (<code>manager</code>). Wer am Tresen einen Freund mitbringen will, muss den Admin suchen.</td><td>club-screen.tsx</td><td><span class="sev h">hoch</span></td></tr>
+<tr><td class="n">B2</td><td>Einladen ist dreistufig: Art wählen (Für alle / Für eine Person), Gültigkeit (1/7/30 Tage), „Einladung erstellen“. Erst dann der QR-Code. Der häufigste Fall braucht keine dieser Fragen.</td><td>invite-sheet.tsx</td><td><span class="sev h">hoch</span></td></tr>
+<tr><td class="n">B3</td><td>Zwei getrennte Scanner („Einladung öffnen“ in Clubs und in Turniere). Der eine antwortet auf den Code des anderen mit „Das ist keine Club-Einladung.“ Ein Profil-Code wird dort gar nicht genommen, obwohl <code>parseAppLink</code> alle Arten kennt.</td><td>open-link-screen.tsx</td><td><span class="sev h">hoch</span></td></tr>
+<tr><td class="n">B4</td><td>Ein Leiter auf seinem zweiten Gerät kann den Code nicht zeigen: „Auf einem anderen Gerät erstellt; der Link ist nur dort.“ Das Geheimnis des Links bleibt auf dem Erstellgerät.</td><td>manage-sheets.tsx, Entscheidung E2</td><td><span class="sev m">mittel</span></td></tr>
+<tr><td class="n">B5</td><td>Club-Seite: Kopfkarte, zwei Buttons, Clubabend, Saison, Turnier, drei Zeilen, Verwalten, Verlassen, Sync-Zeile. Zehn Blöcke gleicher Gewichtung, nichts sticht heraus. Verwalten und Verlassen stehen im Inhalt statt im Menü.</td><td>club-screen.tsx</td><td><span class="sev m">mittel</span></td></tr>
+<tr><td class="n">B6</td><td>Der Einstieg „Club gründen“ / „Einladung öffnen“ steht als Buttonpaar zwischen den Karten. Mit drei Clubs rutscht er aus dem Bild; im Leerzustand ist er doppelt vorhanden.</td><td>clubs-home.tsx, tab-homes.tsx</td><td><span class="sev l">niedrig</span></td></tr>
+<tr><td class="n">B7</td><td>Turnierseite: „Turnierleitung“ ist eine Listenzeile zwischen Phasenkarte und Segmenten; „Teilen“ ein Button ganz unten. Beides sind Nav-Bar-Aktionen (HIG: eine herausgehobene Aktion rechts).</td><td>tournament-screen.tsx</td><td><span class="sev h">hoch</span></td></tr>
+<tr><td class="n">B8</td><td>In der Anmeldephase sagt die Leitung „Teile den Link“, aber der Teilen-Button liegt auf einer anderen Seite. Der Board-Code: Turnier › Leitung › Boards › Board › Sheet. Vier Ebenen für das, was beim Aufbau am häufigsten gebraucht wird.</td><td>organize-screen.tsx, organize-sheets.tsx</td><td><span class="sev h">hoch</span></td></tr>
+<tr><td class="n">B9</td><td>Zwei Ebenen Segmented Controls (Turnier: Spiele / Baum / Infos; Leitung: Spieler / Boards / Ergebnisse) ohne sichtbaren Ortswechsel. Welche Phase läuft, steht nur als Wort unter dem Namen.</td><td>beide Screens</td><td><span class="sev m">mittel</span></td></tr>
+<tr><td class="n">B10</td><td>Nach „Club gründen“ und nach „Turnier veröffentlichen“ kommt erst ein Button „Einladen“ / „Teilen“, dann das Sheet, dann (Club) das Formular. Der Moment, in dem alle am Tisch sitzen, wird dreimal unterbrochen.</td><td>create-screen.tsx (beide)</td><td><span class="sev m">mittel</span></td></tr>
+<tr><td class="n">B11</td><td>Karten sind reine Textzeilen: kein Avatar-Stapel der Mitglieder, keine Status-Chips, kein Unterschied zwischen „läuft gerade“ und „vor drei Wochen“. Turniere sind nicht nach Zustand gruppiert.</td><td>clubs-home.tsx, tournaments-home.tsx</td><td><span class="sev m">mittel</span></td></tr>
+<tr><td class="n">B12</td><td>Gültigkeit endet nach spätestens 30 Tagen. Ein am Board ausgehängter QR-Code ist dann tot (die Discord-Lektion).</td><td>invite-sheet.tsx</td><td><span class="sev l">niedrig</span></td></tr>
+</tbody></table></div>
+
+<h2 id="prinzipien">Prinzipien aus HIG und Recherche</h2>
+<div class="cols">
+  <div class="box"><h3>Apple HIG</h3>
+    <blockquote>„Use a tab bar to support navigation, not to provide actions.“<cite>HIG › Tab bars</cite></blockquote>
+    <blockquote>„Use the .prominent style for key actions such as Done … Only specify one primary action … trailing side.“ „Minimize the number of groups … aim for a maximum of three.“<cite>HIG › Toolbars (iOS 26, Navigation Bars sind darin aufgegangen)</cite></blockquote>
+    <blockquote>„Consider supporting the medium detent to allow progressive disclosure.“ „Include a grabber in a resizable sheet.“<cite>HIG › Sheets</cite></blockquote>
+    <blockquote>„Use the Share button to display an activity view … Avoid creating duplicate versions of common actions.“<cite>HIG › Activity views</cite></blockquote>
+    <blockquote>Segmented Controls: „Use nouns“, „no more than about five segments“, für „closely related subviews“, nicht für App-Bereiche.<cite>HIG › Segmented controls</cite></blockquote>
+    <blockquote>Action sheets: „Avoid displaying more than four buttons … including Cancel.“ Menüs: „Prefer listing important or frequently used menu items first.“<cite>HIG › Action sheets, Menus</cite></blockquote>
+  </div>
+  <div class="box"><h3>Was die Besten gleich machen</h3>
+    <ul>
+      <li><b>Die Triade:</b> ein Screen mit großem QR-Code, kurzem Code und Teilen-Button. Spotify Jam, WhatsApp, Signal, Kahoot. Nichts sonst auf diesem Screen.</li>
+      <li><b>Scanner einen Tipp entfernt,</b> und der Link landet direkt auf „Beitreten“ mit Name, Bild und Mitgliedern (Partiful, Apple Invites: ohne Konto ansehen, Konto erst beim Beitritt).</li>
+      <li><b>Beitrittspolitik als Schalter:</b> sofort dabei oder nach Bestätigung (Apple Invites „Approve Guests“, WhatsApp, Strava). Mit Liste der offenen Anfragen.</li>
+      <li><b>Dart-Apps:</b> DartCounter Local Tournaments: „join instantly by scanning a QR code or entering a code“, jedes Match auf einem eigenen Gerät. Autodarts: Lobby-QR, Freunde direkt per „Invite“, private Turniere „per Freundesliste, Link oder QR“. Scolia: „Board Access“ für Freunde statt Code tippen.</li>
+      <li><b>Zustandsgruppen:</b> DartCounter sortiert Turniere in „Lobby / Participating / Live“ und hebt laufende hervor.</li>
+      <li><b>Ausgehängte Codes dürfen nicht ablaufen</b> (Discord-Nutzer verloren gedruckte QR-Codes). Stattdessen „Link zurücksetzen“ (WhatsApp, Signal).</li>
+    </ul>
+  </div>
+</div>
+
+<h2 id="ia">Navigation vorher und nachher</h2>
+<p>Die fünf Tabs bleiben (der Spielbildschirm und die Rangliste sind nicht Teil dieses Vorschlags). Was sich ändert: wo Aktionen stehen und wie viele Wege es gibt.</p>
+<div class="cols">
+<pre class="tree"><b>Heute</b>
+Clubs (Tab)
+├── [Karte Club]
+│   ├── Spiel starten · <span class="x">Mitglieder einladen (nur Leitung)</span>
+│   ├── Nächster Clubabend · Saison · Turnier
+│   ├── Spieler · Tabelle · Termine &amp; Turniere
+│   ├── <span class="x">Club verwalten (im Inhalt)</span>
+│   │     └── Einladungen › Erstellen › Formular › QR
+│   └── <span class="x">Club verlassen (im Inhalt)</span>
+├── <span class="x">Club gründen (Button mittig)</span>
+├── <span class="x">Einladung öffnen (Button) › Scanner nur Club</span>
+└── Öffentliche Clubs
+Turniere (Tab)
+├── [Karte Turnier]
+│   ├── Phasenkarte
+│   ├── <span class="x">Turnierleitung (Listenzeile)</span> › Spieler | Boards | Ergebnisse › ⚙
+│   ├── Spiele | Turnierbaum | Infos (TV, Drucken)
+│   └── <span class="x">Teilen (Button ganz unten)</span>
+├── <span class="x">Turnier erstellen (Button mittig)</span>
+└── <span class="x">Einladung öffnen (Button) › Scanner nur Turnier</span></pre>
+<pre class="tree"><b>Vorschlag</b>
+Clubs (Tab)  <span class="y">Nav: [Scannen] [+]</span>
+├── <span class="y">+ › Club gründen · Mit Code beitreten</span>
+├── Einladungen (Karten mit „Beitreten“ direkt)
+├── [Karte Club: Avatar-Stapel, Termin-Chip, Aufgabe]
+│   ├── <span class="y">Hero · Spielen | Einladen | Termine | Tabelle</span>
+│   ├── Heute (eine Aufgabe) · Clubabend · Saison · Turnier
+│   ├── Spieler · Tabelle · Termine &amp; Turniere
+│   └── <span class="y">Nav ⋯ › Verwalten · Einladungen · Export · Verlassen</span>
+└── Öffentliche Clubs
+Turniere (Tab)  <span class="y">Nav: [Scannen] [+]</span>
+├── <span class="y">Läuft jetzt · Anmeldung offen · Du leitest · Vorbei</span>
+└── [Karte Turnier]
+    ├── <span class="y">Nav: [Teilen] [Leiten ▸ herausgehoben]</span>
+    ├── Hero · Phasenkarte „Dein nächster Schritt“
+    ├── Spiele | Baum | Infos
+    └── Leitung: <span class="y">Phasen-Stepper</span> · Spieler (+Einladen) | Boards (+Code) | Ergebnisse
+<span class="y">Ein Scanner</span> für Einladung · Turnier · Profil · Live · Board · Gerät
+<span class="k">(parseAppLink und dispatchLink gibt es schon; nur die Türen fehlen)</span></pre>
+</div>
+
+<h2 id="clubs">Clubs</h2>
+<h3>Der Clubs-Tab</h3>
+<div class="cmp">
+  <div class="pane ist"><span class="tag">Ist</span>
+    <div class="inner">
+      <div class="ph">
+        <div class="nav"><span></span><span></span><span></span></div>
+        <div class="scr">
+          <div class="lt">Clubs</div>
+          <div class="sec">Meine Clubs</div>
+          <div class="card"><div class="rw"><div class="av lg">D</div><div class="t"><b>Dartfreunde Nord</b><small>Mitglied</small><small>Nächster Termin: Sa., 17. Okt., 20:00</small></div><div class="chev"></div></div></div>
+          <div class="btn p" style="margin-top:8px">Club gründen</div>
+          <div class="btn s">Einladung öffnen</div>
+          <div class="card" style="margin-top:8px"><div class="rw"><div class="ic t"></div><div class="t"><b>Öffentliche Clubs</b><small>Soweit bekannt, ohne Verzeichnis</small></div><div class="chev"></div></div></div>
+        </div>
+        <div class="tabbar"><div><svg><use href="#i-play"/></svg>Spielen</div><div><svg><use href="#i-trophy"/></svg>Rangliste</div><div class="on"><svg><use href="#i-people"/></svg>Clubs</div><div><svg><use href="#i-medal"/></svg>Turniere</div><div><svg><use href="#i-person"/></svg>Profil</div></div>
+      </div>
+      <ul class="notes">
+        <li><i>1</i>Die Karte sagt Rolle und Termin, zeigt aber nicht, wer dabei ist oder ob heute etwas ansteht.</li>
+        <li><i>2</i>Das Buttonpaar steht mitten im Inhalt. Mit mehreren Clubs wandert es nach unten (B6).</li>
+        <li><i>3</i>„Einladung öffnen“ führt zu einem Scanner, der nur Club-Codes nimmt (B3).</li>
+      </ul>
+    </div>
+  </div>
+  <div class="pane neu"><span class="tag">Vorschlag</span>
+    <div class="inner">
+      <div class="ph">
+        <div class="nav"><span></span><span></span><span class="r"><svg><use href="#i-scan"/></svg><svg><use href="#i-plus"/></svg></span></div>
+        <div class="menu"><div>Club gründen <svg><use href="#i-people"/></svg></div><div>Mit Code beitreten <svg><use href="#i-scan"/></svg></div></div>
+        <div class="scr">
+          <div class="lt">Clubs</div>
+          <div class="sec">Einladung</div>
+          <div class="card"><div class="rw"><div class="av o">P</div><div class="t"><b>Pfeilwerfer Süd</b><small>Olaf lädt dich ein · 8 Spieler</small></div><span class="btn s" style="height:28px;padding:0 12px;font-size:12px">Beitreten</span></div></div>
+          <div class="sec">Meine Clubs</div>
+          <div class="card">
+            <div class="rw" style="align-items:flex-start"><div class="av lg">D</div><div class="t"><b>Dartfreunde Nord</b><div class="stack" style="margin:4px 0"><span class="av">A</span><span class="av o">B</span><span class="av g">M</span><span class="av v">J</span><small>+8 · du bist Mitglied</small></div><span class="chip b">Do 20:00 · Vereinsheim</span> <span class="chip">Herbst 2026 · Platz 3</span></div><div class="chev"></div></div>
+            <div class="rw" style="color:var(--m-blue);font-weight:600;font-size:12.5px">Kommst du am Donnerstag? <span style="margin-left:auto" class="chev"></span></div>
+          </div>
+          <div class="card" style="margin-top:4px"><div class="rw"><div class="ic t"></div><div class="t"><b>Öffentliche Clubs</b><small>Soweit bekannt</small></div><div class="chev"></div></div></div>
+        </div>
+        <div class="tabbar"><div><svg><use href="#i-play"/></svg>Spielen</div><div><svg><use href="#i-trophy"/></svg>Rangliste</div><div class="on"><svg><use href="#i-people"/></svg>Clubs</div><div><svg><use href="#i-medal"/></svg>Turniere</div><div><svg><use href="#i-person"/></svg>Profil</div></div>
+      </div>
+      <ul class="notes">
+        <li><i>1</i>Nav-Bar: „Scannen“ und „+“. Das Menü hinter „+“ hält die zwei Wege hinein (HIG Toolbars: Aktionen rechts, höchstens drei Gruppen).</li>
+        <li><i>2</i>Einladungen stehen oben mit „Beitreten“ direkt in der Zeile; die Detailseite bleibt für die Vorschau.</li>
+        <li><i>3</i>Die Karte zeigt Gesichter, den nächsten Termin als Chip, die eigene Saisonposition und darunter die eine offene Frage.</li>
+        <li><i>4</i>Leerzustand (kein Club): dieselben zwei Wege, einmal, als Empty State mit Erklärung. Das gibt es heute schon und bleibt.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<h3>Die Club-Seite</h3>
+<div class="cmp">
+  <div class="pane ist"><span class="tag">Ist</span>
+    <div class="inner">
+      <div class="ph">
+        <div class="nav"><span>‹ Clubs</span><span class="mid">Dartfreunde Nord</span><span></span></div>
+        <div class="scr">
+          <div class="card"><div class="hero"><div class="av lg">D</div><div class="t"><b>Dartfreunde Nord</b><small>Eigentümer</small></div></div><div style="padding:0 11px 10px;font-size:12px">Donnerstags im Vereinsheim</div></div>
+          <div class="btn p">Spiel starten</div>
+          <div class="btn s">Mitglieder einladen</div>
+          <div class="sec">Nächster Clubabend</div>
+          <div class="card"><div class="rw"><div class="t"><b>Clubabend</b><small>Sa., 17. Okt., 20:00 · Vereinsheim</small></div><span class="v">0 Zusagen</span><div class="chev"></div></div><div style="padding:8px 11px"><div style="font-size:11px;margin-bottom:4px">Kommst du?</div><div class="seg"><span>Ja</span><span>Vielleicht</span><span>Nein</span></div></div></div>
+          <div class="sec">Aktuelle Saison</div>
+          <div class="card"><div class="rw"><div class="t"><b>Herbst 2026</b><small>Du stehst noch nicht in der Tabelle.</small></div><span class="v">Ganze Tabelle</span><div class="chev"></div></div></div>
+          <div class="card"><div class="rw"><div class="ic"></div><div class="t"><b>Spieler</b></div><span class="v">2</span><div class="chev"></div></div><div class="rw"><div class="ic gr"></div><div class="t"><b>Tabelle</b></div><div class="chev"></div></div><div class="rw"><div class="ic o"></div><div class="t"><b>Termine &amp; Turniere</b></div><div class="chev"></div></div></div>
+          <div class="card"><div class="rw"><div class="ic g"></div><div class="t"><b>Club verwalten</b></div><div class="chev"></div></div></div>
+          <div class="card"><div class="rw red"><div class="t"><b>Club verlassen</b></div></div></div>
+        </div>
+        <div class="tabbar"><div><svg><use href="#i-play"/></svg>Spielen</div><div><svg><use href="#i-trophy"/></svg>Rangliste</div><div class="on"><svg><use href="#i-people"/></svg>Clubs</div><div><svg><use href="#i-medal"/></svg>Turniere</div><div><svg><use href="#i-person"/></svg>Profil</div></div>
+      </div>
+      <ul class="notes">
+        <li><i>1</i>Kopfkarte, Buttonpaar, dann sechs Gruppen untereinander. Alles gleich laut (B5).</li>
+        <li><i>2</i>„Mitglieder einladen“ sehen nur Eigentümer und Admin (B1).</li>
+        <li><i>3</i>Verwalten und Verlassen stehen im Inhalt. Beides sind seltene Aktionen, die im Menü gehören.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="pane neu"><span class="tag">Vorschlag</span>
+    <div class="inner">
+      <div class="ph">
+        <div class="nav"><span>‹ Clubs</span><span></span><span class="r"><svg><use href="#i-more"/></svg></span></div>
+        <div class="scr">
+          <div class="hero c"><div class="av xl">D</div><div class="t"><b>Dartfreunde Nord</b><small>Eigentümer · 12 Spieler · Donnerstags im Vereinsheim</small></div><div class="stack"><span class="av">A</span><span class="av o">B</span><span class="av g">M</span><span class="av v">J</span><span class="av k">+8</span></div></div>
+          <div class="acts"><div><svg><use href="#i-play"/></svg>Spielen</div><div><svg><use href="#i-invite"/></svg>Einladen</div><div><svg><use href="#i-cal"/></svg>Termine</div><div><svg><use href="#i-chart"/></svg>Tabelle</div></div>
+          <div class="task">2 Anfragen warten auf dich <span style="margin-left:auto" class="chev"></span></div>
+          <div class="sec">Donnerstag, 20:00 · Vereinsheim</div>
+          <div class="card"><div class="rw"><div class="t"><b>Clubabend</b><small>7 kommen · 2 vielleicht</small></div><div class="chev"></div></div><div style="padding:0 11px 9px"><div class="seg"><span class="on">Ja</span><span>Vielleicht</span><span>Nein</span></div></div></div>
+          <div class="sec">Herbst 2026</div>
+          <div class="card"><div class="rank"><b>3.</b><div style="flex:1"><div style="font-weight:600">14 Punkte · 6 Spiele</div><small style="color:var(--m-mute)">1 Spiel wartet auf Bestätigung</small></div><div class="chev"></div></div></div>
+          <div class="card"><div class="rw"><div class="ic o"></div><div class="t"><b>Vereinsmeisterschaft</b><small>Sa 14:00 · Anmeldung offen · 3 frei</small></div><div class="chev"></div></div></div>
+        </div>
+        <div class="tabbar"><div><svg><use href="#i-play"/></svg>Spielen</div><div><svg><use href="#i-trophy"/></svg>Rangliste</div><div class="on"><svg><use href="#i-people"/></svg>Clubs</div><div><svg><use href="#i-medal"/></svg>Turniere</div><div><svg><use href="#i-person"/></svg>Profil</div></div>
+      </div>
+      <ul class="notes">
+        <li><i>1</i>Hero wie Kontakte und Karten: Bild, Name, Rolle, Gesichter. Der Name wandert beim Scrollen in die Nav-Bar (gibt es schon).</li>
+        <li><i>2</i>Vier Schnellaktionen mit Symbol und Substantiv. „Einladen“ sehen alle Mitglieder; was sie zeigen dürfen, regelt der Club (Stufe 2, M12/M13).</li>
+        <li><i>3</i>Danach nur, was heute zählt: eine Aufgabe, der Termin mit Antwort, die eigene Zeile als Zahl, ein Turnier. „Spieler“ steckt im Avatar-Stapel, die Tabelle in der Aktionsreihe.</li>
+        <li><i>4</i>Das „⋯“-Menü oben rechts: Club verwalten, Einladungen, Name und Bild, Exportieren, zuletzt rot „Club verlassen“ (HIG Menus: Wichtiges zuerst, Destruktives getrennt).</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<h2 id="einladen">Einladen</h2>
+<h3>Leitung oder Mitglied: „Einladen“</h3>
+<div class="cmp">
+  <div class="pane ist"><span class="tag">Ist</span>
+    <div class="inner">
+      <div class="ph">
+        <div class="nav"><span>‹ Clubs</span><span></span><span></span></div>
+        <div class="scr"><div class="lt">Club gründen</div><div class="status">Dein Club steht. Lade jetzt deine Mitspieler ein.</div><div class="btn p">Mitglieder einladen</div></div>
+        <div class="dim"></div>
+        <div class="sheet"><h4>Mitglieder einladen</h4><p>Zeig den Code oder teil den Link. Wer ihn hat, kann beitreten.</p>
+          <div class="card"><div class="rw"><div class="t"><b>Für alle</b><small>Jeder mit dem Link tritt sofort bei.</small></div><span style="color:var(--m-blue)">✓</span></div><div class="rw"><div class="t"><b>Für eine Person</b><small>Einmal nutzbar; du bestätigst den Beitritt.</small></div></div></div>
+          <div class="card" style="padding:9px 11px"><div style="font-size:13px;margin-bottom:6px">Gültig</div><div class="seg"><span>1 Tag</span><span class="on">7 Tage</span><span>30 Tage</span></div></div>
+          <div class="btn p">Einladung erstellen</div><div class="btn g">Abbrechen</div></div>
+      </div>
+      <ul class="notes">
+        <li><i>1</i>Erst zwei Fragen, dann „Erstellen“, dann erst der QR-Code (B2). Danach: QR, Teilen, Link kopieren, Fertig.</li>
+        <li><i>2</i>Auf dem zweiten Gerät des Leiters: „Der Link ist nur dort.“ (B4)</li>
+        <li><i>3</i>Kein Weg zurück zum Freund: Ich kann seinen Profil-Code nicht scannen und ihn damit einladen.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="pane neu"><span class="tag">Vorschlag</span>
+    <div class="inner">
+      <div class="ph">
+        <div class="nav"><span>‹ Clubs</span><span></span><span class="r"><svg><use href="#i-more"/></svg></span></div>
+        <div class="scr"><div class="hero c"><div class="av xl">D</div><div class="t"><b>Dartfreunde Nord</b></div></div></div>
+        <div class="dim"></div>
+        <div class="sheet"><h4>In den Club einladen</h4>
+          <div class="seg"><span class="on">Code zeigen</span><span>Scannen</span></div>
+          <div class="qrcard"><svg class="qr" data-qr="dfn"></svg><span class="av lg" style="width:34px;height:34px;font-size:13px">D</span></div>
+          <div class="code">DFN·4K2P</div>
+          <p style="text-align:center">Scannen oder Code eingeben · Neue sind sofort dabei</p>
+          <div class="two"><div class="btn p"><svg width="16" height="16" style="stroke:#fff;fill:none;stroke-width:2"><use href="#i-share"/></svg>Teilen</div><div class="btn s">Link kopieren</div></div>
+          <div class="rw" style="border:0;padding:4px 4px 0;font-size:12.5px;color:var(--m-blue)">Optionen: nur eine Person, Gültigkeit, Beitritt bestätigen, Link zurücksetzen <span class="chev" style="margin-left:auto"></span></div>
+        </div>
+      </div>
+      <ul class="notes">
+        <li><i>1</i>Ein Tipp, der Code ist da. Sheet mit Griff und mittlerer Höhe (HIG Sheets), Titel sagt, worum es geht.</li>
+        <li><i>2</i>Die Triade: großer QR mit Club-Bild in der Mitte, Kurzcode zum Eintippen (Stufe 2, M10), Teilen und Kopieren.</li>
+        <li><i>3</i>Standard: Gruppenlink, der gilt, bis er zurückgesetzt wird (B12). Ausnahmen hinter „Optionen“: eine Person, Frist, Bestätigung.</li>
+        <li><i>4</i>Segment „Scannen“: den Profil-Code des Freundes lesen, der ihm direkt eine Einladung schickt (Stufe 2, M11). Für Mitglieder ohne Leitungsrecht die zweite Richtung derselben Geste.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<h3>Der Freund: Code öffnen und beitreten</h3>
+<div class="cmp">
+  <div class="pane ist"><span class="tag">Ist</span>
+    <div class="inner">
+      <div class="ph">
+        <div class="nav"><span>‹ Clubs</span><span></span><span></span></div>
+        <div class="scr">
+          <div class="lt">Einladung öffnen</div>
+          <div style="font-size:13px;color:var(--m-mute)">Scanne den Code der Einladung oder füge den Link ein.</div>
+          <div class="card" style="padding:26px 12px;text-align:center"><svg width="36" height="36" style="stroke:var(--m-blue);fill:none;stroke-width:1.8;margin:0 auto 10px;display:block"><use href="#i-scan"/></svg><span class="btn p" style="display:inline-flex;padding:0 20px">Code scannen</span></div>
+          <div class="fl">Link einfügen</div>
+          <div class="field" style="display:flex;justify-content:space-between">Link der Einladung <span style="color:var(--m-blue);opacity:.5">Öffnen</span></div>
+          <div class="status e" style="margin-top:8px">Das ist keine Club-Einladung.</div>
+        </div>
+        <div class="tabbar"><div><svg><use href="#i-play"/></svg>Spielen</div><div><svg><use href="#i-trophy"/></svg>Rangliste</div><div class="on"><svg><use href="#i-people"/></svg>Clubs</div><div><svg><use href="#i-medal"/></svg>Turniere</div><div><svg><use href="#i-person"/></svg>Profil</div></div>
+      </div>
+      <ul class="notes">
+        <li><i>1</i>Ein eigener Screen pro Tab. Die Kamera startet erst nach „Code scannen“ (nach Erlaubnis sofort, gut).</li>
+        <li><i>2</i>Ein Turnier-Code wird hier abgelehnt, ein Profil-Code auch (B3). Der Freund muss wissen, in welchem Tab er scannt.</li>
+        <li><i>3</i>Einen Link auf dem Handy einzufügen ist in der Kneipe kein Weg. Einen Kurzcode gibt es nicht.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="pane neu"><span class="tag">Vorschlag</span>
+    <div class="inner">
+      <div class="ph">
+        <div class="nav"><span></span><span></span><span class="r"><svg><use href="#i-scan"/></svg><svg><use href="#i-plus"/></svg></span></div>
+        <div class="scr"><div class="lt">Clubs</div></div>
+        <div class="dim"></div>
+        <div class="sheet" style="top:46px;border-radius:18px 18px 0 0">
+          <h4>Scannen</h4><p>Einladung, Turnier, Profil, Live-Spiel oder Board. Die App erkennt, was es ist.</p>
+          <div class="cam">Richte die Kamera auf den Code</div>
+          <div class="fl">Oder Code eingeben</div>
+          <div class="field" style="font-family:var(--mono);letter-spacing:.12em;text-align:center">DFN·____</div>
+          <div class="card" style="margin-top:2px"><div class="hero"><div class="av lg">D</div><div class="t"><b>Dartfreunde Nord</b><small>Olaf lädt dich ein · 12 Spieler · Do 20:00</small></div></div>
+            <div style="padding:0 11px 10px;display:grid;gap:8px"><div class="field">Dein Name am Board</div><div class="btn p">Beitreten</div></div></div>
+          <div class="btn g">Nicht jetzt</div>
+        </div>
+      </div>
+      <ul class="notes">
+        <li><i>1</i>Ein Scanner-Sheet aus jedem Tab und aus dem Spielmenü („Spieler per QR“ nutzt ihn schon). Er nimmt alle BlueLine-Codes und schickt sie an den richtigen Ort (<code>dispatchLink</code>).</li>
+        <li><i>2</i>Unter der Kamera das Feld für den Kurzcode. Der Link-Einfügen-Weg bleibt dahinter für den Desktop.</li>
+        <li><i>3</i>Nach dem Scan erscheint die Beitrittskarte im selben Sheet: Bild, Name, Gastgeber, Gesichter, ein Feld, ein Button. Gäste bekommen das Profil nebenbei (heute schon so).</li>
+        <li><i>4</i>Ohne App: Die iPhone-Kamera öffnet den Link, die Seite landet direkt auf dieser Karte (funktioniert heute über <code>#club=</code>).</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<h2 id="turniere">Turniere</h2>
+<h3>Der Turniere-Tab</h3>
+<div class="cmp">
+  <div class="pane ist"><span class="tag">Ist</span>
+    <div class="inner">
+      <div class="ph">
+        <div class="nav"><span></span><span></span><span></span></div>
+        <div class="scr">
+          <div class="lt">Turniere</div>
+          <div class="sec">Meine Turniere</div>
+          <div class="card"><div class="rw"><div class="t"><b>Pub Open</b><small>301, First to 1 Leg · K.-o.-System</small><small>Sa., 24. Okt., 19:00 · Goldener Anker</small><div style="font-size:12px;font-weight:500;margin-top:3px">2 Plätze frei · Du leitest</div></div><div class="chev"></div></div></div>
+          <div class="card"><div class="rw"><div class="t"><b>Vereinsmeisterschaft</b><small>501, Best of 3 · Gruppen + K.-o.</small><small>Sa., 7. Nov., 14:00 · Vereinsheim</small><div style="font-size:12px;font-weight:500;margin-top:3px">Läuft · Angemeldet</div></div><div class="chev"></div></div></div>
+          <div class="sec">Zuletzt geöffnet</div>
+          <div class="card"><div class="rw"><div class="t"><b>Sommercup</b><small>501, Best of 3 · K.-o.-System</small><small>Sa., 12. Sept., 15:00</small><div style="font-size:12px;font-weight:500;margin-top:3px">Beendet</div></div><div class="chev"></div></div></div>
+          <div class="two" style="margin-top:8px"><div class="btn p">Turnier erstellen</div><div class="btn s">Einladung öffnen</div></div>
+        </div>
+        <div class="tabbar"><div><svg><use href="#i-play"/></svg>Spielen</div><div><svg><use href="#i-trophy"/></svg>Rangliste</div><div><svg><use href="#i-people"/></svg>Clubs</div><div class="on"><svg><use href="#i-medal"/></svg>Turniere</div><div><svg><use href="#i-person"/></svg>Profil</div></div>
+      </div>
+      <ul class="notes">
+        <li><i>1</i>Alle Karten sehen gleich aus. Ob gerade mein Spiel aufgerufen wird oder das Turnier vor sechs Wochen war, steht in derselben Schriftgröße (B11).</li>
+        <li><i>2</i>Zwei Buttons unten, einer davon wieder ein Scanner nur für Turniere.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="pane neu"><span class="tag">Vorschlag</span>
+    <div class="inner">
+      <div class="ph">
+        <div class="nav"><span></span><span></span><span class="r"><svg><use href="#i-scan"/></svg><svg><use href="#i-plus"/></svg></span></div>
+        <div class="scr">
+          <div class="lt">Turniere</div>
+          <div class="sec">Läuft jetzt</div>
+          <div class="card" style="border-color:var(--m-blue)"><div class="rw" style="align-items:flex-start"><div class="t"><b>Vereinsmeisterschaft</b><div style="margin:4px 0"><span class="chip live">Live</span> <span class="chip">501 · Best of 3</span> <span class="chip">Gruppen + K.-o.</span></div><small>Vereinsheim · 16 Spieler · Runde 2</small></div><div class="chev"></div></div><div class="task" style="border-radius:0;background:var(--m-tint)">Dein Spiel: Board 2 gegen Mia <span style="margin-left:auto" class="chev"></span></div></div>
+          <div class="sec">Anmeldung offen</div>
+          <div class="card"><div class="rw"><div class="t"><b>Pub Open</b><div style="margin:4px 0"><span class="chip gr">2 Plätze frei</span> <span class="chip">301 · 1 Leg · K.-o.</span></div><small>Sa 24. Okt., 19:00 · Goldener Anker</small></div><span class="chip b">Du leitest</span><div class="chev"></div></div></div>
+          <div class="sec">Vorbei</div>
+          <div class="card"><div class="rw"><div class="t"><b>Sommercup</b><small>12. Sept. · 3. Platz</small></div><div class="chev"></div></div></div>
+        </div>
+        <div class="tabbar"><div><svg><use href="#i-play"/></svg>Spielen</div><div><svg><use href="#i-trophy"/></svg>Rangliste</div><div><svg><use href="#i-people"/></svg>Clubs</div><div class="on"><svg><use href="#i-medal"/></svg>Turniere</div><div><svg><use href="#i-person"/></svg>Profil</div></div>
+      </div>
+      <ul class="notes">
+        <li><i>1</i>Gruppen nach Zustand: Läuft jetzt, Anmeldung offen, Entwürfe, Vorbei (DartCounter: Lobby / Participating / Live). Das laufende Turnier bekommt den Rahmen und den eigenen nächsten Schritt direkt auf der Karte.</li>
+        <li><i>2</i>Chips statt Satzzeilen: Format, freie Plätze, Rolle. Dieselben Chips tauchen auf der Turnierseite wieder auf.</li>
+        <li><i>3</i>„+“: Turnier erstellen, Mit Code beitreten. „Scannen“ derselbe Scanner wie überall.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<h3>Die Turnierseite</h3>
+<div class="cmp">
+  <div class="pane ist"><span class="tag">Ist</span>
+    <div class="inner">
+      <div class="ph">
+        <div class="nav"><span>‹ Turniere</span><span></span><span></span></div>
+        <div class="scr">
+          <div class="lt">Pub Open</div>
+          <div style="font-size:13px;color:var(--m-mute);line-height:1.4">301, First to 1 Leg · K.-o.-System<br>Beginn Sa., 24. Okt., 19:00 (Europe/Berlin) · Goldener Anker<br>Leitung: Orga Olaf</div>
+          <div class="card" style="padding:11px"><b style="font-size:15px">2 Plätze frei</b><div style="font-size:12px;color:var(--m-mute);margin:3px 0 8px">Zum Anmelden brauchst du ein Profil. Du legst es mit einem Namen an.</div><div class="fl" style="margin-left:0">Dein Name</div><div class="field" style="margin:4px 0 8px">Dein Spielername</div><div class="btn p dis">Anmelden</div></div>
+          <div class="card"><div class="rw"><div class="ic g"></div><div class="t"><b>Turnierleitung</b><small>3 Aufgaben</small></div><div class="chev"></div></div></div>
+          <div class="seg"><span class="on">Spiele</span><span>Turnierbaum</span><span>Infos</span></div>
+          <div class="caption" style="padding:8px">Die Paarungen stehen nach der Auslosung.</div>
+          <div class="btn s"><svg width="16" height="16" style="stroke:var(--m-blue);fill:none;stroke-width:2"><use href="#i-share"/></svg>Teilen</div>
+        </div>
+        <div class="tabbar"><div><svg><use href="#i-play"/></svg>Spielen</div><div><svg><use href="#i-trophy"/></svg>Rangliste</div><div><svg><use href="#i-people"/></svg>Clubs</div><div class="on"><svg><use href="#i-medal"/></svg>Turniere</div><div><svg><use href="#i-person"/></svg>Profil</div></div>
+      </div>
+      <ul class="notes">
+        <li><i>1</i>Die Phasenkarte („2 Plätze frei“, Anmelden) ist richtig und bleibt. Sie ist das Beste an dieser Seite.</li>
+        <li><i>2</i>„Turnierleitung“ als Listenzeile zwischen Karte und Segmenten (B7). Der Leiter sieht damit zwei Segmentleisten hintereinander (B9).</li>
+        <li><i>3</i>„Teilen“ ganz unten, dort wo niemand hinschaut, wenn er den Link gerade braucht.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="pane neu"><span class="tag">Vorschlag</span>
+    <div class="inner">
+      <div class="ph">
+        <div class="nav"><span>‹ Turniere</span><span></span><span class="r"><svg><use href="#i-share"/></svg><span class="pill">Leiten</span></span></div>
+        <div class="scr">
+          <div class="lt">Pub Open</div>
+          <div><span class="chip gr">Anmeldung offen</span> <span class="chip">301 · 1 Leg · K.-o.</span> <span class="chip">8 Plätze</span></div>
+          <div class="rw" style="border:0;padding:0"><div class="av o" style="width:24px;height:24px;font-size:10px">O</div><small style="color:var(--m-mute)">Olaf · Sa 24. Okt., 19:00 · Goldener Anker</small></div>
+          <div class="task">Du leitest · 3 Aufgaben <span style="margin-left:auto" class="chev"></span></div>
+          <div class="card" style="padding:11px"><b style="font-size:15px">Dein nächster Schritt</b><div style="font-size:12px;color:var(--m-mute);margin:3px 0 8px">6 von 8 Plätzen vergeben. Mit deinem Namen bist du dabei.</div><div class="field" style="margin:0 0 8px">Dein Name</div><div class="btn p">Anmelden</div></div>
+          <div class="seg"><span class="on">Spiele</span><span>Baum</span><span>Infos</span></div>
+          <div class="card"><div class="rw"><div class="stack"><span class="av">J</span><span class="av o">M</span><span class="av g">A</span><span class="av v">B</span><span class="av k">+2</span></div><div class="t" style="margin-left:6px"><b>6 angemeldet</b><small>Paarungen nach der Auslosung</small></div></div></div>
+        </div>
+        <div class="tabbar"><div><svg><use href="#i-play"/></svg>Spielen</div><div><svg><use href="#i-trophy"/></svg>Rangliste</div><div><svg><use href="#i-people"/></svg>Clubs</div><div class="on"><svg><use href="#i-medal"/></svg>Turniere</div><div><svg><use href="#i-person"/></svg>Profil</div></div>
+      </div>
+      <ul class="notes">
+        <li><i>1</i>Nav-Bar: Teilen als Symbol, „Leiten“ als eine herausgehobene Aktion (HIG Toolbars: genau eine, rechts). Für Spieler ohne Leitung nur „Teilen“.</li>
+        <li><i>2</i>Kopf mit Chips statt drei grauen Zeilen; Zeitzone nur, wenn sie von der des Geräts abweicht.</li>
+        <li><i>3</i>Der Leitungsstreifen nennt die Aufgabenzahl und öffnet die Leitung; er ersetzt die Listenzeile.</li>
+        <li><i>4</i>Segmente bleiben drei Substantive. Unter „Spiele“ vor der Auslosung: wer schon dabei ist, als Gesichter.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<h3>Die Turnierleitung</h3>
+<div class="cmp">
+  <div class="pane ist"><span class="tag">Ist</span>
+    <div class="inner">
+      <div class="ph">
+        <div class="nav"><span>‹ Pub Open</span><span></span><span></span></div>
+        <div class="scr">
+          <div class="lt">Turnierleitung</div>
+          <div class="rw" style="border:0;padding:0"><div class="t"><b>Pub Open</b><small>Anmeldung offen</small></div><svg width="22" height="22" style="stroke:var(--m-blue);fill:none;stroke-width:1.8"><use href="#i-gear"/></svg></div>
+          <div class="sec">Jetzt dran</div>
+          <div class="card" style="padding:9px 11px"><div class="btn p">Check-in öffnen</div></div>
+          <div class="seg"><span class="on">Spieler</span><span>Boards</span><span>Ergebnisse</span></div>
+          <div class="sec">Angemeldet (4)</div>
+          <div class="card"><div class="rw"><div class="t"><b>Jonas</b><small>Gast</small></div><div class="chev"></div></div><div class="rw"><div class="t"><b>Mia</b><small>Gast</small></div><div class="chev"></div></div><div class="rw"><div class="t"><b>Anna</b></div><div class="chev"></div></div><div class="rw"><div class="t"><b>Ben</b></div><div class="chev"></div></div></div>
+          <div class="btn s">Gäste hinzufügen</div>
+        </div>
+        <div class="tabbar"><div><svg><use href="#i-play"/></svg>Spielen</div><div><svg><use href="#i-trophy"/></svg>Rangliste</div><div><svg><use href="#i-people"/></svg>Clubs</div><div class="on"><svg><use href="#i-medal"/></svg>Turniere</div><div><svg><use href="#i-person"/></svg>Profil</div></div>
+      </div>
+      <ul class="notes">
+        <li><i>1</i>„Jetzt dran“ mit dem einen nächsten Schritt ist richtig und bleibt.</li>
+        <li><i>2</i>Kein Einladelink hier, obwohl die Leitung in dieser Phase genau den braucht (B8).</li>
+        <li><i>3</i>Board-Code: Boards › Board antippen › Sheet. Beim Aufbau mit vier Boards achtmal tippen.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="pane neu"><span class="tag">Vorschlag</span>
+    <div class="inner">
+      <div class="ph">
+        <div class="nav"><span>‹ Pub Open</span><span class="mid">Leitung</span><span class="r"><svg><use href="#i-gear"/></svg></span></div>
+        <div class="scr">
+          <div class="steps"><span class="done">Anmeldung</span><span class="now">Check-in</span><span>Auslosung</span><span>Läuft</span><span>Fertig</span></div>
+          <div class="card" style="padding:9px 11px"><div style="font-weight:600;margin-bottom:6px">Jetzt dran</div><div class="btn p">Auslosung vorbereiten</div><div class="caption" style="margin-top:6px">6 da · 2 fehlen · Nachmeldung möglich</div></div>
+          <div class="seg"><span>Spieler</span><span class="on">Boards</span><span>Ergebnisse</span></div>
+          <div class="card">
+            <div class="rw"><div class="t"><b>Board 1</b><small>Frei</small></div><span class="btn s" style="height:28px;padding:0 10px;font-size:12px">Code</span></div>
+            <div class="rw"><div class="t"><b>Board 2</b><small>Jonas – Mia · aufgerufen</small></div><span class="btn s" style="height:28px;padding:0 10px;font-size:12px">Code</span></div>
+            <div class="rw" style="color:var(--m-blue);font-weight:600">Board hinzufügen</div>
+          </div>
+          <div class="sec">Spieler-Tab (zum Vergleich)</div>
+          <div class="card"><div class="rw"><div class="ic t"></div><div class="t"><b>Spieler einladen</b><small>QR-Code und Link zur Anmeldung</small></div><div class="chev"></div></div><div class="rw"><div class="t"><b>Gäste hinzufügen</b><small>Ohne Handy, nur mit Namen</small></div><div class="chev"></div></div></div>
+        </div>
+        <div class="tabbar"><div><svg><use href="#i-play"/></svg>Spielen</div><div><svg><use href="#i-trophy"/></svg>Rangliste</div><div><svg><use href="#i-people"/></svg>Clubs</div><div class="on"><svg><use href="#i-medal"/></svg>Turniere</div><div><svg><use href="#i-person"/></svg>Profil</div></div>
+      </div>
+      <ul class="notes">
+        <li><i>1</i>Phasen-Stepper oben: Wo stehen wir, was kommt. Ersetzt das Wort unter dem Namen und macht „Jetzt dran“ verständlich.</li>
+        <li><i>2</i>Boards: „Code“ direkt in der Zeile. Ein Tipp pro Board, das Sheet zeigt QR groß (wie heute).</li>
+        <li><i>3</i>Spieler-Tab: „Spieler einladen“ und „Gäste hinzufügen“ als erste zwei Zeilen, davor keine Buttons.</li>
+        <li><i>4</i>Die drei Segmente bleiben, Einstellungen bleiben hinter dem Zahnrad. Der Titel heißt „Leitung“: kürzer, passt neben „Pub Open“.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<h2 id="kneipe">Der Kneipen-Moment: Freund neben mir in den Club</h2>
+<p>Olaf ist Mitglied, Ben steht daneben und hat BlueLine noch nie geöffnet. Beide Handys in der Hand, Musik läuft.</p>
+<h3>Heute</h3>
+<div class="flow">
+  <div class="st"><b>1</b>Olaf: Tab Clubs<small>Nur wenn Olaf Admin ist. Sonst: Admin suchen.</small></div>
+  <div class="st"><b>2</b>Club öffnen</div>
+  <div class="st"><b>3</b>„Mitglieder einladen“</div>
+  <div class="st"><b>4</b>Art lassen, Frist lassen, „Erstellen“</div>
+  <div class="st"><b>5</b>Ben: Tab Clubs<small>Oder Kamera-App: Link öffnet den Browser.</small></div>
+  <div class="st"><b>6</b>„Einladung öffnen“</div>
+  <div class="st"><b>7</b>„Code scannen“, Kamera erlauben</div>
+  <div class="st"><b>8</b>Scannen</div>
+  <div class="st"><b>9</b>Name tippen, „Beitreten“</div>
+</div>
+<h3>Vorschlag</h3>
+<div class="flow">
+  <div class="st"><b>1</b>Olaf: Club › „Einladen“<small>Als Mitglied, wenn der Club es erlaubt. Der Code ist sofort da.</small></div>
+  <div class="st"><b>2</b>Ben: Kamera-App auf den Code<small>Oder in BlueLine: „Scannen“ in jedem Tab.</small></div>
+  <div class="st"><b>3</b>Name tippen, „Beitreten“<small>Olaf sieht Ben nach Sekunden im Avatar-Stapel.</small></div>
+</div>
+<p>Zweite Richtung, falls Ben schon ein Profil hat: Olaf wählt im Einladen-Sheet „Scannen“, Ben zeigt „Profil teilen“ (gibt es). Olaf tippt „Ben einladen“. Ben sieht die Einladung unter Clubs. Für Clubs, die Beitritte bestätigen, ist das sogar der schnellere Weg, weil der Admin die Person damit schon kennt.</p>
+
+<h2 id="optik">Optik: das übernächste Level, ohne den Spielbildschirm anzufassen</h2>
+<div class="swatches">
+  <div class="sw"><div class="demo" style="background:var(--m-bg)"><span class="ph" style="all:unset"><span class="chip live" style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;background:#fee2e2;color:#991b1b">Live</span></span>&nbsp;<span style="display:inline-flex;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;background:#dcfce7;color:#166534">2 Plätze frei</span>&nbsp;<span style="display:inline-flex;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;background:var(--m-tint);color:var(--m-blue)">Du leitest</span></div><b>Status-Chips</b><br>Ein Vokabular für Karten und Köpfe: Zustand, Format, Rolle. Farbe nur für Zustand.</div>
+  <div class="sw"><div class="demo" style="background:var(--m-bg)"><span style="display:flex"><span style="width:28px;height:28px;border-radius:50%;background:linear-gradient(145deg,#38bdf8,#1d4ed8);border:2px solid var(--m-card)"></span><span style="width:28px;height:28px;border-radius:50%;background:linear-gradient(145deg,#fb923c,#c2410c);border:2px solid var(--m-card);margin-left:-9px"></span><span style="width:28px;height:28px;border-radius:50%;background:linear-gradient(145deg,#4ade80,#15803d);border:2px solid var(--m-card);margin-left:-9px"></span><span style="width:28px;height:28px;border-radius:50%;background:linear-gradient(145deg,#94a3b8,#475569);border:2px solid var(--m-card);margin-left:-9px;display:grid;place-items:center;color:#fff;font-size:10px;font-weight:700">+8</span></span></div><b>Avatar-Stapel</b><br>Menschen statt Zahlen. „12 Spieler“ wird zu Gesichtern, die man kennt.</div>
+  <div class="sw"><div class="demo" style="background:#fff;border:1px solid var(--line)"><svg class="qr-demo" data-qr="demo" width="40" height="40"></svg><span style="font-family:var(--mono);font-size:15px;letter-spacing:.12em;color:#0b1020">DFN·4K2P</span></div><b>QR-Karte mit Kurzcode</b><br>Weiße Karte, Club-Bild in der Mitte (wie WhatsApp), Code darunter in Mono und tabellarischen Ziffern.</div>
+  <div class="sw"><div class="demo" style="background:var(--m-bg);gap:10px"><span style="display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:var(--m-card);border:1px solid var(--m-line);color:var(--m-blue);font-size:10px;font-weight:600">Spielen</span><span style="display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:var(--m-card);border:1px solid var(--m-line);color:var(--m-blue);font-size:10px;font-weight:600">Einladen</span><span style="display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:var(--m-card);border:1px solid var(--m-line);color:var(--m-blue);font-size:10px;font-weight:600">Termine</span></div><b>Aktionsreihe</b><br>Vier Kacheln unter dem Kopf, wie Kontakte und Karten: Symbol plus Substantiv, 44 pt hoch.</div>
+  <div class="sw"><div class="demo" style="background:var(--m-bg)"><span style="font-family:var(--display);font-size:34px;font-weight:600;color:var(--m-ink)">3.</span>&nbsp;<span style="font-size:12px;color:var(--m-mute)">14 Punkte · 6 Spiele</span></div><b>Zahlen in Barlow Condensed</b><br>Die Schrift der großen Titel trägt auch Rang, Spielstand und Aufrufe. Eine Zahl pro Karte, nie drei.</div>
+  <div class="sw"><div class="demo" style="background:var(--m-bg);position:relative"><span style="position:absolute;left:10px;right:10px;bottom:8px;height:30px;border-radius:15px;border:1px solid var(--m-line);background:color-mix(in srgb,var(--m-card) 75%,transparent);backdrop-filter:blur(10px)"></span></div><b>Stufe 3: iOS-26-Anleihen</b><br>Schwebende Tab-Leiste, die beim Scrollen schrumpft, runde Glas-Buttons in der Nav-Bar, höhere Listenzeilen. Nur, wenn der Spielbildschirm sein festes Raster behält (E13).</div>
+</div>
+<p style="margin-top:16px">Was bleibt: die Tokens aus <code>app/globals.css</code>, die Bausteine <code>Group</code>, <code>ListRow</code>, <code>Segmented</code>, <code>Sheet</code>, <code>Avatar</code>, keine Auslassungspunkte, 44 pt, Deutsch zuerst, beide Modi. Neu dazu kommen genau vier Bausteine: <code>Chip</code>, <code>AvatarStack</code>, <code>ActionRow</code>, <code>PhaseSteps</code>. Alles andere sind Umstellungen vorhandener Teile.</p>
+
+<h2 id="massnahmen">Maßnahmen</h2>
+<p>Stufe 1 braucht keine Protokolländerung und keine neuen Events; sie lässt sich mit den heutigen Tests und dem Spielabend-Lauf (P8.01) absichern. Stufe 2 erweitert das Club-Protokoll um drei kleine Stücke, alle über nostr-core. Stufe 3 ist optional.</p>
+<div class="tbl"><table>
+<thead><tr><th>Nr.</th><th>Maßnahme</th><th>Löst</th><th>Stufe</th><th>Aufwand</th><th>Braucht</th></tr></thead>
+<tbody>
+<tr><td class="n">M1</td><td>Nav-Bar-Aktionen auf Clubs und Turniere: „Scannen“ und „+“ (Menü: Gründen/Erstellen, Mit Code beitreten). Buttonpaare aus der Mitte entfernen; Leerzustände behalten die zwei Wege.</td><td>B6</td><td><span class="stage">1</span></td><td>klein</td><td>NavHeader <code>trailing</code> gibt es; ein Menü-Baustein (Popover/Action Sheet) fehlt noch</td></tr>
+<tr><td class="n">M2</td><td>Ein Scanner-Sheet für alle Link-Arten, aus jedem Tab und dem Spielmenü. Ersetzt <code>club.openInvite</code> und <code>tournament.openInvite</code>; Kurzcode-Feld unter der Kamera (ab M10 aktiv), Link einfügen dahinter.</td><td>B3</td><td><span class="stage">1</span></td><td>mittel</td><td><code>parseAppLink</code>, <code>dispatchLink</code>, <code>QRScanner</code> vorhanden</td></tr>
+<tr><td class="n">M3</td><td>Einladen-Sheet neu: öffnet mit QR (Standard: für alle, lange Gültigkeit), Teilen prominent, Kopieren daneben, „Optionen“ eingeklappt (eine Person, Frist, Bestätigung, zurücksetzen). Segment „Scannen“ vorbereitet (M11).</td><td>B2, B12</td><td><span class="stage">1</span></td><td>klein</td><td>Gültigkeit über 30 Tage: Protokoll erlaubt beliebiges <code>expires</code> (prüfen)</td></tr>
+<tr><td class="n">M4</td><td>Club-Seite: Hero mit Avatar-Stapel, Aktionsreihe (Spielen, Einladen, Termine, Tabelle), eine Aufgabe, Termin, Saisonzeile als Zahl, Turnier. Verwalten, Einladungen, Export, Verlassen ins „⋯“-Menü.</td><td>B1 (für Leitung), B5</td><td><span class="stage">1</span></td><td>mittel</td><td>Bausteine Chip, AvatarStack, ActionRow</td></tr>
+<tr><td class="n">M5</td><td>Turnierseite: Teilen in die Nav-Bar, „Leiten“ als herausgehobene Nav-Aktion plus Aufgabenstreifen; Kopf als Chips; Listenzeile und unterer Button entfallen.</td><td>B7, B9</td><td><span class="stage">1</span></td><td>klein</td><td>–</td></tr>
+<tr><td class="n">M6</td><td>Turnierleitung: Phasen-Stepper, „Spieler einladen“ und „Gäste“ als erste Zeilen im Spieler-Tab, „Code“ direkt in jeder Board-Zeile, Titel „Leitung“.</td><td>B8, B9</td><td><span class="stage">1</span></td><td>klein</td><td>ShareSheet und BoardSheet vorhanden</td></tr>
+<tr><td class="n">M7</td><td>Nach „Club gründen“ und „Turnier veröffentlichen“ öffnet sich das Einladen-/Teilen-Sheet sofort; der Zwischenschritt mit Button entfällt.</td><td>B10</td><td><span class="stage">1</span></td><td>klein</td><td>–</td></tr>
+<tr><td class="n">M8</td><td>Karten mit Chips, Avatar-Stapel und Aufgabenzeile (Clubs); Turniere nach Zustand gruppiert, laufende hervorgehoben mit eigenem nächsten Schritt.</td><td>B11</td><td><span class="stage">1</span></td><td>mittel</td><td>Mitgliederbilder sind lokal (<code>useProfileNames</code>)</td></tr>
+<tr><td class="n">M9</td><td>Einladungs-Karten im Clubs-Tab mit „Beitreten“ direkt in der Zeile (Gast: öffnet die Karte mit Namensfeld).</td><td>B11</td><td><span class="stage">1</span></td><td>klein</td><td>–</td></tr>
+<tr><td class="n">M10</td><td>Kurzcode (z. B. 3+4 Zeichen, ohne 0/O/1/I): Das Einladungs-Event trägt den Hash des Codes als Tag; der Beitritt fragt die Standard-Relays danach und erhält Club-Adresse und Token. Code steht neben dem QR und im Teilen-Text.</td><td>B2, Kneipe</td><td><span class="stage">2</span></td><td>mittel</td><td>Protokoll-Erweiterung <code>invite.md</code>; Entscheidung E14 (Entropie, Relays)</td></tr>
+<tr><td class="n">M11</td><td>Einladung an ein Profil: Profil-Code des Freundes scannen, persönliche Einladung mit <code>p</code>-Tag erzeugen, Zustellung als verschlüsselte Nachricht (NIP-17, in nostr-core 1.0.6). Erscheint beim Freund unter „Einladungen“.</td><td>B1, zweite Richtung</td><td><span class="stage">2</span></td><td>mittel</td><td>Protokoll-Erweiterung; NIP-17 aus nostr-core</td></tr>
+<tr><td class="n">M12</td><td>Club-Code für alle Leitungsgeräte: der Gruppen-Token liegt verschlüsselt im privaten Club-Zustand, jedes Leitungsgerät zeigt denselben Code. Optional für Mitglieder (M13).</td><td>B4</td><td><span class="stage">2</span></td><td>mittel</td><td>Berührt Entscheidung E2 (Nachweis per Link-Schlüssel)</td></tr>
+<tr><td class="n">M13</td><td>Club-Einstellung „Neue Mitglieder“: sofort dabei / nach Bestätigung, und „Mitglieder dürfen einladen“ (an/aus). Ersetzt die Wahl pro Einladung im Alltag.</td><td>B1</td><td><span class="stage">2</span></td><td>klein</td><td>Feld in <code>club.found/update</code>; Entscheidung E15</td></tr>
+<tr><td class="n">M14</td><td>Freunde ohne Freundesliste: „Zuletzt gespielt mit“ (lokale Historie mit Profilen) als Vorschlagsliste beim Einladen, in der Spielaufstellung und beim Hinzufügen von Turniergästen.</td><td>Recherche (Autodarts, Nintendo)</td><td><span class="stage">2</span></td><td>mittel</td><td>Nur lokale Daten; keine Veröffentlichung</td></tr>
+<tr><td class="n">M15</td><td>Live-Streifen für laufende Turnierspiele (Board, Paarung, Legs) oben auf Turnierseite und Karte, große Ziffern, Puls nur bei „aufgerufen“.</td><td>Recherche (Live Activities)</td><td><span class="stage">3</span></td><td>mittel</td><td><code>useLiveMatches</code> vorhanden</td></tr>
+<tr><td class="n">M16</td><td>iOS-26-Anleihen: schwebende Tab-Leiste mit Blur, die beim Scrollen schrumpft; runde Glas-Buttons in der Nav-Bar; größere Listenzeilen. Spielbildschirm ausgenommen.</td><td>Optik</td><td><span class="stage">3</span></td><td>mittel</td><td>Entscheidung E16; HIG-Matrix (154 Fälle) erneut</td></tr>
+</tbody></table></div>
+<p style="margin-top:14px">Reihenfolge, wenn alles gebaut wird: M2 und M3 zuerst (der Einlade-Moment), dann M1, M4, M5, M6, M7 (Menüführung), dann M8, M9 (Karten). Stufe 2 danach, jedes Stück mit Testvektor und Relay-Test. Jede Stufe endet mit Lint, Typecheck, Tests, dem P8.01-Spielabend und der Viewport-Matrix.</p>
+
+<h2 id="entscheidungen">Entscheidungen für dich</h2>
+<div class="tbl"><table>
+<thead><tr><th>Nr.</th><th>Frage</th><th>Vorschlag</th></tr></thead>
+<tbody>
+<tr><td class="n">E14</td><td>Kurzcode: Länge und wo er gesucht wird. 7 Zeichen aus 32 (ohne 0/O/1/I) sind 35 Bit; die Suche läuft über die Standard-Relays, ein Club auf eigenen Relays bräuchte zusätzlich den Link.</td><td>7 Zeichen, Trennpunkt nach 3, nur für Gruppen-Einladungen; Codes auf Standard-Relays spiegeln.</td></tr>
+<tr><td class="n">E15</td><td>Dürfen Mitglieder einladen? Standard an oder aus? Bei geschlossenen Clubs mit Bestätigung ist „an“ risikolos, bei sofortigem Beitritt entscheidet die Leitung.</td><td>Standard an, gekoppelt: sofortiger Beitritt nur über Codes der Leitung; Mitglieder-Codes führen zur Bestätigung.</td></tr>
+<tr><td class="n">E16</td><td>iOS-26-Optik (Stufe 3) jetzt oder nach den Nutzertests (A29)?</td><td>Nach Stufe 1 und 2; die Nutzertests mit der ruhigeren Optik fahren.</td></tr>
+<tr><td class="n">E17</td><td>Der Begriff: „Clubs“ bleibt, oder „Clans“ wie in deiner Nachricht? „Club“ passt zum Vereinsheim, „Clan“ zu Online-Gruppen.</td><td>„Clubs“ in der App, kein Wechsel.</td></tr>
+<tr><td class="n">E18</td><td>Gültigkeit „bis zurückgesetzt“ für Gruppen-Codes statt höchstens 30 Tage.</td><td>Ja, mit „Link zurücksetzen“ im Optionen-Bereich und in den Einladungen.</td></tr>
+</tbody></table></div>
+
+<h2 id="quellen">Quellen</h2>
+<ol class="src">
+  <li>Apple HIG, Tab bars: <a href="https://developer.apple.com/design/human-interface-guidelines/tab-bars">developer.apple.com/…/tab-bars</a></li>
+  <li>Apple HIG, Toolbars: <a href="https://developer.apple.com/design/human-interface-guidelines/toolbars">developer.apple.com/…/toolbars</a></li>
+  <li>Apple HIG, Sheets: <a href="https://developer.apple.com/design/human-interface-guidelines/sheets">developer.apple.com/…/sheets</a></li>
+  <li>Apple HIG, Menus und Action sheets: <a href="https://developer.apple.com/design/human-interface-guidelines/menus">menus</a>, <a href="https://developer.apple.com/design/human-interface-guidelines/action-sheets">action-sheets</a></li>
+  <li>Apple HIG, Segmented controls: <a href="https://developer.apple.com/design/human-interface-guidelines/segmented-controls">developer.apple.com/…/segmented-controls</a></li>
+  <li>Apple HIG, Activity views (Teilen): <a href="https://developer.apple.com/design/human-interface-guidelines/activity-views">developer.apple.com/…/activity-views</a></li>
+  <li>Apple HIG, Lists and tables: <a href="https://developer.apple.com/design/human-interface-guidelines/lists-and-tables">developer.apple.com/…/lists-and-tables</a></li>
+  <li>Apple HIG, Live Activities: <a href="https://developer.apple.com/design/human-interface-guidelines/live-activities">developer.apple.com/…/live-activities</a></li>
+  <li>Apple, Adopting Liquid Glass: <a href="https://developer.apple.com/documentation/technologyoverviews/adopting-liquid-glass">developer.apple.com/documentation/technologyoverviews/adopting-liquid-glass</a></li>
+  <li>Apple, VisionKit DataScanner: <a href="https://developer.apple.com/documentation/visionkit/scanning-data-with-the-camera">developer.apple.com/documentation/visionkit/scanning-data-with-the-camera</a></li>
+  <li>Apple Invites, Gäste einladen und bestätigen: <a href="https://support.apple.com/guide/apple-invites/DEV851DD16DB">support.apple.com/guide/apple-invites</a></li>
+  <li>DartCounter, Local Tournaments (QR oder Code): <a href="https://dartcounter.net/press/local-tournaments">dartcounter.net/press/local-tournaments</a></li>
+  <li>DartCounter, Tournaments und Online Play: <a href="https://dartcounter.net/features/tournaments">features/tournaments</a>, <a href="https://dartcounter.net/darts-manual/online-play">darts-manual/online-play</a></li>
+  <li>DartCounter v9 Release Notes (Filter-Pills, Brackets, QR-Dialoge): <a href="https://dartcounter.net/release-notes/release-notes-dartcounter-v9-0-0">dartcounter.net/release-notes</a></li>
+  <li>Autodarts, Freundesliste und Mitteilungen: <a href="https://autodarts.com/updates/friend-list-notification-center">autodarts.com/updates/friend-list-notification-center</a></li>
+  <li>Autodarts, Lobby und private Turniere (Community-Doku): <a href="https://autodarts.diy/how-to-play/lobby-settings/">autodarts.diy/how-to-play/lobby-settings</a>, <a href="https://autodarts.diy/Autodarts-Plus/Exclusive-tournaments/">Exclusive-tournaments</a></li>
+  <li>Scolia, FAQ (Board Access, Turniere): <a href="https://scoliadarts.com/faq/">scoliadarts.com/faq</a></li>
+  <li>DartConnect, Event-Teilnahme ohne Codes: <a href="https://www.dartconnect.com/events/event-participants/">dartconnect.com/events/event-participants</a></li>
+  <li>WhatsApp, Gruppen-Einladungslink und QR: <a href="https://faq.whatsapp.com/3242937609289432/">faq.whatsapp.com</a></li>
+  <li>Signal, Gruppenlink und QR: <a href="https://support.signal.org/hc/articles/360051086971">support.signal.org</a></li>
+  <li>Spotify Jam (Tippen, QR, Link): <a href="https://newsroom.spotify.com/?p=25175">newsroom.spotify.com</a></li>
+  <li>Kahoot, PIN, Link, QR: <a href="https://support.kahoot.com/hc/articles/360039890713">support.kahoot.com</a></li>
+  <li>Strava, Clubs und Anfragen: <a href="https://support.strava.com/hc/en-us/articles/216918347">support.strava.com</a></li>
+  <li>Discord, abgelaufene Einladungscodes (Nutzerbeschwerde): <a href="https://support.discord.com/hc/en-us/community/posts/16897752009751-Invite-code-history-and-restoration">support.discord.com</a></li>
+  <li>Nintendo Switch 2, Freunde per QR und in der Nähe: <a href="https://en-americas-support.nintendo.com/app/answers/detail/a_id/68292/">nintendo.com</a></li>
+</ol>
+
+<footer>Mockups sind CSS-Skizzen in den Tokens der App, keine Screenshots. Alle Namen und Zahlen sind Beispiele. Ist-Stand nach <code>components/clubs</code>, <code>components/tournaments</code>, <code>components/shell</code> und <code>docs/implementation/evidence</code> auf <code>dev</code> be6bbf6.</footer>
+</div>
+
+<script>
+// Pseudo-QR-Codes für die Mockups: deterministisch aus dem data-qr-Wert, mit drei Suchmustern.
+(function(){
+  function rnd(seed){var s=0;for(var i=0;i<seed.length;i++)s=(s*31+seed.charCodeAt(i))>>>0;return function(){s=(s*1664525+1013904223)>>>0;return s/4294967296}}
+  function finder(x,y){var r=[];for(var i=0;i<7;i++)for(var j=0;j<7;j++){var e=i===0||i===6||j===0||j===6,c=i>=2&&i<=4&&j>=2&&j<=4;if(e||c)r.push([x+j,y+i])}return r}
+  document.querySelectorAll('svg[data-qr]').forEach(function(svg){
+    var n=25,r=rnd(svg.getAttribute('data-qr')),out='',skip={};
+    [finder(0,0),finder(n-7,0),finder(0,n-7)].forEach(function(f){f.forEach(function(p){out+='<rect x="'+p[0]+'" y="'+p[1]+'" width="1" height="1"/>'})});
+    function reserved(x,y){return (x<8&&y<8)||(x>=n-8&&y<8)||(x<8&&y>=n-8)}
+    for(var y=0;y<n;y++)for(var x=0;x<n;x++){if(reserved(x,y))continue;if(r()<0.46)out+='<rect x="'+x+'" y="'+y+'" width="1" height="1"/>'}
+    svg.setAttribute('viewBox','0 0 '+n+' '+n);svg.setAttribute('shape-rendering','crispEdges');svg.innerHTML='<g fill="#0b1020">'+out+'</g>';
+  });
+})();
+</script>
+</body>
+</html>

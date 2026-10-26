@@ -149,13 +149,15 @@ export const tournamentsScreensDe = {
 
   // The Tournaments tab.
   home: {
+    // On a card: how many matches are being played right now.
+    liveCount: (n: number) => (n === 1 ? "1 Spiel läuft" : `${n} Spiele laufen`),
     mine: "Meine Turniere",
     recent: "Zuletzt geöffnet",
     drafts: "Entwürfe",
     draft: "Entwurf",
     untitled: "Ohne Titel",
     create: "Turnier erstellen",
-    openInvite: "Einladung öffnen",
+    openInvite: "Code scannen",
     free: (n: number) => (n === 0 ? "Ausgebucht" : n === 1 ? "1 Platz frei" : `${n} Plätze frei`),
     places: (taken: number, capacity: number) => `${taken} von ${capacity} Plätzen belegt`,
     online: "Online",
@@ -284,6 +286,9 @@ export const tournamentsScreensDe = {
     nextMatch: "Dein nächstes Spiel",
     versus: (name: string) => `gegen ${name}`,
     onBoard: (board: string) => board,
+    // The strip of matches on the boards right now, legs as big digits.
+    liveStrip: "Gerade an den Boards",
+    calledShort: "Aufgerufen",
     called: "Aufgerufen: Geh zum Board.",
     playing: "Läuft gerade",
     waitingOpponent: "Dein Gegner steht noch nicht fest.",
@@ -308,6 +313,8 @@ export const tournamentsScreensDe = {
     takingOver: "Wird übernommen",
     takeOverOffline: "Keine Verbindung: Übernehmen geht nur mit dem aktuellen Stand. Versuch es gleich nochmal.",
     organize: "Turnierleitung",
+    // The prominent button in the bar, for the organizer: a verb, one word.
+    organizeShort: "Leiten",
     organizeTasks: (n: number) => (n === 1 ? "1 offene Aufgabe" : `${n} offene Aufgaben`),
     share: "Teilen",
     shareTitle: "Turnier teilen",
@@ -343,6 +350,8 @@ export const tournamentsScreensDe = {
   // The organizer's workspace.
   organize: {
     tabs: { participants: "Spieler", boards: "Boards", results: "Ergebnisse", settings: "Einstellungen" },
+    // The course of a tournament, one word per phase, under its name in the organizer's workspace.
+    steps: { label: "Phasen des Turniers", registration: "Anmeldung", checkin: "Check-in", drawn: "Auslosung", running: "Spiele", finished: "Fertig" },
     tasks: {
       title: "Jetzt dran",
       requests: (n: number) => (n === 1 ? "1 Anfrage bestätigen" : `${n} Anfragen bestätigen`),
@@ -368,8 +377,13 @@ export const tournamentsScreensDe = {
       late: "Nachmeldung",
       linked: "Mit Profil verbunden",
       wantsPlace: (n: number) => (n === 1 ? "1 Profil meldet: Das bin ich" : `${n} Profile melden: Das bin ich`),
+      // Before the draw: the two ways players get in, first in the list.
+      invite: "Spieler einladen",
+      inviteHint: "Code zeigen oder Link teilen",
       addGuests: "Gäste hinzufügen",
+      addGuestsHint: "Mitspieler ohne Profil, mit Namen",
       guestNames: "Namen, einer pro Zeile",
+      recent: "Zuletzt gespielt mit",
       add: (n: number) => (n === 1 ? "1 Gast hinzufügen" : `${n} Gäste hinzufügen`),
       admit: "Aufnehmen",
       toWaitlist: "Auf die Warteliste",
@@ -417,7 +431,8 @@ export const tournamentsScreensDe = {
       playing: (match: string) => `Läuft: ${match}`,
       called: (match: string) => `Aufgerufen: ${match}`,
       inactive: "Entfernt",
-      showCode: "Code zeigen",
+      // The button on each board's row.
+      code: "Code",
       codeTitle: (name: string) => `${name} verbinden`,
       codeText: "Mit dem Gerät am Board scannen. Es zeigt dann nur noch die Spiele dieses Boards.",
       codeLabel: "Code für das Board",
