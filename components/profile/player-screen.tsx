@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { UserRound } from "lucide-react"
 import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
 import { ImportedSheet } from "@/components/data/imported-sheet"
@@ -17,7 +18,7 @@ import { legsWonInGame } from "@/lib/game/engine"
 import { formatNumber, formatPercent, formatWhen, modeName, type Messages } from "@/lib/i18n"
 import { useMatchHistory } from "@/lib/leaderboard"
 import { readStatsCard } from "@/lib/protocol/stats-card"
-import type { ScreenProps } from "@/lib/shell/registry"
+import { SCREENS, type ScreenProps } from "@/lib/shell/registry"
 import type { ArchivedMatch } from "@/lib/storage/archive"
 import { headToHead, matchState, playerKey as keyOf, summarizePlayer, type PlayerSummary } from "@/lib/storage/stats"
 import { cn } from "@/lib/utils"
@@ -104,11 +105,12 @@ export default function PlayerScreen({ params }: ScreenProps) {
         </section>
       )}
 
-      {imported && anySummary && (
+      {(pubkey && !me) || (imported && anySummary) ? (
         <Group>
-          <ListRow title={tx.player.assign} subtitle={tx.player.assignHint} onClick={() => setAssigning(true)} />
+          {pubkey && !me && <ListRow icon={UserRound} iconTone="blue" title={t.shell.screens.publicProfile} onClick={() => nav.push(SCREENS.profilePublic, { pubkey })} />}
+          {imported && anySummary && <ListRow title={tx.player.assign} subtitle={tx.player.assignHint} onClick={() => setAssigning(true)} />}
         </Group>
-      )}
+      ) : null}
 
       <StatsView matches={all} playerKey={key} aliases={aliases} sameAs={sameAs} />
 

@@ -1,0 +1,92 @@
+import type { Widen } from "../index"
+import type { friendsScreensDe } from "./friends.screens.de.ts"
+
+// English texts of the friends area. Same shape as friends.screens.de.ts.
+export const friendsScreensEn: Widen<typeof friendsScreensDe> = {
+  title: "Friends",
+  unnamed: "No name",
+
+  row: {
+    title: "Friends",
+    requests: (n) => (n === 1 ? "1 request" : `${n} requests`),
+  },
+
+  sections: { requests: "Requests", friends: "Friends", sent: "Sent" },
+  wantsToBe: "Wants to be your friend",
+  requestSent: "Request sent",
+  since: (date) => `Friends since ${date}`,
+  accept: "Accept",
+  acceptFor: (name) => `Accept ${name}`,
+  accepting: "Accepting",
+  decline: "Decline",
+  empty: {
+    title: "No friends yet",
+    text: "Friends join a game with one tap and see their figures side by side in the leaderboard. Only the two of you know you are friends.",
+  },
+  unavailable: "Friends are available once this device has synced your profile. That happens by itself when there is a connection.",
+  signerApp: "With a signer app, other people's requests and answers don't arrive by themselves. What you change here still counts. On a device where your profile is signed in without a signer app, you see everything.",
+  offline: "No connection. The list shows the last state.",
+
+  add: "Add friend",
+  addTitle: "Add friend",
+  addText: "Pick someone you played with lately, or scan their profile code. They get your request and decide.",
+  scan: "Scan profile code",
+  scanManual: "Paste link or code",
+  myCode: "Show my code",
+  recent: "Played with lately",
+  noRecent: "Nobody with a profile yet. Play a game with someone or scan their profile code.",
+  scanned: "Scanned",
+  send: "Add",
+  sendFor: (name) => `Add ${name}`,
+  sending: (name) => `Sending request to ${name}`,
+  notProfile: "That is not a profile code.",
+  isYou: "That is your own profile.",
+  already: (name) => `${name} is already on your list.`,
+  sentTo: (name) => `Request sent to ${name}.`,
+  queued: (name) => `The request to ${name} goes out once there is a connection.`,
+  back: "Back",
+
+  addFriend: "Add as friend",
+  friend: "Friends",
+  acceptRequest: "Accept request",
+  declineRequest: "Decline request",
+  withdraw: "Withdraw request",
+  remove: "Remove friend",
+  removeTitle: (name) => `Remove ${name} as a friend?`,
+  removeText: "You no longer see each other in your friend lists. Your games together stay.",
+  removeConfirm: "Remove",
+  withdrawTitle: "Withdraw request?",
+  withdrawText: "The person then no longer sees your request.",
+  withdrawConfirm: "Withdraw",
+
+  setup: { group: "Friends" },
+  invite: { group: "Friends" },
+
+  ranks: {
+    scope: (n) => `You and your friends with the figures each of you shares under Visibility: X01 against others, ranked from ${n} games.`,
+    offline: "No connection. The figures show the last state.",
+    notLoaded: "Not loaded yet",
+    silent: "Without figures",
+    noCard: "Shows no figures",
+    youNoCard: "You show no figures",
+    openVisibility: "Open Visibility",
+    loading: "Loading figures",
+    emptyTitle: "No friends yet",
+    emptyText: "Your friends stand here with the figures each of them shows.",
+    emptyAction: "Add friend",
+    guestTitle: "Friends need a profile",
+    guestText: "With a profile you add friends, and you see each other's figures side by side.",
+    guestAction: "To the profile",
+  },
+
+  problems: {
+    "no-key": "This device hasn't synced your profile yet. Try again in a moment.",
+    offline: "No connection. Try again once you are back online.",
+    clock: "This device's clock is behind. Set it right and try again.",
+    signer: "Your signer app did not sign.",
+    switched: "The profile changed. Open the list again.",
+    refused: "The change was not accepted. Try again later.",
+    full: "Your list is full. Remove someone before you add someone.",
+    unknown: "That did not work. Try again.",
+  },
+}

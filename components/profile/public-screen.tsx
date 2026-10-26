@@ -43,7 +43,9 @@ export default function PublicScreen({ params }: ScreenProps) {
       {(name) => (
         <>
           <div className="mt-4 grid gap-2">
-            <Button onClick={() => setShareOpen(true)} className="h-12 w-full gap-2 rounded-xl text-[1.0625rem] font-semibold">
+            {/* On someone else's profile the relationship comes first (Game Center, Strava); sharing is the filled button only on one's own. */}
+            {!own && <SlotItems list="profile.actions" props={() => ({ pubkey: address.pubkey, name: name ?? tx.unnamed })} />}
+            <Button variant={own ? "default" : "secondary"} onClick={() => setShareOpen(true)} className={own ? "h-12 w-full gap-2 rounded-xl text-[1.0625rem] font-semibold" : "h-12 w-full gap-2 rounded-xl bg-primary/10 text-[1.0625rem] font-semibold text-primary shadow-none hover:bg-primary/15 active:bg-primary/20"}>
               <Share className="h-5 w-5" aria-hidden="true" />
               {tx.public.share}
             </Button>
@@ -53,7 +55,6 @@ export default function PublicScreen({ params }: ScreenProps) {
                 {tx.setup.add}
               </Button>
             )}
-            {!own && <SlotItems list="profile.actions" props={() => ({ pubkey: address.pubkey, name: name ?? tx.unnamed })} />}
           </div>
           <ShareSheet open={shareOpen} onOpenChange={setShareOpen} pubkey={address.pubkey} name={name} writeRelays={relaySettings(state.profile?.relayList).write} />
         </>

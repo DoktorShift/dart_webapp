@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Medal, Users } from "lucide-react"
+import { Medal, UserRound, Users } from "lucide-react"
 import { EmptyState } from "@/components/ui/empty-state"
 import { Segmented } from "@/components/ui/segmented"
 import { useNav } from "@/components/nav/nav-context"
@@ -9,13 +9,15 @@ import { useRegistryVersion } from "@/components/nav/use-registry"
 import { SlotItems } from "@/components/shell/slot-items"
 import { useT } from "@/components/i18n-provider"
 import { DeviceSection } from "@/components/leaderboard/device-section"
+import { featureOn } from "@/lib/shell/features"
 import { getSlotItems } from "@/lib/shell/registry"
 
-// The Rangliste tab: one tab, three areas (E-decision 2026-10-26): the games on this device,
-// the season tables of the player's clubs, the player's tournament placings. Each area says
-// what it counts. The two latter come from their areas through the registry ("leaderboard.sections").
-type Section = "device" | "clubs" | "tournaments"
-const SECTIONS: Section[] = ["device", "clubs", "tournaments"]
+// The Rangliste tab: one tab, four areas (E-decision 2026-10-26, friends added E29): the games
+// on this device, the figures the player's friends share, the season tables of the player's
+// clubs, the player's tournament placings. Each area says what it counts. The three latter come
+// from their areas through the registry ("leaderboard.sections").
+type Section = "device" | "friends" | "clubs" | "tournaments"
+const SECTIONS: Section[] = (["device", "friends", "clubs", "tournaments"] as const).filter((s) => s !== "friends" || featureOn("friends"))
 
 export default function LeaderboardHome() {
   const t = useT()
@@ -30,6 +32,12 @@ export default function LeaderboardHome() {
         <Segmented label={l.section} options={SECTIONS.map((s) => ({ value: s, label: l.sections[s] }))} value={section} onChange={setSection} />
       </div>
       {section === "device" && <DeviceSection />}
+      {section === "friends" &&
+        (provided("friends") ? (
+          <SlotItems list="leaderboard.sections" only={["friends"]} props={() => ({})} />
+        ) : (
+          <EmptyState icon={UserRound} title={l.friendsOffTitle} description={l.friendsOffText} />
+        ))}
       {section === "clubs" &&
         (provided("clubs") ? (
           <SlotItems list="leaderboard.sections" only={["clubs"]} props={() => ({})} />

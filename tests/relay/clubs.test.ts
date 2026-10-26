@@ -17,6 +17,7 @@ import { answerGame, confirmedCopies, correctGame, gameSeats, recordGame, record
 import { findInviteByCode } from "../../lib/clubs/codes.ts"
 import { acceptInvitation, invitationState, openInvitation } from "../../lib/clubs/invitation.ts"
 import { sendInvitation, watchInvitations } from "../../lib/clubs/invitations.ts"
+import { startInbox, stopInbox } from "../../lib/profile/inbox.ts"
 import { clubLink, readClubPayload } from "../../lib/clubs/links.ts"
 import { acceptOwnership, acceptRequest, createInvite, foundClub, isConfirmedMember, offerOwnership, openOffer, removeMember, setRole, updateInfo } from "../../lib/clubs/membership.ts"
 import { createSeason, decideResult, DEFAULT_RULES } from "../../lib/clubs/seasons.ts"
@@ -277,11 +278,13 @@ test("an invitation sent straight to a profile arrives gift-wrapped and opens un
   const danasDevice = await device(dana)
   const arrived = await new Promise<string>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error("the invitation did not arrive")), 15_000)
-    const sub = watchInvitations({ pubkey: dana.pubkey, signer: danasDevice.signer }, (opened) => {
+    const stop = watchInvitations((opened) => {
       clearTimeout(timer)
-      sub.close()
+      stop()
+      stopInbox()
       resolve(opened)
     })
+    startInbox({ pubkey: dana.pubkey, signer: danasDevice.signer })
   })
   assert.equal(arrived, club)
   view = await refreshClub(club, danasDevice)

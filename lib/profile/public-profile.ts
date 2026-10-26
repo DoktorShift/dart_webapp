@@ -56,15 +56,18 @@ export async function loadPublicProfile(pubkey: string, hints: readonly string[]
   return { profile, status: failed > 0 ? "partial" : "complete" }
 }
 
-// The names and pictures of several people at once (a club's members): one question to the
-// profile and general relays for their metadata, kept per person as loadPublicProfile keeps it.
-// Without an answer from any relay, what this device had is returned unchanged.
-export async function loadProfiles(pubkeys: readonly string[]): Promise<Map<string, PublicProfile>> {
-  const found = new Map<string, PublicProfile>()
+// The names and pictures of several people at once (a club's members), and with `cards` their
+// stats cards too (the friends' Rangliste): one question to the profile and general relays, kept
+// per person as loadPublicProfile keeps it. Without an answer from any relay, what this device
+// had is returned unchanged; `answered` says whether one did.
+export async function loadProfiles(pubkeys: readonly string[], options: { cards?: boolean } = {}): Promise<Map<string, PublicProfile> & { answered?: boolean }> {
+  const found: Map<string, PublicProfile> & { answered?: boolean } = new Map()
   for (const pubkey of pubkeys) found.set(pubkey, (await cachedProfile(pubkey).catch(() => null)) ?? { pubkey, metadata: null, relayList: null, card: null, loadedAt: null })
   if (found.size === 0) return found
-  const result = await query([{ authors: [...found.keys()], kinds: [0] }], mergeRelays(profileRelays(), generalRelays()))
-  if (result.answered.length === 0) return found
+  const authors = [...found.keys()]
+  const result = await query([{ authors, kinds: [0] }, ...(options.cards ? [{ authors, kinds: [31180], "#d": [STATS_CARD_D] }] : [])], mergeRelays(profileRelays(), generalRelays()))
+  found.answered = result.answered.length > 0
+  if (!found.answered) return found
   const ops: WriteOp[] = []
   for (const [pubkey, profile] of found) {
     const next = { ...merge(profile, result.events), loadedAt: Date.now() }

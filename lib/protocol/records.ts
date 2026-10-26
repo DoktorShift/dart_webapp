@@ -3,6 +3,7 @@ import type { EventTemplate } from "../nostr/types.ts"
 import { BADGE_TYPES } from "./badges.ts"
 import { CLUB_TYPES, MAX_SHARED_KEYS } from "./club.ts"
 import type { RecordSpec } from "./common.ts"
+import { FRIEND_TYPES } from "./friend.ts"
 import type { InvitePreview } from "./invite.ts"
 import { previewPlaintext } from "./invite.ts"
 import { FORMAT_VERSION, KIND_RECORD, KIND_STATE, MAX_EVENT_BYTES, MAX_FUTURE_SKEW_SECONDS, MAX_OFFER_SECONDS, MAX_SEALED_PLAINTEXT_BYTES } from "./kinds.ts"
@@ -26,9 +27,9 @@ import { TOURNAMENT_TYPES } from "./tournament.ts"
 
 // Rumors that only ever travel inside a NIP-59 gift wrap to one person; signed and published as
 // events they are refused.
-export const GIFT_WRAPPED_ONLY: readonly string[] = ["payment.request", "club.invitation"]
+export const GIFT_WRAPPED_ONLY: readonly string[] = ["payment.request", "club.invitation", ...Object.keys(FRIEND_TYPES)]
 
-export const RECORD_TYPES = { ...CLUB_TYPES, ...TOURNAMENT_TYPES, ...MATCH_TYPES, ...LIVE_TYPES, ...PAYMENT_TYPES, ...PROFILE_TYPES, ...BADGE_TYPES }
+export const RECORD_TYPES = { ...CLUB_TYPES, ...TOURNAMENT_TYPES, ...MATCH_TYPES, ...LIVE_TYPES, ...PAYMENT_TYPES, ...PROFILE_TYPES, ...BADGE_TYPES, ...FRIEND_TYPES }
 export type RecordType = keyof typeof RECORD_TYPES
 export type ContentOf<T extends RecordType> = Infer<(typeof RECORD_TYPES)[T]["schema"]>
 

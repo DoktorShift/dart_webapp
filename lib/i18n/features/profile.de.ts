@@ -32,6 +32,7 @@ export const profileDe = {
     training: "Training",
     visibility: "Sichtbarkeit",
     advanced: "Erweitert",
+    friends: "Freunde",
   },
 
   // Game setup: a seat filled from a profile.

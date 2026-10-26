@@ -27,7 +27,7 @@ Die Bindung an `d` als zusätzliche Daten verhindert, dass ein Datensatz unbemer
 
 ## Klartext
 
-`{ v: 1, type, id, rev, device, at, data | parts | deleted }`: `type` (etwa `match`, `players`, `settings`, `clubs`, `devices`, `badges`, `payments`), `id`, Lamport-Zähler `rev` und schreibendes Gerät `device` (zwei Geräte, die denselben Datensatz offline ändern, werden unterschieden statt überschrieben, Recherche PR-18), genau eines von `data` (bis 20 000 Byte), `parts` (Kopf, Stückzahl, Größe größerer Daten) oder `deleted`. Teile liegen unter `recordSlot(schlüssel, id + "#" + seq)` mit `{ v, of, set, seq, total, prev, data }` und werden wie Matchprotokolle hash-verkettet.
+`{ v: 1, type, id, rev, device, at, data | parts | deleted }`: `type` (etwa `match`, `players`, `settings`, `clubs`, `devices`, `friends`, `badges`, `payments`), `id`, Lamport-Zähler `rev` und schreibendes Gerät `device` (zwei Geräte, die denselben Datensatz offline ändern, werden unterschieden statt überschrieben, Recherche PR-18), genau eines von `data` (bis 20 000 Byte), `parts` (Kopf, Stückzahl, Größe größerer Daten) oder `deleted`. Teile liegen unter `recordSlot(schlüssel, id + "#" + seq)` mit `{ v, of, set, seq, total, prev, data }` und werden wie Matchprotokolle hash-verkettet.
 
 ## Sichtbarkeit, Aufbewahrung, Löschung
 

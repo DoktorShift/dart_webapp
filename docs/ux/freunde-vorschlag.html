@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Freunde in BlueLine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&display=swap">
+<style>
+/* Layout: ein ruhiges Dokument mit Telefon-Mockups in Paaren (Ist | Vorschlag); Mockups folgen den
+   Farbtokens der App (app/globals.css), das Dokument selbst einem neutralen Blaugrau. */
+:root{
+  --bg:#f6f7fa; --fg:#121826; --mute:#5b667a; --line:#dde2ea; --card:#ffffff; --accent:#2563eb; --accent-ink:#1d4ed8;
+  --tint:#e8efff; --soft:#eef1f6; --good:#157a4f; --warn:#9a5b00; --bad:#b42318;
+  --m-bg:#f2f2f7; --m-card:#ffffff; --m-line:#dcdce1; --m-ink:#0b1020; --m-mute:#4a5568; --m-blue:#2563eb; --m-tint:#dbe6fd; --m-gray:#e5e5ea; --m-green:#15803d; --m-red:#c81e1e;
+  --display:"Barlow Condensed",ui-sans-serif,system-ui,sans-serif; --body:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Helvetica,Arial,sans-serif; --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0d1117; --fg:#e7ebf2; --mute:#98a3b5; --line:#263041; --card:#141b26; --accent:#5b8dff; --accent-ink:#8fb0ff;
+  --tint:#17233d; --soft:#1a2231; --good:#4ade80; --warn:#fbbf24; --bad:#f87171;
+  --m-bg:#000000; --m-card:#1c1c1e; --m-line:#2c2c2e; --m-ink:#f5f5f7; --m-mute:#a1a1aa; --m-blue:#3b82f6; --m-tint:#1e2a44; --m-gray:#2c2c2e; --m-green:#34d399; --m-red:#f87171;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0d1117; --fg:#e7ebf2; --mute:#98a3b5; --line:#263041; --card:#141b26; --accent:#5b8dff; --accent-ink:#8fb0ff;
+  --tint:#17233d; --soft:#1a2231; --good:#4ade80; --warn:#fbbf24; --bad:#f87171;
+  --m-bg:#000000; --m-card:#1c1c1e; --m-line:#2c2c2e; --m-ink:#f5f5f7; --m-mute:#a1a1aa; --m-blue:#3b82f6; --m-tint:#1e2a44; --m-gray:#2c2c2e; --m-green:#34d399; --m-red:#f87171;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font:16px/1.55 var(--body);padding-block:0 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+a{color:var(--accent-ink)}
+.wrap{max-width:1120px;margin:0 auto}
+header.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:baseline;justify-content:space-between;padding:28px 0 18px;border-bottom:1px solid var(--line)}
+.brand{font-family:var(--display);font-weight:600;font-size:22px;letter-spacing:.2px}
+.meta{font-size:13px;color:var(--mute)}
+h1{font-family:var(--display);font-weight:600;font-size:clamp(34px,5vw,54px);line-height:1.05;margin:34px 0 10px;text-wrap:balance}
+.lead{font-size:18px;color:var(--mute);max-width:62ch;margin:0 0 8px}
+h2{font-family:var(--display);font-weight:600;font-size:30px;line-height:1.1;margin:56px 0 14px;text-wrap:balance;scroll-margin-top:16px}
+h3{font-size:18px;margin:26px 0 8px}
+p{max-width:72ch}
+ul,ol{max-width:72ch;padding-left:22px}
+li{margin:4px 0}
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 0;padding:0;list-style:none;max-width:none}
+.toc a{display:inline-block;padding:7px 12px;border:1px solid var(--line);border-radius:999px;font-size:13px;text-decoration:none;color:var(--fg);background:var(--card)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:22px 0}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.kpi b{display:block;font-family:var(--display);font-size:40px;line-height:1;font-weight:600;font-variant-numeric:tabular-nums}
+.kpi span{font-size:13px;color:var(--mute)}
+.kpi .vs{font-size:13px;color:var(--good);font-weight:600}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);font-weight:600;background:var(--soft)}
+tr:last-child td{border-bottom:0}
+td.n{font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--mute)}
+.sev{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600}
+.sev.h{background:#fde8e6;color:#9f1d13}.sev.m{background:#fff2d6;color:#8a5200}.sev.l{background:var(--soft);color:var(--mute)}
+:root[data-theme="dark"] .sev.h,:root[data-theme="dark"] .sev.m{background:var(--soft)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .sev.h,:root:not([data-theme="light"]) .sev.m{background:var(--soft)}}
+.stage{display:inline-block;min-width:26px;text-align:center;padding:2px 7px;border-radius:7px;font-size:12px;font-weight:700;background:var(--tint);color:var(--accent-ink)}
+code{font:13px var(--mono);background:var(--soft);padding:1px 5px;border-radius:5px}
+blockquote{margin:10px 0;padding:10px 16px;border-left:3px solid var(--accent);background:var(--card);border-radius:0 10px 10px 0;max-width:72ch}
+blockquote cite{display:block;font-size:12.5px;color:var(--mute);margin-top:6px;font-style:normal}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+.box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.box h3{margin-top:0}
+
+/* Vergleichspaare */
+.cmp{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:22px;margin:18px 0 10px}
+.pane{min-width:0}
+.pane .tag{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:7px;margin-bottom:10px}
+.pane.ist .tag{background:var(--soft);color:var(--mute)}
+.pane.neu .tag{background:var(--tint);color:var(--accent-ink)}
+.pane .inner{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:760px){.pane .inner{grid-template-columns:1fr}}
+.notes{font-size:14px;color:var(--fg);margin:0;padding:0;list-style:none}
+.notes li{position:relative;padding-left:28px;margin:0 0 9px}
+.notes li i{position:absolute;left:0;top:1px;width:20px;height:20px;border-radius:50%;font:700 12px/20px var(--body);text-align:center;font-style:normal;color:#fff;background:var(--mute)}
+.pane.neu .notes li i{background:var(--accent)}
+
+/* Telefon-Mockup, 300 px breit, Maßstab ~0,77 zu iPhone-Punkten */
+.ph{width:300px;max-width:100%;height:628px;background:var(--m-bg);color:var(--m-ink);border:1px solid var(--line);border-radius:34px;overflow:hidden;position:relative;display:flex;flex-direction:column;font:12.5px/1.35 var(--body);box-shadow:0 10px 30px -18px rgba(0,0,0,.35)}
+.ph.tall{height:auto;min-height:628px}
+.ph .nav{height:38px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 12px;font-size:13px;color:var(--m-blue)}
+.ph .nav .mid{color:var(--m-ink);font-weight:600}
+.ph .nav .r{display:flex;gap:10px;align-items:center}
+.ph .nav svg{width:22px;height:22px;stroke:var(--m-blue);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ph .nav .pill{background:var(--m-blue);color:#fff;font-weight:600;font-size:12px;padding:4px 10px;border-radius:999px}
+.ph .scr{flex:1;min-height:0;overflow:hidden;padding:0 12px 12px;display:flex;flex-direction:column;gap:10px}
+.ph .scr>*{flex:none}
+.ph .lt{font-family:var(--display);font-weight:600;font-size:28px;line-height:1;margin:2px 0 4px}
+.ph .sec{font-size:11px;color:var(--m-mute);margin:6px 0 -4px 4px}
+.ph .card{background:var(--m-card);border:1px solid var(--m-line);border-radius:12px;overflow:hidden}
+.ph .rw{display:flex;align-items:center;gap:9px;padding:9px 11px;min-height:38px;border-top:1px solid var(--m-line)}
+.ph .rw:first-child{border-top:0}
+.ph .rw .ic{width:22px;height:22px;border-radius:6px;flex:none;background:#0a7aff}
+.ph .rw .ic.g{background:#8e8e93}.ph .rw .ic.gr{background:#2fb553}.ph .rw .ic.o{background:#f08a00}.ph .rw .ic.t{background:#1e9fbf}.ph .rw .ic.p{background:#9b51e0}
+.ph .rw .t{flex:1;min-width:0}
+.ph .rw .t b{display:block;font-weight:600;font-size:13px}
+.ph .rw .t small{display:block;color:var(--m-mute);font-size:11px}
+.ph .rw .v{color:var(--m-mute);font-size:12px;white-space:nowrap}
+.ph .rw .chev{width:7px;height:7px;border-right:1.6px solid var(--m-mute);border-top:1.6px solid var(--m-mute);transform:rotate(45deg);opacity:.6;flex:none}
+.ph .rw.red b{color:var(--m-red);font-weight:500}
+.ph .btn{display:flex;align-items:center;justify-content:center;gap:6px;height:38px;border-radius:10px;font-weight:600;font-size:13px}
+.ph .btn.p{background:var(--m-blue);color:#fff}
+.ph .btn.s{background:var(--m-tint);color:var(--m-blue)}
+.ph .btn.g{color:var(--m-blue);height:32px;font-weight:500}
+.ph .btn.dis{opacity:.45}
+.ph .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ph .seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;background:var(--m-gray);border-radius:9px;padding:2px;font-size:12px;font-weight:600;text-align:center}
+.ph .seg span{padding:6px 2px;border-radius:7px;color:var(--m-mute)}
+.ph .seg span.on{background:var(--m-card);color:var(--m-ink);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.ph .av{width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;color:#fff;font-weight:700;font-size:13px;background:linear-gradient(145deg,#38bdf8,#1d4ed8)}
+.ph .av.lg{width:52px;height:52px;font-size:19px}
+.ph .av.xl{width:68px;height:68px;font-size:26px}
+.ph .av.o{background:linear-gradient(145deg,#fb923c,#c2410c)}
+.ph .av.g{background:linear-gradient(145deg,#4ade80,#15803d)}
+.ph .av.v{background:linear-gradient(145deg,#c084fc,#7e22ce)}
+.ph .av.k{background:linear-gradient(145deg,#94a3b8,#475569)}
+.ph .stack{display:flex;align-items:center}
+.ph .stack .av{width:22px;height:22px;font-size:9px;border:2px solid var(--m-card);margin-left:-7px}
+.ph .stack .av:first-child{margin-left:0}
+.ph .stack small{margin-left:6px;color:var(--m-mute);font-size:11px}
+.ph .chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:600;background:var(--m-gray);color:var(--m-mute)}
+.ph .chip.b{background:var(--m-tint);color:var(--m-blue)}
+.ph .chip.gr{background:#dcfce7;color:#166534}
+.ph .chip.live{background:#fee2e2;color:#991b1b}
+.ph .chip.live::before{content:"";width:6px;height:6px;border-radius:50%;background:#dc2626}
+.ph .hero{padding:12px 11px 10px;display:flex;gap:10px;align-items:center}
+.ph .hero .t b{display:block;font-size:15px;font-weight:700}
+.ph .hero .t small{display:block;color:var(--m-mute);font-size:11px}
+.ph .hero.c{flex-direction:column;text-align:center;gap:6px;padding-top:6px}
+.ph .hero.c .t b{font-family:var(--display);font-size:24px;font-weight:600;line-height:1}
+.ph .acts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.ph .acts div{background:var(--m-card);border:1px solid var(--m-line);border-radius:12px;padding:8px 4px 6px;text-align:center;font-size:10.5px;font-weight:600;color:var(--m-blue)}
+.ph .acts svg{width:20px;height:20px;stroke:var(--m-blue);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;display:block;margin:0 auto 3px}
+.ph .task{display:flex;align-items:center;gap:8px;background:var(--m-tint);color:var(--m-blue);border-radius:12px;padding:10px 11px;font-weight:600;font-size:12.5px}
+.ph .rank{display:flex;gap:12px;align-items:center;padding:10px 11px}
+.ph .rank b{font-family:var(--display);font-size:32px;font-weight:600;line-height:1}
+.ph .status{padding:9px 11px;border-radius:10px;font-size:12px;background:#dcfce7;color:#14532d}
+.ph .status.i{background:var(--m-tint);color:var(--m-blue)}
+.ph .status.e{background:#fee2e2;color:#7f1d1d}
+.ph .field{background:var(--m-card);border:1px solid var(--m-line);border-radius:10px;padding:9px 11px;color:var(--m-mute);font-size:13px}
+.ph .fl{font-size:11px;color:var(--m-mute);margin:2px 0 -6px 4px}
+.ph .tabbar{flex:none;height:56px;border-top:1px solid var(--m-line);background:var(--m-card);display:grid;grid-template-columns:repeat(5,1fr);align-items:center;font-size:9.5px;color:var(--m-mute);text-align:center}
+.ph .tabbar .on{color:var(--m-blue)}
+.ph .tabbar svg{width:20px;height:20px;display:block;margin:0 auto 2px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.ph .tabbar.float{position:absolute;left:12px;right:12px;bottom:10px;height:52px;border:1px solid var(--m-line);border-radius:26px;background:color-mix(in srgb,var(--m-card) 78%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 6px 20px -10px rgba(0,0,0,.4)}
+.ph .sheet{position:absolute;left:0;right:0;bottom:0;background:var(--m-bg);border-radius:18px 18px 0 0;padding:8px 12px 14px;box-shadow:0 -8px 30px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:9px}
+.ph .sheet::before{content:"";width:34px;height:4px;border-radius:2px;background:var(--m-line);margin:0 auto 2px}
+.ph .sheet h4{margin:0;font-size:16px;font-weight:700}
+.ph .sheet p{margin:0;font-size:12px;color:var(--m-mute)}
+.ph .dim{position:absolute;inset:0;background:rgba(0,0,0,.32)}
+.ph .qrcard{background:#fff;border-radius:14px;padding:12px;display:grid;place-items:center;position:relative}
+.ph .qr{width:150px;height:150px;display:block}
+.ph .qrcard .av{position:absolute;border:3px solid #fff}
+.ph .code{font-family:var(--mono);font-size:20px;letter-spacing:.14em;font-weight:600;text-align:center;font-variant-numeric:tabular-nums}
+.ph .cam{background:#0b0f19;border-radius:14px;height:210px;position:relative;color:#cbd5e1;display:grid;place-items:center;font-size:11px}
+.ph .cam::before{content:"";position:absolute;inset:34px 44px;border:2px solid transparent;border-radius:16px;background:
+  linear-gradient(#fff,#fff) top left/26px 2px no-repeat,linear-gradient(#fff,#fff) top left/2px 26px no-repeat,
+  linear-gradient(#fff,#fff) top right/26px 2px no-repeat,linear-gradient(#fff,#fff) top right/2px 26px no-repeat,
+  linear-gradient(#fff,#fff) bottom left/26px 2px no-repeat,linear-gradient(#fff,#fff) bottom left/2px 26px no-repeat,
+  linear-gradient(#fff,#fff) bottom right/26px 2px no-repeat,linear-gradient(#fff,#fff) bottom right/2px 26px no-repeat}
+.ph .cam.small{height:150px}
+.ph .steps{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;font-size:9px;text-align:center;color:var(--m-mute)}
+.ph .steps span{padding-top:5px;border-top:3px solid var(--m-gray)}
+.ph .steps span.done{border-color:var(--m-blue);color:var(--m-blue)}
+.ph .steps span.now{border-color:var(--m-blue);color:var(--m-ink);font-weight:700}
+.ph .match{display:flex;align-items:center;gap:8px;padding:9px 11px;border-top:1px solid var(--m-line)}
+.ph .match:first-child{border-top:0}
+.ph .match .sc{font-family:var(--display);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;min-width:34px;text-align:center}
+.ph .match .n{flex:1;font-size:12.5px;font-weight:600}
+.ph .match small{color:var(--m-mute);font-size:10.5px;display:block;font-weight:400}
+.ph .menu{position:absolute;right:12px;top:40px;background:var(--m-card);border:1px solid var(--m-line);border-radius:12px;box-shadow:0 10px 30px -10px rgba(0,0,0,.4);min-width:180px;overflow:hidden;z-index:2}
+.ph .menu div{padding:9px 12px;font-size:13px;border-top:1px solid var(--m-line);display:flex;justify-content:space-between;align-items:center}
+.ph .menu div:first-child{border-top:0}
+.ph .menu div.red{color:var(--m-red)}
+.ph .menu svg{width:17px;height:17px;stroke:var(--m-ink);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ph .menu div.red svg{stroke:var(--m-red)}
+.ph .caption{font-size:11px;color:var(--m-mute);text-align:center}
+
+/* Flussdiagramm */
+.flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}
+.flow .st{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:14px;position:relative}
+.flow .st b{display:block;font-family:var(--display);font-size:22px;font-weight:600;color:var(--accent-ink);line-height:1;margin-bottom:4px}
+.flow .st small{display:block;color:var(--mute);font-size:12.5px;margin-top:4px}
+.tree{font:13.5px/1.6 var(--mono);background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;overflow-x:auto;white-space:pre;margin:0}
+.tree .x{color:var(--bad);text-decoration:line-through}
+.tree .y{color:var(--good);font-weight:600}
+.tree .k{color:var(--mute)}
+.swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.sw{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;font-size:13px}
+.sw .demo{height:54px;border-radius:9px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:6px}
+footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);font-size:13px;color:var(--mute)}
+.src{font-size:13.5px;columns:2;column-gap:28px;max-width:none}
+@media (max-width:720px){.src{columns:1}}
+.src li{break-inside:avoid}
+.src a,footer code,td code{overflow-wrap:anywhere}
+@media (prefers-reduced-motion:no-preference){.ph .chip.live::before{animation:pulse 1.4s ease-in-out infinite}}
+@keyframes pulse{50%{opacity:.35}}
+
+/* Zusätze für Profil und Rangliste */
+.ph .nav svg{width:22px;height:22px}
+.ph .fig3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:9px 11px 10px;border-top:1px solid var(--m-line)}
+.ph .fig3 div b{display:block;font-family:var(--display);font-size:24px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+.ph .fig3 div small{display:block;color:var(--m-mute);font-size:10.5px;margin-top:3px;line-height:1.2}
+.ph .cap{padding:0 11px 9px;font-size:10.5px;color:var(--m-mute)}
+.ph .spark{display:flex;align-items:flex-end;gap:3px;height:44px}
+.ph .spark i{flex:1;background:var(--m-blue);border-radius:2px 2px 0 0;opacity:.72;min-height:3px}
+.ph .spark i.hi{opacity:1}.ph .spark i.lo{opacity:.4}.ph .spark i.pb{background:#f08a00;opacity:1}
+.ph .spark.big{height:120px;gap:5px}
+.ph .spark.big i{border-radius:3px 3px 0 0}
+.ph .chartbox{position:relative;padding:8px 11px 6px}
+.ph .chartbox .goal{position:absolute;left:11px;right:11px;border-top:1.5px dashed #f08a00;font-size:9.5px;color:#b45309;text-align:right;padding-right:2px}
+.ph .axis{display:flex;justify-content:space-between;font-size:9.5px;color:var(--m-mute);padding:0 11px 8px}
+.ph .trend{font-size:12px;padding:9px 11px 0}
+.ph .trend b{font-weight:700}
+.ph .up{color:var(--m-green)}.ph .dn{color:var(--m-red)}
+.ph .chips{display:flex;gap:6px;flex-wrap:wrap}
+.ph .chip.pick{background:var(--m-card);border:1px solid var(--m-line);color:var(--m-ink);padding:4px 9px;font-size:11.5px}
+.ph .chip.pick::after{content:"";width:5px;height:5px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg);margin:-3px 0 0 3px;opacity:.7}
+.ph .foot{font-size:10.5px;color:var(--m-mute);padding:0 4px;line-height:1.3}
+.ph .lrow{display:flex;align-items:center;gap:9px;padding:8px 11px;min-height:44px;border-top:1px solid var(--m-line)}
+.ph .lrow:first-child{border-top:0}
+.ph .lrow .rk{width:24px;flex:none;font-family:var(--display);font-size:20px;font-weight:600;text-align:center;font-variant-numeric:tabular-nums;color:var(--m-mute)}
+.ph .lrow .rk.g{color:#b8860b}.ph .lrow .rk.s{color:#8e8e93}.ph .lrow .rk.b{color:#b06a2b}
+.ph .lrow .t{flex:1;min-width:0}.ph .lrow .t b{display:block;font-size:13px;font-weight:600}.ph .lrow .t small{display:block;color:var(--m-mute);font-size:11px}
+.ph .lrow .f{text-align:right;font-variant-numeric:tabular-nums;flex:none}
+.ph .lrow .f b{display:block;font-family:var(--display);font-size:21px;font-weight:600;line-height:1}
+.ph .lrow .f small{color:var(--m-mute);font-size:10.5px}
+.ph .lrow.me{background:var(--m-tint)}
+.ph .pin{position:absolute;left:12px;right:12px;bottom:70px;background:var(--m-card);border:1.5px solid var(--m-blue);border-radius:12px;box-shadow:0 6px 20px -10px rgba(0,0,0,.45);overflow:hidden}
+.ph .bars{padding:8px 11px 10px;display:grid;gap:7px}
+.ph .bars .hd{display:grid;grid-template-columns:1fr 1fr;font-size:11.5px;font-weight:700;text-align:center}
+.ph .bars .b{display:grid;grid-template-columns:30px 1fr 1fr 30px;gap:6px;align-items:center;font-size:11px;font-variant-numeric:tabular-nums}
+.ph .bars .b span:first-child{text-align:right}
+.ph .bars .b i{height:7px;border-radius:4px;background:var(--m-gray);position:relative;display:block}
+.ph .bars .b i::after{content:"";position:absolute;top:0;bottom:0;background:#b4b4bb;border-radius:4px;width:var(--w)}
+.ph .bars .b i.l::after{right:0}.ph .bars .b i.r::after{left:0}
+.ph .bars .b i.win::after{background:var(--m-blue)}
+.ph .bars .b small{grid-column:1/-1;text-align:center;color:var(--m-mute);font-size:10px;margin-top:-4px}
+.ph .rw .ic.tl{background:#1e9fbf}
+.ph .hero .chip{flex:none;white-space:nowrap;margin-left:auto}
+.ph .hero .t{flex:1;min-width:0}
+.ph .badges{display:flex;gap:6px;padding:0 11px 9px}
+.ph .badges span{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12px;background:var(--m-tint)}
+.ph .big{font-family:var(--display);font-size:40px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums;padding:6px 11px 0}
+.ph .empty{padding:22px 14px;text-align:center;color:var(--m-mute);font-size:12px}
+.ph .empty b{display:block;color:var(--m-ink);font-size:14px;margin-bottom:3px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin:14px 0}
+.shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:14px 0}
+.shots figure{margin:0;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px}
+.shots img{width:100%;height:auto;border-radius:8px;display:block}
+.shots figcaption{font-size:12px;color:var(--mute);margin-top:6px}
+.defs td b{font-variant-numeric:tabular-nums}
+.yes{color:var(--good);font-weight:700}.no{color:var(--bad);font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <div class="brand">BlueLine Darts · UX-Vorschlag und Umsetzung</div>
+  <div class="meta">Freunde · Zweig <code>feat/freunde</code> · 26. Oktober 2026 · gebaut, zur Abnahme</div>
+</header>
+
+<h1>Freunde: einmal hinzufügen, überall mit einem Tipp dabei</h1>
+<p class="lead">Bis heute kannte BlueLine keine Freunde. Wer mit jemandem spielen, ihn in den Club holen oder seine Zahlen neben den eigenen sehen wollte, musste jedes Mal scannen oder tippen. Dieser Vorschlag führt eine private Freundesliste ein, die im Profil wohnt und in Spielen, Clubs, Turniere und Rangliste hineinreicht. Grundlage: Apple Game Center und Kontakte, die Muster von Strava, Instagram und Duolingo, die Apple Human Interface Guidelines (iOS 26) und das vorhandene Protokoll der App (private Datensätze, Einladungen an ein Profil).</p>
+<div class="box" style="margin:16px 0 20px;border-color:#16a34a"><strong>Stand 26. Oktober 2026:</strong> Alles unten ist auf dem Zweig gebaut: Datensatz und Nachrichten (<a href="../protocol/families/friends.md">Protokoll „Freunde“</a>), die Zeile im Profil mit dem Bildschirm, das Blatt „Freund hinzufügen“, der Knopf auf jeder Spielerseite, die Chips in der Spielvorbereitung, die Gruppe „Freunde“ beim Einladen in Clubs und Turniere, der Bereich „Freunde“ in der Rangliste. Nachweis im Spielabend P8.01 und in der HIG-Matrix (<a href="../implementation/evidence/P8/README.md">Ergebnis</a>). Offen sind die Entscheidungen E29 bis E33 unten; ohne Antwort bleibt es beim gebauten Vorschlag.</div>
+
+<ul class="toc">
+  <li><a href="#kurz">Kurzfassung</a></li><li><a href="#befunde">Befunde am Ist-Stand</a></li><li><a href="#prinzipien">Prinzipien</a></li><li><a href="#modell">Das Modell</a></li>
+  <li><a href="#orte">Die Orte in der App</a></li><li><a href="#technik">Unter der Haube</a></li><li><a href="#leer">Leerzustände und Fehler</a></li><li><a href="#entscheidungen">Entscheidungen</a></li><li><a href="#quellen">Quellen</a></li>
+</ul>
+
+<h2 id="kurz">Kurzfassung</h2>
+<div class="grid2">
+  <div class="box"><h3>Was heute stört</h3>
+    <ul class="notes">
+      <li><i>1</i>Mitspieler sind nur „Zuletzt gespielt mit“: eine Liste der Vergangenheit, keine Beziehung. Wer drei Wochen nicht gespielt hat, ist weg.</li>
+      <li><i>2</i>Ein Freund in die Runde: Code scannen, jedes Mal. Ein Freund in den Club: Code scannen oder aus den letzten Spielen suchen.</li>
+      <li><i>3</i>Zahlen vergleichen geht nur über die Rangliste des eigenen Geräts oder eine öffentliche Spielerseite, die man erst finden muss.</li>
+      <li><i>4</i>Die Sichtbarkeitsstufe „Freunde“ war ehrlich nicht möglich (E25), weil es keine Freunde gab.</li>
+    </ul>
+  </div>
+  <div class="box"><h3>Was der Vorschlag ändert</h3>
+    <ul class="notes">
+      <li><i>1</i><b>Eine Zeile „Freunde“ im Profil</b> mit Zahl und offenen Anfragen; dahinter die Liste in drei Gruppen: Anfragen, Freunde, Gesendet.</li>
+      <li><i>2</i><b>Gegenseitig, wie bei Game Center.</b> Anfrage, Annehmen, fertig. Niemand folgt jemandem einseitig; nur ihr beide wisst, dass ihr befreundet seid.</li>
+      <li><i>3</i><b>Ein Knopf auf jeder Spielerseite</b>, der seinen Zustand sagt: Als Freund hinzufügen · Anfrage gesendet · Anfrage annehmen · Befreundet.</li>
+      <li><i>4</i><b>Freunde zuerst</b>, wo Menschen gewählt werden: Chips in der Spielvorbereitung, Gruppe „Freunde“ in „Person einladen“ (Club) und bei den Turniergästen.</li>
+      <li><i>5</i><b>Rangliste › Freunde:</b> ihr nebeneinander, mit den Zahlen, die jeder von sich freigibt. Keine neue Freigabe, kein Mehr an Daten.</li>
+    </ul>
+  </div>
+</div>
+
+<h2 id="befunde">Befunde am Ist-Stand</h2>
+<div class="tbl"><table>
+<thead><tr><th>Nr.</th><th>Befund</th><th>Wo</th><th>Folge</th></tr></thead>
+<tbody>
+<tr><td class="n">F1</td><td>Mitspieler lassen sich nur über Vergangenheit (Zuletzt gespielt mit) oder Code erreichen; es gibt keinen Ort, an dem eine Person gehalten wird.</td><td>Spielen, Clubs, Turniere</td><td>Jede Wiederholung kostet einen Scan oder eine Suche.</td></tr>
+<tr><td class="n">F2</td><td>Die Spielvorbereitung bietet nur Namen aus der Vergangenheit; ein Name ohne Profil zählt in keiner Rangliste außer der des Geräts.</td><td>Spielen</td><td>Freunde mit Profil landen als Tippname ohne Verbindung.</td></tr>
+<tr><td class="n">F3</td><td>Die Spielerseite in der Rangliste („X gegen dich“) führt nicht zur öffentlichen Spielerseite, obwohl das Profil bekannt ist.</td><td>Rangliste › Hier gespielt</td><td>Zahlen und Freundschaft bleiben unerreichbar.</td></tr>
+<tr><td class="n">F4</td><td>Die Rangliste vergleicht nur Spiele dieses Geräts, Clubs und Turniere. Zwei Freunde, die zu Hause je allein zählen, sehen sich nie.</td><td>Rangliste</td><td>Kein Vergleich über Geräte hinweg.</td></tr>
+<tr><td class="n">F5</td><td>Einladungen an ein Profil (Clubs) kommen nur an, während der Clubs-Tab einmal geöffnet war; jeder Bereich hörte für sich.</td><td>Clubs</td><td>Für Freunde untauglich; eine Anfrage muss ankommen, egal wo man ist.</td></tr>
+</tbody></table></div>
+
+<h2 id="prinzipien">Prinzipien aus HIG und Recherche</h2>
+<div class="grid2">
+  <div class="box"><h3>Apple HIG und Apples eigene Apps</h3>
+    <ul>
+      <li><b>Game Center:</b> Freunde sind gegenseitig, Anfragen stehen oben in einer eigenen Gruppe, das Hinzufügen sitzt als Plus-Knopf in der Leiste, die Liste zeigt Gesicht, Name und eine Zeile darunter.</li>
+      <li><b>Kontakte und Nachrichten:</b> Hinzufügen über ein Blatt mit wenigen klaren Wegen (hier: scannen, eigenen Code zeigen, aus den letzten Spielen wählen), nie ein Formular.</li>
+      <li><b>Bestätigung nur fürs Entfernen:</b> ein zerstörender Schritt fragt mit rotem Knopf nach; Anfragen gehen ohne Rückfrage, sie sind reversibel.</li>
+      <li><b>Zustand im Knopf:</b> ein Knopf, der sagt, was gerade gilt, statt mehrerer Knöpfe; 44 pt, ganze Wörter, keine Abkürzungen.</li>
+      <li><b>Leerzustände erklären und bieten den ersten Schritt an</b> (Symbol, Satz, ein Knopf).</li>
+    </ul>
+  </div>
+  <div class="box"><h3>Was Strava, Instagram, Duolingo, DartCounter gleich machen</h3>
+    <ul>
+      <li>Der Beziehungsknopf steht <b>auf dem Profil der Person</b>, nicht in einer Verwaltung.</li>
+      <li><b>Gegenseitigkeit, wenn Daten fließen:</b> Strava teilt Zahlen mit Followern, Game Center und Duolingo nur unter Freunden. Hier fließen Zahlen, also gegenseitig.</li>
+      <li>„Zuletzt gespielt mit“ bzw. „Leute, die du kennen könntest“ als <b>erster Vorschlag</b> beim Hinzufügen; QR/Code als zweiter Weg.</li>
+      <li>DartCounter bietet Freunde mit Online-Spiel und Vergleich; die Freundesliste ist dort der Einstieg in jede Runde mit Bekannten.</li>
+    </ul>
+  </div>
+</div>
+
+<h2 id="modell">Das Modell: gegenseitig, privat, mit vier Zuständen</h2>
+<p>Zwischen zwei Profilen gibt es aus Sicht einer Person genau einen Zustand. Die Liste ist ein privater Datensatz des Profils (nur das Profil kann ihn lesen; Geräte des Profils gleichen ihn ab). Zwischen den beiden laufen drei verschlüsselte Nachrichten, die niemand außer dem Empfänger sieht.</p>
+<div class="tbl"><table>
+<thead><tr><th>Zustand</th><th>Wie er entsteht</th><th>Was die Person sieht</th><th>Was sie tun kann</th></tr></thead>
+<tbody>
+<tr><td>Nichts</td><td>Standard</td><td>„Als Freund hinzufügen“</td><td>Anfrage senden</td></tr>
+<tr><td>Gesendet</td><td>Eigene Anfrage</td><td>„Anfrage gesendet“ (Profil), Gruppe „Gesendet“ (Liste)</td><td>Zurückziehen (mit Rückfrage)</td></tr>
+<tr><td>Erhalten</td><td>Anfrage der anderen Person</td><td>„Anfragen“ ganz oben mit „Annehmen“; auf dem Profil „Anfrage annehmen“ und „Ablehnen“</td><td>Annehmen oder ablehnen (still, ohne Nachricht an die Person)</td></tr>
+<tr><td>Befreundet</td><td>Angenommen, von einer Seite</td><td>„Befreundet“ mit Haken; „Freunde seit …“</td><td>Entfernen (mit Rückfrage); die andere Seite erfährt es</td></tr>
+</tbody></table></div>
+<p>Zwei Anfragen, die sich kreuzen, ergeben eine Freundschaft, ohne dass jemand noch einmal tippt. Ablehnen schickt nichts: die andere Person sieht weiter „Anfrage gesendet“ und kann sie zurückziehen (so halten es Game Center und Instagram; es nimmt dem Nein die Härte).</p>
+
+<h2 id="orte">Die Orte in der App</h2>
+<h3>Profil › Freunde</h3>
+<p>Die Zeile „Freunde“ steht im Profil über dem Konto, mit der Zahl rechts und offenen Anfragen als Untertitel („1 Anfrage“). Dahinter die Liste: <b>Anfragen</b> (mit „Annehmen“ in der Zeile und dem Satz, den die Person mitschickte), <b>Freunde</b> („Freunde seit 26. Okt. 2026“), <b>Gesendet</b>. Jede Zeile öffnet die Spielerseite, wo entfernt, zurückgezogen oder abgelehnt wird. Der Plus-Knopf in der Leiste öffnet „Freund hinzufügen“.</p>
+<div class="shots">
+  <figure><img src="../implementation/evidence/P8/screens/41-friends-list.jpg" alt="Profil › Freunde mit Ben unter Freunde" loading="lazy"><figcaption>Profil › Freunde: Anfragen oben, dann Freunde, dann Gesendet.</figcaption></figure>
+  <figure><img src="../implementation/evidence/P8/screens/40-friends-add.jpg" alt="Blatt Freund hinzufügen mit Zuletzt gespielt mit" loading="lazy"><figcaption>„Freund hinzufügen“: scannen, eigenen Code zeigen, oder einer aus „Zuletzt gespielt mit“.</figcaption></figure>
+</div>
+<h3>Freund hinzufügen</h3>
+<p>Ein Blatt mit drei Wegen, in dieser Reihenfolge: <b>Profilcode scannen</b> (oder Link einfügen), <b>Meinen Code zeigen</b> (für die andere Richtung, das bekannte Blatt „Profil teilen“), und darunter <b>Zuletzt gespielt mit</b>: alle mit Profil, die noch nicht in der Liste sind, je mit „Hinzufügen“. Ein Tipp sendet; das Blatt sagt „Anfrage an Ben gesendet.“ oder, ohne Verbindung, dass sie rausgeht, sobald eine besteht. Nach dem Scannen wird die Person erst mit Namen gezeigt, dann gesendet (gegen den falschen Code).</p>
+<h3>Die Spielerseite</h3>
+<p>Unter dem Kopf der öffentlichen Spielerseite steht als Erstes ein Knopf, der den Zustand sagt (Instagram, Strava: die Beziehung zuerst); „Profil teilen“ ist auf fremden Seiten nicht mehr der gefüllte Knopf. Bei einer erhaltenen Anfrage steht der Satz der Person darüber. Zurückziehen fragt einmal nach, nicht rot (noch einmal fragen ist ein Tipp); Entfernen fragt rot. Aus der Rangliste erreicht man die Seite neu über „Spielerprofil“ auf der Vergleichsseite („X gegen dich“), sobald die Person ein Profil hat.</p>
+<h3>Spielen: Freunde als Chips</h3>
+<p>Die Chips „Zuletzt gespielt“ der Spielvorbereitung tragen jetzt das Profil, wenn das Spiel es kannte: ein Tipp besetzt den Sitz verbunden, wie nach einem Scan. Darunter erscheint die Gruppe „Freunde“ für die Freunde, mit denen hier noch nicht gespielt wurde, höchstens acht, ohne die schon sitzenden; niemand steht zweimal da. Gäste und Profile ohne Freunde sehen die Gruppe nicht, die Vorbereitung bleibt, wie sie ist.</p>
+<h3>Clubs und Turniere</h3>
+<p>„Person einladen“ (Club) bekommt die Gruppe <b>Freunde</b> über „Zuletzt gespielt mit“; ein Tipp schickt die Einladung an das Profil, wie bisher. Bei den Turniergästen stehen die Namen der Freunde zuerst unter den Vorschlägen. Mehr braucht es nicht: die Einladung selbst bleibt dieselbe.</p>
+<h3>Rangliste › Freunde</h3>
+<p>Die Rangliste bekommt einen vierten Bereich: <b>Hier gespielt · Freunde · Clubs · Turniere</b>. „Freunde“ zeigt dich und deine Freunde nach Siegquote (X01 gegen andere), mit Ø und Spielen, aus der Statistikkarte, die jeder unter „Sichtbarkeit“ freigibt. Ab der üblichen Mindestzahl von Spielen in der Wertung, darunter mit „Nicht in der Wertung“. Wer nichts freigibt, steht darunter mit „Zeigt keine Zahlen“; du selbst mit „Sichtbarkeit öffnen“. Der Satz darüber sagt genau das. Nichts, was nicht ohnehin auf der Spielerseite stünde, wird hier gezeigt.</p>
+<div class="shots">
+  <figure><img src="../implementation/evidence/P8/screens/43-ranks-friends.jpg" alt="Rangliste › Freunde" loading="lazy"><figcaption>Rangliste › Freunde: geteilte Zahlen, nebeneinander.</figcaption></figure>
+  <figure><img src="../implementation/evidence/P8/screens/44-setup-friend-chip.jpg" alt="Spielvorbereitung mit dem Chip Ben" loading="lazy"><figcaption>Spielen: Freunde als Chips über den Sitzen.</figcaption></figure>
+</div>
+
+<h2 id="technik">Unter der Haube, ohne dass jemand ein Wort davon sieht</h2>
+<ul>
+  <li><b>Die Liste</b> ist ein privater Datensatz des Profils (Kind 30078, verschlüsselt mit dem Datenschlüssel des Profils, Kennung <code>friends</code>), wie die Geräteliste: die neueste Fassung gewinnt, jedes Gerät des Profils liest und schreibt sie (<code>lib/sync/small-record.ts</code>, neu und auch von der Geräteliste benutzt).</li>
+  <li><b>Drei Nachrichten</b> (<code>friend.request</code>, <code>friend.accept</code>, <code>friend.remove</code>) laufen nur als Gift Wrap an das Profil der anderen Person, wie die Clubeinladung an ein Profil, zusätzlich an die Lese-Relays der Person, wenn ihr Profil hier bekannt ist. Relays sehen weder Absender noch Inhalt. Die Nachricht geht innerhalb der Änderung der Liste in die Outbox, die sie aufhebt und wiederholt, erst nachdem der Stand der Relays gelesen ist, und wird zurückgenommen, wenn das Schreiben danach scheitert; so entsteht weder eine Änderung, von der die andere Seite nie erfährt, noch eine Nachricht ohne Änderung.</li>
+  <li><b>Späte, doppelte und alte Nachrichten:</b> Relays spielen die letzten Tage bei jedem Start erneut aus. Die Liste merkt sich je Person die Zeit des letzten Worts, das zählte; was älter ist, ändert nichts. Eine abgelehnte Anfrage bleibt abgelehnt, ein altes „Entfernen“ hebt keine neuere Freundschaft auf, zwei Geräte des Profils schreiben nacheinander, nie gleichzeitig.</li>
+  <li><b>Ein Posteingang je Profil</b> (<code>lib/profile/inbox.ts</code>): eine Verbindung hört alle Wraps an das Profil und verteilt sie an Clubs (Einladungen) und Freunde. Er läuft, sobald ein Profil mit Schlüssel auf dem Gerät ist, nicht erst, wenn ein Tab geöffnet war (behebt F5).</li>
+  <li><b>Keine neue Freigabe:</b> Rangliste › Freunde liest die Statistikkarte (<code>profile.stats</code>), die es schon gibt. Wer unter Sichtbarkeit „Niemandem“ stehen hat, zeigt auch Freunden nichts.</li>
+  <li><b>Signer-Apps:</b> Ändern geht (die App unterschreibt über die Signer-App); Eingehendes kommt nicht von allein, weil der Posteingang den Entschlüsselungsschlüssel braucht. Der Bildschirm sagt es in einem Satz.</li>
+  <li><b>Feature-Schalter</b> <code>friends</code> (braucht <code>profile</code> und <code>sync</code>); aus heißt: keine Zeile, kein Knopf, kein Bereich, keine Chips.</li>
+</ul>
+
+<h2 id="leer">Leerzustände und Fehler</h2>
+<div class="tbl"><table>
+<thead><tr><th>Lage</th><th>Was steht da</th><th>Was es anbietet</th></tr></thead>
+<tbody>
+<tr><td>Keine Freunde</td><td>„Noch keine Freunde“ mit dem Satz, was Freunde bringen und dass nur ihr beide davon wisst</td><td>„Freund hinzufügen“, „Meinen Code zeigen“</td></tr>
+<tr><td>Gast in Rangliste › Freunde</td><td>„Freunde brauchen ein Profil“</td><td>„Zum Profil“</td></tr>
+<tr><td>Gerät noch nicht abgeglichen</td><td>„Freunde gibt es, sobald dieses Gerät dein Profil einmal abgeglichen hat.“</td><td>nichts zu tun, passiert von allein</td></tr>
+<tr><td>Ohne Verbindung</td><td>Liste zeigt den letzten Stand; Anfragen warten in der Outbox („geht raus, sobald eine Verbindung besteht“)</td><td>weiterarbeiten</td></tr>
+<tr><td>Falscher Code</td><td>„Das ist kein Profilcode.“ / „Das ist dein eigenes Profil.“ / „Ben ist schon dabei.“</td><td>Scanner bleibt offen</td></tr>
+<tr><td>Freund zeigt keine Zahlen</td><td>„Zeigt keine Zahlen“ unter „Ohne Zahlen“; ohne Verbindung „Noch nicht geladen“ statt einer Behauptung über seine Wahl</td><td>Zeile öffnet die Spielerseite</td></tr>
+<tr><td>Liste voll (500)</td><td>„Deine Liste ist voll. Entferne jemanden, bevor du jemanden hinzufügst.“</td><td>Entfernen auf einer Spielerseite</td></tr>
+</tbody></table></div>
+
+<h2 id="entscheidungen">Entscheidungen für dich</h2>
+<p>E1 bis E28 sind vergeben; hier geht es mit E29 weiter. Gebaut ist jeweils der Vorschlag.</p>
+<div class="tbl"><table>
+<thead><tr><th>Nr.</th><th>Frage</th><th>Vorschlag (gebaut)</th></tr></thead>
+<tbody>
+<tr><td class="n">E29</td><td>Gegenseitige Freunde (Game Center) oder einseitiges Folgen (Strava)? Mit Folgen sähe man Zahlen von Leuten, die einen nicht kennen.</td><td>Gegenseitig. Zahlen fließen nur unter Freunden; Anfragen, Annehmen, Entfernen wie in Game Center.</td></tr>
+<tr><td class="n">E30</td><td>Private Liste (nur das Profil liest sie) oder öffentliche Kontaktliste nach Nostr-Standard (NIP-02), die jeder Client lesen könnte?</td><td>Privat, wie gewünscht. Wer mit wem befreundet ist, geht niemanden an; andere Clients brauchen die Liste nicht.</td></tr>
+<tr><td class="n">E31</td><td>Ablehnen still (die andere Seite sieht weiter „Anfrage gesendet“) oder mit Nachricht?</td><td>Still. Game Center und Instagram halten es so; es nimmt dem Nein die Härte.</td></tr>
+<tr><td class="n">E32</td><td>Rangliste › Freunde aus der geteilten Statistikkarte (keine neue Freigabe) oder eine dritte Sichtbarkeitsstufe „Nur Freunden“?</td><td>Aus der Karte. Eine Stufe „Nur Freunden“ wäre ein eigener verschlüsselter Datensatz je Freund; als Stufe 2 möglich, wenn Nutzer sie wünschen.</td></tr>
+<tr><td class="n">E33</td><td>Anfrage mit kurzem Satz („Hey, hier Ben vom Donnerstag“)? Das Protokoll erlaubt 140 Zeichen; das Blatt bietet heute keinen Satz an.</td><td>Ohne Satz in Stufe 1 (ein Tipp statt Formular); der Platz im Protokoll bleibt, der Satz würde unter „Anfragen“ angezeigt.</td></tr>
+</tbody></table></div>
+
+<h2 id="quellen">Quellen</h2>
+<ul>
+  <li>Apple Human Interface Guidelines: Lists and tables, Action sheets, Alerts, Buttons, Empty states (developer.apple.com/design/human-interface-guidelines).</li>
+  <li>Apple Game Center: Freunde, Anfragen und Einladungen (support.apple.com, „Mit Freunden in Game Center spielen“).</li>
+  <li>Strava: Follow-Modell und Sichtbarkeit; Instagram: stilles Ablehnen; Duolingo: Freunde und Wochenvergleich.</li>
+  <li>Nostr: NIP-59 (Gift Wrap), NIP-44, NIP-78 (anwendungsspezifische Daten), NIP-02 (Kontaktliste, nicht benutzt).</li>
+  <li>Dieses Repository: <a href="../protocol/families/friends.md">docs/protocol/families/friends.md</a>, <a href="../protocol/families/private-records.md">private-records.md</a>, <a href="profil-rangliste-vorschlag.html">Vorschlag Profil und Rangliste</a> (E25).</li>
+</ul>
+</div>
+</body>
+</html>
