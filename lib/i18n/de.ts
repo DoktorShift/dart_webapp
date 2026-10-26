@@ -389,7 +389,7 @@ export const de = {
     guestHere: "Gast auf diesem Gerät",
     // The three areas of the tab: this device's games, the clubs' tables, the tournaments.
     section: "Bereich",
-    sections: { device: "Hier gespielt", clubs: "Clubs", tournaments: "Turniere" },
+    sections: { device: "Hier gespielt", friends: "Freunde", clubs: "Clubs", tournaments: "Turniere" },
     filter: "Spielart",
     filters: { all: "Alle Spielarten", x01: "X01", cricket: "Cricket", clock: "Clock" },
     period: "Zeitraum",
@@ -428,6 +428,8 @@ export const de = {
     emptyShowAll: "Alle Spiele anzeigen",
     recent: "Letzte Spiele",
     // The two areas other parts of the app fill in; what the tab says while they have nothing.
+    friendsOffTitle: "Freunde sind hier nicht eingeschaltet",
+    friendsOffText: "Diese Ausgabe der App kommt ohne Freunde. Deine Spiele und Clubs bleiben, wie sie sind.",
     clubsEmptyTitle: "Du bist in keinem Club",
     clubsEmptyText: "Die Saisontabellen deiner Clubs stehen hier, sobald du Mitglied bist.",
     clubsOpen: "Clubs ansehen",

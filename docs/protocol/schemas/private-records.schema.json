@@ -13,7 +13,7 @@
           "minLength": 1,
           "maxLength": 32,
           "pattern": "^[a-z][a-z0-9.-]*$",
-          "description": "match, players, settings, clubs, devices, badges, payments, …"
+          "description": "match, players, settings, clubs, devices, friends, badges, payments, …"
         },
         "id": {
           "type": "string",

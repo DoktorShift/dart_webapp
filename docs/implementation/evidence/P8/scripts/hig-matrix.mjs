@@ -13,11 +13,11 @@ const SIZES = [SE, PHONE, SE_LANDSCAPE, TABLET, BOARD]
 const LOOKS = [
   {
     locale: "de", dark: false, tabs: { play: "Spielen", ranks: "Rangliste", clubs: "Clubs", tournaments: "Turniere", profile: "Profil" }, resume: /Weiterspielen/,
-    ranks: { device: "Hier gespielt", clubs: "Clubs", tournaments: "Turniere" }, profile: { stats: "Statistik", training: /^Training/, start: "Training starten", startGame: "Spiel starten", visibility: "Sichtbarkeit", history: /^Spielverlauf/, done: "Fertig", back: /^Zurück zu Profil$/, goal: /^Ziel/, goalSave: "Ziel setzen", cancel: "Abbrechen", share: "Training als Bild teilen" },
+    ranks: { device: "Hier gespielt", friends: "Freunde", clubs: "Clubs", tournaments: "Turniere" }, profile: { friends: /^Freunde/, addFriend: "Freund hinzufügen", stats: "Statistik", training: /^Training/, start: "Training starten", startGame: "Spiel starten", visibility: "Sichtbarkeit", history: /^Spielverlauf/, done: "Fertig", back: /^Zurück zu Profil$/, goal: /^Ziel/, goalSave: "Ziel setzen", cancel: "Abbrechen", share: "Training als Bild teilen" },
   },
   {
     locale: "en", dark: true, tabs: { play: "Play", ranks: "Leaderboard", clubs: "Clubs", tournaments: "Tournaments", profile: "Profile" }, resume: /Continue|Resume/,
-    ranks: { device: "Played here", clubs: "Clubs", tournaments: "Tournaments" }, profile: { stats: "Statistics", training: /^Training/, start: "Start training", startGame: "Start game", visibility: "Visibility", history: /^Game history/, done: "Done", back: /^Back to Profile$/, goal: /^Goal/, goalSave: "Set goal", cancel: "Cancel", share: "Share training as a picture" },
+    ranks: { device: "Played here", friends: "Friends", clubs: "Clubs", tournaments: "Tournaments" }, profile: { friends: /^Friends/, addFriend: "Add friend", stats: "Statistics", training: /^Training/, start: "Start training", startGame: "Start game", visibility: "Visibility", history: /^Game history/, done: "Done", back: /^Back to Profile$/, goal: /^Goal/, goalSave: "Set goal", cancel: "Cancel", share: "Share training as a picture" },
   },
 ]
 // Words of the protocol that never belong in normal flows (NOSTR-DESIGN-RULES.md).
@@ -79,8 +79,11 @@ export async function runMatrix({ annaState }) {
       await visit("play")
       await tab(page, look.tabs.ranks)
       await visit("ranks")
-      // The tab's three areas: each says what it counts.
+      // The tab's four areas: each says what it counts.
       const ranks = page.locator('[data-tab-panel="leaderboard"]')
+      await ranks.getByRole("radio", { name: look.ranks.friends }).click()
+      await page.waitForTimeout(1500)
+      await visit("ranks-friends")
       await ranks.getByRole("radio", { name: look.ranks.clubs }).click()
       await visit("ranks-clubs")
       await ranks.getByRole("radio", { name: look.ranks.tournaments }).click()
@@ -123,6 +126,14 @@ export async function runMatrix({ annaState }) {
       }
       await (await onScreen(profile.getByRole("button", { name: look.profile.stats, exact: true }))).click()
       await visit("profile-stats")
+      await back()
+      // Friends: the list (Ben since tonight) and the sheet that adds one.
+      await (await onScreen(profile.getByRole("button", { name: look.profile.friends }))).click()
+      await visit("profile-friends")
+      await (await onScreen(page.getByRole("button", { name: look.profile.addFriend }).first())).click()
+      await visit("profile-friends-add")
+      await (await onScreen(page.getByRole("button", { name: look.profile.done, exact: true }))).click()
+      await page.waitForTimeout(400)
       await back()
       await (await onScreen(profile.getByRole("button", { name: look.profile.training }).first())).click()
       // The goal (M18): set to 60 from its sheet, then the screen with the line through the chart,

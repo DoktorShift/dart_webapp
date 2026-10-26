@@ -51,8 +51,14 @@
 //     "leaderboard.sections" The areas of the Rangliste tab beside the shell's own "Hier
 //                       gespielt": the clubs' season tables (piece id "clubs") and the player's
 //                       tournament placings (piece id "tournaments"). No props; the tab shows the
-//                       piece whose id matches the chosen segment, and its own empty state for a
-//                       segment without a piece (the area is switched off).
+//                       piece whose id matches the chosen area, and its own empty state for an
+//                       area without a piece (the area is switched off).
+//     "tab.badges"      On a tab bar symbol: the count of what waits for the person under that
+//                       tab (open friend requests on Profil), as a CountBadge
+//                       (components/ui/count-badge.tsx). Gets { tab, id }: the id the tab's
+//                       button names as its description, for the words that say what waits, so
+//                       the tab keeps its name. A piece renders nothing for the other tabs and
+//                       while nothing waits.
 //     "profile.card"    On a profile (own or someone else's), below its figures: badges, a club
 //                       hint. Gets { pubkey, own }. Keep it to one line.
 //     "profile.notices" On the own profile, below the sports card and before the form: one
@@ -356,6 +362,7 @@ export interface SlotListProps {
   "profile.actions": { pubkey: string; name: string }
   "profile.advanced": { pubkey: string }
   "club.tournaments": { club: string; name: string; leader: boolean; compact: boolean }
+  "tab.badges": { tab: TabId; id: string }
 }
 export type SlotListId = keyof SlotListProps
 export interface SlotItem<K extends SlotListId> {
@@ -377,6 +384,7 @@ const slotLists: { [K in SlotListId]: Map<string, ComponentType<SlotListProps[K]
   "profile.actions": new Map(),
   "profile.advanced": new Map(),
   "club.tournaments": new Map(),
+  "tab.badges": new Map(),
 }
 
 // Adds a piece to a slot list. The same id again replaces the piece in its place.

@@ -26,6 +26,7 @@ import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { startFakeWallet } from "../../../../../tests/support/fake-wallet.ts"
 import {
+  onScreen,
   BASE, BOARD, OUT, PHONE, RELAYS, SE, allPassed, notes, audits, button, buttons, closeAll, isOnScreen, tap, copiedLink, dart, device, devices, firstSeatWins301, local, nakReq, onlyLocal, seen, shot, startRelays, step, table, tab, visibleCount,
 } from "./lib.mjs"
 
@@ -730,6 +731,112 @@ await step("Anna lädt Carla direkt an ihr Profil ein", async (expect) => {
   await tap(a, /Zurück zu Dartfreunde Nord/)
   await button(a, /Spieler\s*4$/, 30_000)
   expect("Anna's club counts four players", true)
+})
+
+// ---- 15. Friends: Anna and Ben, from the games they played ---------------------------------------
+await step("Anna und Ben werden Freunde: Anfrage aus „Zuletzt gespielt mit“, Annehmen, Rangliste, Spielvorbereitung", async (expect) => {
+  const a = anna.page
+  const b = ben.page
+  const bodyText = async (page) => (await page.locator("body").innerText()).replace(/\s+/g, " ")
+  await a.goto(BASE)
+  await a.waitForTimeout(800)
+  await tab(a, "Profil")
+  await profilePanel(a).getByRole("button", { name: /^Freunde/ }).click()
+  await a.waitForTimeout(1200)
+  let t = await panelText(a)
+  expect("Profil › Freunde starts empty, with the first step offered", /Noch keine Freunde/.test(t) && /Freund hinzufügen/.test(t), t.slice(0, 160))
+  expect("no 'not synced yet' notice on a synced device", !/abgeglichen hat/.test(t))
+  await a.getByRole("button", { name: "Freund hinzufügen" }).first().click()
+  await a.waitForTimeout(900)
+  await shot(anna, "40-friends-add")
+  t = await bodyText(a)
+  expect("the sheet lists Ben under 'Zuletzt gespielt mit' with 'Hinzufügen'", /Zuletzt gespielt mit/.test(t) && /Ben/.test(t), t.slice(0, 200))
+  await a.getByRole("button", { name: "Ben hinzufügen", exact: true }).click()
+  await seen(a, "Anfrage an Ben gesendet.", { timeout: 20_000 })
+  expect("'Anfrage an Ben gesendet.' after one tap", true)
+  await tap(a, "Fertig")
+  await a.waitForTimeout(800)
+  t = await panelText(a)
+  expect("Anna's list shows Ben under Gesendet", /Gesendet/.test(t) && /Anfrage gesendet/.test(t), t.slice(0, 160))
+
+  await b.goto(BASE)
+  await b.waitForTimeout(800)
+  // The request reaches Ben on the Play tab: the Profile tab's symbol carries the count.
+  // The badge's words are the tab button's description (its id), not part of its name.
+  const badge = b.locator("#tab-badge-bar-profile")
+  await badge.waitFor({ state: "attached", timeout: 30_000 })
+  expect("the badge says '1 Anfrage' and the tab is still named Profil", (await badge.innerText()) === "1 Anfrage" && (await b.getByRole("button", { name: "Profil", exact: true }).count()) === 1)
+  expect("Ben's Profile tab symbol carries the badge '1 Anfrage' while he is on another tab", true)
+  await shot(ben, "41-friends-badge")
+  await tab(b, "Profil")
+  await profilePanel(b).getByRole("button", { name: /^Freunde.*1 Anfrage/ }).waitFor({ timeout: 30_000 })
+  expect("Ben's Profile tab says '1 Anfrage' without opening anything", true)
+  await profilePanel(b).getByRole("button", { name: /^Freunde/ }).click()
+  await b.waitForTimeout(1200)
+  await shot(ben, "41-friends-request")
+  t = await panelText(b)
+  expect("Ben sees Anna under Anfragen with 'Annehmen' in the row", /Anfragen/.test(t) && /Anna/.test(t) && /Möchte mit dir befreundet sein/.test(t), t.slice(0, 200))
+  await tap(b, "Anna annehmen")
+  await seen(b, /Freunde seit/, { timeout: 20_000 })
+  expect("Ben: 'Freunde seit' after accepting", true)
+  expect("the badge on Ben's Profile tab goes once the request is answered", (await b.locator("#tab-badge-bar-profile").count()) === 0)
+  await seen(a, /Freunde seit/, { timeout: 30_000 })
+  expect("Anna's list moves Ben to Freunde by itself", true)
+  await shot(anna, "41-friends-list")
+
+  // The profile's other devices show the same friend without anything done on them: the paired
+  // second one (dark, small) and the one restored from the backup file (English).
+  const two = annaTwo.page
+  await two.goto(BASE)
+  await two.waitForTimeout(800)
+  await tab(two, "Profil")
+  await profilePanel(two).getByRole("button", { name: /^Freunde/ }).click()
+  await seen(two, /Freunde seit/, { timeout: 30_000 })
+  expect("Anna's paired second device lists Ben under Freunde", true)
+  t = await panelText(two)
+  expect("no 'not synced yet' notice on the second device", !/abgeglichen hat/.test(t), t.slice(0, 160))
+  await shot(annaTwo, "45-friends-second-device")
+  const three = annaThree.page
+  await three.goto(BASE)
+  await three.waitForTimeout(800)
+  await tab(three, "Profile")
+  await profilePanel(three).getByRole("button", { name: /^Friends/ }).click()
+  await seen(three, /Friends since/, { timeout: 30_000 })
+  expect("Anna's device restored from the backup lists Ben too", true)
+  await shot(annaThree, "46-friends-restored-device")
+
+  await a.getByRole("button", { name: /Ben/ }).first().click()
+  await a.waitForTimeout(2000)
+  expect("Ben's player profile says 'Befreundet'", await isOnScreen(buttons(a, "Befreundet")))
+  await shot(anna, "42-friend-profile")
+  await tab(a, "Rangliste")
+  await a.waitForTimeout(500)
+  await a.locator('[data-tab-panel="leaderboard"]').getByRole("radio", { name: "Freunde" }).click()
+  await a.waitForTimeout(2500)
+  await shot(anna, "43-ranks-friends")
+  t = (await a.locator('[data-tab-panel="leaderboard"]').innerText()).replace(/\s+/g, " ")
+  expect("Rangliste › Freunde says what it shows and lists Ben", /Du und deine Freunde mit den Zahlen/.test(t) && /Ben/.test(t), t.slice(0, 220))
+  expect("Anna's own row is there, tinted, with the way to Sichtbarkeit when she shares nothing", /Anna/.test(t) && (/Sichtbarkeit öffnen/.test(t) || !/Du zeigst keine Zahlen/.test(t)), t.match(/Anna.{0,80}/)?.[0] ?? "")
+
+  await tab(a, "Spielen")
+  await a.waitForTimeout(600)
+  await a.getByRole("button", { name: /X01/ }).first().click()
+  await a.waitForTimeout(1200)
+  // Setup remembers the stake game's seats (Anna, Ben): a seated friend is no chip, so Ben's
+  // seat goes first.
+  const seatedBen = a.getByRole("button", { name: "Ben entfernen" })
+  if (await isOnScreen(seatedBen)) await seatedBen.click()
+  // Ben played here tonight, so he is one chip under "Zuletzt gespielt" (with his profile), not a
+  // second one under "Freunde"; a friend never played with would stand there.
+  const chip = a.getByRole("button", { name: "Ben", exact: true })
+  await onScreen(chip, 10_000)
+  expect("game setup offers Ben once, as one chip", (await chip.count()) === 1)
+  await chip.click()
+  await a.waitForTimeout(600)
+  await shot(anna, "44-setup-friend-chip")
+  expect("the chip fills a seat with Ben, linked to his profile", (await a.locator('input[value="Ben"]').count()) >= 1 && (await a.getByRole("img", { name: "Mit Profil verbunden" }).count()) >= 1)
+  await a.goto(BASE)
+  await a.evaluate(() => localStorage.removeItem("dart-scorer.current-match.v1"))
 })
 
 // ---- The whole evening --------------------------------------------------------------------------

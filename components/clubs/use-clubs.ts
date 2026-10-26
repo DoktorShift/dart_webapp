@@ -91,27 +91,14 @@ async function refreshAll() {
   emit({ refreshing: false, online })
 }
 
-// Invitations sent straight to this profile (lib/clubs/invitations.ts) arrive while the app is
-// open; each opened one is refreshed like a scanned link. Only a key on this device decrypts
-// without asking, so only then.
-let inbox: { pubkey: string; close: () => void } | null = null
-let inboxStarting: Promise<void> | null = null
-function followInbox(): Promise<void> {
-  // Two screens starting together share one attempt; the next load after it may look again.
-  inboxStarting ??= (async () => {
-    const r = await clubReader()
-    if (inbox && inbox.pubkey !== r.pubkey) {
-      inbox.close()
-      inbox = null
-    }
-    if (inbox || !r.pubkey || !r.signer?.nip44 || !r.automatic) return
-    const pubkey = r.pubkey
-    const sub = watchInvitations({ pubkey, signer: r.signer }, (club) => void refreshOne(club, r).then(() => emit()))
-    inbox = { pubkey, close: () => sub.close() }
-  })().finally(() => {
-    inboxStarting = null
-  })
-  return inboxStarting
+// Invitations sent straight to this profile (lib/clubs/invitations.ts) arrive through the
+// profile's inbox (lib/profile/inbox.ts) while the app is open; each opened one is refreshed
+// like a scanned link.
+let inboxFollowed = false
+function followInbox() {
+  if (inboxFollowed) return
+  inboxFollowed = true
+  watchInvitations((club) => void clubReader().then((r) => refreshOne(club, r)).then(() => emit()))
 }
 
 function watch() {
@@ -130,7 +117,7 @@ const store = profileStore<ClubsSnapshot>(
   async () => {
     watch()
     await readLocal()
-    void followInbox().catch(() => {})
+    followInbox()
   },
   refreshAll,
 )

@@ -2398,7 +2398,7 @@ export function buildVectors(): Record<string, unknown> {
   }
 }
 
-const FAMILY_OF: Record<string, string> = { club: "club", tournament: "tournament", match: "match", payment: "payment-request", profile: "profile", badge: "badges" }
+const FAMILY_OF: Record<string, string> = { club: "club", tournament: "tournament", match: "match", payment: "payment-request", profile: "profile", badge: "badges", friend: "friends" }
 
 export function buildSchemas(): Record<string, JsonSchema> {
   const families: Record<string, Record<string, JsonSchema>> = {}

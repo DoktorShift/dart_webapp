@@ -30,6 +30,7 @@ export const profileEn: Messages["profile"] = {
     training: "Training",
     visibility: "Visibility",
     advanced: "Advanced",
+    friends: "Friends",
   },
 
   seatLinked: "Linked to a profile",

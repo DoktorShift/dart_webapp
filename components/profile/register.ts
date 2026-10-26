@@ -5,7 +5,9 @@ import { lazyScreen } from "@/components/nav/lazy-screen"
 import { PROFILE_SCREENS } from "@/components/profile/screens"
 import { featureOn } from "@/lib/shell/features"
 import type { ScreenProps, SetupPlayersProps, SlotListProps } from "@/lib/shell/registry"
-import { SCREENS, registerLinkHandler, registerScreen, registerSlot, registerSlotItem } from "@/lib/shell/registry"
+import { SESSION_KEY } from "@/lib/profile/storage-keys"
+import { SCREENS, registerLinkHandler, registerScreen, registerSlot, registerSlotItem, registerStartTask } from "@/lib/shell/registry"
+import { dbGet, onStorageChange } from "@/lib/storage/db"
 
 // Where the profile area plugs into the shell (imported by components/shell/extensions.ts). Every
 // piece loads on demand: the guest path carries this file and nothing of nostr-core. Behind the
@@ -39,6 +41,22 @@ if (featureOn("profile")) {
 
   registerLinkHandler("signer-return", (link, nav) => {
     void import("@/components/profile/signer-return").then(({ handleSignerReturn }) => handleSignerReturn(link.payload, nav))
+  })
+
+  // The profile's inbox (gift wraps to it: club invitations, friend requests), once a profile is
+  // stored here, now or when one signs in later; a guest never loads it.
+  registerStartTask(() => {
+    let started = false
+    const start = () => {
+      started = true
+      void import("@/components/profile/inbox-start").then(({ followSessionInbox }) => followSessionInbox())
+    }
+    const look = () => void dbGet("kv", SESSION_KEY).then((stored) => stored !== undefined && !started && start(), () => {})
+    const stop = onStorageChange((message) => {
+      if (started) stop()
+      else if (message.type === "change" && message.stores.includes("kv")) look()
+    })
+    look()
   })
 }
 
