@@ -761,6 +761,13 @@ await step("Anna und Ben werden Freunde: Anfrage aus „Zuletzt gespielt mit“,
 
   await b.goto(BASE)
   await b.waitForTimeout(800)
+  // The request reaches Ben on the Play tab: the Profile tab's symbol carries the count.
+  // The badge's words are the tab button's description (its id), not part of its name.
+  const badge = b.locator("#tab-badge-bar-profile")
+  await badge.waitFor({ state: "attached", timeout: 30_000 })
+  expect("the badge says '1 Anfrage' and the tab is still named Profil", (await badge.innerText()) === "1 Anfrage" && (await b.getByRole("button", { name: "Profil", exact: true }).count()) === 1)
+  expect("Ben's Profile tab symbol carries the badge '1 Anfrage' while he is on another tab", true)
+  await shot(ben, "41-friends-badge")
   await tab(b, "Profil")
   await profilePanel(b).getByRole("button", { name: /^Freunde.*1 Anfrage/ }).waitFor({ timeout: 30_000 })
   expect("Ben's Profile tab says '1 Anfrage' without opening anything", true)
@@ -772,9 +779,31 @@ await step("Anna und Ben werden Freunde: Anfrage aus „Zuletzt gespielt mit“,
   await tap(b, "Anna annehmen")
   await seen(b, /Freunde seit/, { timeout: 20_000 })
   expect("Ben: 'Freunde seit' after accepting", true)
+  expect("the badge on Ben's Profile tab goes once the request is answered", (await b.locator("#tab-badge-bar-profile").count()) === 0)
   await seen(a, /Freunde seit/, { timeout: 30_000 })
   expect("Anna's list moves Ben to Freunde by itself", true)
   await shot(anna, "41-friends-list")
+
+  // The profile's other devices show the same friend without anything done on them: the paired
+  // second one (dark, small) and the one restored from the backup file (English).
+  const two = annaTwo.page
+  await two.goto(BASE)
+  await two.waitForTimeout(800)
+  await tab(two, "Profil")
+  await profilePanel(two).getByRole("button", { name: /^Freunde/ }).click()
+  await seen(two, /Freunde seit/, { timeout: 30_000 })
+  expect("Anna's paired second device lists Ben under Freunde", true)
+  t = await panelText(two)
+  expect("no 'not synced yet' notice on the second device", !/abgeglichen hat/.test(t), t.slice(0, 160))
+  await shot(annaTwo, "45-friends-second-device")
+  const three = annaThree.page
+  await three.goto(BASE)
+  await three.waitForTimeout(800)
+  await tab(three, "Profile")
+  await profilePanel(three).getByRole("button", { name: /^Friends/ }).click()
+  await seen(three, /Friends since/, { timeout: 30_000 })
+  expect("Anna's device restored from the backup lists Ben too", true)
+  await shot(annaThree, "46-friends-restored-device")
 
   await a.getByRole("button", { name: /Ben/ }).first().click()
   await a.waitForTimeout(2000)
