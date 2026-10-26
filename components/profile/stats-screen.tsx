@@ -11,5 +11,5 @@ export default function StatsScreen() {
   const own = useOwnProfile()
   if (!own || !own.history.loaded) return null
   if (!own.key) return <p className="mt-6 px-4 text-[1.0625rem] leading-snug text-muted-foreground">{tx.games.noneText}</p>
-  return <StatsView matches={own.history.all} playerKey={own.key} aliases={own.history.aliases} sameAs={own.sameAs} />
+  return <StatsView matches={own.history.all} playerKey={own.key} aliases={own.history.aliases} sameAs={own.sameAs} share={{ name: own.name ?? own.player?.name ?? "" }} />
 }

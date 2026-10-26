@@ -13,11 +13,11 @@ const SIZES = [SE, PHONE, SE_LANDSCAPE, TABLET, BOARD]
 const LOOKS = [
   {
     locale: "de", dark: false, tabs: { play: "Spielen", ranks: "Rangliste", clubs: "Clubs", tournaments: "Turniere", profile: "Profil" }, resume: /Weiterspielen/,
-    ranks: { device: "Hier gespielt", clubs: "Clubs", tournaments: "Turniere" }, profile: { stats: "Statistik", training: /^Training/, start: "Training starten", startGame: "Spiel starten", visibility: "Sichtbarkeit", history: /^Spielverlauf/, done: "Fertig", back: /^Zurück zu Profil$/ },
+    ranks: { device: "Hier gespielt", clubs: "Clubs", tournaments: "Turniere" }, profile: { stats: "Statistik", training: /^Training/, start: "Training starten", startGame: "Spiel starten", visibility: "Sichtbarkeit", history: /^Spielverlauf/, done: "Fertig", back: /^Zurück zu Profil$/, goal: /^Ziel/, goalSave: "Ziel setzen", cancel: "Abbrechen", share: "Teilen" },
   },
   {
     locale: "en", dark: true, tabs: { play: "Play", ranks: "Leaderboard", clubs: "Clubs", tournaments: "Tournaments", profile: "Profile" }, resume: /Continue|Resume/,
-    ranks: { device: "Played here", clubs: "Clubs", tournaments: "Tournaments" }, profile: { stats: "Statistics", training: /^Training/, start: "Start training", startGame: "Start game", visibility: "Visibility", history: /^Game history/, done: "Done", back: /^Back to Profile$/ },
+    ranks: { device: "Played here", clubs: "Clubs", tournaments: "Tournaments" }, profile: { stats: "Statistics", training: /^Training/, start: "Start training", startGame: "Start game", visibility: "Visibility", history: /^Game history/, done: "Done", back: /^Back to Profile$/, goal: /^Goal/, goalSave: "Set goal", cancel: "Cancel", share: "Share" },
   },
 ]
 // Words of the protocol that never belong in normal flows (NOSTR-DESIGN-RULES.md).
@@ -125,7 +125,21 @@ export async function runMatrix({ annaState }) {
       await visit("profile-stats")
       await back()
       await (await onScreen(profile.getByRole("button", { name: look.profile.training }).first())).click()
+      // The goal (M18): set to 60 from its sheet, then the screen with the line through the chart,
+      // and "Teilen" in the bar.
+      await (await onScreen(profile.getByRole("button", { name: look.profile.goal }))).click()
+      await page.getByRole("dialog").getByRole("textbox").fill("60")
+      await page.waitForTimeout(500)
+      await shot(d, `m-profile-training-goal-${tag}`)
+      await page.getByRole("button", { name: look.profile.goalSave, exact: true }).click()
+      await page.waitForTimeout(600)
+      // Back to the top: the shot is the screen as it opens, chart first.
+      await page.evaluate(() => document.querySelectorAll("[data-scroll-container]").forEach((el) => el.scrollTo(0, 0)))
       await visit("profile-training")
+      note(`${tag} profile-training: the goal row shows 60`, (await page.getByRole("button", { name: /^(Ziel|Goal)\b.*60/ }).count()) >= 1)
+      // The chart needs a month with enough trainings; the evening's import gives October three.
+      note(`${tag} profile-training: the goal line is in the chart`, (await page.getByText(/^(Ziel|Goal) 60/).count()) >= 1)
+      note(`${tag} profile-training: Teilen in the bar`, await isOnScreen(page.getByRole("button", { name: look.profile.share, exact: true })))
       await back()
       await (await onScreen(profile.getByRole("button", { name: look.profile.visibility }))).click()
       await visit("profile-visibility")
@@ -133,6 +147,13 @@ export async function runMatrix({ annaState }) {
       await (await onScreen(profile.getByRole("button", { name: look.profile.history }))).click()
       await page.waitForTimeout(700)
       await shot(d, `m-profile-history-${tag}`)
+      // The import's preview (M16) from the evening's table, then back without importing.
+      await page.locator('input[type="file"]').last().setInputFiles(new URL("../fixtures/spielverlauf.csv", import.meta.url).pathname)
+      await page.waitForTimeout(900)
+      await shot(d, `m-profile-import-${tag}`)
+      note(`${tag} profile-import: the preview asks which name is you`, await isOnScreen(page.getByRole("radiogroup")))
+      await (await onScreen(page.getByRole("button", { name: look.profile.cancel, exact: true }))).click()
+      await page.waitForTimeout(400)
       await (await onScreen(page.getByRole("button", { name: look.profile.done, exact: true }))).click()
       await page.waitForTimeout(400)
 

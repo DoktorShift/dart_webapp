@@ -1,6 +1,6 @@
 import { ENGINE_VERSION, playsSets, replay, type MatchState } from "../game/engine.ts"
 import type { GameType, Throw } from "../game/types.ts"
-import type { ArchivedMatch, ArchivedPlayer } from "./archive.ts"
+import { isImported, type ArchivedMatch, type ArchivedPlayer } from "./archive.ts"
 import { isUnnamed, nameKey } from "./players.ts"
 
 // Statistics from the archive. Every figure is summed from raw counts (points and darts,
@@ -39,7 +39,7 @@ export function playerKey(match: ArchivedMatch, player: ArchivedPlayer, aliases?
   const key = nameKey(player.name)
   if (!key) return null
   if (player.unnamed || isUnnamed(player.name)) return `unnamed:${key}`
-  if (match.source === "imported-v1" || !player.playerId) {
+  if (isImported(match) || !player.playerId) {
     const alias = aliases?.get(key)
     return alias ? `id:${sameAs?.get(alias) ?? alias}` : `imported:${key}`
   }
@@ -250,7 +250,7 @@ function addGame(tally: Tally, match: ArchivedMatch, i: number) {
     s.versus++
     if (player.won) s.wins++
   }
-  if (match.source === "imported-v1") s.includesImported = true
+  if (isImported(match)) s.includesImported = true
 
   const state = matchState(match)
   const st = state?.stats[i]
@@ -603,7 +603,7 @@ export function computeStandings(matches: readonly ArchivedMatch[], options: Sta
       }
       row.games++
       if (player.won) row.wins++
-      if (match.source === "imported-v1") row.includesImported = true
+      if (isImported(match)) row.includesImported = true
       if (match.modeType === "x01") {
         sum.darts += player.darts
         sum.points += player.points

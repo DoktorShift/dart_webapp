@@ -142,6 +142,20 @@ export const profileScreensDe = {
     recent: "Letzte Trainings",
     legs: (n: number) => (n === 1 ? "1 Leg" : `${n} Legs`),
     minutes: (n: number) => `${n} Min.`,
+    total: "Trainings insgesamt",
+    // The goal (M18): a line through the chart, set by the player, kept on this device only.
+    goal: "Ziel",
+    goalNone: "Kein Ziel",
+    goalValue: (value: string) => `Ziel ${value}`,
+    goalLeft: (diff: string) => `Noch ${diff} bis zum Ziel`,
+    goalReached: "Ziel erreicht",
+    goalReachedIn: (n: number, total: number) => `Ziel in ${n} von ${total} Zeiträumen erreicht`,
+    goalTitle: "Trainingsziel",
+    goalText: (measure: string) => `Der Monatswert im Training, den du erreichen willst: ${measure}. Er erscheint als Linie im Verlauf. Nur du siehst ihn.`,
+    goalRange: (min: string, max: string) => `Zwischen ${min} und ${max}`,
+    goalSave: "Ziel setzen",
+    goalRemove: "Ziel entfernen",
+    goalFailed: "Das Ziel konnte nicht gespeichert werden. Versuch es noch einmal.",
   },
 
   // Profil › Statistik, and a player's view on this device.
@@ -264,14 +278,14 @@ export const profileScreensDe = {
   // Profil › Konto › Spielverlauf: the games as a file, for other apps and spreadsheets.
   history: {
     title: "Spielverlauf",
-    row: "Exportieren",
+    row: "Exportieren oder importieren",
     intro: (n: number, since: string) => `${n === 1 ? "1 Spiel" : `${n} Spiele`} seit ${since}: deine Spiele gegen andere und deine Trainings auf diesem Gerät.`,
     none: "Noch keine Spiele zum Exportieren.",
     csv: "Tabelle (CSV)",
     csvHint: "Für Numbers, Excel und andere Dart-Apps",
     json: "Alle Daten (JSON)",
     jsonHint: "Für BlueLine auf einem anderen Gerät",
-    hint: "Du wählst dann, wohin: Dateien, Mail, AirDrop. Importierte Spiele sind gekennzeichnet.",
+    hint: "Du wählst dann, wohin: Dateien, Mail, AirDrop. Spiele aus Tabellen sind gekennzeichnet.",
     failed: "Der Export hat nicht geklappt. Versuch es noch einmal.",
     columns: ["Datum", "Spielart", "Spieler", "Gegner", "Ergebnis", "Darts", "Punkte", "Ø 3 Darts", "Quelle"],
     won: "Gewonnen",
@@ -280,6 +294,37 @@ export const profileScreensDe = {
     imported: "Importiert",
     local: "BlueLine",
     fileName: "blueline-spielverlauf",
+    // Import (M16): the files this app writes, or a table with the same columns.
+    importRow: "Importieren",
+    importHint: "Spielverlauf aus BlueLine oder eine Tabelle mit denselben Spalten",
+    reading: "Datei wird gelesen",
+    found: (n: number, from: string, to: string) => `${n === 1 ? "1 Spiel" : `${n} Spiele`}, ${from === to ? from : `${from} bis ${to}`}.`,
+    foundNames: (n: number) => (n === 1 ? "1 Name" : `${n} Namen`),
+    unreadable: (n: number) => (n === 1 ? "1 Zeile war nicht lesbar und bleibt weg." : `${n} Zeilen waren nicht lesbar und bleiben weg.`),
+    whoAreYou: "Welcher Name bist du?",
+    whoAreYouHint: "Spiele unter diesem Namen zählen zu dir. Alle anderen Namen stehen in der Rangliste als importierte Spiele, zuordnen kannst du sie dort.",
+    nameGames: (n: number) => (n === 1 ? "1 Spiel" : `${n} Spiele`),
+    nobody: "Keiner davon",
+    importButton: "Importieren",
+    importDone: (added: number, known: number) =>
+      added === 0 ? "Alle Spiele dieser Datei waren schon da." : `${added === 1 ? "1 Spiel" : `${added} Spiele`} importiert${known > 0 ? `, ${known === 1 ? "1 war" : `${known} waren`} schon da` : ""}.`,
+    importedAs: (name: string) => `Spiele als „${name}“ zählen zu dir.`,
+    importNote: "Importierte Spiele kennen nur Namen und Summen: Ø 3 Darts ja, First 9 und Checkout nein.",
+    importFailed: "Die Spiele konnten nicht gespeichert werden. Es wurde nichts verändert.",
+    importFormat: "Diese Datei kennt BlueLine nicht. Es gehen der Spielverlauf aus BlueLine (CSV oder JSON) und Tabellen mit den Spalten Datum, Spielart, Spieler und Darts, dazu Gegner, Ergebnis und Punkte.",
+    importEmpty: "In dieser Datei steht kein Spiel.",
+    importNewer: "Diese Datei stammt aus einer neueren Version von BlueLine. Lade die App neu und versuch es noch einmal.",
+  },
+
+  // The figures as a picture (M17), through the share sheet.
+  picture: {
+    action: "Teilen",
+    stats: (mode: string) => `Statistik · ${mode}`,
+    year: (year: number) => `Mein Dartjahr ${year}`,
+    training: (month: string) => `Training · ${month}`,
+    footer: "Gezählt mit BlueLine Darts",
+    fileName: "blueline-statistik.png",
+    trainingFileName: "blueline-training.png",
   },
 
   // A public profile.

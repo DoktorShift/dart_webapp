@@ -507,6 +507,37 @@ await step("Rangliste heute Abend: Hier gespielt, Clubs, Turniere auf Annas Tele
   await panel.getByRole("radio", { name: "Hier gespielt" }).click()
 })
 
+// ---- 11c. Games from a file ---------------------------------------------------------------------
+// Anna brings a table of earlier games (docs/data/spielverlauf.md): the sheet says what is in it,
+// asks which name is hers, and afterwards the games count for her, the other name stands in the
+// Rangliste as imported. Three of them are trainings this month, so the training chart has a
+// month to show (the matrix puts the goal line through it).
+await step("Anna importiert ihren Spielverlauf aus einer Tabelle", async (expect) => {
+  const { page } = anna
+  await home(page)
+  await tab(page, "Profil")
+  await profilePanel(page).getByRole("button", { name: /^Spielverlauf/ }).click()
+  await seen(page, /Spiele seit/, { timeout: 20_000 })
+  await page.locator('input[type="file"]').last().setInputFiles(new URL("../fixtures/spielverlauf.csv", import.meta.url).pathname)
+  await seen(page, /Welcher Name bist du\?/, { timeout: 20_000 })
+  const preview = await page.getByRole("dialog").innerText()
+  await shot(anna, "36-import-preview")
+  expect("the sheet says how many games, from when to when, and how many names the file holds", /6 Spiele, 12\. Sept\. 2026 bis 17\. Okt\. 2026\. 2 Namen\./.test(preview), preview.slice(0, 160))
+  expect("Anna's own name is chosen already", (await page.getByRole("radio", { name: /^Anna/ }).getAttribute("aria-checked")) === "true")
+  await page.getByRole("button", { name: "Importieren", exact: true }).click()
+  await seen(page, /Spiele importiert/, { timeout: 20_000 })
+  const done = await page.getByRole("dialog").innerText()
+  await shot(anna, "37-import-done")
+  expect("the games are in once and count for Anna", /6 Spiele importiert\./.test(done) && /Spiele als „Anna“ zählen zu dir\./.test(done), done.slice(0, 160))
+  await page.getByRole("button", { name: "Fertig", exact: true }).click()
+  await page.waitForTimeout(600)
+  await tab(page, "Rangliste")
+  const panel = page.locator('[data-tab-panel="leaderboard"]')
+  await seen(page, /Jonas/, { timeout: 20_000 })
+  const ranks = await panel.innerText()
+  expect("the other name from the file stands in the Rangliste, marked as imported", /Jonas/.test(ranks) && /Importiert/.test(ranks), ranks.match(/Jonas.{0,80}/s)?.[0] ?? "")
+})
+
 // ---- 12. A stake, paid once ---------------------------------------------------------------------
 await step("Einsatz 500 sats: Anna zahlt Ben mit der Wallet, genau einmal", async (expect) => {
   const payer = await startFakeWallet({ relay: RELAYS[0], balanceMsat: 50_000_000 })

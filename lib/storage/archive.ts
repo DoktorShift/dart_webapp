@@ -35,7 +35,11 @@ import {
 export const ARCHIVE_SCHEMA = 1
 
 // "local": played and scored on this device. "imported-v1": totals taken over from 1.0.0.
-export type ArchiveSource = "local" | "imported-v1"
+// "imported-file": totals read from a file (Profil › Konto › Spielverlauf › Importieren).
+export type ArchiveSource = "local" | "imported-v1" | "imported-file"
+
+// Imported games know names and totals, never the player directory or the throws.
+export const isImported = (match: Pick<ArchivedMatch, "source">) => match.source !== "local"
 
 export interface ArchivedPlayer extends V1PlayerResult {
   // The player directory's id; null in imported results, which know only names.

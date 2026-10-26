@@ -15,13 +15,16 @@ export interface ChoiceListOption<T extends string> {
 // Labels wrap; nothing is cut off.
 export function ChoiceList<T extends string>({
   label,
+  labelledBy,
   options,
   value,
   onChange,
   className,
   disabled,
 }: {
-  label: string
+  // The group's name: a text, or the id of the text that stands above it.
+  label?: string
+  labelledBy?: string
   options: ChoiceListOption<T>[]
   value: T | null
   onChange: (value: T) => void
@@ -30,7 +33,7 @@ export function ChoiceList<T extends string>({
   disabled?: boolean
 }) {
   return (
-    <div role="radiogroup" aria-label={label} aria-busy={disabled || undefined} className={cn("divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card", disabled && "opacity-60", className)}>
+    <div role="radiogroup" aria-label={label} aria-labelledby={labelledBy} aria-busy={disabled || undefined} className={cn("divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card", disabled && "opacity-60", className)}>
       {options.map((option) => {
         const checked = option.value === value
         return (

@@ -1,4 +1,4 @@
-import type { ArchivedMatch } from "../storage/archive.ts"
+import { isImported, type ArchivedMatch } from "../storage/archive.ts"
 import { gameValue } from "../storage/stats.ts"
 import type { PlayedGame } from "./history.ts"
 
@@ -40,7 +40,7 @@ export function historyCsv(games: readonly PlayedGame[], labels: HistoryLabels):
       String(me.darts),
       x01 ? String(me.points) : "",
       average === null ? "" : average.toFixed(2),
-      match.source === "imported-v1" ? labels.imported : labels.local,
+      isImported(match) ? labels.imported : labels.local,
     ])
   }
   return rows.map((row) => row.map(cell).join(";")).join("\r\n") + "\r\n"

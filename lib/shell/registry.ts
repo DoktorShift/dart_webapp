@@ -55,6 +55,10 @@
 //                       segment without a piece (the area is switched off).
 //     "profile.card"    On a profile (own or someone else's), below its figures: badges, a club
 //                       hint. Gets { pubkey, own }. Keep it to one line.
+//     "profile.notices" On the own profile, below the sports card and before the form: one
+//                       card per note that asks for something (the backup hint), as iOS Settings
+//                       puts "Finish setting up" below the Apple Account row. Gets { pubkey }.
+//                       Nothing while there is nothing to say.
 //     "profile.actions" On another player's public profile, below "Profil teilen": e.g.
 //                       "Gratulieren". Gets { pubkey, name } (the name as that profile shows it).
 //     "profile.advanced" In Profil › Erweitert, below the technical identity: diagnostics.
@@ -348,6 +352,7 @@ export interface SlotListProps {
   "profile.account": Record<string, never>
   "leaderboard.sections": Record<string, never>
   "profile.card": { pubkey: string; own: boolean }
+  "profile.notices": { pubkey: string }
   "profile.actions": { pubkey: string; name: string }
   "profile.advanced": { pubkey: string }
   "club.tournaments": { club: string; name: string; leader: boolean; compact: boolean }
@@ -368,6 +373,7 @@ const slotLists: { [K in SlotListId]: Map<string, ComponentType<SlotListProps[K]
   "profile.account": new Map(),
   "leaderboard.sections": new Map(),
   "profile.card": new Map(),
+  "profile.notices": new Map(),
   "profile.actions": new Map(),
   "profile.advanced": new Map(),
   "club.tournaments": new Map(),

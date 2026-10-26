@@ -32,13 +32,13 @@ export function ScreenFrame({
   const [titleAway, setTitleAway] = useState(false)
   const [slot, setSlot] = useState<HTMLElement | null>(null)
   const isRoot = !onBack
-  // A phone in landscape has no room for a large title on a pushed screen: as on iOS in compact
-  // height, the title sits in the bar and the content starts right below it.
+  // A phone in landscape has no room for a large title: as on iOS in compact height, the title
+  // sits in the bar and the content starts right below it, on root screens too.
   const compactHeight = useMediaQuery(XSHORT)
-  const large = largeTitle && !(compactHeight && !isRoot)
-  // A root without buttons lets its bar float over the content, so the large title sits exactly
-  // where the Leaderboard has its own.
-  const overlay = isRoot && largeTitle && !trailing
+  const large = largeTitle && !compactHeight
+  // A root without buttons lets its bar float over the content, so the large title starts at
+  // the top of the screen.
+  const overlay = large && isRoot && !trailing
 
   useEffect(() => {
     const el = scrollRef.current

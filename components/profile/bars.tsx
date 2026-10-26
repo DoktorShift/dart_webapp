@@ -14,16 +14,25 @@ export interface Bar {
   text?: string
 }
 
+export interface Goal {
+  value: number
+  // "Ziel 60": written at the line's end and read in the table.
+  label: string
+  // The goal as the figure is written ("60,0", "50 %"), for the table.
+  text: string
+}
+
 // A chart of bars drawn in CSS, one per game or per week or month, in the style Apple's Health
 // and Fitness use: no axes, the best bar carries its value, first and last label below with the
 // range between them. The scale starts a little under the lowest value, never so high that
-// small differences look large (HIG: charting data). Colour never carries the meaning alone:
-// VoiceOver gets a one-sentence summary plus the table.
-export function Bars({ bars, summary, range, legend, height = 88, className }: { bars: readonly Bar[]; summary: string; range?: string; legend?: string; height?: number; className?: string }) {
+// small differences look large (HIG: charting data), and always holds the goal line when there
+// is one. Colour never carries the meaning alone: VoiceOver gets a one-sentence summary plus
+// the table.
+export function Bars({ bars, summary, range, legend, goal, height = 88, className }: { bars: readonly Bar[]; summary: string; range?: string; legend?: string; goal?: Goal; height?: number; className?: string }) {
   const id = useId()
   const values = bars.map((b) => b.value).filter((v): v is number => v !== null)
-  const lo = values.length > 0 ? Math.min(...values) : 0
-  const hi = values.length > 0 ? Math.max(...values) : 1
+  const lo = Math.min(...(values.length > 0 ? values : [0]), goal?.value ?? Infinity)
+  const hi = Math.max(...(values.length > 0 ? values : [1]), goal?.value ?? -Infinity)
   const span = hi - lo
   const base = Math.max(0, Math.min(lo * 0.8, lo - span))
   const scale = hi > base ? hi - base : 1
@@ -31,9 +40,20 @@ export function Bars({ bars, summary, range, legend, height = 88, className }: {
   const first = bars[0]?.label
   const last = bars.length > 1 ? bars[bars.length - 1]?.label : undefined
   const bestAt = bars.findIndex((b) => b.tone === "best")
+  // The goal's label keeps clear of the best bar's value: at the other end of the line, and not
+  // at all in a chart too low to hold it (the table still names the goal).
+  const goalLabel = goal && height >= 60 ? (bestAt >= (bars.length * 2) / 3 ? "left-0" : "right-0") : null
   return (
     <figure className={cn("min-w-0", className)}>
-      <div role="img" aria-label={summary} aria-describedby={id} className="flex items-end gap-[3px] pt-5" style={{ height: height + 20 }}>
+      <div role="img" aria-label={summary} aria-describedby={id} className="relative flex items-end gap-[3px] pt-5" style={{ height: height + 20 }}>
+        {goal && (
+          // Under the bars, in a layer as tall as they are, so its height means the same as theirs.
+          <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0" style={{ height }}>
+            <span className="absolute inset-x-0 border-t-2 border-dashed border-muted-foreground/70" style={{ bottom: `${heightOf(goal.value)}%` }}>
+              {goalLabel && <span className={cn("absolute bottom-0.5 whitespace-nowrap rounded bg-card/80 px-1 text-[0.6875rem] font-semibold tabular-nums text-muted-foreground", goalLabel)}>{goal.label}</span>}
+            </span>
+          </span>
+        )}
         {bars.map((bar, i) => (
           <span key={i} className="relative flex h-full min-w-0 flex-1 items-end">
             {bar.value === null ? (
@@ -45,7 +65,7 @@ export function Bars({ bars, summary, range, legend, height = 88, className }: {
               />
             )}
             {i === bestAt && bar.text && (
-              <span aria-hidden="true" className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-[0.75rem] font-semibold tabular-nums text-[#c25e00] dark:text-[#ff9500]" style={{ bottom: `calc(${heightOf(bar.value ?? hi)}% + 2px)` }}>
+              <span aria-hidden="true" className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-card/80 px-0.5 text-[0.75rem] font-semibold tabular-nums text-[#c25e00] dark:text-[#ff9500]" style={{ bottom: `calc(${heightOf(bar.value ?? hi)}% + 2px)` }}>
                 {bar.text}
               </span>
             )}
@@ -68,6 +88,12 @@ export function Bars({ bars, summary, range, legend, height = 88, className }: {
               <td>{bar.text ?? (bar.value === null ? "—" : String(Math.round(bar.value * 100) / 100))}</td>
             </tr>
           ))}
+          {goal && (
+            <tr>
+              <th scope="row">{goal.label}</th>
+              <td>{goal.text}</td>
+            </tr>
+          )}
         </tbody>
       </table>
     </figure>

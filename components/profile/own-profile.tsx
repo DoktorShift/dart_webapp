@@ -87,6 +87,8 @@ function OwnProfileView({ own, onSignOut }: { own: OwnProfile; onSignOut: () => 
         )}
       </ProfileCard>
 
+      <SlotItems list="profile.notices" props={() => ({ pubkey: session.pubkey })} />
+
       {key && (
         <>
           <FormCard matches={history.all} playerKey={key} aliases={history.aliases} sameAs={sameAs} onOpen={() => nav.push(PROFILE_SCREENS.stats)} />
