@@ -40,7 +40,7 @@ export function TextField({
           id={id}
           aria-invalid={problem ? true : undefined}
           aria-describedby={problem || hint ? `${id}-note` : undefined}
-          className="h-11 min-w-0 flex-1 bg-transparent text-[1.0625rem] outline-none placeholder:text-muted-foreground/60"
+          className="h-11 min-w-0 flex-1 bg-transparent text-[1.0625rem] outline-hidden placeholder:text-muted-foreground/60"
           onChange={(event) => {
             const secret = containsSecretKey(event.target.value)
             setRefused(secret)

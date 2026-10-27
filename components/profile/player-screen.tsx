@@ -71,7 +71,7 @@ export default function PlayerScreen({ params }: ScreenProps) {
           <table className="mt-1 w-full border-collapse">
             <thead>
               <tr className="text-[0.9375rem] font-semibold">
-                <th scope="col" className="w-20 py-0.5 text-left font-semibold [overflow-wrap:anywhere]">{name}</th>
+                <th scope="col" className="w-20 py-0.5 text-left font-semibold wrap-anywhere">{name}</th>
                 <th scope="col" className="py-0.5">
                   <span className="sr-only">{tx.stats.scoring}</span>
                 </th>
@@ -156,7 +156,7 @@ function BarPair({ label, left, right, write }: { label: string; left: number | 
         <span className="block">{text(left)}</span>
         <span className="mt-1 block" aria-hidden="true">{bar("left")}</span>
       </td>
-      <th scope="row" className="py-2 text-center text-[0.8125rem] font-normal text-muted-foreground [overflow-wrap:anywhere]">{label}</th>
+      <th scope="row" className="py-2 text-center text-[0.8125rem] font-normal text-muted-foreground wrap-anywhere">{label}</th>
       <td className={cn("py-2 pl-2 text-right text-[1.0625rem] font-semibold tabular-nums", lead === "right" ? "text-primary" : "text-foreground")}>
         <span className="block">{text(right)}</span>
         <span className="mt-1 block" aria-hidden="true">{bar("right")}</span>

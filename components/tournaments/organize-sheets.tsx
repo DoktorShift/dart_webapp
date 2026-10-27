@@ -153,7 +153,7 @@ export function GuestsSheet({ entry, open, onOpenChange }: { entry: Entry; open:
       <label className="sr-only" htmlFor="guest-names">
         {p.guestNames}
       </label>
-      <textarea id="guest-names" rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder={tx.create.guestsPlaceholder} className="w-full resize-y rounded-2xl border border-border bg-card px-4 py-3 text-[1.0625rem] outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+      <textarea id="guest-names" rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder={tx.create.guestsPlaceholder} className="w-full resize-y rounded-2xl border border-border bg-card px-4 py-3 text-[1.0625rem] outline-hidden focus-visible:ring-2 focus-visible:ring-ring" />
       {suggestions.length > 0 && (
         <div className="mt-3">
           <p className="mb-1.5 px-1 text-[0.8125rem] text-muted-foreground">{p.recent}</p>
@@ -163,7 +163,7 @@ export function GuestsSheet({ entry, open, onOpenChange }: { entry: Entry; open:
                 key={r.pubkey ?? r.name}
                 type="button"
                 onClick={() => setText((current) => (current.trim() ? `${current.replace(/\s+$/, "")}\n${r.name}` : r.name))}
-                className="min-h-11 rounded-full border border-border bg-card px-4 text-[0.9375rem] font-medium text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:bg-primary/15 [overflow-wrap:anywhere]"
+                className="min-h-11 rounded-full border border-border bg-card px-4 text-[0.9375rem] font-medium text-primary transition-colors hover:bg-primary/10 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring active:bg-primary/15 wrap-anywhere"
               >
                 {r.name}
               </button>
@@ -418,7 +418,7 @@ export function ResultSheet({ entry, names, match: m, onOpenChange }: { entry: E
         {m.affected && <InlineStatus className="mt-1">{r.affected}</InlineStatus>}
         {skipped && <InlineStatus className="mt-1">{automatic ? r.skippedWalkover : r.skipped}</InlineStatus>}
         {decided && !m.affected && !editing && (
-          <p className="mt-2 text-[1.5rem] font-semibold [overflow-wrap:anywhere]">
+          <p className="mt-2 text-[1.5rem] font-semibold wrap-anywhere">
             {m.state === "walkover" ? tx.walkover[m.walkover ?? "noShow"] : scoreText(m)} · {names.nameOf(m.winner)}
           </p>
         )}

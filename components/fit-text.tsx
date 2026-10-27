@@ -43,7 +43,7 @@ export function FitText({
   }, [children, minScale])
 
   return (
-    <span ref={ref} className={cn("block min-w-0 overflow-hidden whitespace-nowrap [overflow-wrap:break-word]", className)}>
+    <span ref={ref} className={cn("block min-w-0 overflow-hidden whitespace-nowrap wrap-break-word", className)}>
       {children}
     </span>
   )

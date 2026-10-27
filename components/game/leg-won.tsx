@@ -80,7 +80,7 @@ export function LegWonCard({
             <tbody className="divide-y divide-border">
               {players.map((player, i) => (
                 <tr key={player.id}>
-                  <th scope="row" className="px-4 py-2.5 text-[1.0625rem] font-normal [overflow-wrap:anywhere]">
+                  <th scope="row" className="px-4 py-2.5 text-[1.0625rem] font-normal wrap-anywhere">
                     {player.name}
                   </th>
                   {sets && <td className="text-center font-display text-2xl font-semibold tabular-nums">{state.setsWon[i]}</td>}

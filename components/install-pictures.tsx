@@ -50,7 +50,7 @@ function Phone({ edge, children }: { edge: "top" | "bottom"; children: ReactNode
   return (
     <div
       className={cn(
-        "absolute left-1/2 flex h-[135%] w-[46%] min-w-[11rem] -translate-x-1/2 flex-col overflow-hidden border-[5px] border-foreground/80 bg-background shadow-xl",
+        "absolute left-1/2 flex h-[135%] w-[46%] min-w-44 -translate-x-1/2 flex-col overflow-hidden border-[5px] border-foreground/80 bg-background shadow-xl",
         edge === "bottom" ? "bottom-3 rounded-b-[1.75rem] border-t-0" : "top-3 rounded-t-[1.75rem] border-b-0",
       )}
     >
@@ -298,7 +298,7 @@ const PICTURES: Record<InstallPicture, (words: Messages["install"]["picture"]) =
           {words.worksOffline}
         </span>
       </div>
-      <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-end gap-2.5 rounded-2xl border border-border bg-card/80 px-3 py-2 shadow-xl backdrop-blur">
+      <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-end gap-2.5 rounded-2xl border border-border bg-card/80 px-3 py-2 shadow-xl backdrop-blur-sm">
         {Array.from({ length: 3 }, (_, i) => (
           <span key={i} className="h-8 w-8 rounded-[22%] bg-secondary" />
         ))}
@@ -318,7 +318,7 @@ export function InstallPictureFrame({ picture }: { picture: InstallPicture }) {
     <div
       role="img"
       aria-label={words.labels[picture]}
-      className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-border bg-[radial-gradient(circle_at_50%_30%,hsl(var(--primary)/0.18),transparent_65%)] bg-secondary/40 text-foreground"
+      className="relative aspect-16/10 w-full overflow-hidden rounded-2xl border border-border bg-[radial-gradient(circle_at_50%_30%,hsl(var(--primary)/0.18),transparent_65%)] bg-secondary/40 text-foreground"
     >
       {PICTURES[picture](words)}
     </div>

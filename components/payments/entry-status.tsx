@@ -73,7 +73,7 @@ function StatusIcon({ tone, className }: { tone: Tone; className?: string }) {
 export function StatusLabel({ tone, children, className }: { tone: Tone; children: ReactNode; className?: string }) {
   return (
     <span className={cn("inline-flex items-start gap-1.5", TONE_COLORS[tone], className)}>
-      <StatusIcon tone={tone} className="mt-[0.1875rem]" />
+      <StatusIcon tone={tone} className="mt-0.75" />
       <span>{children}</span>
     </span>
   )

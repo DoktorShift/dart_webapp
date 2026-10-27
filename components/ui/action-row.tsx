@@ -21,10 +21,10 @@ export function ActionRow({ actions, className }: { actions: readonly Action[]; 
           type="button"
           onClick={onClick}
           disabled={disabled}
-          className="flex min-h-[3.75rem] flex-col items-center justify-center gap-1 rounded-2xl border border-border bg-card px-1 py-2 text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:bg-secondary/70 disabled:opacity-50"
+          className="flex min-h-15 flex-col items-center justify-center gap-1 rounded-2xl border border-border bg-card px-1 py-2 text-primary transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring active:bg-secondary/70 disabled:opacity-50"
         >
           <Icon className="h-6 w-6" strokeWidth={1.9} aria-hidden />
-          <span className="max-w-full text-[0.75rem] font-semibold leading-tight [overflow-wrap:anywhere]">{label}</span>
+          <span className="max-w-full text-[0.75rem] font-semibold leading-tight wrap-anywhere">{label}</span>
         </button>
       ))}
     </div>

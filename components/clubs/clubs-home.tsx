@@ -82,7 +82,7 @@ function ClubCard({ view, onOpen, join = false }: { view: ClubView; onOpen: (par
     <div className="overflow-hidden rounded-2xl border border-border bg-card">
       <button type="button" onClick={() => onOpen()} className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors active:bg-secondary/70">
         <Avatar seed={view.id} name={view.info?.name ?? undefined} src={view.info?.picture} size={48} />
-        <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
+        <span className="min-w-0 flex-1 wrap-anywhere">
           <span className="block text-[1.0625rem] font-semibold leading-snug">{view.info?.name ?? tx.unnamed}</span>
           <span className="mt-1 flex flex-wrap items-center gap-1.5">
             <Chip tone={member && isLeader(view.me.role) ? "accent" : view.info?.archived || !member ? "neutral" : "success"}>{membershipLine(view, tx)}</Chip>
@@ -102,7 +102,7 @@ function ClubCard({ view, onOpen, join = false }: { view: ClubView; onOpen: (par
         </div>
       )}
       {task && (
-        <button type="button" onClick={() => onOpen(taskParams(task))} className="flex min-h-11 w-full items-center border-t border-border px-4 py-2 text-left text-[0.9375rem] font-semibold text-primary transition-colors active:bg-secondary/70 [overflow-wrap:anywhere]">
+        <button type="button" onClick={() => onOpen(taskParams(task))} className="flex min-h-11 w-full items-center border-t border-border px-4 py-2 text-left text-[0.9375rem] font-semibold text-primary transition-colors active:bg-secondary/70 wrap-anywhere">
           {taskLabel(task, tx, t)}
         </button>
       )}

@@ -16,7 +16,7 @@ const TONES: Record<ChipTone, string> = {
 // carries a dot that pulses, unless motion is reduced.
 export function Chip({ tone = "neutral", icon: Icon, children, className }: { tone?: ChipTone; icon?: ComponentType<{ className?: string; "aria-hidden"?: boolean }>; children: ReactNode; className?: string }) {
   return (
-    <span className={cn("inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-[0.75rem] font-semibold leading-5 [overflow-wrap:anywhere]", TONES[tone], className)}>
+    <span className={cn("inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-[0.75rem] font-semibold leading-5 wrap-anywhere", TONES[tone], className)}>
       {tone === "live" && <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-danger motion-safe:animate-pulse" />}
       {Icon && <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />}
       <span className="min-w-0">{children}</span>

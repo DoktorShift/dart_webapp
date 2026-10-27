@@ -57,7 +57,7 @@ export function DateSheet({ view, state, date, open, onOpenChange }: { view: Clu
             {tx.dates.cancelled}
           </InlineStatus>
         )}
-        {date?.note && <p className="mb-4 text-[0.9375rem] leading-snug [overflow-wrap:anywhere]">{date.note}</p>}
+        {date?.note && <p className="mb-4 text-[0.9375rem] leading-snug wrap-anywhere">{date.note}</p>}
         {date && member && !date.cancelled && <DateAnswer view={view} state={state} date={date} />}
         <p className="mb-2 mt-4 text-[0.8125rem] text-muted-foreground">{tx.dates.who}</p>
         {sorted.length === 0 ? (
@@ -66,7 +66,7 @@ export function DateSheet({ view, state, date, open, onOpenChange }: { view: Clu
           <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
             {sorted.map(([pubkey, a]) => (
               <li key={pubkey} className="flex min-h-11 items-center justify-between gap-3 px-4 py-2 text-[1.0625rem]">
-                <span className="min-w-0 [overflow-wrap:anywhere]">{personName(pubkey, names(pubkey), tx, { me: view.me.pubkey })}</span>
+                <span className="min-w-0 wrap-anywhere">{personName(pubkey, names(pubkey), tx, { me: view.me.pubkey })}</span>
                 <span className="shrink-0 text-[0.9375rem] text-muted-foreground">{tx.dates.answered[a.answer]}</span>
               </li>
             ))}

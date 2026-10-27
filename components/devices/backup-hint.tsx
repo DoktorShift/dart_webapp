@@ -55,7 +55,7 @@ function Hint({ pubkey }: { pubkey: string }) {
         </Button>
       </div>
       <Button variant="ghost" aria-label={h.laterLabel} onClick={later} className="-mr-2 -mt-2 h-11 w-11 shrink-0 rounded-xl hover:bg-transparent sm:mt-0">
-        <span className="flex h-[1.375rem] w-[1.375rem] items-center justify-center rounded-full bg-muted-foreground/60 text-card">
+        <span className="flex h-5.5 w-5.5 items-center justify-center rounded-full bg-muted-foreground/60 text-card">
           <X className="h-3.5 w-3.5" strokeWidth={3} aria-hidden="true" />
         </span>
       </Button>

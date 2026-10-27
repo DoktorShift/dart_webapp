@@ -90,7 +90,7 @@ export function CongratulateFlow({ pubkey, name, action, onDone }: { pubkey: str
             maxLength={MAX_MESSAGE}
             onChange={(event) => setMessage(event.target.value)}
             placeholder={c.messagePlaceholder}
-            className="h-12 w-full rounded-2xl border border-border bg-card px-4 text-[1.0625rem] outline-none placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-12 w-full rounded-2xl border border-border bg-card px-4 text-[1.0625rem] outline-hidden placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
       )}

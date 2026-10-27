@@ -52,10 +52,10 @@ export function GoalSheet({ type, value, current, open, onOpenChange }: { type: 
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title={r.goalTitle}>
       <SheetBody>
-        <p className="text-[1.0625rem] leading-snug text-muted-foreground [@media(max-height:500px)]:sr-only">{r.goalText(r.measure[type])}</p>
+        <p className="text-[1.0625rem] leading-snug text-muted-foreground xshort:sr-only">{r.goalText(r.measure[type])}</p>
         <form
           id={`${id}-form`}
-          className="mt-5 [@media(max-height:500px)]:mt-1"
+          className="mt-5 xshort:mt-1"
           onSubmit={(event) => {
             event.preventDefault()
             setChecked(true)
@@ -69,7 +69,7 @@ export function GoalSheet({ type, value, current, open, onOpenChange }: { type: 
             <StepButton label={r.goalLess} onClick={() => step(-1)} disabled={busy || (parsed !== null && parsed <= min)}>
               <Minus className="h-6 w-6" aria-hidden="true" />
             </StepButton>
-            <div className={cn("flex h-16 min-w-[7.5rem] items-center justify-center gap-1 rounded-2xl border bg-card px-3", invalid ? "border-danger" : "border-border")}>
+            <div className={cn("flex h-16 min-w-30 items-center justify-center gap-1 rounded-2xl border bg-card px-3", invalid ? "border-danger" : "border-border")}>
               <input
                 id={id}
                 value={text}
@@ -84,7 +84,7 @@ export function GoalSheet({ type, value, current, open, onOpenChange }: { type: 
                 aria-invalid={invalid || undefined}
                 aria-describedby={`${id}-note`}
                 size={Math.max(2, text.length)}
-                className="w-auto min-w-[3ch] max-w-[6ch] bg-transparent text-center font-display text-5xl font-semibold tabular-nums leading-none outline-none"
+                className="w-auto min-w-[3ch] max-w-[6ch] bg-transparent text-center font-display text-5xl font-semibold tabular-nums leading-none outline-hidden"
               />
               {type === "clock" && <span className="font-display text-3xl font-semibold text-muted-foreground">%</span>}
             </div>
@@ -121,7 +121,7 @@ export function GoalSheet({ type, value, current, open, onOpenChange }: { type: 
 
 function StepButton({ label, onClick, disabled, children }: { label: string; onClick: () => void; disabled?: boolean; children: ReactNode }) {
   return (
-    <button type="button" aria-label={label} onClick={onClick} disabled={disabled} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-secondary text-primary transition-colors active:bg-secondary/70 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+    <button type="button" aria-label={label} onClick={onClick} disabled={disabled} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-secondary text-primary transition-colors active:bg-secondary/70 disabled:opacity-40 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring">
       {children}
     </button>
   )

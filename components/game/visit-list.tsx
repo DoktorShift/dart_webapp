@@ -26,7 +26,7 @@ export function LegVisits({ state, legs = playedLegs(state), onSelect }: { state
             const body = (
               <>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[1.0625rem] font-medium [overflow-wrap:anywhere]">{players[v.player].name}</span>
+                  <span className="block text-[1.0625rem] font-medium wrap-anywhere">{players[v.player].name}</span>
                   <span className="block text-[0.8125rem] text-muted-foreground">
                     {v.enteredAsTotal ? t.sheets.history.totalOf(v.dartCount) : v.darts.map((d) => slotLabel(state, d, t)).join("  ")}
                     {v.edited && <span className="ml-2 text-warning">{t.sheets.history.corrected}</span>}

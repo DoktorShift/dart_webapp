@@ -20,7 +20,7 @@ const SCREEN_TITLE = "[data-screen-title]"
 
 // Pushed screens are opaque, with the board-light glow of the page behind them in dark mode.
 const PUSHED_SURFACE =
-  "bg-background shadow-[-10px_0_28px_-16px_rgba(0,0,0,0.45)] dark:[background-image:radial-gradient(circle_at_bottom_left,rgba(29,78,216,0.15),transparent_50%),radial-gradient(circle_at_top_right,rgba(29,78,216,0.15),transparent_50%)]"
+  "bg-background shadow-[-10px_0_28px_-16px_rgba(0,0,0,0.45)] dark:bg-[radial-gradient(circle_at_bottom_left,rgba(29,78,216,0.15),transparent_50%),radial-gradient(circle_at_top_right,rgba(29,78,216,0.15),transparent_50%)]"
 
 function StackLayer({
   index,

@@ -65,7 +65,7 @@ export default function ProfileSeats({ session, players, canAdd, addPlayer, repl
             {rounds.map((round) => (
               <button key={round.id} type="button" onClick={() => replacePlayers(round.players.map(({ name, pubkey }) => ({ name: seatName(name), pubkey })))} className={chipClass}>
                 <Users className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-                <span className="[overflow-wrap:anywhere]">{roundLabel(round)}</span>
+                <span className="wrap-anywhere">{roundLabel(round)}</span>
               </button>
             ))}
           </div>
@@ -120,7 +120,7 @@ function SaveRound({ session, players, rounds, onSaved }: { session: Session; pl
     <SheetBody>
       <form onSubmit={save}>
         <TextField label={s.roundName} value={title} onChange={(e) => setTitle(e.target.value)} placeholder={s.roundPlaceholder} maxLength={60} autoCapitalize="sentences" enterKeyHint="done" />
-        <p className="mt-3 px-4 text-[0.9375rem] leading-snug [overflow-wrap:anywhere]">{seats.length > 0 ? seats.map((p) => p.name).join(", ") : s.noNames}</p>
+        <p className="mt-3 px-4 text-[0.9375rem] leading-snug wrap-anywhere">{seats.length > 0 ? seats.map((p) => p.name).join(", ") : s.noNames}</p>
         {guestsLeftOut && seats.some((p) => !p.pubkey) && <p className="mt-2 px-4 text-[0.8125rem] leading-snug text-muted-foreground">{s.guestsNotSaved}</p>}
         {problem && (
           <InlineStatus tone="error" className="mt-4">
@@ -138,7 +138,7 @@ function SaveRound({ session, players, rounds, onSaved }: { session: Session; pl
           <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
             {rounds.map((round) => (
               <li key={round.id} className="flex min-h-12 items-center gap-2 py-1 pl-4 pr-1">
-                <span className="min-w-0 flex-1 text-[1.0625rem] leading-snug [overflow-wrap:anywhere]">{roundLabel(round)}</span>
+                <span className="min-w-0 flex-1 text-[1.0625rem] leading-snug wrap-anywhere">{roundLabel(round)}</span>
                 <button type="button" aria-label={s.delete(roundLabel(round))} disabled={busy} onClick={() => setDeleting(round)} className="flex h-11 w-11 shrink-0 items-center justify-center text-danger disabled:opacity-40">
                   <Trash2 className="h-5 w-5" aria-hidden="true" />
                 </button>

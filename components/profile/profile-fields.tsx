@@ -62,7 +62,7 @@ export function ProfileFields({
       <div className="mt-6 flex items-center gap-3 rounded-2xl bg-secondary/50 px-4 py-3">
         <Avatar seed={seed} name={name.trim() || undefined} src={shown} size={48} />
         <div className="min-w-0">
-          <p className="text-[1.0625rem] font-semibold leading-snug [overflow-wrap:anywhere]">{name.trim() || tx.unnamed}</p>
+          <p className="text-[1.0625rem] font-semibold leading-snug wrap-anywhere">{name.trim() || tx.unnamed}</p>
           <p className="text-[0.8125rem] leading-snug text-muted-foreground">{f.visible}</p>
         </div>
       </div>

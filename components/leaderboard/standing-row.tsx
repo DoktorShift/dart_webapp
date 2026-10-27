@@ -55,7 +55,7 @@ export function StandingRow({
       <Avatar seed={standing.playerId ?? standing.key} name={standing.name} src={picture} size={40} />
       <span className="block min-w-0 flex-1">
         <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
-          <span className="font-medium leading-snug [overflow-wrap:anywhere]">{standing.name}</span>
+          <span className="font-medium leading-snug wrap-anywhere">{standing.name}</span>
           {you && <Chip tone="accent">{t.leaderboard.you}</Chip>}
           {standing.imported && <Chip>{t.data.importedTag}</Chip>}
           {!standing.imported && standing.includesImported && <Chip>{t.data.withImportedTag}</Chip>}
@@ -81,7 +81,7 @@ export function StandingRow({
   return (
     <li data-you={you || undefined}>
       {onClick ? (
-        <button type="button" onClick={onClick} className={cn(layout, "transition-colors active:bg-secondary/70 focus-visible:bg-secondary/50 focus-visible:outline-none")}>
+        <button type="button" onClick={onClick} className={cn(layout, "transition-colors active:bg-secondary/70 focus-visible:bg-secondary/50 focus-visible:outline-hidden")}>
           {body}
         </button>
       ) : (

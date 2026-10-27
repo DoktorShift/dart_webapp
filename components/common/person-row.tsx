@@ -12,15 +12,15 @@ export function PersonRow({ pubkey, name, picture, subtitle, action, onClick }: 
     <>
       <Avatar seed={pubkey} name={name} src={picture} size={40} />
       <span className="block min-w-0 flex-1 text-left">
-        <span className="block text-[1.0625rem] leading-snug [overflow-wrap:anywhere]">{name}</span>
-        {subtitle && <span className="block text-[0.8125rem] leading-snug text-muted-foreground [overflow-wrap:anywhere]">{subtitle}</span>}
+        <span className="block text-[1.0625rem] leading-snug wrap-anywhere">{name}</span>
+        {subtitle && <span className="block text-[0.8125rem] leading-snug text-muted-foreground wrap-anywhere">{subtitle}</span>}
       </span>
     </>
   )
   return (
     <div className="flex min-h-14 items-center gap-3 px-4 py-1.5">
       {onClick ? (
-        <button type="button" onClick={onClick} className={cn("flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-lg text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:opacity-70")}>
+        <button type="button" onClick={onClick} className={cn("flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-lg text-left transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring active:opacity-70")}>
           {body}
         </button>
       ) : (

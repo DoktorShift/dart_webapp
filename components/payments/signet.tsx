@@ -33,8 +33,8 @@ const NWC_SRC = source(NWC)
 
 // The prototype's proportions: the NWC mark a touch smaller, so both read the same size.
 const SIZES = {
-  small: { unit: "gap-0.5", bitcoin: "h-5 w-5", nwc: "h-[1.1875rem] w-[1.1875rem]" },
-  large: { unit: "gap-1.5", bitcoin: "h-[3.25rem] w-[3.25rem]", nwc: "h-[3.0625rem] w-[3.0625rem]" },
+  small: { unit: "gap-0.5", bitcoin: "h-5 w-5", nwc: "h-4.75 w-4.75" },
+  large: { unit: "gap-1.5", bitcoin: "h-13 w-13", nwc: "h-12.25 w-12.25" },
 }
 
 export function PaymentSignet({ size = "small", label, className }: { size?: keyof typeof SIZES; label?: string; className?: string }) {

@@ -142,7 +142,7 @@ function Chip({ label, hint, chosen, onClick }: { label: string; hint?: string; 
       )}
     >
       {chosen && <Check className="h-4 w-4 shrink-0" aria-hidden="true" />}
-      <span className="[overflow-wrap:anywhere]">{label}</span>
+      <span className="wrap-anywhere">{label}</span>
       {hint && <span className="text-[0.8125rem] text-muted-foreground">{hint}</span>}
     </button>
   )

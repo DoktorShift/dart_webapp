@@ -176,7 +176,7 @@ export function HeroBoard({ className }: { className?: string }) {
       <div className="relative w-full">
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -inset-[18%] rounded-full bg-[radial-gradient(closest-side,hsl(var(--primary)/0.28),hsl(var(--primary)/0.08)_60%,transparent)]"
+          className="pointer-events-none absolute inset-[-18%] rounded-full bg-[radial-gradient(closest-side,hsl(var(--primary)/0.28),hsl(var(--primary)/0.08)_60%,transparent)]"
         />
         <motion.div
           ref={boardRef}
@@ -186,7 +186,7 @@ export function HeroBoard({ className }: { className?: string }) {
           aria-label={t.play.practiceBoardLabel}
           onClick={handleClick}
           onKeyDown={handleKey}
-          className="relative aspect-square w-full cursor-crosshair touch-manipulation select-none rounded-full outline-none focus-visible:ring-4 focus-visible:ring-primary/60 [-webkit-tap-highlight-color:transparent]"
+          className="relative aspect-square w-full cursor-crosshair touch-manipulation select-none rounded-full outline-hidden focus-visible:ring-4 focus-visible:ring-primary/60 [-webkit-tap-highlight-color:transparent]"
         >
           <Dartboard className="h-full w-full" />
           {darts.map((dart) => (
@@ -202,7 +202,7 @@ export function HeroBoard({ className }: { className?: string }) {
             <div
               key={i}
               className={cn(
-                "flex h-11 min-w-[3.25rem] items-center justify-center rounded-xl border px-2 font-display text-xl font-semibold tabular-nums transition-colors",
+                "flex h-11 min-w-13 items-center justify-center rounded-xl border px-2 font-display text-xl font-semibold tabular-nums transition-colors",
                 dart ? "border-primary/40 bg-primary/10 text-foreground" : "border-dashed border-border text-muted-foreground/60",
               )}
             >
@@ -210,7 +210,7 @@ export function HeroBoard({ className }: { className?: string }) {
             </div>
           )
         })}
-        <div className="ml-2 min-w-[3.5rem] text-right font-display text-3xl font-semibold tabular-nums">{total}</div>
+        <div className="ml-2 min-w-14 text-right font-display text-3xl font-semibold tabular-nums">{total}</div>
       </div>
       <p className="sr-only" aria-live="polite">
         {last ? `${spokenLabel(last.hit, t)}. ${t.play.visitTotal(total)}` : ""}

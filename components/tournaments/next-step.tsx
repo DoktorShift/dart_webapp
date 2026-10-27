@@ -86,7 +86,7 @@ export function useNextStep(entry: Entry, names: Names): NextStep {
     calls,
     problem: actions.problem,
     button: primary && (
-      <Button onClick={primary.run} disabled={actions.busy !== null} className={`${PRIMARY} h-auto min-h-14 whitespace-normal py-2 leading-snug [overflow-wrap:anywhere]`}>
+      <Button onClick={primary.run} disabled={actions.busy !== null} className={`${PRIMARY} h-auto min-h-14 whitespace-normal py-2 leading-snug wrap-anywhere`}>
         {primary.label}
       </Button>
     ),

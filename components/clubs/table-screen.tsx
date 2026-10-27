@@ -95,7 +95,7 @@ export default function TableScreen({ params }: ScreenProps) {
   const wide = "hidden sm:table-cell"
 
   const Name = ({ row }: { row: Standing }) => (
-    <span className="[overflow-wrap:anywhere]">
+    <span className="wrap-anywhere">
       {nameOf(row)}
       {row.pubkey === me && <span className="ml-1.5 rounded-full bg-primary px-2 py-0.5 text-[0.75rem] font-semibold text-primary-foreground">{tx.you}</span>}
       {dup.has(row.pubkey) && <span className="block text-[0.8125rem] font-normal text-muted-foreground">{tx.id(shortKey(row.pubkey))}</span>}
@@ -109,7 +109,7 @@ export default function TableScreen({ params }: ScreenProps) {
           <Segmented label={tx.club.season} options={seasons.slice(0, 4).map((s) => ({ value: s.id, label: s.name }))} value={season.id} onChange={setChosen} />
         </div>
       )}
-      <p className="mt-6 px-4 text-[0.8125rem] text-muted-foreground [overflow-wrap:anywhere]">
+      <p className="mt-6 px-4 text-[0.8125rem] text-muted-foreground wrap-anywhere">
         {season.name} · {tx.table.period(formatDate(t, season.starts * 1000), season.ends !== undefined ? formatDate(t, season.ends * 1000) : null)}
         {season.ended && ` · ${tx.table.ended}`}
       </p>

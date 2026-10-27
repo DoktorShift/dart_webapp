@@ -163,7 +163,7 @@ export function StorageAlert({ inGame }: { inGame: boolean }) {
       type="button"
       aria-label={t.data.hide}
       onClick={dismissSaveAlert}
-      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:bg-secondary ${className}`}
+      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring active:bg-secondary ${className}`}
     >
       <X className="h-5 w-5" aria-hidden="true" />
     </button>
@@ -182,7 +182,7 @@ export function StorageAlert({ inGame }: { inGame: boolean }) {
           onClick={retry}
           disabled={retrying}
           aria-busy={retrying}
-          className="flex h-11 shrink-0 items-center rounded-lg px-2 text-[0.9375rem] font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:opacity-60 disabled:opacity-40"
+          className="flex h-11 shrink-0 items-center rounded-lg px-2 text-[0.9375rem] font-semibold text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring active:opacity-60 disabled:opacity-40"
         >
           {t.data.retry}
         </button>
@@ -195,7 +195,7 @@ export function StorageAlert({ inGame }: { inGame: boolean }) {
         <TriangleAlert className="mt-px h-5 w-5 shrink-0 text-warning" aria-hidden="true" />
         <p className="min-w-0 flex-1 text-[0.9375rem] font-semibold leading-5">{t.data.saveFailed}</p>
         {closeButton("-mr-3 -mt-3")}
-        {fit === "full" && <p className="basis-full pl-8 pt-0.5 text-[0.8125rem] leading-[1.125rem] text-muted-foreground">{t.data.saveFailedHint}</p>}
+        {fit === "full" && <p className="basis-full pl-8 pt-0.5 text-[0.8125rem] leading-4.5 text-muted-foreground">{t.data.saveFailedHint}</p>}
         <Button
           onClick={retry}
           disabled={retrying}

@@ -272,7 +272,7 @@ function RelayList({
         {entries.map((entry) => (
           <div key={entry.url} className="flex min-h-12 items-center gap-2 py-1.5 pl-4 pr-1">
             <div className="min-w-0 flex-1">
-              <p className="text-[1.0625rem] leading-snug [overflow-wrap:anywhere]">{relayHost(entry.url)}</p>
+              <p className="text-[1.0625rem] leading-snug wrap-anywhere">{relayHost(entry.url)}</p>
               <p className="flex flex-wrap items-center gap-x-1.5 text-[0.8125rem] text-muted-foreground">
                 <RelayState status={status?.get(entry.url)} />
                 <span aria-hidden="true">·</span>
@@ -311,7 +311,7 @@ function RelayList({
                 className={cn("flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-secondary/50 px-4 text-[0.9375rem] active:bg-secondary", saving !== url && "disabled:opacity-40")}
               >
                 {saving === url ? <LoaderCircle className="h-4 w-4 text-primary motion-safe:animate-spin" aria-hidden="true" /> : <Plus className="h-4 w-4 text-primary" aria-hidden="true" />}
-                <span className="[overflow-wrap:anywhere]">{relayHost(url)}</span>
+                <span className="wrap-anywhere">{relayHost(url)}</span>
               </button>
             ))}
           </div>

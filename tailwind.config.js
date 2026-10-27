@@ -10,16 +10,6 @@ module.exports = {
   ],
   theme: {
     extend: {
-      screens: {
-        // Side-by-side game layout: any landscape screen wide enough (phones and tablets).
-        split: { raw: "(orientation: landscape) and (min-width: 560px)" },
-        // Tablet-sized in both directions: bigger type and keys.
-        tablet: { raw: "(min-width: 700px) and (min-height: 700px)" },
-        // Small phones in portrait (iPhone SE) and every phone in landscape: tighter spacing.
-        short: { raw: "(max-height: 740px)" },
-        // Phones in landscape.
-        xshort: { raw: "(max-height: 500px)" },
-      },
       fontFamily: {
         display: ["var(--font-display)", "system-ui", "sans-serif"],
       },

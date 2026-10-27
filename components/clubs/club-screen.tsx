@@ -321,7 +321,7 @@ function ClubHero({ view, state, onMembers }: { view: ClubView; state: ClubState
           <AvatarStack people={people} label={tx.home.members(pubkeys.length)} onClick={onMembers} />
         </div>
       </div>
-      {info?.about && <p className="mt-3 text-[0.9375rem] leading-snug text-muted-foreground [overflow-wrap:anywhere]">{info.about}</p>}
+      {info?.about && <p className="mt-3 text-[0.9375rem] leading-snug text-muted-foreground wrap-anywhere">{info.about}</p>}
     </section>
   )
 }

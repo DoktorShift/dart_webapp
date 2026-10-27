@@ -47,7 +47,7 @@ export function CalloutFlash({ callout }: { callout: Callout | null }) {
           key={callout.id}
           aria-hidden="true"
           className={cn(
-            "pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-card/95 ring-2 ring-inset backdrop-blur-sm",
+            "pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-card/95 ring-2 ring-inset backdrop-blur-xs",
             COLOR[callout.kind],
           )}
           initial={{ opacity: 0 }}

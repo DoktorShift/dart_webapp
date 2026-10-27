@@ -57,7 +57,7 @@ export function QRCodeView({
 
   return (
     <figure className={cn("flex flex-col items-center", className)}>
-      <div style={{ maxWidth: `min(18rem, ${maxSize})` }} className="aspect-square w-full rounded-3xl bg-white p-3 shadow-sm ring-1 ring-black/5">
+      <div style={{ maxWidth: `min(18rem, ${maxSize})` }} className="aspect-square w-full rounded-3xl bg-white p-3 shadow-xs ring-1 ring-black/5">
         {ready ? (
           <svg role="img" aria-label={label ?? t.shell.qr.label} viewBox={`-4 -4 ${box} ${box}`} className="h-full w-full" shapeRendering="crispEdges">
             <path d={qr.path} fill="#020817" />

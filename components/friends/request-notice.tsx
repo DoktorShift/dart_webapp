@@ -52,12 +52,12 @@ export default function FriendRequestNotices() {
           <button
             type="button"
             onClick={() => nav.push(SCREENS.profilePublic, { pubkey: f.pubkey })}
-            className="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-xl text-left focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
           >
             <Avatar seed={f.pubkey} name={nameOf(f.pubkey)} src={names(f.pubkey).picture} size={40} />
             <span className="min-w-0 flex-1">
-              <span className="block text-[0.9375rem] font-semibold leading-snug [overflow-wrap:anywhere]">{tx.notice.wants(nameOf(f.pubkey))}</span>
-              {f.message && <span className="block text-[0.875rem] leading-snug text-muted-foreground [overflow-wrap:anywhere]">„{f.message}“</span>}
+              <span className="block text-[0.9375rem] font-semibold leading-snug wrap-anywhere">{tx.notice.wants(nameOf(f.pubkey))}</span>
+              {f.message && <span className="block text-[0.875rem] leading-snug text-muted-foreground wrap-anywhere">„{f.message}“</span>}
             </span>
           </button>
           <Button onClick={() => void accept(f)} disabled={busy !== null} aria-label={tx.notice.acceptFor(nameOf(f.pubkey))} className="h-11 shrink-0 rounded-full px-4 text-[0.9375rem] font-semibold">
@@ -66,7 +66,7 @@ export default function FriendRequestNotices() {
         </div>
       ))}
       {received.length > SHOWN && (
-        <button type="button" onClick={() => nav.push(FRIENDS_SCREENS.list)} className="mt-1 flex min-h-11 w-full items-center justify-center rounded-xl text-[1.0625rem] font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <button type="button" onClick={() => nav.push(FRIENDS_SCREENS.list)} className="mt-1 flex min-h-11 w-full items-center justify-center rounded-xl text-[1.0625rem] font-semibold text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring">
           {tx.notice.more(received.length - SHOWN)}
         </button>
       )}

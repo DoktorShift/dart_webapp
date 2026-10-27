@@ -15,7 +15,7 @@ export function ResumeAccessory({ resume, onResume }: { resume: ResumeInfo; onRe
     <button
       type="button"
       onClick={onResume}
-      className="mx-auto mb-2 flex h-12 w-full max-w-2xl items-center gap-3 rounded-2xl border border-border/70 bg-background/80 pl-2 pr-4 text-left shadow-[0_10px_30px_-14px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-colors active:bg-secondary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring xshort:hidden"
+      className="mx-auto mb-2 flex h-12 w-full max-w-2xl items-center gap-3 rounded-2xl border border-border/70 bg-background/80 pl-2 pr-4 text-left shadow-[0_10px_30px_-14px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-colors active:bg-secondary/60 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring xshort:hidden"
     >
       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
         <Play className="ml-0.5 h-4 w-4" fill="currentColor" aria-hidden="true" />

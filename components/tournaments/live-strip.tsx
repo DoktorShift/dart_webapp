@@ -57,7 +57,7 @@ function LiveRow({ read, m, names }: { read: TournamentRead; m: MatchView; names
             <Chip tone="live">{tx.tournament.live}</Chip>
           )}
         </Chips>
-        <span className="mt-1 block text-[1.0625rem] leading-snug [overflow-wrap:anywhere]">
+        <span className="mt-1 block text-[1.0625rem] leading-snug wrap-anywhere">
           {names.nameOf(a.participant)} <span className="text-muted-foreground">·</span> {names.nameOf(b.participant)}
         </span>
       </span>

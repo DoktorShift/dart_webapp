@@ -223,7 +223,7 @@ function Preview({ own, file, onDone, onCancel }: { own: OwnProfile; file: Histo
   return (
     <>
       <SheetBody>
-        <p ref={sentence} tabIndex={-1} className="text-[1.0625rem] leading-snug outline-none">
+        <p ref={sentence} tabIndex={-1} className="text-[1.0625rem] leading-snug outline-hidden">
           {h.found(file.matches.length, date(file.from ?? ""), date(file.to ?? ""))}: {h.foundKinds(versus, trainings)}. {h.foundNames(file.names.length)}.
         </p>
         {(file.skipped > 0 || file.merged > 0) && (
@@ -356,7 +356,7 @@ function Done({ own, outcome, onClose }: { own: OwnProfile; outcome: Outcome; on
 // One thing to do with a file as a row: what it is and whom it is for.
 function FileRow({ icon: Icon, title, hint, disabled, onClick }: { icon: typeof FileJson; title: string; hint: string; disabled?: boolean; onClick: () => void }) {
   return (
-    <button type="button" disabled={disabled} onClick={onClick} className="flex min-h-14 w-full items-center gap-3 rounded-xl bg-secondary px-4 py-2 text-left transition-colors active:bg-secondary/70 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+    <button type="button" disabled={disabled} onClick={onClick} className="flex min-h-14 w-full items-center gap-3 rounded-xl bg-secondary px-4 py-2 text-left transition-colors active:bg-secondary/70 disabled:opacity-50 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring">
       <Icon className="h-5 w-5 shrink-0 text-primary" aria-hidden />
       <span className="min-w-0 flex-1">
         <span className="block text-[1.0625rem] font-medium leading-snug">{title}</span>

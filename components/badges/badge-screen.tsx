@@ -52,7 +52,7 @@ function Head({ image, name, description, status }: { image?: string | null; nam
       <div className="flex items-center gap-4">
         <BadgeIcon image={image} size={64} />
         <div className="min-w-0">
-          <h2 className="text-xl font-semibold leading-tight [overflow-wrap:anywhere]">{name}</h2>
+          <h2 className="text-xl font-semibold leading-tight wrap-anywhere">{name}</h2>
           <p className="mt-0.5 text-[0.9375rem] leading-snug text-muted-foreground">{status}</p>
         </div>
       </div>

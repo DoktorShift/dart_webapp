@@ -46,7 +46,7 @@ export function ScopeBar<T extends string>({
       ref={ref}
       role="radiogroup"
       aria-label={label}
-      className={cn("-mx-4 flex gap-2 overflow-x-auto px-4 py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden", className)}
+      className={cn("-mx-4 flex gap-2 overflow-x-auto px-4 py-0.5 scrollbar-none [&::-webkit-scrollbar]:hidden", className)}
     >
       {options.map((option, index) => {
         const chosen = option.value === value
@@ -66,7 +66,7 @@ export function ScopeBar<T extends string>({
               event.preventDefault()
             }}
             className={cn(
-              "flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-4 text-[0.9375rem] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-4 text-[0.9375rem] font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
               chosen ? "bg-primary text-primary-foreground" : "bg-secondary/70 text-foreground hover:bg-secondary",
             )}
           >

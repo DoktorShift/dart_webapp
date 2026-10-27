@@ -82,7 +82,7 @@ function Settings({ entry, onRefresh }: { entry: Entry; onRefresh: () => void })
       <Group footer={s.advancedText}>
         <ListRow title={s.advanced} onClick={() => setAdvanced((a) => !a)} chevron={false} trailing={<ChevronDown className={cn("h-5 w-5 text-muted-foreground transition-transform motion-reduce:transition-none", advanced && "rotate-180")} aria-hidden="true" />} />
         {advanced && (
-          <div className="px-4 py-3 text-[0.8125rem] leading-relaxed text-muted-foreground [overflow-wrap:anywhere]">
+          <div className="px-4 py-3 text-[0.8125rem] leading-relaxed text-muted-foreground wrap-anywhere">
             <p>{read.id}</p>
             <p>
               {s.relays}: {tournamentRelays(read.relays).map(relayHost).join(", ")}

@@ -53,7 +53,7 @@ export function ResultRow({ icon: Icon, label, tone = "neutral", onClick, placem
       <Main
         {...main}
         aria-label={ariaLabel}
-        className="flex h-11 min-w-0 max-w-full items-center rounded-xl px-2 text-[0.9375rem] font-medium text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:bg-secondary/70"
+        className="flex h-11 min-w-0 max-w-full items-center rounded-xl px-2 text-[0.9375rem] font-medium text-primary transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring active:bg-secondary/70"
       >
         <FitText minScale={0.7} className="leading-snug">
           {label}
@@ -68,7 +68,7 @@ export function ResultRow({ icon: Icon, label, tone = "neutral", onClick, placem
       <Main
         {...main}
         aria-label={ariaLabel}
-        className={cn("flex min-w-0 flex-1 items-center gap-3 py-1 pl-4 pr-3 text-left text-[1.0625rem] font-medium transition-colors focus-visible:outline-none", onClick && pressed)}
+        className={cn("flex min-w-0 flex-1 items-center gap-3 py-1 pl-4 pr-3 text-left text-[1.0625rem] font-medium transition-colors focus-visible:outline-hidden", onClick && pressed)}
       >
         <Icon className="h-5 w-auto shrink-0 short:hidden" aria-hidden />
         <FitText minScale={0.7} className="flex-1 leading-snug">
@@ -81,7 +81,7 @@ export function ResultRow({ icon: Icon, label, tone = "neutral", onClick, placem
           type="button"
           onClick={trailing.onClick}
           aria-label={trailing.kind === "dismiss" ? trailing.label : trailing.ariaLabel}
-          className={cn("flex min-w-11 shrink-0 items-center justify-center px-3 text-[0.9375rem] text-muted-foreground transition-colors focus-visible:outline-none", pressed)}
+          className={cn("flex min-w-11 shrink-0 items-center justify-center px-3 text-[0.9375rem] text-muted-foreground transition-colors focus-visible:outline-hidden", pressed)}
         >
           {trailing.kind === "dismiss" ? <X className="h-5 w-5" aria-hidden="true" /> : trailing.label}
         </button>

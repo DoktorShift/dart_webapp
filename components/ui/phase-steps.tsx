@@ -17,7 +17,7 @@ export function PhaseSteps({ steps, label, className }: { steps: readonly PhaseS
           key={step.id}
           aria-current={step.state === "now" ? "step" : undefined}
           className={cn(
-            "border-t-[3px] pt-1.5 text-center text-[0.6875rem] leading-tight [overflow-wrap:anywhere]",
+            "border-t-[3px] pt-1.5 text-center text-[0.6875rem] leading-tight wrap-anywhere",
             step.state === "next" && "border-secondary text-muted-foreground",
             step.state === "done" && "border-primary/60 text-primary",
             step.state === "now" && "border-primary font-semibold text-foreground",

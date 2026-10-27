@@ -96,7 +96,7 @@ export function PlayScreen({ onSelect, resume, onResume, onDiscardResume, again,
 
       <div className="mx-auto grid min-h-0 w-full max-w-6xl flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)_auto] gap-3 pt-2 split:grid-cols-2 split:grid-rows-1 split:items-center split:gap-8 lg:pt-8">
         {/* The board scales to the space left: whichever is smaller, width or height. */}
-        <section aria-label={t.play.practiceBoard} className="flex h-full min-h-0 items-center justify-center self-stretch [container-type:size]">
+        <section aria-label={t.play.practiceBoard} className="flex h-full min-h-0 items-center justify-center self-stretch @container-size">
           <div style={{ width: "min(100cqw, calc(100cqh - 4.25rem), 34rem)" }}>
             <HeroBoard className="w-full" />
           </div>
@@ -122,7 +122,7 @@ export function PlayScreen({ onSelect, resume, onResume, onDiscardResume, again,
                   <button
                     type="button"
                     onClick={() => onSelect(type)}
-                    className="flex h-full min-h-[clamp(5.25rem,12dvh,7.5rem)] w-full flex-col items-center justify-center gap-1 rounded-2xl border border-border bg-card/70 px-1.5 py-2 text-center transition-colors hover:bg-secondary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:bg-secondary/70 xshort:min-h-14 xshort:gap-0.5 xshort:py-1 tablet:min-h-28 tablet:gap-2"
+                    className="flex h-full min-h-[clamp(5.25rem,12dvh,7.5rem)] w-full flex-col items-center justify-center gap-1 rounded-2xl border border-border bg-card/70 px-1.5 py-2 text-center transition-colors hover:bg-secondary/50 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring active:bg-secondary/70 xshort:min-h-14 xshort:gap-0.5 xshort:py-1 tablet:min-h-28 tablet:gap-2"
                   >
                     <Dartboard variant="mini" highlight={GAME_HIGHLIGHTS[type]} className="h-8 w-8 shrink-0 xshort:h-6 xshort:w-6 tablet:h-11 tablet:w-11" />
                     <span className="w-full min-w-0">

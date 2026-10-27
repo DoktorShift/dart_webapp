@@ -85,7 +85,7 @@ function PullDown({ id, label, open, align, items, onClose }: { id: string; labe
           transition={{ duration: 0.16, ease: [0.2, 0, 0, 1] }}
           style={{ transformOrigin: align === "right" ? "top right" : "top left" }}
           className={cn(
-            "absolute top-full z-30 mt-1 min-w-[14rem] max-w-[min(20rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-border bg-card/95 py-1 shadow-xl backdrop-blur-xl",
+            "absolute top-full z-30 mt-1 min-w-56 max-w-[min(20rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-border bg-card/95 py-1 shadow-xl backdrop-blur-xl",
             align === "right" ? "right-0" : "left-0",
           )}
         >
@@ -104,13 +104,13 @@ function PullDown({ id, label, open, align, items, onClose }: { id: string; labe
                   item.onSelect()
                 }}
                 className={cn(
-                  "flex min-h-11 w-full items-center gap-3 px-4 py-2 text-left text-[1.0625rem] transition-colors focus-visible:bg-secondary/60 focus-visible:outline-none active:bg-secondary/70",
+                  "flex min-h-11 w-full items-center gap-3 px-4 py-2 text-left text-[1.0625rem] transition-colors focus-visible:bg-secondary/60 focus-visible:outline-hidden active:bg-secondary/70",
                   index > 0 && "border-t border-border/70",
                   item.destructive ? "text-danger" : "text-foreground",
                 )}
               >
                 {choices && <Check className={cn("h-5 w-5 shrink-0 text-primary", !item.checked && "invisible")} aria-hidden />}
-                <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">{item.label}</span>
+                <span className="min-w-0 flex-1 wrap-anywhere">{item.label}</span>
                 {ItemIcon && <ItemIcon className="h-5 w-5 shrink-0 opacity-80" aria-hidden />}
               </button>
             )
@@ -190,11 +190,11 @@ export function ChipMenu<T extends string>({
         aria-controls={open ? id : undefined}
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          "flex min-h-11 max-w-full items-center gap-1 rounded-full border border-border bg-card px-3.5 text-[0.9375rem] font-medium text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:bg-secondary/70",
+          "flex min-h-11 max-w-full items-center gap-1 rounded-full border border-border bg-card px-3.5 text-[0.9375rem] font-medium text-foreground transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring active:bg-secondary/70",
           open && "bg-secondary/60",
         )}
       >
-        <span className="min-w-0 [overflow-wrap:anywhere]">{current?.label}</span>
+        <span className="min-w-0 wrap-anywhere">{current?.label}</span>
         <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
       </button>
       <PullDown

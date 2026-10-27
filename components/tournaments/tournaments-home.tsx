@@ -102,7 +102,7 @@ export function TournamentCard({ entry, status, onOpen }: { entry: Entry; status
   const live = state.phase === "running" ? (entry.read.view?.matches.filter((m) => m.state === "live" && !m.affected).length ?? 0) : 0
   return (
     <button type="button" onClick={onOpen} className="flex w-full items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-left transition-colors active:bg-secondary/70">
-      <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
+      <span className="min-w-0 flex-1 wrap-anywhere">
         <span className="block text-[1.0625rem] font-semibold leading-snug">{s.name}</span>
         <Chips className="mt-1">
           <Chip tone={PHASE_TONES[state.phase]}>{tx.phase[state.phase]}</Chip>

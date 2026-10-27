@@ -89,7 +89,7 @@ export default function DiscoverScreen() {
               title={
                 <span className="flex items-center gap-3">
                   <Avatar seed={club.id} name={club.name} src={club.picture} size={36} />
-                  <span className="min-w-0 [overflow-wrap:anywhere]">{club.name}</span>
+                  <span className="min-w-0 wrap-anywhere">{club.name}</span>
                 </span>
               }
               subtitle={club.about}

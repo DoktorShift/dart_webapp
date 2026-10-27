@@ -93,7 +93,7 @@ export function ImportedSheet({
                     onClick={() => void run(() => assignImportedName(key, p.id))}
                     className="flex min-h-14 w-full flex-col justify-center px-4 py-2 text-left active:bg-secondary/70 disabled:opacity-40"
                   >
-                    <span className="text-[1.0625rem] text-primary [overflow-wrap:anywhere]">{d.assignTo(p.name)}</span>
+                    <span className="text-[1.0625rem] text-primary wrap-anywhere">{d.assignTo(p.name)}</span>
                     <span className="text-[0.8125rem] text-muted-foreground">{d.lastPlayed(when(p))}</span>
                   </button>
                 </li>

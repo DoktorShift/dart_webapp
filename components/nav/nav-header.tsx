@@ -42,7 +42,7 @@ export function BackButton({ label, onClick }: { label: string; onClick: () => v
         type="button"
         onClick={onClick}
         aria-label={t.shell.backTo(label)}
-        className="-ml-1 flex min-h-11 min-w-11 items-center gap-0.5 whitespace-nowrap rounded-lg pr-3 text-[1.0625rem] text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:opacity-60"
+        className="-ml-1 flex min-h-11 min-w-11 items-center gap-0.5 whitespace-nowrap rounded-lg pr-3 text-[1.0625rem] text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring active:opacity-60"
       >
         <ChevronLeft className="h-7 w-7 shrink-0" aria-hidden="true" />
         {mode === "full" ? label : mode === "short" ? t.common.back : null}

@@ -39,7 +39,7 @@ function NavButton({ label, onClick, children }: { label: string; onClick: () =>
       type="button"
       aria-label={label}
       onClick={onClick}
-      className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:bg-secondary"
+      className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring active:bg-secondary"
     >
       {children}
     </button>
@@ -184,7 +184,7 @@ export function GameScreen({
         )}
       >
         <section aria-label={t.game.scores} data-area="scores" className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden tablet:gap-4">
-          <div className="relative min-h-0 flex-1 [container-type:size]">
+          <div className="relative min-h-0 flex-1 @container-size">
             {type === "x01" && <X01Scoreboard state={state} onSelectPlayer={correction ? undefined : setThrower} />}
             {type === "cricket" && <CricketScoreboard state={state} onSelectPlayer={correction ? undefined : setThrower} />}
             {type === "clock" && <ClockScoreboard state={state} onSelectPlayer={correction ? undefined : setThrower} />}

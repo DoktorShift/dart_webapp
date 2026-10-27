@@ -369,7 +369,7 @@ export function QRScanner({
             autoComplete="off"
             spellCheck={false}
             enterKeyHint="go"
-            className="h-11 min-w-0 flex-1 bg-transparent text-[1.0625rem] outline-none placeholder:text-muted-foreground/70"
+            className="h-11 min-w-0 flex-1 bg-transparent text-[1.0625rem] outline-hidden placeholder:text-muted-foreground/70"
           />
           <Button type="submit" variant="secondary" disabled={!typed.trim() || checking} className="h-11 shrink-0 rounded-xl px-4 text-[1.0625rem] font-semibold text-primary">
             {t.shell.scanner.submit}

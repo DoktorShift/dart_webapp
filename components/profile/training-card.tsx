@@ -87,10 +87,10 @@ export function TrainingCard({ matches, playerKey, aliases, sameAs, onOpen, onSt
 
   return (
     <section aria-labelledby={titleId} className="mt-4 rounded-2xl border border-border bg-card px-4 py-3">
-      <button type="button" onClick={onOpen} aria-labelledby={`${titleId} ${lineId}`} className="-mx-4 -mt-3 flex w-[calc(100%+2rem)] items-center gap-3 rounded-t-2xl px-4 pt-3 text-left transition-colors active:bg-secondary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <button type="button" onClick={onOpen} aria-labelledby={`${titleId} ${lineId}`} className="-mx-4 -mt-3 flex w-[calc(100%+2rem)] items-center gap-3 rounded-t-2xl px-4 pt-3 text-left transition-colors active:bg-secondary/70 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring">
         <span className="block min-w-0 flex-1">
           <span id={titleId} className="block text-[0.8125rem] font-medium text-muted-foreground">{r.title}</span>
-          <span id={lineId} className="mt-0.5 block text-[1.0625rem] font-semibold leading-snug [overflow-wrap:anywhere]">{monthHeadline(t, r, training)}</span>
+          <span id={lineId} className="mt-0.5 block text-[1.0625rem] font-semibold leading-snug wrap-anywhere">{monthHeadline(t, r, training)}</span>
           {second && (
             <span className="mt-0.5 block text-[0.9375rem] leading-snug">
               {second}

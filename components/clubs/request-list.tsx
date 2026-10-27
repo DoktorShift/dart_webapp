@@ -49,7 +49,7 @@ export function RequestList({ state }: { state: ClubState }) {
           <div key={request.pubkey} className="px-4 py-3">
             <div className="flex items-center gap-3">
               <Avatar seed={request.pubkey} name={info.name ?? undefined} src={info.picture} size={40} />
-              <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
+              <span className="min-w-0 flex-1 wrap-anywhere">
                 <span className="block text-[1.0625rem] leading-snug">{info.name ?? tx.unnamed}</span>
                 <span className="block text-[0.8125rem] leading-snug text-muted-foreground">
                   {[info.name ? null : tx.id(shortKey(request.pubkey)), request.check === "unverified" ? tx.members.unverified : null, inviter(request) ? tx.members.invitedBy(names(inviter(request) as string).name ?? tx.unnamed) : null]

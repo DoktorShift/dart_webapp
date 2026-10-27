@@ -27,7 +27,7 @@ export function AboutView({ qrSvg, embedded = false }: { qrSvg: string; embedded
   const content = (
     <>
       <div className="flex flex-col items-center text-center">
-        <Image src="/icon/192" alt="" width={88} height={88} priority className="h-[5.5rem] w-[5.5rem] rounded-[1.4rem] shadow-lg" />
+        <Image src="/icon/192" alt="" width={88} height={88} priority className="h-22 w-22 rounded-[1.4rem] shadow-lg" />
         <Heading className="mt-4 font-display text-5xl font-semibold leading-none tracking-tight">{SITE.name}</Heading>
         <p className="mt-2 text-[1.0625rem] text-muted-foreground">{t.meta.tagline}</p>
       </div>
@@ -93,7 +93,7 @@ export function AboutView({ qrSvg, embedded = false }: { qrSvg: string; embedded
         <div className="relative mx-auto flex h-11 max-w-xl items-center px-2">
           <Link
             href="/"
-            className="relative z-10 flex min-h-11 items-center gap-0.5 rounded-lg pr-3 text-[1.0625rem] text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="relative z-10 flex min-h-11 items-center gap-0.5 rounded-lg pr-3 text-[1.0625rem] text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
           >
             <ChevronLeft className="h-7 w-7" aria-hidden="true" />
             {t.about.back}

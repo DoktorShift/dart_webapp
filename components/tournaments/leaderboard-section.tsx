@@ -93,7 +93,7 @@ export default function TournamentsLeaderboard() {
                     <span aria-hidden="true">{l.place(placement.place, placement.placeTo)}</span>
                     <span className="sr-only">{l.placeLabel(placement.place, placement.placeTo)}</span>
                   </span>
-                  <span className="block min-w-0 flex-1 [overflow-wrap:anywhere]">
+                  <span className="block min-w-0 flex-1 wrap-anywhere">
                     <span className="block font-medium leading-snug">{state.settings.name}</span>
                     <span className="block text-[0.8125rem] leading-snug text-muted-foreground">{details}</span>
                   </span>

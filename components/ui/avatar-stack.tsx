@@ -45,12 +45,12 @@ export function AvatarStack({
           </span>
         )}
       </span>
-      <span className="min-w-0 text-[0.8125rem] font-medium text-muted-foreground [overflow-wrap:anywhere]">{label}</span>
+      <span className="min-w-0 text-[0.8125rem] font-medium text-muted-foreground wrap-anywhere">{label}</span>
     </>
   )
   if (!onClick) return <span className={cn("inline-flex items-center gap-2", className)}>{faces}</span>
   return (
-    <button type="button" onClick={onClick} className={cn("inline-flex min-h-11 items-center gap-2 rounded-full pr-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:opacity-70", className)}>
+    <button type="button" onClick={onClick} className={cn("inline-flex min-h-11 items-center gap-2 rounded-full pr-2 text-left transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring active:opacity-70", className)}>
       {faces}
     </button>
   )

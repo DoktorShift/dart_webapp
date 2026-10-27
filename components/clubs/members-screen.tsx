@@ -61,7 +61,7 @@ export default function MembersScreen({ params }: ScreenProps) {
               title={
                 <span className="flex items-center gap-3">
                   <Avatar seed={m.pubkey} name={info.name ?? undefined} src={info.picture} size={36} />
-                  <span className="min-w-0 [overflow-wrap:anywhere]">
+                  <span className="min-w-0 wrap-anywhere">
                     {info.name ?? tx.unnamed}
                     {m.pubkey === me && <span className="ml-1.5 rounded-full bg-primary px-2 py-0.5 text-[0.75rem] font-semibold text-primary-foreground">{tx.you}</span>}
                   </span>

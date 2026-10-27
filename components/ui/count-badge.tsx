@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 export function CountBadge({ count, label, id, className }: { count: number; label: string; id: string; className?: string }) {
   if (count <= 0) return null
   return (
-    <span aria-hidden="true" className={cn("absolute -right-2 -top-1.5 flex h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-full bg-[#ff3b30] px-1 text-[0.6875rem] font-semibold leading-none text-white ring-2 ring-background", className)}>
+    <span aria-hidden="true" className={cn("absolute -right-2 -top-1.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-[#ff3b30] px-1 text-[0.6875rem] font-semibold leading-none text-white ring-2 ring-background", className)}>
       {count > 99 ? "99+" : count}
       <span id={id} className="sr-only">
         {label}

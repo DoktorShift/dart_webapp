@@ -117,16 +117,16 @@ function TournamentView({ entry, onRefresh }: { entry: Entry; onRefresh: () => v
           {places && <Chip>{places}</Chip>}
           {standing && <Chip tone={read.me.organizer ? "accent" : "success"}>{standing}</Chip>}
         </Chips>
-        <p className="text-[1.0625rem] leading-snug text-muted-foreground [overflow-wrap:anywhere]">
+        <p className="text-[1.0625rem] leading-snug text-muted-foreground wrap-anywhere">
           {[rulesLine(state, tx), tx.formats[s.format].name].join(" · ")}
           {s.final && ` · ${tx.finalLine(s.final.legsToWin, s.final.setsToWin)}`}
         </p>
-        <p className="mt-1 text-[0.9375rem] leading-snug text-muted-foreground [overflow-wrap:anywhere]">
+        <p className="mt-1 text-[0.9375rem] leading-snug text-muted-foreground wrap-anywhere">
           {[s.starts !== undefined ? (s.timezone ? tx.tournament.startsAtZone(formatDateTime(t, s.starts * 1000), s.timezone) : tx.tournament.startsAt(formatDateTime(t, s.starts * 1000))) : tx.home.noDate, s.online ? tx.tournament.online : s.place]
             .filter(Boolean)
             .join(" · ")}
         </p>
-        <p className="mt-1 text-[0.9375rem] leading-snug text-muted-foreground [overflow-wrap:anywhere]">{tx.tournament.organizedBy(organizerInfo.name ?? shortKey(state.organizer))}</p>
+        <p className="mt-1 text-[0.9375rem] leading-snug text-muted-foreground wrap-anywhere">{tx.tournament.organizedBy(organizerInfo.name ?? shortKey(state.organizer))}</p>
       </header>
 
       {!urgent && phaseCard}
