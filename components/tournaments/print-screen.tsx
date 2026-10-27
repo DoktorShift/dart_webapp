@@ -50,7 +50,7 @@ function Sheet({ entry }: { entry: Entry }) {
   }
   const sheet = (
     <article className="mt-6">
-      <h2 className="text-2xl font-semibold leading-tight [overflow-wrap:anywhere]">{state.settings.name}</h2>
+      <h2 className="text-2xl font-semibold leading-tight wrap-anywhere">{state.settings.name}</h2>
       <p className="mt-1 text-[0.9375rem] text-muted-foreground">
         {[rulesLine(state, tx), tx.formats[state.settings.format].name, state.settings.starts !== undefined ? formatDateTime(t, state.settings.starts * 1000) : null, state.settings.place].filter(Boolean).join(" · ")}
       </p>
@@ -70,10 +70,10 @@ function Sheet({ entry }: { entry: Entry }) {
             <tr key={m.id} className="border-b border-border align-top">
               <td className="py-2 pr-2 tabular-nums">{m.number}</td>
               <td className="py-2 pr-2">{round(m)}</td>
-              <td className="py-2 pr-2 [overflow-wrap:anywhere]">{m.slots[0].empty ? tx.tournament.bye : names.nameOf(m.slots[0].participant)}</td>
-              <td className="py-2 pr-2 [overflow-wrap:anywhere]">{m.slots[1].empty ? tx.tournament.bye : names.nameOf(m.slots[1].participant)}</td>
+              <td className="py-2 pr-2 wrap-anywhere">{m.slots[0].empty ? tx.tournament.bye : names.nameOf(m.slots[0].participant)}</td>
+              <td className="py-2 pr-2 wrap-anywhere">{m.slots[1].empty ? tx.tournament.bye : names.nameOf(m.slots[1].participant)}</td>
               <td className="py-2 pr-2 tabular-nums">{m.state === "walkover" ? tx.walkover[m.walkover ?? "noShow"] : scoreText(m)}</td>
-              <td className="py-2 pr-2 [overflow-wrap:anywhere]">{m.winner ? names.nameOf(m.winner) : ""}</td>
+              <td className="py-2 pr-2 wrap-anywhere">{m.winner ? names.nameOf(m.winner) : ""}</td>
               <td className="py-2 pr-2">{boardName(state, m.board)}</td>
               <td className="py-2">{labels.state(m)}</td>
             </tr>

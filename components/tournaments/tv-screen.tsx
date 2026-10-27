@@ -32,7 +32,7 @@ export default function TvScreen({ params }: ScreenProps) {
     return (
       <div className="pb-4">
         <div className="mt-2 flex items-start justify-between gap-3">
-          <h2 className="text-2xl font-semibold leading-tight [overflow-wrap:anywhere]">{entry.read.state.settings.name}</h2>
+          <h2 className="text-2xl font-semibold leading-tight wrap-anywhere">{entry.read.state.settings.name}</h2>
           <button type="button" onClick={() => setFull(true)} aria-label={tx.tv.fullScreen} className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-primary active:bg-secondary/70">
             <Maximize2 className="h-5 w-5" aria-hidden="true" />
           </button>
@@ -43,7 +43,7 @@ export default function TvScreen({ params }: ScreenProps) {
   return (
     <div role="dialog" aria-modal="true" aria-label={tx.tv.fullScreen} className="fixed inset-0 z-50 overflow-y-auto bg-background px-6 pb-[max(env(safe-area-inset-bottom),1rem)] pt-[max(env(safe-area-inset-top),0.5rem)]">
       <div className="flex items-start justify-between gap-3">
-        <h2 className="text-4xl font-semibold leading-tight [overflow-wrap:anywhere]">{entry.read.state.settings.name}</h2>
+        <h2 className="text-4xl font-semibold leading-tight wrap-anywhere">{entry.read.state.settings.name}</h2>
         <button type="button" onClick={() => setFull(false)} aria-label={tx.tv.closeFullScreen} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground active:bg-secondary/70">
           <X className="h-6 w-6" aria-hidden="true" />
         </button>
@@ -66,7 +66,7 @@ function Board({ entry, large }: { entry: Entry; large: boolean }) {
   return (
     <div className={cn("mt-4 grid gap-6", large && "lg:grid-cols-2")}>
       {view?.champion && (
-        <p className={cn("flex items-center gap-3 rounded-2xl border border-success/30 bg-success/10 px-4 py-3 font-semibold text-success [overflow-wrap:anywhere]", large ? "text-5xl lg:col-span-2" : "text-2xl")}>
+        <p className={cn("flex items-center gap-3 rounded-2xl border border-success/30 bg-success/10 px-4 py-3 font-semibold text-success wrap-anywhere", large ? "text-5xl lg:col-span-2" : "text-2xl")}>
           <Trophy className={cn("shrink-0", large ? "h-12 w-12" : "h-7 w-7")} aria-hidden="true" />
           {tx.tv.champion(names.nameOf(view.champion))}
         </p>
@@ -113,7 +113,7 @@ function Tile({ m, names, large, right, standing }: { m: MatchView; names: { nam
       {[0, 1].map((i) => {
         const won = m.winner !== null && m.winner === m.slots[i].participant
         return (
-          <p key={i} className={cn("flex items-baseline justify-between gap-4 leading-snug [overflow-wrap:anywhere]", large ? "text-4xl" : "text-[1.25rem]", won && "font-semibold")}>
+          <p key={i} className={cn("flex items-baseline justify-between gap-4 leading-snug wrap-anywhere", large ? "text-4xl" : "text-[1.25rem]", won && "font-semibold")}>
             <span className="flex items-baseline gap-2">
               {names.nameOf(m.slots[i].participant)}
               {won && <Trophy className={cn("shrink-0 self-center text-amber-500", large ? "h-8 w-8" : "h-4 w-4")} aria-label={tx.tv.winner} />}

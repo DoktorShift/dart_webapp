@@ -41,7 +41,7 @@ export default function FriendSeats({ players, canAdd, addPlayer }: SetupPlayers
         {chips.map((c) => (
           <button key={c.pubkey} type="button" onClick={() => addPlayer({ name: seatName(c.name), pubkey: c.pubkey })} className="flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-secondary/50 px-4 text-left text-[0.9375rem] active:bg-secondary">
             <UserRound className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-            <span className="[overflow-wrap:anywhere]">{c.name}</span>
+            <span className="wrap-anywhere">{c.name}</span>
           </button>
         ))}
       </div>

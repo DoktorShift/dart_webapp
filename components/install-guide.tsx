@@ -76,7 +76,7 @@ function InstallGuide({ qrSvg, onDone }: { qrSvg: string; onDone: () => void }) 
             onClick={() => choose(id)}
             className={cn(
               "min-h-11 rounded-lg px-1 text-[0.9375rem] font-medium leading-tight transition-colors",
-              platform === id ? "bg-background text-foreground shadow" : "text-muted-foreground",
+              platform === id ? "bg-background text-foreground shadow-sm" : "text-muted-foreground",
             )}
           >
             {t.install.platforms[id]}
@@ -101,7 +101,7 @@ function InstallGuide({ qrSvg, onDone }: { qrSvg: string; onDone: () => void }) 
           </div>
         </motion.div>
 
-        <div className="sticky bottom-0 z-[1] mt-1 flex items-center gap-2 bg-background py-1">
+        <div className="sticky bottom-0 z-1 mt-1 flex items-center gap-2 bg-background py-1">
           <button
             type="button"
             onClick={() => setStep((s) => Math.max(0, s - 1))}

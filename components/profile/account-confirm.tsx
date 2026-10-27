@@ -38,7 +38,7 @@ export function AccountConfirm({ pubkey, busy, onAnswer }: { pubkey: string; bus
       <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-card">
         <div className="flex items-center gap-4 px-4 py-4">
           <Avatar seed={pubkey} name={metadata.name ?? undefined} src={metadata.picture} size={56} />
-          <p className="min-w-0 text-[1.0625rem] font-semibold leading-snug [overflow-wrap:anywhere]">
+          <p className="min-w-0 text-[1.0625rem] font-semibold leading-snug wrap-anywhere">
             {metadata.name ?? (status === null ? c.accountLoading : c.accountUnknown)}
           </p>
         </div>

@@ -113,7 +113,7 @@ function PlayerRow({
         }}
         aria-invalid={duplicate}
         className={cn(
-          "h-11 min-w-0 flex-1 bg-transparent text-[1.0625rem] outline-none placeholder:text-muted-foreground/60",
+          "h-11 min-w-0 flex-1 bg-transparent text-[1.0625rem] outline-hidden placeholder:text-muted-foreground/60",
           duplicate && "text-danger",
         )}
       />

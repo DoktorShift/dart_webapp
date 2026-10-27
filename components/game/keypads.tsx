@@ -35,7 +35,7 @@ function Key({
       aria-pressed={tone === "selected" ? true : undefined}
       className={cn(
         "flex min-h-0 min-w-0 touch-manipulation select-none items-center justify-center rounded-xl font-semibold transition-[transform,background-color,opacity] duration-75 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-35",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
         tone === "plain" && "bg-key text-foreground shadow-[0_1px_0_hsl(var(--key-shadow))] active:bg-key-pressed",
         tone === "quiet" && "bg-key-quiet text-muted-foreground shadow-[0_1px_0_hsl(var(--key-shadow))] active:bg-key-pressed",
         tone === "accent" && "bg-primary text-primary-foreground active:bg-primary/80",
@@ -57,7 +57,7 @@ function UndoKey({ onUndo, canUndo, narrow, className }: { onUndo: () => void; c
       disabled={!canUndo}
       tone="quiet"
       label={t.common.undoLastDart}
-      className={cn(narrow ? "flex-col gap-0.5 px-1 [container-type:inline-size]" : "gap-1.5 text-[0.9375rem]", className)}
+      className={cn(narrow ? "flex-col gap-0.5 px-1 @container" : "gap-1.5 text-[0.9375rem]", className)}
     >
       <Undo2 className="h-5 w-5 shrink-0" aria-hidden="true" />
       {narrow ? (

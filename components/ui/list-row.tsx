@@ -26,8 +26,8 @@ const TONES: Record<RowTone, string> = {
 
 function RowIcon({ icon: Icon, tone = "blue" }: { icon: ComponentType<{ className?: string; "aria-hidden"?: boolean }>; tone?: RowTone }) {
   return (
-    <span className={cn("flex h-[1.875rem] w-[1.875rem] shrink-0 items-center justify-center rounded-lg text-white", TONES[tone])}>
-      <Icon className="h-[1.125rem] w-[1.125rem]" aria-hidden />
+    <span className={cn("flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-lg text-white", TONES[tone])}>
+      <Icon className="h-4.5 w-4.5" aria-hidden />
     </span>
   )
 }
@@ -72,18 +72,18 @@ export function ListRow({
   const showChevron = chevron ?? (interactive && !destructive)
   const classes = cn(
     "flex min-h-12 w-full items-center gap-3 px-4 py-2.5 text-left text-[1.0625rem]",
-    interactive && "transition-colors active:bg-secondary/70 focus-visible:bg-secondary/50 focus-visible:outline-none disabled:opacity-40",
+    interactive && "transition-colors active:bg-secondary/70 focus-visible:bg-secondary/50 focus-visible:outline-hidden disabled:opacity-40",
     destructive && "text-danger",
     className,
   )
   const body = (
     <>
       {icon && <RowIcon icon={icon} tone={iconTone} />}
-      <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
+      <span className="min-w-0 flex-1 wrap-anywhere">
         <span className="block leading-snug">{title}</span>
         {subtitle && <span className="mt-0.5 block text-[0.8125rem] leading-snug text-muted-foreground">{subtitle}</span>}
       </span>
-      {value !== undefined && <span className="max-w-[50%] shrink-0 text-right tabular-nums text-muted-foreground [overflow-wrap:anywhere]">{value}</span>}
+      {value !== undefined && <span className="max-w-[50%] shrink-0 text-right tabular-nums text-muted-foreground wrap-anywhere">{value}</span>}
       {trailing}
       {showChevron && <ChevronRight className="-mr-1 h-5 w-5 shrink-0 text-muted-foreground/70" aria-hidden="true" />}
     </>

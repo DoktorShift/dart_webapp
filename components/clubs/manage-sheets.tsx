@@ -207,7 +207,7 @@ export function InvitesSheet({ view, state, open, onOpenChange }: { view: ClubVi
               const token = view.tokens[invite.id]
               return (
                 <div key={invite.id} className="px-4 py-3">
-                  <p className="text-[1.0625rem] leading-snug [overflow-wrap:anywhere]">
+                  <p className="text-[1.0625rem] leading-snug wrap-anywhere">
                     {invite.kind === "group" ? tx.invites.group : tx.invites.personal}
                     {invite.label && `: ${invite.label}`}
                   </p>

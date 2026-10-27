@@ -25,7 +25,7 @@ export function GameSummary({ game, me, className }: { game: ClubGame; me: strin
       <ul className="flex flex-col gap-1">
         {seats.map((seat, i) => (
           <li key={i} className={cn("flex items-baseline justify-between gap-3 text-[1.0625rem]", result?.winner === i && "font-semibold")}>
-            <span className="min-w-0 [overflow-wrap:anywhere]">{nameOf(seat.pubkey, seat.alias)}</span>
+            <span className="min-w-0 wrap-anywhere">{nameOf(seat.pubkey, seat.alias)}</span>
             <span className="shrink-0 tabular-nums">{result ? result.legs[i] : "—"}</span>
           </li>
         ))}

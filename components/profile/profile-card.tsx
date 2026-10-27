@@ -44,10 +44,10 @@ export function ProfileCard({
       <div className="flex items-center gap-4">
         <Avatar seed={seed} name={name ?? undefined} src={picture} size={64} />
         <div className="min-w-0">
-          <h2 id={id} className="text-xl font-semibold leading-tight [overflow-wrap:anywhere]">
+          <h2 id={id} className="text-xl font-semibold leading-tight wrap-anywhere">
             {name ?? placeholder ?? tx.unnamed}
           </h2>
-          {subtitle && <p className="mt-0.5 text-[0.9375rem] leading-snug text-muted-foreground [overflow-wrap:anywhere]">{subtitle}</p>}
+          {subtitle && <p className="mt-0.5 text-[0.9375rem] leading-snug text-muted-foreground wrap-anywhere">{subtitle}</p>}
         </div>
         {action && <div className="ml-auto shrink-0 self-start">{action}</div>}
       </div>
@@ -126,7 +126,7 @@ export const sportFiguresOf = (s: PlayerSummary): SportFigures => ({
 // A quiet text button for the card's corner, 44 pt tall.
 export function CardAction({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} className="-mr-2 -mt-1 flex min-h-11 items-center rounded-xl px-2 text-[1.0625rem] font-medium text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:bg-primary/10">
+    <button type="button" onClick={onClick} className="-mr-2 -mt-1 flex min-h-11 items-center rounded-xl px-2 text-[1.0625rem] font-medium text-primary transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring active:bg-primary/10">
       {label}
     </button>
   )

@@ -268,10 +268,10 @@ export function PayFlow({
               {counterpart.name && (
                 <>
                   <Avatar seed={counterpart.pubkey ?? counterpart.name} name={counterpart.name} size={56} className="xshort:hidden" />
-                  <p className="mt-2 text-[1.0625rem] font-semibold leading-snug [overflow-wrap:anywhere] xshort:mt-0">{counterpart.name}</p>
+                  <p className="mt-2 text-[1.0625rem] font-semibold leading-snug wrap-anywhere xshort:mt-0">{counterpart.name}</p>
                 </>
               )}
-              {active && active.kind !== "scan" && !step.scanned && <p className="text-[0.8125rem] text-muted-foreground [overflow-wrap:anywhere]">{p.toAddress(active.address)}</p>}
+              {active && active.kind !== "scan" && !step.scanned && <p className="text-[0.8125rem] text-muted-foreground wrap-anywhere">{p.toAddress(active.address)}</p>}
               <AmountBlock msat={step.amountMsat} fiat={step.fiat} className="mt-3 xshort:mt-1" />
             </div>
             <div className="mt-4 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card xshort:mt-0">

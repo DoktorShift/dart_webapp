@@ -174,7 +174,7 @@ function TrainingView({ own, playerKey }: { own: OwnProfile; playerKey: string }
             <p className="mt-1 font-display text-5xl font-semibold tabular-nums leading-none">{measure(t, mode, month.value)}</p>
           </>
         ) : (
-          <p className="text-[1.0625rem] font-semibold leading-snug [overflow-wrap:anywhere]">{monthHeadline(t, r, training)}</p>
+          <p className="text-[1.0625rem] font-semibold leading-snug wrap-anywhere">{monthHeadline(t, r, training)}</p>
         )}
         <p className="mt-1.5 text-[0.9375rem] leading-snug">{diff !== null ? <Direction diff={diff}>{directionText}</Direction> : <span className="text-muted-foreground">{directionText}</span>}</p>
         {goalText && (

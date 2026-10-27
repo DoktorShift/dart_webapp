@@ -33,7 +33,7 @@ export default function FriendsProfileLine({ own }: { pubkey: string; own: boole
     <button
       type="button"
       onClick={() => nav.push(FRIENDS_SCREENS.list, nobody ? { add: "1" } : undefined)}
-      className="-mx-2 -my-1 flex min-h-11 w-[calc(100%+1rem)] items-center gap-3 rounded-xl px-2 text-left transition-colors active:bg-secondary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="-mx-2 -my-1 flex min-h-11 w-[calc(100%+1rem)] items-center gap-3 rounded-xl px-2 text-left transition-colors active:bg-secondary/60 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
     >
       {faces.length > 0 ? (
         <span className="flex shrink-0 items-center" aria-hidden="true">
@@ -46,7 +46,7 @@ export default function FriendsProfileLine({ own }: { pubkey: string; own: boole
           <UserRoundPlus className="h-4 w-4" />
         </span>
       )}
-      <span className="min-w-0 flex-1 text-[0.9375rem] font-medium leading-snug [overflow-wrap:anywhere]">
+      <span className="min-w-0 flex-1 text-[0.9375rem] font-medium leading-snug wrap-anywhere">
         {text}
         {requests > 0 && <span className="font-semibold text-primary"> · {tx.card.requests(requests)}</span>}
       </span>

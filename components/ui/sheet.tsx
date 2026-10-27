@@ -27,7 +27,7 @@ export function Sheet({
 }) {
   return (
     <Drawer open={open} onOpenChange={onOpenChange} dismissible={dismissible} shouldScaleBackground={false}>
-      <DrawerContent handle={dismissible} className={cn("mx-auto max-h-[92dvh] max-w-lg border-border [@media(max-height:500px)]:h-[100dvh] [@media(max-height:500px)]:max-h-[100dvh] [@media(max-height:500px)]:rounded-none", className)}>
+      <DrawerContent handle={dismissible} className={cn("mx-auto max-h-[92dvh] max-w-lg border-border xshort:h-dvh xshort:max-h-dvh xshort:rounded-none", className)}>
         <div className="flex min-h-0 flex-col px-4 pb-[max(env(safe-area-inset-bottom),1rem)]">
           <DrawerHeader className="px-0 text-left">
             <DrawerTitle className="text-xl">{title}</DrawerTitle>
@@ -52,5 +52,5 @@ export function SheetBody({ className, children }: { className?: string; childre
 // notwithstanding. In compact height they stand side by side, the primary one on the right,
 // and leave the height to the content.
 export function SheetActions({ className, children }: { className?: string; children: ReactNode }) {
-  return <div className={cn("relative grid shrink-0 gap-2 pt-2 before:pointer-events-none before:absolute before:inset-x-0 before:-top-4 before:h-4 before:bg-gradient-to-t before:from-background before:to-transparent [@media(max-height:500px)]:grid-flow-col-dense [@media(max-height:500px)]:auto-cols-fr [@media(max-height:500px)]:[direction:rtl] [@media(max-height:500px)]:*:[direction:ltr]", className)}>{children}</div>
+  return <div className={cn("relative grid shrink-0 gap-2 pt-2 before:pointer-events-none before:absolute before:inset-x-0 before:-top-4 before:h-4 before:bg-linear-to-t before:from-background before:to-transparent xshort:grid-flow-col-dense xshort:auto-cols-fr xshort:[direction:rtl] xshort:*:[direction:ltr]", className)}>{children}</div>
 }

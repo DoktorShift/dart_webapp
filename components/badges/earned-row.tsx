@@ -95,7 +95,7 @@ function EarnedSheet({ open, onOpenChange, reached, children }: { open: boolean;
                 return (
                   <li key={milestone.id} className="flex min-h-12 items-center gap-3 px-4 py-2.5">
                     <BadgeIcon size={36} />
-                    <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
+                    <span className="min-w-0 flex-1 wrap-anywhere">
                       <span className="block text-[1.0625rem] leading-snug">{words.name}</span>
                       <span className="mt-0.5 block text-[0.8125rem] leading-snug text-muted-foreground">{words.description}</span>
                     </span>

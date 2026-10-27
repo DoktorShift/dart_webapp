@@ -92,7 +92,7 @@ export function MatchView({ followed, actions, compact }: { followed: Followed; 
     <div className="mt-2">
       <header className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
-          <h2 className="text-xl font-semibold leading-tight [overflow-wrap:anywhere]">{rulesSummary(t, config)}</h2>
+          <h2 className="text-xl font-semibold leading-tight wrap-anywhere">{rulesSummary(t, config)}</h2>
           <Freshness followed={followed} status={status} />
         </div>
         {game?.state && (
@@ -123,7 +123,7 @@ export function MatchView({ followed, actions, compact }: { followed: Followed; 
       {fullScreen && game?.state && (
         <FullScreen onClose={() => setFullScreen(false)}>
           <div className="min-w-0 px-1">
-            <p className="text-2xl font-semibold leading-tight tablet:text-4xl [overflow-wrap:anywhere]">{rulesSummary(t, config)}</p>
+            <p className="text-2xl font-semibold leading-tight tablet:text-4xl wrap-anywhere">{rulesSummary(t, config)}</p>
             <Freshness followed={followed} status={status} large />
           </div>
           <Board state={game.state} stale={stale} className="min-h-0 flex-1" large />
@@ -164,7 +164,7 @@ function Board({ state, stale, className, large }: { state: MatchState; stale: b
   const winner = state.winner !== null ? players[state.winner].name : null
   return (
     <section aria-label={gameSubtitle(t, state)} className={cn("flex flex-col gap-2 transition-opacity", stale && "opacity-50", className)}>
-      <div className="relative min-h-0 flex-1 [container-type:size]">
+      <div className="relative min-h-0 flex-1 @container-size">
         {state.config.type === "x01" && <X01Scoreboard state={state} />}
         {state.config.type === "cricket" && <CricketScoreboard state={state} />}
         {state.config.type === "clock" && <ClockScoreboard state={state} />}
@@ -191,7 +191,7 @@ function CurrentVisit({ state }: { state: MatchState }) {
   const points = state.config.type === "x01" ? state.visitStartScore - state.scores[state.current] : null
   return (
     <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-      <span className="font-semibold [overflow-wrap:anywhere]">{tx.watch.throwing(name)}</span>
+      <span className="font-semibold wrap-anywhere">{tx.watch.throwing(name)}</span>
       <span className="text-muted-foreground">{tx.watch.current}</span>
       <span className="font-display font-semibold tabular-nums">{darts.length > 0 ? darts.join("  ") : "–"}</span>
       {points !== null && darts.length > 0 && <span className="ml-auto font-display font-semibold tabular-nums">{points}</span>}

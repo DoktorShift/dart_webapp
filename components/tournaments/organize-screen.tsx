@@ -81,7 +81,7 @@ function Workspace({ entry }: { entry: Entry }) {
         <NavIconButton icon={Settings} label={o.tabs.settings} onClick={() => nav.push(TOURNAMENT_SCREENS.settings, { tournament: read.id })} className="-mr-1" />
       </NavBarItems>
       <div className="mt-2">
-        <p className="text-[1.0625rem] font-semibold leading-snug [overflow-wrap:anywhere]">{state.settings.name}</p>
+        <p className="text-[1.0625rem] font-semibold leading-snug wrap-anywhere">{state.settings.name}</p>
         <p className="text-[0.9375rem] text-muted-foreground">{tx.phase[state.phase]}</p>
       </div>
       {state.phase !== "cancelled" && <PhaseSteps steps={phaseSteps(state, o.steps)} label={o.steps.label} className="mt-4" />}

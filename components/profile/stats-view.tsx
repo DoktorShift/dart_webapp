@@ -169,7 +169,7 @@ export function StatsView({ matches, playerKey, aliases, sameAs, share }: { matc
       {summary && valueText ? (
         <>
           <section className="mt-4 rounded-2xl border border-border bg-card px-4 py-3">
-            <p className="text-[1.0625rem] font-semibold leading-snug [overflow-wrap:anywhere]">{p.sentence(valueText, periodText)}</p>
+            <p className="text-[1.0625rem] font-semibold leading-snug wrap-anywhere">{p.sentence(valueText, periodText)}</p>
             {beforeText && (
               <p className="mt-0.5 text-[0.9375rem] leading-snug">
                 {diff === null ? (

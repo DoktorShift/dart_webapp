@@ -35,7 +35,7 @@ export default function ReplaceDialog({ existing, onAnswer }: { existing: Sessio
     <AlertDialog open onOpenChange={(open) => !open && onAnswer(false)}>
       <AlertDialogContent className="max-w-[calc(100vw-2rem)] rounded-2xl sm:max-w-md">
         <AlertDialogHeader>
-          <AlertDialogTitle className="[overflow-wrap:anywhere]">{r.title(name)}</AlertDialogTitle>
+          <AlertDialogTitle className="wrap-anywhere">{r.title(name)}</AlertDialogTitle>
           <AlertDialogDescription>
             {existing.kind === "local" && <span className="mb-2 block font-medium text-foreground">{tx.signOut.localWarning}</span>}
             {r.description}

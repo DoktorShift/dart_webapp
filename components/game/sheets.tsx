@@ -297,7 +297,7 @@ export function OptionsSheet({
                     onRetire(i)
                     change(false)
                   }}
-                  className={cn(rowButton, "[overflow-wrap:anywhere]")}
+                  className={cn(rowButton, "wrap-anywhere")}
                 >
                   {p.name}
                 </button>

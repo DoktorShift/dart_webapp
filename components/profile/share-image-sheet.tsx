@@ -62,7 +62,7 @@ export function ShareImageSheet({ open, onOpenChange, make, fileName, title }: {
         {picture ? (
           // An object URL of a picture drawn here: nothing for next/image to optimise.
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={picture.url} alt={title} className="mx-auto block max-h-[55dvh] w-auto max-w-full rounded-2xl border border-border [@media(max-height:500px)]:max-h-[calc(100dvh-9.5rem)]" />
+          <img src={picture.url} alt={title} className="mx-auto block max-h-[55dvh] w-auto max-w-full rounded-2xl border border-border xshort:max-h-[calc(100dvh-9.5rem)]" />
         ) : failed ? (
           <InlineStatus tone="error">{tx.failed}</InlineStatus>
         ) : (

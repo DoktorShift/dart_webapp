@@ -62,10 +62,10 @@ function Chips({ chips }: { chips: Chip[] }) {
             <button
               type="button"
               onClick={() => nav.push(BADGE_SCREENS.badge, { id: award.award.id, name, pubkey: award.recipient })}
-              className="flex min-h-11 max-w-full items-center gap-2 rounded-xl bg-secondary/70 py-1 pl-1.5 pr-3 text-left text-[0.9375rem] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:bg-secondary"
+              className="flex min-h-11 max-w-full items-center gap-2 rounded-xl bg-secondary/70 py-1 pl-1.5 pr-3 text-left text-[0.9375rem] font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring active:bg-secondary"
             >
               <BadgeIcon image={award.image} size={32} />
-              <span className="min-w-0 leading-snug [overflow-wrap:anywhere]">
+              <span className="min-w-0 leading-snug wrap-anywhere">
                 {name}
                 {voided && <span className="block text-[0.8125rem] font-normal text-muted-foreground">{tx.list.corrected}</span>}
               </span>

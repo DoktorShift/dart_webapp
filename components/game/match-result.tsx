@@ -69,7 +69,7 @@ function SmallAction({
       type="button"
       onClick={onClick}
       aria-label={ariaLabel}
-      className="flex min-h-12 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:bg-secondary xshort:min-h-11"
+      className="flex min-h-12 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl text-muted-foreground transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring active:bg-secondary xshort:min-h-11"
     >
       <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
       <FitText minScale={0.75} className="w-full text-center text-[0.75rem] font-medium">

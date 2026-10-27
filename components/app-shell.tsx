@@ -62,7 +62,7 @@ export function AppShell({ tab, onTabChange, accessory, children }: { tab: Tab; 
                 aria-current={tab === id ? "page" : undefined}
                 aria-describedby={`tab-badge-side-${id}`}
                 className={cn(
-                  "flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-[1.0625rem] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  "flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-[1.0625rem] transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
                   tab === id ? "bg-primary font-semibold text-primary-foreground" : "text-foreground hover:bg-secondary/60",
                 )}
               >
@@ -82,7 +82,7 @@ export function AppShell({ tab, onTabChange, accessory, children }: { tab: Tab; 
         className="shrink-0 pb-[max(env(safe-area-inset-bottom),0.625rem)] pl-[max(env(safe-area-inset-left),0.75rem)] pr-[max(env(safe-area-inset-right),0.75rem)] pt-1.5 lg:hidden xshort:border-t xshort:border-border/70 xshort:bg-background/85 xshort:p-0 xshort:pb-[env(safe-area-inset-bottom)] xshort:pl-[env(safe-area-inset-left)] xshort:pr-[env(safe-area-inset-right)] xshort:backdrop-blur-xl"
       >
         {accessory}
-        <ul className="mx-auto grid h-[3.0625rem] max-w-2xl grid-cols-5 rounded-[1.625rem] border border-border/70 bg-background/80 shadow-[0_10px_30px_-14px_rgba(0,0,0,0.45)] backdrop-blur-2xl xshort:h-11 xshort:rounded-none xshort:border-0 xshort:bg-transparent xshort:shadow-none xshort:backdrop-blur-none">
+        <ul className="mx-auto grid h-12.25 max-w-2xl grid-cols-5 rounded-[1.625rem] border border-border/70 bg-background/80 shadow-[0_10px_30px_-14px_rgba(0,0,0,0.45)] backdrop-blur-2xl xshort:h-11 xshort:rounded-none xshort:border-0 xshort:bg-transparent xshort:shadow-none xshort:backdrop-blur-none">
           {TABS.map(({ id, label, icon }) => (
             <li key={id} className="min-w-0">
               <button
@@ -92,7 +92,7 @@ export function AppShell({ tab, onTabChange, accessory, children }: { tab: Tab; 
                 aria-describedby={`tab-badge-bar-${id}`}
                 className={cn(
                   "flex h-full w-full flex-col items-center justify-center gap-0.5 rounded-[1.625rem] px-0.5 text-[0.625rem] transition-colors xshort:flex-row xshort:gap-1.5 xshort:rounded-none xshort:text-[0.8125rem]",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                  "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
                   tab === id ? "font-semibold text-primary" : "font-medium text-muted-foreground",
                 )}
               >

@@ -116,7 +116,7 @@ function useMoreBelow() {
       el.removeEventListener("scroll", check)
     }
   }, [])
-  const fade = more && <div aria-hidden="true" className="pointer-events-none sticky bottom-0 left-0 -mt-6 h-6 bg-gradient-to-t from-card to-transparent" />
+  const fade = more && <div aria-hidden="true" className="pointer-events-none sticky bottom-0 left-0 -mt-6 h-6 bg-linear-to-t from-card to-transparent" />
   return { ref, fade }
 }
 
@@ -145,14 +145,14 @@ export function StatsTable({ state, rows, large = false, className }: { state: M
       >
         <thead>
           <tr>
-            <th scope="col" className={cn(pinned, "left-0 top-0 z-[2] shadow-[0_1px_0_hsl(var(--border))]")} style={{ width: `${labelWidth}em` }}>
+            <th scope="col" className={cn(pinned, "left-0 top-0 z-2 shadow-[0_1px_0_hsl(var(--border))]")} style={{ width: `${labelWidth}em` }}>
               <span className="sr-only">{t.result.statistic}</span>
             </th>
             {players.map((p, i) => (
               <th
                 key={p.id}
                 scope="col"
-                className={cn(pinned, cell, "top-0 z-[1] py-2 text-right font-semibold shadow-[0_1px_0_hsl(var(--border))]", i === winner && "text-primary")}
+                className={cn(pinned, cell, "top-0 z-1 py-2 text-right font-semibold shadow-[0_1px_0_hsl(var(--border))]", i === winner && "text-primary")}
               >
                 <FitText minScale={0.65}>{p.name}</FitText>
               </th>
@@ -162,7 +162,7 @@ export function StatsTable({ state, rows, large = false, className }: { state: M
         <tbody className="divide-y divide-border">
           {rows.map((row) => (
             <tr key={row.label}>
-              <th scope="row" className={cn(pinned, rowPadding, "left-0 z-[1] pl-3 pr-1 text-left font-normal text-muted-foreground")}>
+              <th scope="row" className={cn(pinned, rowPadding, "left-0 z-1 pl-3 pr-1 text-left font-normal text-muted-foreground")}>
                 {row.label}
               </th>
               {rowValues(state, row, t).map((value, i) => (

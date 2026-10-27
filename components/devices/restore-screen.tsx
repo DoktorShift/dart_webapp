@@ -86,7 +86,7 @@ export default function RestoreScreen() {
         />
         <Button type="button" variant="secondary" onClick={() => input.current?.click()} className="h-12 w-full justify-start gap-3 whitespace-normal rounded-2xl px-4 text-left text-[1.0625rem] text-primary">
           <FileLock2 className="h-5 w-5 shrink-0" aria-hidden="true" />
-          <span className="min-w-0 [overflow-wrap:anywhere]">{file ? file.name : r.chooseFile}</span>
+          <span className="min-w-0 wrap-anywhere">{file ? file.name : r.chooseFile}</span>
         </Button>
         <TextField
           label={r.passwordLabel}

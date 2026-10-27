@@ -130,7 +130,7 @@ export function AmountPicker({
             enterKeyHint="done"
             placeholder="0"
             aria-describedby={tooHigh ? hintId : undefined}
-            className="h-12 min-w-0 flex-1 bg-transparent text-[1.0625rem] tabular-nums outline-none placeholder:text-muted-foreground/70"
+            className="h-12 min-w-0 flex-1 bg-transparent text-[1.0625rem] tabular-nums outline-hidden placeholder:text-muted-foreground/70"
           />
           <span aria-hidden="true" className="text-[1.0625rem] text-muted-foreground">
             {mode === "fiat" ? money.symbol : "₿"}

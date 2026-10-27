@@ -157,7 +157,7 @@ function TextArea({ label, hint, className, ...input }: { label: string; hint?: 
       <label htmlFor={id} className="mb-2 block px-4 text-[0.8125rem] text-muted-foreground">
         {label}
       </label>
-      <textarea id={id} rows={4} className="w-full resize-y rounded-2xl border border-border bg-card px-4 py-3 text-[1.0625rem] outline-none placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-ring" {...input} />
+      <textarea id={id} rows={4} className="w-full resize-y rounded-2xl border border-border bg-card px-4 py-3 text-[1.0625rem] outline-hidden placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-ring" {...input} />
       {hint && <p className="mt-2 px-4 text-[0.8125rem] leading-snug text-muted-foreground">{hint}</p>}
     </div>
   )

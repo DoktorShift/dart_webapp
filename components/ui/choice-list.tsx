@@ -47,9 +47,9 @@ export function ChoiceList<T extends string>({
             aria-checked={checked}
             disabled={disabled}
             onClick={() => onChange(option.value)}
-            className="flex min-h-12 w-full items-center gap-3 px-4 py-2.5 text-left text-[1.0625rem] transition-colors focus-visible:bg-secondary/50 focus-visible:outline-none active:bg-secondary/70"
+            className="flex min-h-12 w-full items-center gap-3 px-4 py-2.5 text-left text-[1.0625rem] transition-colors focus-visible:bg-secondary/50 focus-visible:outline-hidden active:bg-secondary/70"
           >
-            <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
+            <span className="min-w-0 flex-1 wrap-anywhere">
               <span className="block leading-snug">{option.title}</span>
               {option.subtitle && <span className="mt-0.5 block text-[0.8125rem] leading-snug text-muted-foreground">{option.subtitle}</span>}
             </span>

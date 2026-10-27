@@ -72,7 +72,7 @@ function ClubTableCard({ view }: { view: ClubView }) {
     <section aria-label={name} className="overflow-hidden rounded-2xl border border-border bg-card">
       <button type="button" onClick={openTable} className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors active:bg-secondary/70">
         <Avatar seed={view.id} name={name} src={view.info?.picture} size={40} />
-        <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
+        <span className="min-w-0 flex-1 wrap-anywhere">
           <span className="block text-[1.0625rem] font-semibold leading-snug">{name}</span>
           <span className="block text-[0.8125rem] leading-snug text-muted-foreground">{line}</span>
         </span>
@@ -110,7 +110,7 @@ function TableRow({ row, you, name, picture, table, onClick }: { row: Standing; 
         <Avatar seed={row.pubkey} name={name} src={picture} size={40} />
         <span className="block min-w-0 flex-1">
           <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
-            <span className="font-medium leading-snug [overflow-wrap:anywhere]">{name}</span>
+            <span className="font-medium leading-snug wrap-anywhere">{name}</span>
             {you && <Chip tone="accent">{tx.you}</Chip>}
           </span>
           <span className="block text-[0.875rem] leading-snug tabular-nums text-muted-foreground">

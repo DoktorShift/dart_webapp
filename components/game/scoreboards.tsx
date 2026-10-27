@@ -163,7 +163,7 @@ export function X01Scoreboard({ state, onSelectPlayer }: BoardProps) {
   const between = state.visitDarts.length === 0 && state.winner === null
 
   return (
-    <ol className={cn("grid h-full auto-rows-[minmax(0,1fr)] gap-2 tablet:gap-3", GRID[size])}>
+    <ol className={cn("grid h-full auto-rows-fr gap-2 tablet:gap-3", GRID[size])}>
       {players.map((player, i) => {
         const active = i === state.current && state.winner === null
         const retired = !state.active[i]
@@ -467,7 +467,7 @@ export function ClockScoreboard({ state, onSelectPlayer }: BoardProps) {
   const target = state.clockTargets[state.progress[state.current]]
   const between = state.visitDarts.length === 0 && state.winner === null
   // The target is what everyone looks at: with few players it gets most of the space.
-  const cardShare = players.length <= 2 ? "flex-[3]" : players.length <= 4 ? "flex-[2]" : "flex-[1.4]"
+  const cardShare = players.length <= 2 ? "flex-3" : players.length <= 4 ? "flex-2" : "flex-[1.4]"
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-2 tablet:gap-3">
@@ -486,7 +486,7 @@ export function ClockScoreboard({ state, onSelectPlayer }: BoardProps) {
           </p>
         </div>
       </div>
-      <ol className={cn("grid min-h-0 flex-[2] auto-rows-[minmax(0,1fr)] gap-2 tablet:gap-3", CLOCK_GRID[size])}>
+      <ol className={cn("grid min-h-0 flex-2 auto-rows-fr gap-2 tablet:gap-3", CLOCK_GRID[size])}>
         {players.map((player, i) => {
           const active = i === state.current && state.winner === null
           const done = state.progress[i]

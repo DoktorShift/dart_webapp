@@ -65,7 +65,7 @@ export function WalletCard({ info, figures: wanted = false }: { info: WalletInfo
       <div className="flex items-center gap-4">
         <PaymentSignet size="large" />
         <div className="min-w-0">
-          <h2 className="text-xl font-semibold leading-tight [overflow-wrap:anywhere]">{info.alias ?? tx.yourWallet}</h2>
+          <h2 className="text-xl font-semibold leading-tight wrap-anywhere">{info.alias ?? tx.yourWallet}</h2>
           {!wanted && <p className="mt-0.5 text-[0.9375rem] leading-snug text-muted-foreground">{capabilityText(tx, info)}</p>}
         </div>
       </div>

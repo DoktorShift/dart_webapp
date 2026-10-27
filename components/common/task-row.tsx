@@ -10,12 +10,12 @@ export function TaskRow({ label, onClick, disabled, className }: { label: string
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "flex min-h-14 w-full items-center gap-3 rounded-2xl bg-primary/10 px-4 py-3 text-left text-[1.0625rem] font-semibold text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:bg-primary/20 disabled:opacity-60",
+        "flex min-h-14 w-full items-center gap-3 rounded-2xl bg-primary/10 px-4 py-3 text-left text-[1.0625rem] font-semibold text-primary transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring active:bg-primary/20 disabled:opacity-60",
         className,
       )}
     >
       <ListTodo className="h-5 w-5 shrink-0" aria-hidden="true" />
-      <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">{label}</span>
+      <span className="min-w-0 flex-1 wrap-anywhere">{label}</span>
       <ChevronRight className="h-5 w-5 shrink-0" aria-hidden="true" />
     </button>
   )

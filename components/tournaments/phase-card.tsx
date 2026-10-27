@@ -248,7 +248,7 @@ function NextMatchCard({ entry, mine, next, names }: { entry: Entry; mine: strin
   const mySide = m.slots.findIndex((s) => s.participant === mine)
   return (
     <Card title={x.nextMatch} tone={next.state === "ready" && board ? "success" : undefined}>
-      <p className="text-[1.0625rem] leading-snug [overflow-wrap:anywhere]">
+      <p className="text-[1.0625rem] leading-snug wrap-anywhere">
         <span className="font-semibold">{opponent ? x.versus(names.nameOf(opponent)) : x.tbd}</span>
         <span className="text-muted-foreground"> · {round(m)}</span>
       </p>
@@ -267,8 +267,8 @@ function NextMatchCard({ entry, mine, next, names }: { entry: Entry; mine: strin
 function Card({ title, text, tone, problem, secondary, children }: { title: string; text?: string; tone?: "success" | "muted"; problem?: string | null; secondary?: ReactNode; children?: ReactNode }) {
   return (
     <section className={cn("mt-6 rounded-2xl border px-4 py-4", tone === "success" ? "border-success/30 bg-success/10" : tone === "muted" ? "border-border bg-secondary/40" : "border-border bg-card")}>
-      <h2 className="text-xl font-semibold leading-tight [overflow-wrap:anywhere]">{title}</h2>
-      {text && <p className="mt-1 text-[0.9375rem] leading-snug text-muted-foreground [overflow-wrap:anywhere]">{text}</p>}
+      <h2 className="text-xl font-semibold leading-tight wrap-anywhere">{title}</h2>
+      {text && <p className="mt-1 text-[0.9375rem] leading-snug text-muted-foreground wrap-anywhere">{text}</p>}
       {problem && (
         <InlineStatus tone="error" className="mt-3">
           {problem}

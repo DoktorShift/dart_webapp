@@ -75,7 +75,7 @@ function BecomeBoard({ link, problem, onConfirm }: { link: Extract<LinkPayload, 
   return (
     <div className="mt-2 grid gap-4">
       <p className="text-xl font-semibold leading-tight">{tx.board.become}</p>
-      <p className="text-[1.0625rem] leading-snug text-muted-foreground [overflow-wrap:anywhere]">{tx.board.becomeText(name, state?.settings.name ?? "…")}</p>
+      <p className="text-[1.0625rem] leading-snug text-muted-foreground wrap-anywhere">{tx.board.becomeText(name, state?.settings.name ?? "…")}</p>
       {problem && <InlineStatus tone="error">{tx.failed}</InlineStatus>}
       <Button onClick={onConfirm} disabled={!fits} className={PRIMARY}>
         {tx.board.becomeConfirm}
@@ -218,7 +218,7 @@ function CurrentMatch({ entry, record, boardKey, onTournament }: { entry: Entry;
 
   return (
     <div className="pb-4">
-      <p className="mt-2 text-[0.9375rem] text-muted-foreground [overflow-wrap:anywhere]">{state.settings.name}</p>
+      <p className="mt-2 text-[0.9375rem] text-muted-foreground wrap-anywhere">{state.settings.name}</p>
       {entry.waiting > 0 && !reporting && <InlineStatus className="mt-4">{b.unsent(entry.waiting)}</InlineStatus>}
       {over ? (
         <section className="mt-6 rounded-2xl border border-border bg-secondary/40 px-4 py-4">
@@ -238,7 +238,7 @@ function CurrentMatch({ entry, record, boardKey, onTournament }: { entry: Entry;
           <p className="text-[0.8125rem] text-muted-foreground">
             {b.now} · {round(m)} · {tx.matchNumber(m.number)}
           </p>
-          <h2 className="mt-1 grid text-[1.75rem] font-semibold leading-tight [overflow-wrap:anywhere]">
+          <h2 className="mt-1 grid text-[1.75rem] font-semibold leading-tight wrap-anywhere">
             <span>{names.nameOf(m.slots[0].participant)}</span>
             <span>
               <span aria-hidden="true" className="font-normal text-muted-foreground">

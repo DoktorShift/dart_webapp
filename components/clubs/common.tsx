@@ -89,7 +89,7 @@ export function SyncLine({ view, onRefresh }: { view: ClubView; onRefresh?: () =
   const when = view.loadedAt === null ? tx.club.neverLoaded : tx.club.loadedAt(formatClock(t, view.loadedAt))
   return (
     <div className="mt-6 flex items-center justify-between gap-3 px-4 text-[0.8125rem] text-muted-foreground">
-      <p className="[overflow-wrap:anywhere]">
+      <p className="wrap-anywhere">
         {online === false && !loading ? `${tx.club.offline} · ${when}` : when}
         {unsent.waiting > 0 && <span className="block">{tx.club.waiting(unsent.waiting)}</span>}
         {unsent.refused > 0 && <span className="block text-warning">{tx.club.refused(unsent.refused)}</span>}
@@ -113,11 +113,11 @@ export function ClubHeader({ view, subtitle }: { view: ClubView; subtitle?: stri
       <div className="flex items-center gap-4">
         <Avatar seed={view.id} name={info?.name ?? undefined} src={info?.picture} size={64} />
         <div className="min-w-0">
-          <h2 className="text-xl font-semibold leading-tight [overflow-wrap:anywhere]">{info?.name ?? tx.unnamed}</h2>
-          {subtitle && <p className="mt-0.5 text-[0.9375rem] leading-snug text-muted-foreground [overflow-wrap:anywhere]">{subtitle}</p>}
+          <h2 className="text-xl font-semibold leading-tight wrap-anywhere">{info?.name ?? tx.unnamed}</h2>
+          {subtitle && <p className="mt-0.5 text-[0.9375rem] leading-snug text-muted-foreground wrap-anywhere">{subtitle}</p>}
         </div>
       </div>
-      {info?.about && <p className="mt-3 text-[0.9375rem] leading-snug text-muted-foreground [overflow-wrap:anywhere]">{info.about}</p>}
+      {info?.about && <p className="mt-3 text-[0.9375rem] leading-snug text-muted-foreground wrap-anywhere">{info.about}</p>}
     </section>
   )
 }
@@ -171,7 +171,7 @@ export function taskParams(task: ClubTask): Record<string, string> {
 // it so content scrolling under it reads as more, never as cut off.
 export function SheetButton({ onClick, children }: { onClick: () => void; children: ReactNode }) {
   return (
-    <div className="relative shrink-0 pt-2 before:pointer-events-none before:absolute before:inset-x-0 before:-top-4 before:h-4 before:bg-gradient-to-t before:from-background before:to-transparent">
+    <div className="relative shrink-0 pt-2 before:pointer-events-none before:absolute before:inset-x-0 before:-top-4 before:h-4 before:bg-linear-to-t before:from-background before:to-transparent">
       <Button variant="ghost" onClick={onClick} className="h-12 w-full rounded-2xl text-[1.0625rem]">
         {children}
       </Button>

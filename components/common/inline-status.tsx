@@ -19,7 +19,7 @@ export function InlineStatus({ tone = "info", children, className }: { tone?: ke
   return (
     <p role={role} className={cn("flex items-start gap-2 rounded-xl px-3 py-2.5 text-[0.9375rem] leading-snug", toneClass, className)}>
       <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-      <span className="min-w-0 [overflow-wrap:anywhere]">{children}</span>
+      <span className="min-w-0 wrap-anywhere">{children}</span>
     </p>
   )
 }

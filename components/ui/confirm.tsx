@@ -39,7 +39,7 @@ export function Confirm({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="max-w-[calc(100vw-2rem)] rounded-2xl sm:max-w-md">
         <AlertDialogHeader>
-          <AlertDialogTitle className="[overflow-wrap:anywhere]">{title}</AlertDialogTitle>
+          <AlertDialogTitle className="wrap-anywhere">{title}</AlertDialogTitle>
           <AlertDialogDescription>{text}</AlertDialogDescription>
         </AlertDialogHeader>
         {children}

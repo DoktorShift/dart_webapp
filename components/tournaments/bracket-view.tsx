@@ -54,7 +54,7 @@ function Table({ standings, names, me }: { standings: Standings; names: Names; m
           {standings.rows.map((row) => (
             <tr key={row.participant} className={cn("border-t border-border", row.participant === me && "bg-primary/5 font-semibold", row.inactive && "text-muted-foreground")}>
               <td className="py-2 pl-4 pr-2 tabular-nums">{row.rank}</td>
-              <td className="py-2 pr-2 [overflow-wrap:anywhere]">{names.nameOf(row.participant)}</td>
+              <td className="py-2 pr-2 wrap-anywhere">{names.nameOf(row.participant)}</td>
               <td className="py-2 pr-2 text-right tabular-nums">{row.played}</td>
               <td className="py-2 pr-2 text-right tabular-nums">{row.wins}</td>
               <td className="py-2 pr-2 text-right tabular-nums">{row.losses}</td>
@@ -129,7 +129,7 @@ function MatchBox({ m, names, me }: { m: MatchView; names: Names; me: string | n
     const name = s.empty ? tx.tournament.bye : names.nameOf(s.participant)
     const won = m.winner !== null && m.winner === s.participant
     return (
-      <span className={cn("flex items-baseline justify-between gap-2 leading-snug [overflow-wrap:anywhere]", won && "font-semibold", s.participant === null && !s.empty && "text-muted-foreground")}>
+      <span className={cn("flex items-baseline justify-between gap-2 leading-snug wrap-anywhere", won && "font-semibold", s.participant === null && !s.empty && "text-muted-foreground")}>
         <span>{name}</span>
         {m.score && <span className="tabular-nums">{m.score.sets ? m.score.sets[i] : m.score.legs[i]}</span>}
       </span>

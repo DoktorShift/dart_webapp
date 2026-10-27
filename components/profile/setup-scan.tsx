@@ -63,7 +63,7 @@ function FoundPlayer({ address, players, onAdd }: { address: ProfileAddress; pla
       <div className="mt-2 flex items-center gap-4 rounded-2xl border border-border bg-card px-4 py-4">
         <Avatar seed={address.pubkey} name={name || undefined} src={metadata.picture} size={56} />
         <div className="min-w-0">
-          <p className="text-[1.0625rem] font-semibold leading-snug [overflow-wrap:anywhere]">{metadata.name ?? (status === null ? tx.public.loading : tx.unnamed)}</p>
+          <p className="text-[1.0625rem] font-semibold leading-snug wrap-anywhere">{metadata.name ?? (status === null ? tx.public.loading : tx.unnamed)}</p>
           {sameName && <p className="mt-0.5 text-[0.8125rem] leading-snug text-muted-foreground">{s.sameName(shortKey(address.pubkey))}</p>}
         </div>
       </div>

@@ -171,7 +171,7 @@ function Seated({
   const alias = state?.agreement.seats[joined.seat]?.alias ?? `${joined.seat + 1}`
   return (
     <>
-      <p className="mt-2 text-[1.0625rem] font-semibold leading-snug [overflow-wrap:anywhere]">{b.seated(alias)}</p>
+      <p className="mt-2 text-[1.0625rem] font-semibold leading-snug wrap-anywhere">{b.seated(alias)}</p>
       <MatchView followed={followed} compact={state?.result != null} actions={<Verdict joined={joined} followed={followed} />} />
       {refused && <InlineStatus tone="error" className="mt-4">{b.leaveRefused}</InlineStatus>}
       {onLeave && (

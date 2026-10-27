@@ -284,7 +284,7 @@ function CodeLine({ code }: { code: string }) {
         type="button"
         onClick={() => void copy(shown)}
         aria-label={`${shown}. ${copied ? tx.invites.codeCopied : tx.invites.codeCopy}`}
-        className="flex min-h-11 items-center gap-2 rounded-xl px-3 font-display text-[1.75rem] font-semibold tracking-[0.12em] text-foreground transition-colors hover:bg-secondary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:bg-secondary"
+        className="flex min-h-11 items-center gap-2 rounded-xl px-3 font-display text-[1.75rem] font-semibold tracking-[0.12em] text-foreground transition-colors hover:bg-secondary/60 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring active:bg-secondary"
       >
         <span aria-hidden="true">{shown}</span>
         <Copy className="h-5 w-5 text-primary" aria-hidden="true" />

@@ -100,7 +100,7 @@ export function ScreenFrame({
           ref={titleRef}
           tabIndex={-1}
           data-screen-title
-          className={cn(large ? "pt-3 font-display text-4xl font-semibold leading-tight tracking-tight [overflow-wrap:anywhere]" : "sr-only", "outline-none")}
+          className={cn(large ? "pt-3 font-display text-4xl font-semibold leading-tight tracking-tight wrap-anywhere" : "sr-only", "outline-hidden")}
         >
           {title}
         </h1>

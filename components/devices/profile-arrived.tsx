@@ -35,7 +35,7 @@ function Arrived({ pubkey }: { pubkey: string }) {
         <Avatar seed={pubkey} name={name ?? undefined} src={own?.metadata.picture} size={72} />
         <CircleCheck className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-background text-success" aria-hidden="true" />
       </span>
-      <h2 className="mt-4 text-xl xshort:mt-0 font-semibold leading-tight [overflow-wrap:anywhere]">{name ? a.done(name) : a.doneUnnamed}</h2>
+      <h2 className="mt-4 text-xl xshort:mt-0 font-semibold leading-tight wrap-anywhere">{name ? a.done(name) : a.doneUnnamed}</h2>
       <p className="mt-2 text-[1.0625rem] leading-snug text-muted-foreground">{a.doneText}</p>
       <div className="mt-4 w-full empty:hidden">
         <HistoryProgress pubkey={pubkey} games={games.length} />
