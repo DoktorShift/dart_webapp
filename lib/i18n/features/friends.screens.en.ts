@@ -6,10 +6,17 @@ export const friendsScreensEn: Widen<typeof friendsScreensDe> = {
   title: "Friends",
   unnamed: "No name",
 
-  row: {
-    title: "Friends",
+  card: {
+    count: (n) => (n === 0 ? "No friends yet" : n === 1 ? "1 friend" : `${n} friends`),
     requests: (n) => (n === 1 ? "1 request" : `${n} requests`),
+    add: "Add friends",
   },
+  notice: {
+    wants: (name) => `${name} wants to be your friend`,
+    acceptFor: (name) => `Accept ${name}'s request`,
+    more: (n) => (n === 1 ? "1 more request" : `${n} more requests`),
+  },
+  together: (n, date) => (n === 1 ? `1 game together, ${date}` : `${n} games together, last on ${date}`),
 
   sections: { requests: "Requests", friends: "Friends", sent: "Sent" },
   wantsToBe: "Wants to be your friend",

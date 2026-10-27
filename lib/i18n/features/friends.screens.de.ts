@@ -3,11 +3,20 @@ export const friendsScreensDe = {
   title: "Freunde",
   unnamed: "Ohne Namen",
 
-  // The row in the Profile tab.
-  row: {
-    title: "Freunde",
+  // The line on the own profile card, and the count on the Profile tab.
+  card: {
+    count: (n: number) => (n === 0 ? "Noch keine Freunde" : n === 1 ? "1 Freund" : `${n} Freunde`),
     requests: (n: number) => (n === 1 ? "1 Anfrage" : `${n} Anfragen`),
+    add: "Freunde hinzufügen",
   },
+  // Requests on the own profile, under the card.
+  notice: {
+    wants: (name: string) => `${name} möchte mit dir befreundet sein`,
+    acceptFor: (name: string) => `Anfrage von ${name} annehmen`,
+    more: (n: number) => (n === 1 ? "1 weitere Anfrage" : `${n} weitere Anfragen`),
+  },
+  // A friend's row: the games you played together here, and the last of them.
+  together: (n: number, date: string) => (n === 1 ? `1 Spiel zusammen, ${date}` : `${n} Spiele zusammen, zuletzt ${date}`),
 
   // The list: requests to answer, friends, requests on their way.
   sections: { requests: "Anfragen", friends: "Freunde", sent: "Gesendet" },

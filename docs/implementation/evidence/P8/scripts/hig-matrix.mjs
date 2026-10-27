@@ -13,11 +13,11 @@ const SIZES = [SE, PHONE, SE_LANDSCAPE, TABLET, BOARD]
 const LOOKS = [
   {
     locale: "de", dark: false, tabs: { play: "Spielen", ranks: "Rangliste", clubs: "Clubs", tournaments: "Turniere", profile: "Profil" }, resume: /Weiterspielen/,
-    ranks: { device: "Hier gespielt", friends: "Freunde", clubs: "Clubs", tournaments: "Turniere" }, profile: { friends: /^Freunde/, addFriend: "Freund hinzufügen", stats: "Statistik", training: /^Training/, start: "Training starten", startGame: "Spiel starten", visibility: "Sichtbarkeit", history: /^Spielverlauf/, done: "Fertig", back: /^Zurück zu Profil$/, goal: /^Ziel/, goalSave: "Ziel setzen", cancel: "Abbrechen", share: "Training als Bild teilen" },
+    ranks: { device: "Hier gespielt", friends: "Freunde", clubs: "Clubs", tournaments: "Turniere" }, profile: { friends: /Freund/, addFriend: "Freund hinzufügen", stats: "Statistik", training: /^Training/, start: "Training starten", startGame: "Spiel starten", visibility: "Sichtbarkeit", history: /^Spielverlauf/, done: "Fertig", back: /^Zurück zu Profil$/, goal: /^Ziel/, goalSave: "Ziel setzen", cancel: "Abbrechen", share: "Training als Bild teilen" },
   },
   {
     locale: "en", dark: true, tabs: { play: "Play", ranks: "Leaderboard", clubs: "Clubs", tournaments: "Tournaments", profile: "Profile" }, resume: /Continue|Resume/,
-    ranks: { device: "Played here", friends: "Friends", clubs: "Clubs", tournaments: "Tournaments" }, profile: { friends: /^Friends/, addFriend: "Add friend", stats: "Statistics", training: /^Training/, start: "Start training", startGame: "Start game", visibility: "Visibility", history: /^Game history/, done: "Done", back: /^Back to Profile$/, goal: /^Goal/, goalSave: "Set goal", cancel: "Cancel", share: "Share training as a picture" },
+    ranks: { device: "Played here", friends: "Friends", clubs: "Clubs", tournaments: "Tournaments" }, profile: { friends: /friend/i, addFriend: "Add friend", stats: "Statistics", training: /^Training/, start: "Start training", startGame: "Start game", visibility: "Visibility", history: /^Game history/, done: "Done", back: /^Back to Profile$/, goal: /^Goal/, goalSave: "Set goal", cancel: "Cancel", share: "Share training as a picture" },
   },
 ]
 // Words of the protocol that never belong in normal flows (NOSTR-DESIGN-RULES.md).
@@ -71,6 +71,17 @@ export async function runMatrix({ annaState }) {
         note(`${tag} ${name}: no protocol word`, word === null, word ?? "")
       }
       try {
+      // A game left with "Speichern und verlassen" waits above the tab bar on every other tab
+      // (the iOS 26 accessory), one tap from going on.
+      await page.goto(BASE)
+      await seed(page, { ...match(`hig-paused-${tag}`, NAMES.slice(0, 2), [dart(20, 3), dart(19)]), status: "paused" })
+      await tab(page, look.tabs.ranks)
+      await visit("ranks-resume")
+      // On a phone in landscape the accessory steps aside (no room above the tab bar); the game
+      // waits on the Play tab as before.
+      const resumeShown = await isOnScreen(page.getByRole("button", { name: look.resume }))
+      if (size.height > 500) note(`${tag} ranks-resume: the waiting game is one tap away above the tab bar`, resumeShown)
+      else note(`${tag} ranks-resume: in landscape the accessory steps aside`, !resumeShown)
       // The evening left the stake game's result open: start from the Play tab.
       await page.goto(BASE)
       await page.evaluate(() => localStorage.removeItem("dart-scorer.current-match.v1"))
