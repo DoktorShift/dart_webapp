@@ -1,9 +1,10 @@
 "use client"
 
-import { useLayoutEffect, useMemo, useRef, useState, type ComponentType } from "react"
+import { useLayoutEffect, useMemo, useRef, useState } from "react"
 import { motion, useReducedMotion } from "framer-motion"
 import { ChartColumn, CircleEllipsis, History, RotateCcw, Share, Trophy, Undo2, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Menu } from "@/components/ui/menu"
 import { Sheet } from "@/components/ui/sheet"
 import { FitText } from "@/components/fit-text"
 import { SHORT, SPLIT, XSHORT, useMediaQuery } from "@/components/common/use-media-query"
@@ -49,34 +50,6 @@ function headline(state: MatchState, t: Messages) {
     return [t.result.perfect(t.leg.perfect(dartsUsed), by, state.legResults.length > 1 ? legName(t, state, leg) : null)]
   })
   return { title, subtitle, badges }
-}
-
-// A small action under the main buttons. No side padding: in landscape a column is narrow, and
-// the label must stay one line, never broken inside a word ("Aufnahmen" at 568x320).
-function SmallAction({
-  icon: Icon,
-  label,
-  onClick,
-  ariaLabel,
-}: {
-  icon: ComponentType<{ className?: string }>
-  label: string
-  onClick: () => void
-  ariaLabel?: string
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={ariaLabel}
-      className="flex min-h-12 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl text-muted-foreground transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring active:bg-secondary xshort:min-h-11"
-    >
-      <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
-      <FitText minScale={0.75} className="w-full text-center text-[0.75rem] font-medium">
-        {label}
-      </FitText>
-    </button>
-  )
 }
 
 // How many of the areas' pieces ("result.actions", lib/shell/registry.ts) show something for
@@ -249,18 +222,10 @@ export function MatchResult({ state, match, onRematch, onNewGame, onHome, onLead
             <RotateCcw className="h-5 w-5" aria-hidden="true" />
             {t.result.rematch}
           </Button>
-          <Button variant="secondary" onClick={onNewGame} className="mt-2 h-12 w-full gap-2 rounded-2xl text-[1.0625rem] xshort:h-11">
-            <Users className="h-5 w-5" aria-hidden="true" />
-            {t.result.newGame}
-          </Button>
+
         </>
       )}
-      <div className="mt-1 grid grid-cols-4 gap-1">
-        <SmallAction icon={Share} label={t.result.share} onClick={share} />
-        <SmallAction icon={ChartColumn} label={t.result.allStats} onClick={() => setStatsOpen(true)} />
-        <SmallAction icon={History} label={t.result.visits} ariaLabel={t.result.visitsLabel} onClick={onReview} />
-        <SmallAction icon={Trophy} label={t.result.leaderboard} ariaLabel={t.nav.leaderboard} onClick={onLeaderboard} />
-      </div>
+
     </div>
   )
 
@@ -275,6 +240,13 @@ export function MatchResult({ state, match, onRematch, onNewGame, onHome, onLead
             {t.result.undoDart}
           </Button>
           {xshort && <BarPieces match={finished} only={only} />}
+          <Menu icon={CircleEllipsis} label={t.result.more} items={[
+            ...(!primary ? [{ id: "new", label: t.result.newGame, icon: Users, onSelect: onNewGame }] : []),
+            { id: "share", label: t.result.share, icon: Share, onSelect: share },
+            { id: "stats", label: t.result.allStats, icon: ChartColumn, onSelect: () => setStatsOpen(true) },
+            { id: "visits", label: t.result.visits, icon: History, onSelect: onReview },
+            { id: "leaderboard", label: t.result.leaderboard, icon: Trophy, onSelect: onLeaderboard },
+          ]} />
           <Button variant="ghost" onClick={onHome} className="-mr-3 h-11 px-3 text-[1.0625rem] font-semibold text-primary">
             {t.common.done}
           </Button>
