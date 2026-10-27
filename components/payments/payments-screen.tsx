@@ -1,65 +1,84 @@
 "use client"
 
 import { useState } from "react"
-import { Confirm } from "@/components/ui/confirm"
+import { ArrowDownLeft, ArrowUpRight, Settings } from "lucide-react"
+import { InlineStatus } from "@/components/common/inline-status"
 import { Button } from "@/components/ui/button"
 import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
 import { Sheet, SheetBody } from "@/components/ui/sheet"
+import { NavBarItems, NavIconButton } from "@/components/nav/nav-bar-items"
 import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
-import { EntryOutcome } from "@/components/payments/entry-outcome"
-import { EntryRow, entryTitle } from "@/components/payments/entry-status"
-import { PayFlow } from "@/components/payments/pay-flow"
+import { EntryDetail } from "@/components/payments/entry-detail"
+import { groupByDay, useEntryGames } from "@/components/payments/entry-game"
+import { EntryRow, entryLabel, entryTitle } from "@/components/payments/entry-status"
+import { LearnMore } from "@/components/payments/learn-more"
 import { ReceiveFlow } from "@/components/payments/receive-flow"
 import { PAYMENT_SCREENS } from "@/components/payments/screens"
-import { LearnMore } from "@/components/payments/learn-more"
+import { SendFlow } from "@/components/payments/send-flow"
 import { PaymentSignet } from "@/components/payments/signet"
-import { WalletCard, WalletRights } from "@/components/payments/wallet-details"
+import { WalletCard } from "@/components/payments/wallet-details"
 import { PAYMENTS_TEXTS } from "@/lib/i18n/features/payments.screens"
 import { useJournal, useWallet } from "@/lib/payments/hooks"
 import { actions } from "@/lib/payments/journal"
-import { capabilities, removeWallet } from "@/lib/payments/wallet"
+import { capabilities } from "@/lib/payments/wallet"
 
-// Profil › Zahlungen: the connected wallet (what it allows, its balance and limit as far as it
-// reports them), receiving and paying an invoice, the payments made on this device, the technical
-// details under "Erweitert", and "Verbindung entfernen". Without a wallet: what payments are for
-// and "Wallet verbinden"; playing never needs one.
+// Profil › Zahlungen (docs/ux/zahlungen-vorschlag.html): the wallet with its balance, "Senden"
+// and "Empfangen", and the payments made on this device, each with its game, by day. Settings
+// (rights, currency, the connection) sit behind the gear. Without a wallet: what payments are
+// for and "Wallet verbinden"; playing never needs one. One sheet at a time.
 
-// How many payments the list shows; older ones stay in the journal.
-const HISTORY = 20
+// How many payments the home shows; the rest under "Alle Zahlungen".
+const RECENT = 8
 
-type Open = { kind: "receive"; action: string } | { kind: "pay"; action: string } | { kind: "entry"; id: string }
+type Open = { kind: "send" } | { kind: "receive"; action: string } | { kind: "entry"; id: string }
 
 export default function PaymentsScreen() {
   const t = useT()
   const nav = useNav()
   const p = useAreaT(PAYMENTS_TEXTS)
-  const w = p.wallet
   const wallet = useWallet()
   const journal = useJournal()
+  const { game, day } = useEntryGames()
   const [open, setOpen] = useState<Open | null>(null)
   const [helpOpen, setHelpOpen] = useState(false)
-  const [confirmRemove, setConfirmRemove] = useState(false)
   if (wallet === undefined || journal === undefined) return null
 
   const can = wallet ? capabilities(wallet) : null
   const close = () => setOpen(null)
   const entry = open?.kind === "entry" ? journal.find((e) => e.id === open.id) : undefined
-  const sheetTitle = open?.kind === "receive" ? p.receive.title : open?.kind === "pay" ? w.payInvoice : entry ? entryTitle(p, entry) : t.payments.title
+  const sheetTitle = open?.kind === "send" ? p.home.send : open?.kind === "receive" ? p.receive.title : entry ? entryTitle(p, entry) : t.payments.title
+  const recent = groupByDay(journal.slice(0, RECENT), day)
 
   return (
     <>
-      {wallet ? (
+      {wallet && (
+        <NavBarItems>
+          <NavIconButton icon={Settings} label={t.payments.settingsTitle} onClick={() => nav.push(PAYMENT_SCREENS.settings)} />
+        </NavBarItems>
+      )}
+      {wallet && can ? (
         <>
-          <WalletCard info={wallet} />
-          <WalletRights info={wallet} figures />
-          {(can?.receive || can?.pay) && (
-            <Group>
-              {can.receive && <ListRow title={w.receiveMoney} onClick={() => setOpen({ kind: "receive", action: actions.single() })} />}
-              {can.pay && <ListRow title={w.payInvoice} onClick={() => setOpen({ kind: "pay", action: actions.single() })} />}
-            </Group>
+          <WalletCard info={wallet} figures />
+          {(can.pay || can.receive) && (
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {can.pay && (
+                <Button variant="secondary" onClick={() => setOpen({ kind: "send" })} className="h-12 gap-2 rounded-xl text-[1.0625rem] font-semibold text-primary">
+                  <ArrowUpRight className="h-5 w-5 shrink-0" aria-hidden="true" />
+                  {p.home.send}
+                </Button>
+              )}
+              {can.receive && (
+                <Button variant="secondary" onClick={() => setOpen({ kind: "receive", action: actions.single() })} className="h-12 gap-2 rounded-xl text-[1.0625rem] font-semibold text-primary">
+                  <ArrowDownLeft className="h-5 w-5 shrink-0" aria-hidden="true" />
+                  {p.home.receive}
+                </Button>
+              )}
+            </div>
           )}
+          {!can.pay && <InlineStatus className="mt-3">{p.wallet.cantPay}</InlineStatus>}
+          {!can.receive && <InlineStatus className="mt-3">{p.wallet.cantReceive}</InlineStatus>}
         </>
       ) : (
         <section className="mt-6 flex flex-col items-center rounded-2xl border border-border bg-card px-4 pb-3 pt-6 text-center">
@@ -75,37 +94,48 @@ export default function PaymentsScreen() {
         </section>
       )}
 
-      <div className="mt-2 px-4">
-        <p className="text-[0.8125rem] leading-snug text-muted-foreground">{p.explain.screen}</p>
-        <div className="-ml-3">
-          <LearnMore />
+      {!wallet && (
+        <div className="mt-2 px-4">
+          <p className="text-[0.8125rem] leading-snug text-muted-foreground">{p.explain.screen}</p>
+          <div className="-ml-3">
+            <LearnMore />
+          </div>
         </div>
-      </div>
-
-      {journal.length > 0 && (
-        <Group title={w.history}>
-          {journal.slice(0, HISTORY).map((item) => (
-            <EntryRow key={item.id} entry={item} onClick={() => setOpen({ kind: "entry", id: item.id })} />
-          ))}
-        </Group>
       )}
 
+      {journal.length > 0
+        ? recent.map((group) => (
+            <Group key={group.label} title={group.label}>
+              {group.entries.map((item) => (
+                <EntryRow key={item.id} entry={item} title={entryLabel(p, item, game(item).text)} onClick={() => setOpen({ kind: "entry", id: item.id })} />
+              ))}
+            </Group>
+          ))
+        : wallet && (
+            <section className="mt-8 rounded-2xl border border-border bg-card px-4 py-5 text-center">
+              <p className="text-[1.0625rem] font-semibold">{p.home.noneYet}</p>
+              <p className="mt-1 text-[0.9375rem] leading-snug text-muted-foreground">{p.home.empty}</p>
+            </section>
+          )}
+      {journal.length > RECENT && (
+        <Group>
+          <ListRow title={p.home.all} onClick={() => nav.push(PAYMENT_SCREENS.history)} />
+        </Group>
+      )}
       {wallet && (
-        <>
-          <Group>
-            <ListRow title={t.payments.advancedTitle} onClick={() => nav.push(PAYMENT_SCREENS.advanced)} />
-          </Group>
-          <Group footer={w.privacy}>
-            <ListRow title={w.remove} destructive onClick={() => setConfirmRemove(true)} />
-          </Group>
-        </>
+        <div className="mt-3 px-4">
+          <p className="text-[0.8125rem] leading-snug text-muted-foreground">{p.explain.screen}</p>
+          <div className="-ml-3">
+            <LearnMore />
+          </div>
+        </div>
       )}
 
       <Sheet open={open !== null} onOpenChange={(next) => !next && close()} title={sheetTitle}>
         <SheetBody>
-          {open?.kind === "receive" && <ReceiveFlow action={open.action} once={false} counterpart={{ name: "" }} amountSats={null} onDone={close} />}
-          {open?.kind === "pay" && <PayFlow action={open.action} once counterpart={{ name: "" }} amountSats={null} route={{ kind: "scan" }} onDone={close} />}
-          {entry && <EntryOutcome entry={entry} onDone={close} />}
+          {open?.kind === "send" && <SendFlow onDone={close} />}
+          {open?.kind === "receive" && <ReceiveFlow action={open.action} once={false} counterpart={{ name: "" }} amount={null} onDone={close} />}
+          {entry && <EntryDetail entry={entry} onDone={close} />}
         </SheetBody>
       </Sheet>
 
@@ -115,16 +145,6 @@ export default function PaymentsScreen() {
           {p.help.ok}
         </Button>
       </Sheet>
-
-      <Confirm
-        open={confirmRemove}
-        onOpenChange={setConfirmRemove}
-        title={w.removeTitle}
-        text={w.removeText}
-        confirm={w.removeConfirm}
-        destructive
-        onConfirm={() => void removeWallet()}
-      />
     </>
   )
 }

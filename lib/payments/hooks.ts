@@ -1,7 +1,6 @@
 "use client"
 
-import { useEffect, useState, useSyncExternalStore } from "react"
-import { exchangeRate } from "@/lib/nostr/wallet"
+import { useSyncExternalStore } from "react"
 import { loadJournal, recoverInterrupted, type PaymentEntry } from "@/lib/payments/journal"
 import { loadWallet, type WalletInfo } from "@/lib/payments/wallet"
 import { returnedConnection, subscribeReturned, type ReturnedConnection } from "@/lib/payments/wallet-return"
@@ -31,20 +30,3 @@ const noReturn = () => null
 // The connection a wallet app sent back ("Wallet-App öffnen"), until it is confirmed or dismissed.
 export const useReturnedConnection = (): ReturnedConnection | null => useSyncExternalStore(subscribeReturned, returnedConnection, noReturn)
 
-// The euro price of a bitcoin and when it was fetched, for "≈ 0,32 €" next to an amount. Null
-// while unknown and when it can't be had: the approximation is then just left out (decision 0001
-// F4). The amount in sats is always what counts.
-export function useEuroRate(): { rate: number; at: number } | null {
-  const [rate, setRate] = useState<{ rate: number; at: number } | null>(null)
-  useEffect(() => {
-    let alive = true
-    exchangeRate("eur").then(
-      (value) => alive && setRate(value),
-      () => {},
-    )
-    return () => {
-      alive = false
-    }
-  }, [])
-  return rate
-}

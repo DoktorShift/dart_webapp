@@ -1,0 +1,775 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Zahlungen in BlueLine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&display=swap">
+<style>
+/* Layout: ein ruhiges Dokument mit Telefon-Mockups in Paaren (Ist | Vorschlag); Mockups folgen den
+   Farbtokens der App (app/globals.css), das Dokument selbst einem neutralen Blaugrau. */
+:root{
+  --bg:#f6f7fa; --fg:#121826; --mute:#5b667a; --line:#dde2ea; --card:#ffffff; --accent:#2563eb; --accent-ink:#1d4ed8;
+  --tint:#e8efff; --soft:#eef1f6; --good:#157a4f; --warn:#9a5b00; --bad:#b42318;
+  --m-bg:#f2f2f7; --m-card:#ffffff; --m-line:#dcdce1; --m-ink:#0b1020; --m-mute:#4a5568; --m-blue:#2563eb; --m-tint:#dbe6fd; --m-gray:#e5e5ea; --m-green:#15803d; --m-red:#c81e1e;
+  --display:"Barlow Condensed",ui-sans-serif,system-ui,sans-serif; --body:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Helvetica,Arial,sans-serif; --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0d1117; --fg:#e7ebf2; --mute:#98a3b5; --line:#263041; --card:#141b26; --accent:#5b8dff; --accent-ink:#8fb0ff;
+  --tint:#17233d; --soft:#1a2231; --good:#4ade80; --warn:#fbbf24; --bad:#f87171;
+  --m-bg:#000000; --m-card:#1c1c1e; --m-line:#2c2c2e; --m-ink:#f5f5f7; --m-mute:#a1a1aa; --m-blue:#3b82f6; --m-tint:#1e2a44; --m-gray:#2c2c2e; --m-green:#34d399; --m-red:#f87171;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0d1117; --fg:#e7ebf2; --mute:#98a3b5; --line:#263041; --card:#141b26; --accent:#5b8dff; --accent-ink:#8fb0ff;
+  --tint:#17233d; --soft:#1a2231; --good:#4ade80; --warn:#fbbf24; --bad:#f87171;
+  --m-bg:#000000; --m-card:#1c1c1e; --m-line:#2c2c2e; --m-ink:#f5f5f7; --m-mute:#a1a1aa; --m-blue:#3b82f6; --m-tint:#1e2a44; --m-gray:#2c2c2e; --m-green:#34d399; --m-red:#f87171;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font:16px/1.55 var(--body);padding-block:0 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+a{color:var(--accent-ink)}
+.wrap{max-width:1120px;margin:0 auto}
+header.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:baseline;justify-content:space-between;padding:28px 0 18px;border-bottom:1px solid var(--line)}
+.brand{font-family:var(--display);font-weight:600;font-size:22px;letter-spacing:.2px}
+.meta{font-size:13px;color:var(--mute)}
+h1{font-family:var(--display);font-weight:600;font-size:clamp(34px,5vw,54px);line-height:1.05;margin:34px 0 10px;text-wrap:balance}
+.lead{font-size:18px;color:var(--mute);max-width:62ch;margin:0 0 8px}
+h2{font-family:var(--display);font-weight:600;font-size:30px;line-height:1.1;margin:56px 0 14px;text-wrap:balance;scroll-margin-top:16px}
+h3{font-size:18px;margin:26px 0 8px}
+p{max-width:72ch}
+ul,ol{max-width:72ch;padding-left:22px}
+li{margin:4px 0}
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 0;padding:0;list-style:none;max-width:none}
+.toc a{display:inline-block;padding:7px 12px;border:1px solid var(--line);border-radius:999px;font-size:13px;text-decoration:none;color:var(--fg);background:var(--card)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:22px 0}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.kpi b{display:block;font-family:var(--display);font-size:40px;line-height:1;font-weight:600;font-variant-numeric:tabular-nums}
+.kpi span{font-size:13px;color:var(--mute)}
+.kpi .vs{font-size:13px;color:var(--good);font-weight:600}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);font-weight:600;background:var(--soft)}
+tr:last-child td{border-bottom:0}
+td.n{font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--mute)}
+.sev{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600}
+.sev.h{background:#fde8e6;color:#9f1d13}.sev.m{background:#fff2d6;color:#8a5200}.sev.l{background:var(--soft);color:var(--mute)}
+:root[data-theme="dark"] .sev.h,:root[data-theme="dark"] .sev.m{background:var(--soft)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .sev.h,:root:not([data-theme="light"]) .sev.m{background:var(--soft)}}
+.stage{display:inline-block;min-width:26px;text-align:center;padding:2px 7px;border-radius:7px;font-size:12px;font-weight:700;background:var(--tint);color:var(--accent-ink)}
+code{font:13px var(--mono);background:var(--soft);padding:1px 5px;border-radius:5px}
+blockquote{margin:10px 0;padding:10px 16px;border-left:3px solid var(--accent);background:var(--card);border-radius:0 10px 10px 0;max-width:72ch}
+blockquote cite{display:block;font-size:12.5px;color:var(--mute);margin-top:6px;font-style:normal}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+.box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.box h3{margin-top:0}
+
+/* Vergleichspaare */
+.cmp{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:22px;margin:18px 0 10px}
+.pane{min-width:0}
+.pane .tag{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:7px;margin-bottom:10px}
+.pane.ist .tag{background:var(--soft);color:var(--mute)}
+.pane.neu .tag{background:var(--tint);color:var(--accent-ink)}
+.pane .inner{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:760px){.pane .inner{grid-template-columns:1fr}}
+.notes{font-size:14px;color:var(--fg);margin:0;padding:0;list-style:none}
+.notes li{position:relative;padding-left:28px;margin:0 0 9px}
+.notes li i{position:absolute;left:0;top:1px;width:20px;height:20px;border-radius:50%;font:700 12px/20px var(--body);text-align:center;font-style:normal;color:#fff;background:var(--mute)}
+.pane.neu .notes li i{background:var(--accent)}
+
+/* Telefon-Mockup, 300 px breit, Maßstab ~0,77 zu iPhone-Punkten */
+.ph{width:300px;max-width:100%;height:628px;background:var(--m-bg);color:var(--m-ink);border:1px solid var(--line);border-radius:34px;overflow:hidden;position:relative;display:flex;flex-direction:column;font:12.5px/1.35 var(--body);box-shadow:0 10px 30px -18px rgba(0,0,0,.35)}
+.ph.tall{height:auto;min-height:628px}
+.ph .nav{height:38px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 12px;font-size:13px;color:var(--m-blue)}
+.ph .nav .mid{color:var(--m-ink);font-weight:600}
+.ph .nav .r{display:flex;gap:10px;align-items:center}
+.ph .nav svg{width:22px;height:22px;stroke:var(--m-blue);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ph .nav .pill{background:var(--m-blue);color:#fff;font-weight:600;font-size:12px;padding:4px 10px;border-radius:999px}
+.ph .scr{flex:1;min-height:0;overflow:hidden;padding:0 12px 12px;display:flex;flex-direction:column;gap:10px}
+.ph .scr>*{flex:none}
+.ph .lt{font-family:var(--display);font-weight:600;font-size:28px;line-height:1;margin:2px 0 4px}
+.ph .sec{font-size:11px;color:var(--m-mute);margin:6px 0 -4px 4px}
+.ph .card{background:var(--m-card);border:1px solid var(--m-line);border-radius:12px;overflow:hidden}
+.ph .rw{display:flex;align-items:center;gap:9px;padding:9px 11px;min-height:38px;border-top:1px solid var(--m-line)}
+.ph .rw:first-child{border-top:0}
+.ph .rw .ic{width:22px;height:22px;border-radius:6px;flex:none;background:#0a7aff}
+.ph .rw .ic.g{background:#8e8e93}.ph .rw .ic.gr{background:#2fb553}.ph .rw .ic.o{background:#f08a00}.ph .rw .ic.t{background:#1e9fbf}.ph .rw .ic.p{background:#9b51e0}
+.ph .rw .t{flex:1;min-width:0}
+.ph .rw .t b{display:block;font-weight:600;font-size:13px}
+.ph .rw .t small{display:block;color:var(--m-mute);font-size:11px}
+.ph .rw .v{color:var(--m-mute);font-size:12px;white-space:nowrap}
+.ph .rw .chev{width:7px;height:7px;border-right:1.6px solid var(--m-mute);border-top:1.6px solid var(--m-mute);transform:rotate(45deg);opacity:.6;flex:none}
+.ph .rw.red b{color:var(--m-red);font-weight:500}
+.ph .btn{display:flex;align-items:center;justify-content:center;gap:6px;height:38px;border-radius:10px;font-weight:600;font-size:13px}
+.ph .btn.p{background:var(--m-blue);color:#fff}
+.ph .btn.s{background:var(--m-tint);color:var(--m-blue)}
+.ph .btn.g{color:var(--m-blue);height:32px;font-weight:500}
+.ph .btn.dis{opacity:.45}
+.ph .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ph .seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;background:var(--m-gray);border-radius:9px;padding:2px;font-size:12px;font-weight:600;text-align:center}
+.ph .seg span{padding:6px 2px;border-radius:7px;color:var(--m-mute)}
+.ph .seg span.on{background:var(--m-card);color:var(--m-ink);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.ph .av{width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;color:#fff;font-weight:700;font-size:13px;background:linear-gradient(145deg,#38bdf8,#1d4ed8)}
+.ph .av.lg{width:52px;height:52px;font-size:19px}
+.ph .av.xl{width:68px;height:68px;font-size:26px}
+.ph .av.o{background:linear-gradient(145deg,#fb923c,#c2410c)}
+.ph .av.g{background:linear-gradient(145deg,#4ade80,#15803d)}
+.ph .av.v{background:linear-gradient(145deg,#c084fc,#7e22ce)}
+.ph .av.k{background:linear-gradient(145deg,#94a3b8,#475569)}
+.ph .stack{display:flex;align-items:center}
+.ph .stack .av{width:22px;height:22px;font-size:9px;border:2px solid var(--m-card);margin-left:-7px}
+.ph .stack .av:first-child{margin-left:0}
+.ph .stack small{margin-left:6px;color:var(--m-mute);font-size:11px}
+.ph .chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:600;background:var(--m-gray);color:var(--m-mute)}
+.ph .chip.b{background:var(--m-tint);color:var(--m-blue)}
+.ph .chip.gr{background:#dcfce7;color:#166534}
+.ph .chip.live{background:#fee2e2;color:#991b1b}
+.ph .chip.live::before{content:"";width:6px;height:6px;border-radius:50%;background:#dc2626}
+.ph .hero{padding:12px 11px 10px;display:flex;gap:10px;align-items:center}
+.ph .hero .t b{display:block;font-size:15px;font-weight:700}
+.ph .hero .t small{display:block;color:var(--m-mute);font-size:11px}
+.ph .hero.c{flex-direction:column;text-align:center;gap:6px;padding-top:6px}
+.ph .hero.c .t b{font-family:var(--display);font-size:24px;font-weight:600;line-height:1}
+.ph .acts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.ph .acts div{background:var(--m-card);border:1px solid var(--m-line);border-radius:12px;padding:8px 4px 6px;text-align:center;font-size:10.5px;font-weight:600;color:var(--m-blue)}
+.ph .acts svg{width:20px;height:20px;stroke:var(--m-blue);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;display:block;margin:0 auto 3px}
+.ph .task{display:flex;align-items:center;gap:8px;background:var(--m-tint);color:var(--m-blue);border-radius:12px;padding:10px 11px;font-weight:600;font-size:12.5px}
+.ph .rank{display:flex;gap:12px;align-items:center;padding:10px 11px}
+.ph .rank b{font-family:var(--display);font-size:32px;font-weight:600;line-height:1}
+.ph .status{padding:9px 11px;border-radius:10px;font-size:12px;background:#dcfce7;color:#14532d}
+.ph .status.i{background:var(--m-tint);color:var(--m-blue)}
+.ph .status.e{background:#fee2e2;color:#7f1d1d}
+.ph .field{background:var(--m-card);border:1px solid var(--m-line);border-radius:10px;padding:9px 11px;color:var(--m-mute);font-size:13px}
+.ph .fl{font-size:11px;color:var(--m-mute);margin:2px 0 -6px 4px}
+.ph .tabbar{flex:none;height:56px;border-top:1px solid var(--m-line);background:var(--m-card);display:grid;grid-template-columns:repeat(5,1fr);align-items:center;font-size:9.5px;color:var(--m-mute);text-align:center}
+.ph .tabbar .on{color:var(--m-blue)}
+.ph .tabbar svg{width:20px;height:20px;display:block;margin:0 auto 2px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.ph .tabbar.float{position:absolute;left:12px;right:12px;bottom:10px;height:52px;border:1px solid var(--m-line);border-radius:26px;background:color-mix(in srgb,var(--m-card) 78%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 6px 20px -10px rgba(0,0,0,.4)}
+.ph .sheet{position:absolute;left:0;right:0;bottom:0;background:var(--m-bg);border-radius:18px 18px 0 0;padding:8px 12px 14px;box-shadow:0 -8px 30px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:9px}
+.ph .sheet::before{content:"";width:34px;height:4px;border-radius:2px;background:var(--m-line);margin:0 auto 2px}
+.ph .sheet h4{margin:0;font-size:16px;font-weight:700}
+.ph .sheet p{margin:0;font-size:12px;color:var(--m-mute)}
+.ph .dim{position:absolute;inset:0;background:rgba(0,0,0,.32)}
+.ph .qrcard{background:#fff;border-radius:14px;padding:12px;display:grid;place-items:center;position:relative}
+.ph .qr{width:150px;height:150px;display:block}
+.ph .qrcard .av{position:absolute;border:3px solid #fff}
+.ph .code{font-family:var(--mono);font-size:20px;letter-spacing:.14em;font-weight:600;text-align:center;font-variant-numeric:tabular-nums}
+.ph .cam{background:#0b0f19;border-radius:14px;height:210px;position:relative;color:#cbd5e1;display:grid;place-items:center;font-size:11px}
+.ph .cam::before{content:"";position:absolute;inset:34px 44px;border:2px solid transparent;border-radius:16px;background:
+  linear-gradient(#fff,#fff) top left/26px 2px no-repeat,linear-gradient(#fff,#fff) top left/2px 26px no-repeat,
+  linear-gradient(#fff,#fff) top right/26px 2px no-repeat,linear-gradient(#fff,#fff) top right/2px 26px no-repeat,
+  linear-gradient(#fff,#fff) bottom left/26px 2px no-repeat,linear-gradient(#fff,#fff) bottom left/2px 26px no-repeat,
+  linear-gradient(#fff,#fff) bottom right/26px 2px no-repeat,linear-gradient(#fff,#fff) bottom right/2px 26px no-repeat}
+.ph .cam.small{height:150px}
+.ph .steps{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;font-size:9px;text-align:center;color:var(--m-mute)}
+.ph .steps span{padding-top:5px;border-top:3px solid var(--m-gray)}
+.ph .steps span.done{border-color:var(--m-blue);color:var(--m-blue)}
+.ph .steps span.now{border-color:var(--m-blue);color:var(--m-ink);font-weight:700}
+.ph .match{display:flex;align-items:center;gap:8px;padding:9px 11px;border-top:1px solid var(--m-line)}
+.ph .match:first-child{border-top:0}
+.ph .match .sc{font-family:var(--display);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;min-width:34px;text-align:center}
+.ph .match .n{flex:1;font-size:12.5px;font-weight:600}
+.ph .match small{color:var(--m-mute);font-size:10.5px;display:block;font-weight:400}
+.ph .menu{position:absolute;right:12px;top:40px;background:var(--m-card);border:1px solid var(--m-line);border-radius:12px;box-shadow:0 10px 30px -10px rgba(0,0,0,.4);min-width:180px;overflow:hidden;z-index:2}
+.ph .menu div{padding:9px 12px;font-size:13px;border-top:1px solid var(--m-line);display:flex;justify-content:space-between;align-items:center}
+.ph .menu div:first-child{border-top:0}
+.ph .menu div.red{color:var(--m-red)}
+.ph .menu svg{width:17px;height:17px;stroke:var(--m-ink);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ph .menu div.red svg{stroke:var(--m-red)}
+.ph .caption{font-size:11px;color:var(--m-mute);text-align:center}
+
+/* Flussdiagramm */
+.flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}
+.flow .st{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:14px;position:relative}
+.flow .st b{display:block;font-family:var(--display);font-size:22px;font-weight:600;color:var(--accent-ink);line-height:1;margin-bottom:4px}
+.flow .st small{display:block;color:var(--mute);font-size:12.5px;margin-top:4px}
+.tree{font:13.5px/1.6 var(--mono);background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;overflow-x:auto;white-space:pre;margin:0}
+.tree .x{color:var(--bad);text-decoration:line-through}
+.tree .y{color:var(--good);font-weight:600}
+.tree .k{color:var(--mute)}
+.swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.sw{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;font-size:13px}
+.sw .demo{height:54px;border-radius:9px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:6px}
+footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);font-size:13px;color:var(--mute)}
+.src{font-size:13.5px;columns:2;column-gap:28px;max-width:none}
+@media (max-width:720px){.src{columns:1}}
+.src li{break-inside:avoid}
+.src a,footer code,td code{overflow-wrap:anywhere}
+@media (prefers-reduced-motion:no-preference){.ph .chip.live::before{animation:pulse 1.4s ease-in-out infinite}}
+@keyframes pulse{50%{opacity:.35}}
+
+/* Zusätze für Profil und Rangliste */
+.ph .nav svg{width:22px;height:22px}
+.ph .fig3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:9px 11px 10px;border-top:1px solid var(--m-line)}
+.ph .fig3 div b{display:block;font-family:var(--display);font-size:24px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+.ph .fig3 div small{display:block;color:var(--m-mute);font-size:10.5px;margin-top:3px;line-height:1.2}
+.ph .cap{padding:0 11px 9px;font-size:10.5px;color:var(--m-mute)}
+.ph .spark{display:flex;align-items:flex-end;gap:3px;height:44px}
+.ph .spark i{flex:1;background:var(--m-blue);border-radius:2px 2px 0 0;opacity:.72;min-height:3px}
+.ph .spark i.hi{opacity:1}.ph .spark i.lo{opacity:.4}.ph .spark i.pb{background:#f08a00;opacity:1}
+.ph .spark.big{height:120px;gap:5px}
+.ph .spark.big i{border-radius:3px 3px 0 0}
+.ph .chartbox{position:relative;padding:8px 11px 6px}
+.ph .chartbox .goal{position:absolute;left:11px;right:11px;border-top:1.5px dashed #f08a00;font-size:9.5px;color:#b45309;text-align:right;padding-right:2px}
+.ph .axis{display:flex;justify-content:space-between;font-size:9.5px;color:var(--m-mute);padding:0 11px 8px}
+.ph .trend{font-size:12px;padding:9px 11px 0}
+.ph .trend b{font-weight:700}
+.ph .up{color:var(--m-green)}.ph .dn{color:var(--m-red)}
+.ph .chips{display:flex;gap:6px;flex-wrap:wrap}
+.ph .chip.pick{background:var(--m-card);border:1px solid var(--m-line);color:var(--m-ink);padding:4px 9px;font-size:11.5px}
+.ph .chip.pick::after{content:"";width:5px;height:5px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg);margin:-3px 0 0 3px;opacity:.7}
+.ph .foot{font-size:10.5px;color:var(--m-mute);padding:0 4px;line-height:1.3}
+.ph .lrow{display:flex;align-items:center;gap:9px;padding:8px 11px;min-height:44px;border-top:1px solid var(--m-line)}
+.ph .lrow:first-child{border-top:0}
+.ph .lrow .rk{width:24px;flex:none;font-family:var(--display);font-size:20px;font-weight:600;text-align:center;font-variant-numeric:tabular-nums;color:var(--m-mute)}
+.ph .lrow .rk.g{color:#b8860b}.ph .lrow .rk.s{color:#8e8e93}.ph .lrow .rk.b{color:#b06a2b}
+.ph .lrow .t{flex:1;min-width:0}.ph .lrow .t b{display:block;font-size:13px;font-weight:600}.ph .lrow .t small{display:block;color:var(--m-mute);font-size:11px}
+.ph .lrow .f{text-align:right;font-variant-numeric:tabular-nums;flex:none}
+.ph .lrow .f b{display:block;font-family:var(--display);font-size:21px;font-weight:600;line-height:1}
+.ph .lrow .f small{color:var(--m-mute);font-size:10.5px}
+.ph .lrow.me{background:var(--m-tint)}
+.ph .pin{position:absolute;left:12px;right:12px;bottom:70px;background:var(--m-card);border:1.5px solid var(--m-blue);border-radius:12px;box-shadow:0 6px 20px -10px rgba(0,0,0,.45);overflow:hidden}
+.ph .bars{padding:8px 11px 10px;display:grid;gap:7px}
+.ph .bars .hd{display:grid;grid-template-columns:1fr 1fr;font-size:11.5px;font-weight:700;text-align:center}
+.ph .bars .b{display:grid;grid-template-columns:30px 1fr 1fr 30px;gap:6px;align-items:center;font-size:11px;font-variant-numeric:tabular-nums}
+.ph .bars .b span:first-child{text-align:right}
+.ph .bars .b i{height:7px;border-radius:4px;background:var(--m-gray);position:relative;display:block}
+.ph .bars .b i::after{content:"";position:absolute;top:0;bottom:0;background:#b4b4bb;border-radius:4px;width:var(--w)}
+.ph .bars .b i.l::after{right:0}.ph .bars .b i.r::after{left:0}
+.ph .bars .b i.win::after{background:var(--m-blue)}
+.ph .bars .b small{grid-column:1/-1;text-align:center;color:var(--m-mute);font-size:10px;margin-top:-4px}
+.ph .rw .ic.tl{background:#1e9fbf}
+.ph .hero .chip{flex:none;white-space:nowrap;margin-left:auto}
+.ph .hero .t{flex:1;min-width:0}
+.ph .badges{display:flex;gap:6px;padding:0 11px 9px}
+.ph .badges span{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12px;background:var(--m-tint)}
+.ph .big{font-family:var(--display);font-size:40px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums;padding:6px 11px 0}
+.ph .empty{padding:22px 14px;text-align:center;color:var(--m-mute);font-size:12px}
+.ph .empty b{display:block;color:var(--m-ink);font-size:14px;margin-bottom:3px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin:14px 0}
+.shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:14px 0}
+.shots figure{margin:0;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px}
+.shots img{width:100%;height:auto;border-radius:8px;display:block}
+.shots figcaption{font-size:12px;color:var(--mute);margin-top:6px}
+.defs td b{font-variant-numeric:tabular-nums}
+.yes{color:var(--good);font-weight:700}.no{color:var(--bad);font-weight:700}
+</style>
+<style>
+/* Ergänzungen für diesen Vorschlag: Geldbeträge in den Mockups */
+.ph .wallet{background:linear-gradient(135deg,#1d4ed8,#0ea5e9);color:#fff;border-radius:14px;padding:12px 13px 11px;display:flex;flex-direction:column;gap:2px;position:relative;overflow:hidden}
+.ph .wallet::after{content:"";position:absolute;right:-30px;top:-40px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,.12)}
+.ph .wallet .who{display:flex;align-items:center;gap:6px;font-size:11px;opacity:.9}
+.ph .wallet .fiat{font-family:var(--display);font-weight:600;font-size:34px;line-height:1;margin-top:8px;font-variant-numeric:tabular-nums}
+.ph .wallet .btc{font-size:12.5px;opacity:.92;font-variant-numeric:tabular-nums}
+.ph .wallet .at{font-size:10px;opacity:.7;margin-top:2px}
+.ph .bits{display:inline-flex;align-items:center;gap:3px}
+.ph .bits i{display:inline-grid;place-items:center;width:14px;height:14px;border-radius:50%;background:#f7931a;color:#fff;font:700 9px/1 var(--body);font-style:normal}
+.ph .amt{text-align:center;padding:4px 0 2px}
+.ph .amt b{display:block;font-family:var(--display);font-weight:600;font-size:34px;line-height:1;font-variant-numeric:tabular-nums}
+.ph .amt small{display:block;color:var(--m-mute);font-size:11.5px;margin-top:4px}
+.ph .rw .v{display:flex;flex-direction:column;align-items:flex-end;gap:1px;line-height:1.2}
+.ph .rw .v b{color:var(--m-ink);font-weight:600;font-size:13px;font-variant-numeric:tabular-nums}
+.ph .rw .v b.in{color:var(--m-green)}
+.ph .rw .v small{font-size:10.5px;color:var(--m-mute);font-variant-numeric:tabular-nums}
+.ph .rw .t small.ok{color:var(--m-green)}
+.ph .rw .t small.wait{color:var(--m-blue)}
+.ph .rw .t small.warn{color:#9a5b00}
+.ph .qr{width:150px;height:150px;margin:4px auto;border-radius:10px;background:
+  repeating-linear-gradient(0deg,var(--m-ink) 0 6px,transparent 6px 12px),repeating-linear-gradient(90deg,var(--m-ink) 0 6px,var(--m-card) 6px 12px);opacity:.85}
+.ph .pre{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.ph .pre span{background:var(--m-card);border:1px solid var(--m-line);border-radius:9px;padding:7px 0;text-align:center;font-weight:600;font-size:12.5px}
+.ph .pre span.on{background:var(--m-tint);border-color:var(--m-blue);color:var(--m-blue)}
+.ph .sheet{margin-top:auto;background:var(--m-bg);border-radius:16px 16px 0 0;padding:8px 12px 12px;display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--m-line)}
+.ph .sheet .grab{width:36px;height:4px;border-radius:2px;background:var(--m-line);margin:0 auto 2px}
+.ph .sheet h4{margin:0;font-size:15px}
+.ph .dim{flex:1;background:rgba(0,0,0,.25)}
+.ph .okc{width:40px;height:40px;border-radius:50%;background:#dcfce7;color:#15803d;display:grid;place-items:center;margin:0 auto;font-weight:700;font-size:18px}
+.ph .ttl{text-align:center;font-weight:700;font-size:16px}
+.ph .sub{text-align:center;color:var(--m-mute);font-size:11.5px}
+.ph .gear{width:22px;height:22px;border-radius:50%;border:1.6px solid var(--m-blue);display:grid;place-items:center;font-size:11px;color:var(--m-blue)}
+.rule{border-top:1px solid var(--line);margin:28px 0 0}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:14px 0}
+.step{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.step h3{margin:6px 0 6px;font-size:17px}
+.step p{font-size:14px;color:var(--mute);margin:0 0 6px}
+.step ul{font-size:13.5px;padding-left:18px;margin:6px 0 0}
+.yes{color:var(--good);font-weight:600}
+.no{color:var(--bad);font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <div class="brand">BlueLine Darts · UX-Vorschlag und Plan</div>
+  <div class="meta">Zahlungen · Zweig <code>ux/zahlungen</code> (geplant) · 26. Oktober 2026 · Vorschlag, noch nicht gebaut</div>
+</header>
+
+<h1>Zahlungen: der Geldbeutel fürs Spiel, in Euro und in Bitcoin</h1>
+<p class="lead">Die Wallet-Anbindung funktioniert. Was fehlt, ist das Gefühl, einen Geldbeutel in der Hand zu haben: ein Blick auf den Stand, zwei Knöpfe für Senden und Empfangen, und bei jeder Zahlung die Antwort auf „wofür war das?“ mit einem Tipp zum Spiel. Beträge stehen zuerst in Euro, darunter in Bitcoin (₿). Das Wort „sats“ kommt nicht mehr vor.</p>
+<ul class="toc">
+  <li><a href="#kurz">Kurzfassung</a></li>
+  <li><a href="#befunde">Befunde</a></li>
+  <li><a href="#prinzipien">HIG und Recherche</a></li>
+  <li><a href="#geld">Beträge: Euro und ₿</a></li>
+  <li><a href="#orte">Die Orte in der App</a></li>
+  <li><a href="#technik">Unter der Haube</a></li>
+  <li><a href="#stufen">Stufen und Nachweis</a></li>
+  <li><a href="#leer">Leerzustände und Fehler</a></li>
+  <li><a href="#entscheidungen">Entscheidungen</a></li>
+  <li><a href="#quellen">Quellen</a></li>
+</ul>
+
+<div class="kpis">
+  <div class="kpi"><b>46</b><span>Stellen „sats“ in 13 Dateien des Zahlungsbereichs, dazu ein Test, der „1 sat, 1.000 sats“ festschreibt</span></div>
+  <div class="kpi"><b>1</b><span>Stelle mit Euro-Betrag (nur die Bezahl-Prüfung); Empfangen, Einsatz, Ergebnis und Liste zeigen keinen</span></div>
+  <div class="kpi"><b>49</b><span>Tests des Zahlungsbereichs grün (Journal, Einsatz, Texte, Wallet, Zap); nichts davon wird angefasst</span></div>
+  <div class="kpi"><b>0</b><span>Backend, wie bisher: Kurs über nostr-core, alles andere bleibt auf dem Gerät und zwischen den Wallets</span></div>
+</div>
+
+<h2 id="kurz">Kurzfassung</h2>
+<div class="grid2">
+  <div class="box"><h3>Was heute stört</h3>
+    <ul class="notes">
+      <li><i>1</i>„Zahlungen“ ist eine Einstellungsseite: Rechte, Guthaben als Listenzeile, zwei Listenzeilen „Geld empfangen“ und „Zahlungscode scannen“. Nichts sagt auf einen Blick, wie viel Geld da ist.</li>
+      <li><i>2</i>Alle Beträge heißen „sats“. Wer Bitcoin nicht kennt, weiß bei „500 sats“ nicht, ob das 5 Cent oder 50 Euro sind. Der Euro steht nur in einem einzigen Fenster, klein, ohne Einheit daneben.</li>
+      <li><i>3</i>Die Liste „Letzte Zahlungen“ sagt „An Ben · Bezahlt · 500 sats“, aber nicht, dass das der Einsatz vom 501 am Samstag war, und es gibt keinen Weg zum Spiel. Umgekehrt zeigt ein gespeichertes Spiel seine Zahlung nicht.</li>
+      <li><i>4</i>Senden geht nur per Scan oder vom Ergebnis aus. Wer Ben vom letzten Spiel noch etwas schuldet, muss Ben bitten, einen Code zu zeigen.</li>
+      <li><i>5</i>Die Vorgaben 100 · 500 · 1.000 · 5.000 sind Bitcoin-Beträge; in Euro sind das heute 6 Cent bis 3 Euro, morgen etwas anderes. Ein Einsatz „5 Euro“ lässt sich nicht einstellen.</li>
+    </ul>
+  </div>
+  <div class="box"><h3>Was der Vorschlag ändert</h3>
+    <ul class="notes">
+      <li><i>1</i><b>Eine Wallet-Karte oben</b> wie bei Apple Cash: Name der Wallet mit dem Bitcoin-Zeichen, Stand groß in Euro, darunter in ₿, mit der Zeit des Kurses. Darunter zwei Knöpfe: Senden, Empfangen.</li>
+      <li><i>2</i><b>Euro zuerst, Bitcoin zweit, überall.</b> „5,00 €“ groß, „7.950 ₿“ darunter. In Sätzen, Knöpfen, Listen und auf der Ergebnisseite. Das Wort „sats“ verschwindet aus allen Texten; ein Test hält das fest.</li>
+      <li><i>3</i><b>Jede Zahlung kennt ihr Spiel.</b> Die Liste sagt „Einsatz · 501 gegen Ben“, das Detail hat eine Zeile „Spiel“, die das gespeicherte Spiel öffnet; das Spiel zeigt seine Zahlung.</li>
+      <li><i>4</i><b>Senden an Menschen,</b> nicht an Codes: zuerst Freunde und „Zuletzt gespielt mit“, dann ein Betrag in Euro, dann die Prüfung. Scannen bleibt als Weg für alle anderen.</li>
+      <li><i>5</i><b>Beträge in Euro wählen:</b> 1 · 2 · 5 · 10 € oder ein eigener Betrag; die App rechnet in ganze Bitcoin-Einheiten um und zeigt beides. Bezahlt wird der Bitcoin-Betrag, das steht dabei.</li>
+      <li><i>6</i><b>Technik bleibt:</b> Journal, Sperren, „nie zweimal zahlen“, Wallet-Verbindung, Zaps, Einsatzregeln, Protokoll. Der Umbau ist Oberfläche, Texte und eine kleine Geld-Schicht.</li>
+    </ul>
+  </div>
+</div>
+
+<h2 id="befunde">Befunde am Ist-Stand: Konformität und Wartbarkeit</h2>
+<p>Gelesen wurden alle Dateien unter <code>components/payments</code> (19), <code>lib/payments</code> (9), <code>lib/nostr/wallet.ts</code>, die Texte, die Protokollfamilie <code>payment-request.md</code>, Entscheidung 0001 (F4) und der Plan („Direkte Zahlungen und vereinbarte Einsätze“). Die 49 Tests des Bereichs laufen grün. Technisch ist der Bereich in Ordnung; die Befunde betreffen Sprache, Anordnung und Wiederholung.</p>
+<div class="tbl"><table>
+<thead><tr><th>Nr.</th><th>Befund</th><th>Gewicht</th><th>Was der Plan daraus macht</th></tr></thead>
+<tbody>
+<tr><td class="n">B1</td><td>Einheit „sats“ an 46 Stellen in 13 Dateien; <code>t.payments.sats()</code> im Startkatalog, <code>format.sats()</code>, <code>unit: "sats"</code>, Platzhalter „Betrag in sats“, Lernkarte „Was sind sats?“. Der Test „one sat, many sats“ schreibt die Form fest.</td><td><span class="sev h">hoch</span></td><td>Eine Geld-Schicht <code>lib/payments/money.ts</code> ersetzt <code>format.ts</code>: <code>fiat()</code>, <code>bitcoin()</code>, <code>both()</code>. Texte bekommen fertige Beträge, nie Einheiten. Die Textprüfung verbietet zusätzlich <code>sats?</code> und <code>satoshi</code>.</td></tr>
+<tr><td class="n">B2</td><td>Euro nur in <code>pay-flow.tsx</code> (eine Zeile), fest auf EUR, Kurs bei jedem Öffnen des Blatts neu geholt (nostr-core hält ihn 60 s im Speicher), kein gemerkter letzter Kurs, keine Anzeige ohne Netz. Empfangen, Einsatz, Ergebniszeile, Liste und Guthaben zeigen keinen Euro.</td><td><span class="sev h">hoch</span></td><td><code>lib/payments/rate.ts</code>: ein Kurs pro Währung, höchstens einmal pro Minute und nur, solange ein Zahlungsbildschirm sichtbar ist; der letzte Kurs liegt im Gerätespeicher mit Zeit, so zeigt die Liste auch ohne Netz „≈ 3,10 €, Kurs von 18:40“. Ein Hook <code>useMoney()</code> für alle Bildschirme.</td></tr>
+<tr><td class="n">B3</td><td>Kursquelle: <code>getExchangeRate</code> von nostr-core fragt CoinGecko (öffentlich, ohne Schlüssel, 30 Anfragen pro Minute). Die CSP erlaubt es (<code>connect-src https:</code>). Jede Abfrage nennt dem Dienst die IP-Adresse; der Hinweistext erwähnt es nicht.</td><td><span class="sev m">mittel</span></td><td>Quelle bleibt nostr-core (Regel). Abfrage nur bei Nutzung des Bereichs (die Schranke <code>gate.tsx</code> gibt es schon), ein Satz dazu unter „Mehr erfahren“ und im Datenschutztext. Wahl der Quelle: E39.</td></tr>
+<tr><td class="n">B4</td><td>Die Startseite ist eine Rechteliste (Bezahlen · Möglich, Empfangen · Möglich, Guthaben, Vom Limit übrig), danach zwei Listenzeilen als Aktionen. Kein Stand oben, keine Primäraktion. Apple legt bei Apple Cash den Stand in die Karte und „Senden oder Anfordern“ direkt darunter.</td><td><span class="sev h">hoch</span></td><td>Wallet-Karte mit Stand, zwei Knöpfe, Liste nach Tagen; Rechte, Limit, Währung, Erweitert und Entfernen wandern in „Einstellungen“ (Zahnrad oben rechts), wie unter „Orte“ gezeigt.</td></tr>
+<tr><td class="n">B5</td><td>Einträge im Journal tragen nur <code>action</code> („stake:&lt;spiel&gt;“, „pay:&lt;spiel&gt;:&lt;spieler&gt;“, „receive:&lt;spiel&gt;“, „congratulate:&lt;spiel&gt;:&lt;profil&gt;“). Der Spielbezug ist da, aber nur als Wissen über die Zeichenkette; keine Stelle liest ihn zurück.</td><td><span class="sev m">mittel</span></td><td><code>lib/payments/actions.ts</code>: <code>matchOf(action)</code> und <code>kindOf(action)</code> lesen den Bezug; kein neues Feld, keine Migration. Liste und Detail holen das Spiel aus dem Archiv, das Spiel seine Zahlungen aus dem Journal.</td></tr>
+<tr><td class="n">B6</td><td>Die Liste zeigt höchstens 20 Zahlungen (<code>HISTORY</code>), ohne Weg zu älteren; Zahlungen eines Spiels erscheinen in der Liste, nicht am Spiel.</td><td><span class="sev l">niedrig</span></td><td>Gruppen nach Tag, „Alle Zahlungen“ als eigener Bildschirm; am gespeicherten Spiel eine Zeile aus einem neuen Steckplatz <code>match.rows</code>.</td></tr>
+<tr><td class="n">B7</td><td>Vorgaben 100 · 500 · 1.000 · 5.000 und Höchstbetrag 1.000.000 sind Bitcoin-Beträge; der Betragswähler nimmt nur ganze Bitcoin-Einheiten (sieben Ziffern). „Gratulieren“ hat eigene Vorgaben 21 · 100 · 500 · 1.000.</td><td><span class="sev m">mittel</span></td><td>Wähler in Euro (1 · 2 · 5 · 10 €; Gratulieren 1 · 2 · 5 €), eigener Betrag in Euro mit Umschalter auf ₿. Umrechnung in ganze Einheiten beim Wählen; der Höchstbetrag bleibt in ₿ und wird in Euro gesagt.</td></tr>
+<tr><td class="n">B8</td><td>Wiederholung: die Knopfklasse <code>h-12 w-full rounded-xl text-[1.0625rem]</code> steht 32-mal in 9 Dateien; jedes Blatt baut Abbrechen/Fertig selbst.</td><td><span class="sev l">niedrig</span></td><td><code>SheetActions</code> bekommt <code>primary</code>, <code>secondary</code>, <code>dismiss</code> als Props; die Flüsse geben Beschriftung und Handler, nicht Klassen.</td></tr>
+<tr><td class="n">B9</td><td><code>result-action.tsx</code> (230 Zeilen) hält zwei Blätter (Einsatz, frei) mit demselben Rahmen: Sheet, Ursprung für den Wallet-Rücksprung, Zurücksetzen beim Schließen.</td><td><span class="sev l">niedrig</span></td><td>Ein Hook <code>useResultSheet(match)</code> für Rahmen und Rücksprung; die beiden Blätter werden kürzer, ihr Verhalten bleibt.</td></tr>
+<tr><td class="n">B10</td><td>Journal, Sperren, Wiederanlauf, „Status prüfen“ statt erneut zahlen, „In deiner Wallet nachgesehen“, Zap-Beleg getrennt von „bezahlt“, Verbindung nur versiegelt auf dem Gerät: entspricht Plan und Entscheidung 0002 §8.</td><td><span class="sev l">in Ordnung</span></td><td>Bleibt unverändert. Kein Test wird geändert, nur ergänzt.</td></tr>
+<tr><td class="n">B11</td><td>Texte: keine Protokollwörter außerhalb „Erweitert“ (Test vorhanden), du-Form, Status nie nur in Farbe. „Zahlungscode scannen“ als Aktion ist sperrig für den Hauptweg.</td><td><span class="sev l">niedrig</span></td><td>Hauptweg heißt „Senden“; „Zahlungscode scannen“ bleibt als Weg innerhalb von Senden.</td></tr>
+</tbody></table></div>
+
+<h2 id="prinzipien">Prinzipien aus HIG und Recherche</h2>
+<div class="cols">
+  <div class="box"><h3>Apple HIG, Wallet und Apple Cash</h3>
+    <blockquote>Keep the pass front uncluttered. Show essential information, like an event date or account balance, in the header so people can see it when the pass is collapsed.<cite>Apple HIG, Wallet</cite></blockquote>
+    <blockquote>Use clear, approachable language, and localize the text you provide. Also, make sure the price you show matches the final price the customer confirmed.<cite>Apple HIG, Wallet, Order tracking</cite></blockquote>
+    <p>Apple Cash in der Wallet-App ist das Vorbild der Startseite: eine Karte mit dem Stand, darunter „Senden oder Anfordern“, dann „Letzte Transaktionen“, jede mit Betrag, Datum, Beteiligten und Status, ein Tipp öffnet die Einzelheiten. Das Apple-Pay-Blatt zeigt vor der Bestätigung Posten, Gebühren und Summe, und nichts wird belastet, bevor die Person bestätigt. Beides deckt sich mit dem, was der Bereich schon tut; der Plan ordnet es nur so an, wie Apple es anordnet.</p>
+  </div>
+  <div class="box"><h3>Bitcoin-Gestaltung: Einheit und Zeichen</h3>
+    <blockquote>Include a fiat value below the bitcoin quantity for maximum clarity.<cite>bitcoin.design, Units and symbols</cite></blockquote>
+    <p>Seit 2025 zeigen Cash App, Wallet of Satoshi, Alby Hub, Bitkit und Squares Kassen ganze Bitcoin-Einheiten mit dem Zeichen ₿ statt „sats“ (Vorschlag BIP 177, Entwurf vom April 2025): aus „15,000 sats“ wird „₿15,000“. Das ist genau die Sprache, die der Eigentümer wünscht: Bitcoin, nicht sats. BlueLine dreht die Reihenfolge, weil die Spieler Euro kennen: Euro groß, ₿ darunter. Der verbindliche Betrag bleibt der in ₿, denn die Wallet zahlt ihn; der Euro-Betrag trägt immer die Zeit seines Kurses.</p>
+    <p>bitcoin.design empfiehlt außerdem, die Einheit in den Einstellungen wählbar zu machen. Deshalb gibt es eine Zeile „Beträge zeigen: Euro zuerst / Bitcoin zuerst“ (E40).</p>
+  </div>
+</div>
+
+<h2 id="geld">Beträge: Euro zuerst, Bitcoin darunter</h2>
+<p>Eine Regel für die ganze App, umgesetzt an einer Stelle (<code>lib/payments/money.ts</code>):</p>
+<div class="tbl"><table>
+<thead><tr><th>Wo</th><th>Deutsch</th><th>Englisch</th><th>Bemerkung</th></tr></thead>
+<tbody>
+<tr><td>Betragsblock (Prüfung, Empfangen, Detail)</td><td><b>5,00 €</b><br>7.950 ₿ · Kurs von 18:40</td><td><b>€5.00</b><br>₿7,950 · rate from 18:40</td><td>Das Zeichen steht, wo die Sprache ihr Währungszeichen hinstellt: im Deutschen hinten mit Abstand, im Englischen vorn.</td></tr>
+<tr><td>Listenzeile</td><td>−3,10 € <small>4.900 ₿</small></td><td>−€3.10 <small>₿4,900</small></td><td>Eingänge mit + in Grün und mit Wort („Erhalten“), nie nur Farbe.</td></tr>
+<tr><td>Satz, Knopf, Ergebniszeile</td><td>5,00 € an Ben zahlen</td><td>Pay €5.00 to Ben</td><td>Im Blatt steht der ₿-Betrag im Block darüber. Form des Knopfs: E37.</td></tr>
+<tr><td>Ohne Kurs (kein Netz, Dienst nicht erreichbar)</td><td><b>7.950 ₿</b><br>Kurs gerade nicht verfügbar</td><td><b>₿7,950</b><br>rate not available right now</td><td>Der Bitcoin-Betrag ist immer da; er ist der echte.</td></tr>
+<tr><td>Alter Kurs (älter als eine Stunde)</td><td>≈ 5,00 € · Kurs von gestern, 22:10</td><td>≈ €5.00 · rate from yesterday, 22:10</td><td>Gemerkter Kurs aus dem Gerätespeicher, als Näherung gekennzeichnet.</td></tr>
+<tr><td>Gebühren</td><td>0,01 € (12 ₿)</td><td>€0.01 (₿12)</td><td>Bruchteile unter einer Einheit werden als „unter 1 ₿“ gesagt.</td></tr>
+<tr><td>Großer Betrag</td><td>1.000.000 ₿ = 0,01 Bitcoin</td><td>₿1,000,000 = 0.01 bitcoin</td><td>Nur in „Mehr erfahren“: „100.000.000 ₿ sind ein ganzer Bitcoin.“</td></tr>
+</tbody></table></div>
+<ul>
+  <li><b>Wählen in Euro:</b> Vorgaben 1 · 2 · 5 · 10 € und ein eigener Betrag. Beim Wählen wird zum aktuellen Kurs in ganze ₿ gerundet; der ₿-Betrag steht sofort darunter. Ein Umschalter „In Bitcoin eingeben“ öffnet das Feld in ₿ für alle, die es so wollen.</li>
+  <li><b>Was gespeichert wird:</b> wie bisher der ₿-Betrag (ganze Einheiten, Höchstbetrag unverändert). Für den Einsatz zusätzlich der vereinbarte Euro-Betrag mit Währung, damit das Ergebnis „5 € wie vereinbart“ sagt, auch wenn der Kurs sich bis zum Spielende bewegt hat (E36). Die Prüfregel „Betrag = vereinbarter Einsatz“ im Protokoll vergleicht weiter ₿.</li>
+  <li><b>Währung:</b> aus der Region des Geräts (de-DE, de-AT → EUR; de-CH → CHF; en-GB → GBP; en-US → USD), sonst EUR; in den Einstellungen änderbar (E35). nostr-core liefert jede dieser Währungen.</li>
+  <li><b>Kurs:</b> höchstens eine Abfrage pro Minute, nur solange ein Zahlungsbildschirm sichtbar ist, nie für Gäste ohne Zahlungen (die Schranke bleibt). Der letzte Kurs liegt mit Zeit und Währung im Gerätespeicher und ist in keiner Sicherung.</li>
+</ul>
+
+<h2 id="orte">Die Orte in der App</h2>
+
+<h3>Zahlungen: die Startseite</h3>
+<p>Heute eine Rechteliste mit zwei Aktionszeilen (ohne Wallet: die Einführungskarte, links unten als Bild). Der Vorschlag macht daraus den Geldbeutel: Karte mit Stand, zwei Knöpfe, Liste nach Tagen mit Spielbezug. Alles Seltene wandert hinter das Zahnrad. Die Einführungskarte ohne Wallet bleibt, nur ihre Sätze sprechen von Euro und Bitcoin.</p>
+<div class="cmp">
+  <div class="pane ist"><span class="tag">Ist</span>
+    <div class="inner">
+      <div class="ph">
+        <div class="nav"><span>‹ Profil</span><span></span><span></span></div>
+        <div class="scr">
+          <div class="lt">Zahlungen</div>
+          <div class="card"><div class="hero"><span class="bits"><i>₿</i></span><div class="t"><b>Testwallet</b><small>Bezahlen und Empfangen möglich</small></div></div></div>
+          <div class="card">
+            <div class="rw"><div class="t"><b>Bezahlen</b></div><div class="v">Möglich</div></div>
+            <div class="rw"><div class="t"><b>Empfangen</b></div><div class="v">Möglich</div></div>
+            <div class="rw"><div class="t"><b>Guthaben</b></div><div class="v">76.300 sats</div></div>
+            <div class="rw"><div class="t"><b>Vom Limit übrig</b></div><div class="v">80.000 von 100.000 sats</div></div>
+          </div>
+          <div class="sec">Dieses Limit setzt deine Wallet für BlueLine durch.</div>
+          <div class="card">
+            <div class="rw"><div class="t"><b>Geld empfangen</b></div><span class="chev"></span></div>
+            <div class="rw"><div class="t"><b>Zahlungscode scannen</b></div><span class="chev"></span></div>
+          </div>
+          <div class="sec">Letzte Zahlungen</div>
+          <div class="card">
+            <div class="rw"><div class="t"><b>An Ben</b><small class="ok">✓ Bezahlt</small></div><div class="v">500 sats</div></div>
+            <div class="rw"><div class="t"><b>Von Anna</b><small class="ok">✓ Erhalten</small></div><div class="v">1.000 sats</div></div>
+          </div>
+          <div class="card">
+            <div class="rw"><div class="t"><b>Erweitert</b></div><span class="chev"></span></div>
+            <div class="rw red"><div class="t"><b>Verbindung entfernen</b></div></div>
+          </div>
+        </div>
+        <div class="tabbar"><span>Spielen</span><span>Rangliste</span><span>Clubs</span><span>Turniere</span><span class="on">Profil</span></div>
+      </div>
+      <ul class="notes">
+        <li><i>1</i>Der Stand ist eine Zeile unter zwei Rechtezeilen, in einer Einheit, die nichts sagt.</li>
+        <li><i>2</i>Die Aktionen sehen aus wie Einstellungen.</li>
+        <li><i>3</i>„An Ben · Bezahlt“: wofür, welches Spiel? Kein Weg dorthin.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="pane neu"><span class="tag">Vorschlag</span>
+    <div class="inner">
+      <div class="ph">
+        <div class="nav"><span>‹ Profil</span><span></span><span class="gear">⚙</span></div>
+        <div class="scr">
+          <div class="lt">Zahlungen</div>
+          <div class="wallet">
+            <div class="who"><span class="bits"><i>₿</i></span> Testwallet</div>
+            <div class="fiat">48,20 €</div>
+            <div class="btc">76.300 ₿</div>
+            <div class="at">Kurs von 18:40</div>
+          </div>
+          <div class="two"><div class="btn p">↑ Senden</div><div class="btn s">↓ Empfangen</div></div>
+          <div class="sec">Heute</div>
+          <div class="card">
+            <div class="rw"><div class="av o">B</div><div class="t"><b>Einsatz · 501 gegen Ben</b><small class="ok">✓ Bezahlt · 21:14</small></div><div class="v"><b>−3,10 €</b><small>4.900 ₿</small></div><span class="chev"></span></div>
+            <div class="rw"><div class="av">A</div><div class="t"><b>Glückwunsch von Anna</b><small class="ok">✓ Erhalten · 19:02</small></div><div class="v"><b class="in">+0,63 €</b><small>1.000 ₿</small></div><span class="chev"></span></div>
+          </div>
+          <div class="sec">Samstag, 25. Okt.</div>
+          <div class="card">
+            <div class="rw"><div class="av g">M</div><div class="t"><b>Einsatz · Cricket gegen Mia</b><small class="warn">! Noch nicht bestätigt</small></div><div class="v"><b>−6,33 €</b><small>10.000 ₿</small></div><span class="chev"></span></div>
+            <div class="rw"><div class="t"><b>Alle Zahlungen</b></div><span class="chev"></span></div>
+          </div>
+          <div class="sec">Zahlungen gehen direkt von Wallet zu Wallet. BlueLine bewahrt kein Geld auf. <span style="color:var(--m-blue)">Mehr erfahren</span></div>
+        </div>
+        <div class="tabbar"><span>Spielen</span><span>Rangliste</span><span>Clubs</span><span>Turniere</span><span class="on">Profil</span></div>
+      </div>
+      <ul class="notes">
+        <li><i>1</i>Karte wie bei Apple Cash: Bitcoin-Zeichen, Name, Stand in Euro groß, ₿ darunter, Kurszeit. Ohne <code>get_balance</code> steht dort „Stand zeigt deine Wallet“, nie ein erfundener Wert.</li>
+        <li><i>2</i>Zwei Knöpfe, wie „Senden oder Anfordern“. Die Rechte entscheiden, welche aktiv sind; ein inaktiver sagt beim Tipp, was in der Wallet freizugeben ist.</li>
+        <li><i>3</i>Jede Zeile: Person oder Zweck, Spielbezug, Status in Wort und Zeichen, Betrag in Euro und ₿. Ein Tipp öffnet das Detail.</li>
+        <li><i>4</i>Zahnrad: Rechte, Limit, Währung, Anzeige, Erweitert, Verbindung entfernen.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+<div class="shots">
+  <figure><img src="zahlungen-vorschlag/ist-zahlungen-390.png" alt="Zahlungen heute ohne Wallet: Einführungskarte mit Wallet verbinden" loading="lazy"><figcaption>Ist, ohne Wallet: die Einführungskarte bleibt im Vorschlag, mit neuen Sätzen.</figcaption></figure>
+  <figure><img src="../implementation/evidence/P8/screens/33-result-stake.jpg" alt="Ergebnis mit Zeile 500 sats an Ben zahlen" loading="lazy"><figcaption>Ist, Ergebnis: „500 sats an Ben zahlen“. Vorschlag: „5,00 € an Ben zahlen“.</figcaption></figure>
+  <figure><img src="../implementation/evidence/P8/screens/36-pay-review.jpg" alt="Bezahl-Prüfung mit 500 sats groß und Euro klein" loading="lazy"><figcaption>Ist, Prüfung: sats groß, Euro klein. Vorschlag: Euro groß, ₿ darunter.</figcaption></figure>
+</div>
+
+<h3>Senden: an eine Person, dann der Betrag, dann die Prüfung</h3>
+<p>Apple Cash fragt zuerst „an wen“, dann „wie viel“, dann bestätigt man. Der Bereich hat alle Teile schon: Empfänger mit Empfangsadresse im Profil (<code>lookupRecipient</code>), den Betragswähler, die Prüfung mit Wallet und Gebühren, den Scanner. Neu ist nur die Reihenfolge und das Euro-Feld.</p>
+<div class="cmp">
+  <div class="pane neu"><span class="tag">Vorschlag · Schritt 1 und 2</span>
+    <div class="inner">
+      <div class="ph">
+        <div class="dim"></div>
+        <div class="sheet">
+          <div class="grab"></div>
+          <h4>Senden</h4>
+          <div class="sec">Freunde</div>
+          <div class="card">
+            <div class="rw"><div class="av o">B</div><div class="t"><b>Ben</b><small>Zuletzt Samstag</small></div><span class="chev"></span></div>
+          </div>
+          <div class="sec">Zuletzt gespielt mit</div>
+          <div class="card">
+            <div class="rw"><div class="av">A</div><div class="t"><b>Anna</b><small>Heute</small></div><span class="chev"></span></div>
+            <div class="rw"><div class="av g">M</div><div class="t"><b>Mia</b><small>Keine Empfangsadresse im Profil</small></div></div>
+          </div>
+          <div class="card"><div class="rw"><div class="ic g"></div><div class="t"><b>Zahlungscode scannen</b><small>Die andere Person zeigt ihn aus „Empfangen“</small></div><span class="chev"></span></div></div>
+          <div class="btn g">Abbrechen</div>
+        </div>
+      </div>
+      <ul class="notes">
+        <li><i>1</i>Nur Personen mit Profil und Empfangsadresse sind antippbar; die anderen sagen, warum nicht, und der Scan bleibt.</li>
+        <li><i>2</i>Freunde zuerst (Freunde-Bereich), dann „Zuletzt gespielt mit“ aus dem Archiv, wie beim Hinzufügen eines Freundes.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="pane neu"><span class="tag">Vorschlag · Betrag und Prüfung</span>
+    <div class="inner">
+      <div class="ph">
+        <div class="dim" style="flex:0 0 40px"></div>
+        <div class="sheet">
+          <div class="grab"></div>
+          <h4>An Ben senden</h4>
+          <div class="amt"><b>5,00 €</b><small>7.950 ₿ · Kurs von 18:40</small></div>
+          <div class="pre"><span>1 €</span><span>2 €</span><span class="on">5 €</span><span>10 €</span></div>
+          <div class="field">Anderer Betrag in €</div>
+          <div class="btn g" style="height:24px">In Bitcoin eingeben</div>
+          <div class="card">
+            <div class="rw"><div class="t"><b>Aus</b></div><div class="v">Testwallet</div></div>
+            <div class="rw"><div class="t"><b>Gebühren</b></div><div class="v">Je nach Wallet</div></div>
+          </div>
+          <div class="sec">Das Geld geht direkt aus deiner Wallet an Ben. Bezahlt werden 7.950 ₿.</div>
+          <div class="btn p">An Ben zahlen</div>
+          <div class="btn g">Abbrechen</div>
+        </div>
+      </div>
+      <ul class="notes">
+        <li><i>1</i>Euro groß, ₿ und Kurszeit darunter; der Satz vor dem Knopf nennt den ₿-Betrag, der wirklich bezahlt wird.</li>
+        <li><i>2</i>Vorgaben in Euro; „In Bitcoin eingeben“ dreht das Feld um.</li>
+        <li><i>3</i>Der Knopf nennt die Person; der Betrag steht einmal groß darüber (E37).</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<h3>Empfangen und das Zahlungsdetail</h3>
+<div class="cmp">
+  <div class="pane neu"><span class="tag">Vorschlag · Empfangen</span>
+    <div class="inner">
+      <div class="ph">
+        <div class="dim" style="flex:0 0 40px"></div>
+        <div class="sheet">
+          <div class="grab"></div>
+          <h4>Empfangen</h4>
+          <div class="amt"><b>5,00 €</b><small>7.950 ₿ · Kurs von 18:40</small></div>
+          <div class="qr"></div>
+          <div class="sub">Lass Ben diesen Code mit der eigenen Wallet scannen.</div>
+          <div class="status i">◷ Warte auf Zahlung</div>
+          <div class="two"><div class="btn s">Code kopieren</div><div class="btn s">Teilen</div></div>
+          <div class="btn g">Abbrechen</div>
+        </div>
+      </div>
+      <ul class="notes">
+        <li><i>1</i>Betrag in Euro wählen wie beim Senden; der Code trägt den ₿-Betrag.</li>
+        <li><i>2</i>„Warte auf Zahlung“ wird „Erhalten“, wie heute; ohne Benachrichtigung der Wallet bleibt „In deiner Wallet nachgesehen?“.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="pane neu"><span class="tag">Vorschlag · Zahlung</span>
+    <div class="inner">
+      <div class="ph">
+        <div class="dim" style="flex:0 0 40px"></div>
+        <div class="sheet">
+          <div class="grab"></div>
+          <div class="okc">✓</div>
+          <div class="ttl">Bezahlt</div>
+          <div class="amt"><b>3,10 €</b><small>4.900 ₿ · Kurs von 21:14</small></div>
+          <div class="card">
+            <div class="rw"><div class="t"><b>Spiel</b><small>501 gegen Ben · Sa. 25. Okt. 21:14</small></div><span class="chev"></span></div>
+            <div class="rw"><div class="t"><b>Grund</b></div><div class="v">Einsatz, wie vereinbart</div></div>
+            <div class="rw"><div class="t"><b>An</b></div><div class="v">Ben</div></div>
+            <div class="rw"><div class="t"><b>Aus</b></div><div class="v">Testwallet</div></div>
+            <div class="rw"><div class="t"><b>Gebühren</b></div><div class="v"><b>0,01 €</b><small>12 ₿</small></div></div>
+          </div>
+          <div class="btn p">Fertig</div>
+        </div>
+      </div>
+      <ul class="notes">
+        <li><i>1</i>Die Zeile „Spiel“ öffnet das gespeicherte Spiel (<code>profile.match</code>), wie eine Zeile in der Rangliste.</li>
+        <li><i>2</i>„Grund“ kommt aus der Aktion: Einsatz, Zahlung nach dem Spiel, Glückwunsch, Zahlungscode.</li>
+        <li><i>3</i>Status prüfen, In der Wallet nachgesehen, Erneut versuchen: unverändert, nur mit Euro-Beträgen.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<h3>Das Spiel: Einsatz vorher, Zahlung nachher, Zahlung am gespeicherten Spiel</h3>
+<div class="cmp">
+  <div class="pane ist"><span class="tag">Ist</span>
+    <div class="inner">
+      <div class="ph tall" style="min-height:0;height:auto">
+        <div class="scr" style="padding-top:12px">
+          <div class="sec">Spielvorbereitung</div>
+          <div class="card"><div class="rw"><div class="t"><b>Einsatz</b></div><div class="v">500 sats</div><span class="chev"></span></div></div>
+          <div class="sec">Der Verlierer zahlt dem Sieger.</div>
+          <div class="sec">Ergebnis</div>
+          <div class="card"><div class="rw"><span class="bits"><i>₿</i></span><div class="t"><b>500 sats an Ben zahlen</b></div><span class="chev"></span></div></div>
+          <div class="sec">Gespeichertes Spiel</div>
+          <div class="card"><div class="rw"><div class="t"><b>501 · Ben gewinnt</b><small>Keine Zeile zur Zahlung</small></div></div></div>
+        </div>
+      </div>
+      <ul class="notes">
+        <li><i>1</i>Der Einsatz lässt sich nur in sats wählen.</li>
+        <li><i>2</i>Das gespeicherte Spiel weiß nichts von seiner Zahlung.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="pane neu"><span class="tag">Vorschlag</span>
+    <div class="inner">
+      <div class="ph tall" style="min-height:0;height:auto">
+        <div class="scr" style="padding-top:12px">
+          <div class="sec">Spielvorbereitung</div>
+          <div class="card"><div class="rw"><div class="t"><b>Einsatz</b></div><div class="v"><b>5 €</b><small>7.950 ₿</small></div><span class="chev"></span></div></div>
+          <div class="sec">Der Verlierer zahlt dem Sieger, direkt von Wallet zu Wallet.</div>
+          <div class="sec">Ergebnis</div>
+          <div class="card"><div class="rw"><span class="bits"><i>₿</i></span><div class="t"><b>5,00 € an Ben zahlen</b></div><span class="chev"></span></div></div>
+          <div class="sec">Ergebnis, nach der Zahlung</div>
+          <div class="card"><div class="rw"><span class="bits"><i>₿</i></span><div class="t"><b>5,00 € an Ben bezahlt</b></div><span class="chev"></span></div></div>
+          <div class="sec">Gespeichertes Spiel</div>
+          <div class="card"><div class="rw"><span class="bits"><i>₿</i></span><div class="t"><b>Einsatz</b><small class="ok">✓ 5,00 € an Ben bezahlt · 21:14</small></div><span class="chev"></span></div></div>
+        </div>
+      </div>
+      <ul class="notes">
+        <li><i>1</i>Einsatz in Euro (1 · 2 · 5 · 10 € oder eigener Betrag); gespeichert wird ₿ wie bisher, dazu „5 €“ als Vereinbarung (E36).</li>
+        <li><i>2</i>Die Ergebniszeile sagt den Euro-Betrag; das Blatt zeigt ₿ und Kurs.</li>
+        <li><i>3</i>Neuer Steckplatz <code>match.rows</code> am gespeicherten Spiel: die Zahlung des Spiels, ein Tipp öffnet ihr Detail. So schließt sich der Kreis in beide Richtungen.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<h3>Profil und Einstellungen</h3>
+<div class="cmp">
+  <div class="pane neu"><span class="tag">Vorschlag · Profil</span>
+    <div class="inner">
+      <div class="ph tall" style="min-height:0;height:auto">
+        <div class="scr" style="padding-top:12px">
+          <div class="card"><div class="rw"><div class="ic o"></div><div class="t"><b>Zahlungen</b><small>48,20 € · Testwallet</small></div><span class="chev"></span></div></div>
+          <div class="sec">oder, ohne Wallet</div>
+          <div class="card"><div class="rw"><div class="ic o"></div><div class="t"><b>Zahlungen</b><small>Keine Wallet verbunden</small></div><span class="chev"></span></div></div>
+          <div class="sec">oder, wenn etwas offen ist</div>
+          <div class="card"><div class="rw"><div class="ic o"></div><div class="t"><b>Zahlungen</b><small class="warn">! Eine Zahlung ist noch nicht bestätigt</small></div><span class="chev"></span></div></div>
+        </div>
+      </div>
+      <ul class="notes">
+        <li><i>1</i>Die Zeile zeigt den zuletzt bekannten Stand aus dem Gerätespeicher; sie weckt die Wallet nicht (E38).</li>
+        <li><i>2</i>Der Warnzustand bleibt vor allem anderen.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="pane neu"><span class="tag">Vorschlag · Zahnrad</span>
+    <div class="inner">
+      <div class="ph tall" style="min-height:0;height:auto">
+        <div class="nav"><span>‹ Zahlungen</span><span class="mid">Einstellungen</span><span></span></div>
+        <div class="scr">
+          <div class="card">
+            <div class="rw"><div class="t"><b>Bezahlen</b></div><div class="v">Möglich</div></div>
+            <div class="rw"><div class="t"><b>Empfangen</b></div><div class="v">Möglich</div></div>
+            <div class="rw"><div class="t"><b>Vom Limit übrig</b></div><div class="v"><b>50,55 €</b><small>80.000 von 100.000 ₿</small></div></div>
+          </div>
+          <div class="sec">Dieses Limit setzt deine Wallet für BlueLine durch.</div>
+          <div class="card">
+            <div class="rw"><div class="t"><b>Währung</b></div><div class="v">Euro</div><span class="chev"></span></div>
+            <div class="rw"><div class="t"><b>Beträge zeigen</b></div><div class="v">Euro zuerst</div><span class="chev"></span></div>
+          </div>
+          <div class="card">
+            <div class="rw"><div class="t"><b>Erweitert</b></div><span class="chev"></span></div>
+            <div class="rw red"><div class="t"><b>Verbindung entfernen</b></div></div>
+          </div>
+          <div class="sec">Die Verbindung liegt verschlüsselt nur auf diesem Gerät. Den Kurs fragt BlueLine bei einem öffentlichen Kursdienst ab, ohne Angaben zu dir.</div>
+        </div>
+      </div>
+      <ul class="notes">
+        <li><i>1</i>Alles, was heute die Startseite füllt, ohne dass man es täglich braucht.</li>
+        <li><i>2</i>Währung (E35) und Reihenfolge (E40) als zwei Zeilen, nicht mehr.</li>
+        <li><i>3</i>Der Satz zum Kursdienst gehört hierher und unter „Mehr erfahren“ (B3).</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<h2 id="technik">Unter der Haube: was bleibt, was sich ändert</h2>
+<div class="cols">
+  <div class="box"><h3><span class="yes">Bleibt unverändert</span></h3>
+    <ul>
+      <li><code>lib/payments/journal.ts</code>: Einträge je Zahlungs-Hash, Sperren, Wiederanlauf, „Status prüfen“, „In der Wallet nachgesehen“.</li>
+      <li><code>lib/payments/wallet.ts</code>, <code>wallet-return.ts</code>, <code>lib/nostr/wallet.ts</code>: Verbindung, Rechte, Rücksprung der Wallet-App.</li>
+      <li><code>lib/payments/invoices.ts</code>, <code>recipient.ts</code>, <code>zap.ts</code>: Zahlungscodes, Empfangsadresse, öffentlicher Glückwunsch mit Beleg.</li>
+      <li><code>lib/payments/stake.ts</code>: ganze Einheiten, Höchstbetrag, wer wem zahlt; <code>readStake</code> liest alte Einsätze weiter.</li>
+      <li><code>lib/protocol/payment.ts</code> und die Familie <code>payment-request.md</code>: Prüfung „Betrag = Einsatz“ in ₿.</li>
+      <li><code>connect.tsx</code>, <code>resolve-by-hand.tsx</code>, <code>advanced-screen.tsx</code>, <code>signet.tsx</code> (die Logos, unverändert).</li>
+      <li>Alle 49 Tests. Sie werden ergänzt, nicht umgeschrieben; nur „one sat, many sats“ wird zum Test der neuen Beträge.</li>
+    </ul>
+  </div>
+  <div class="box"><h3>Neu oder umgebaut</h3>
+    <ul>
+      <li><b>Neu</b> <code>lib/payments/money.ts</code>: Beträge in Euro und ₿ je Sprache, Rundung, Euro → ganze ₿. <code>lib/payments/rate.ts</code>: Kurs mit Zeit, Währung, Speicher, Takt. <code>lib/payments/actions.ts</code>: Spiel und Grund aus einer Aktion. <code>lib/payments/settings.ts</code>: Währung, Reihenfolge (kv, nicht im Profil).</li>
+      <li><b>Umgebaut</b> <code>format.ts</code> → <code>use-money.ts</code> (ein Hook für alle Bildschirme). <code>amount-picker.tsx</code>: Euro mit Umschalter. <code>payments-screen.tsx</code>: Karte, Knöpfe, Liste nach Tagen. Neu <code>wallet-card.tsx</code>, <code>history-list.tsx</code>, <code>send-flow.tsx</code> (Empfängerwahl vor <code>PayFlow</code>), <code>settings-screen.tsx</code>, <code>match-row.tsx</code> (Steckplatz <code>match.rows</code>), <code>entry-outcome.tsx</code> (Zeilen Spiel, Grund, Gebühren).</li>
+      <li><b>Texte</b> <code>payments.screens.de/en.ts</code>, <code>payments.de/en.ts</code>: ohne „sats“, mit fertigen Beträgen; Lernkarte „Euro und Bitcoin“ statt „Was sind sats?“.</li>
+      <li><b>Registry</b> <code>lib/shell/registry.ts</code>: Steckplatz <code>match.rows</code> { match }; <code>components/profile/match-screen.tsx</code> rendert ihn.</li>
+      <li><b>Tests</b> <code>payments-money.test.ts</code> (Formen de/en, Rundung, ohne Kurs), <code>payments-rate.test.ts</code> (Takt, Speicher, Alter), <code>payments-actions.test.ts</code>; Textprüfung um <code>sats?|satoshi</code> erweitert.</li>
+    </ul>
+  </div>
+</div>
+<p style="margin-top:14px"><b>nostr-core:</b> <code>getExchangeRate(currency)</code> bleibt die einzige Kursquelle (Entscheidung 0001 F4). Die App legt nur Takt und Gedächtnis darüber. Nichts aus nostr-core wird kopiert oder umgangen; die Wallet-Klasse und die Zahlungsbausteine bleiben wie sie sind.</p>
+
+<h2 id="stufen">Stufen und Nachweis</h2>
+<p>Fünf Stufen, jede für sich prüfbar und zusammen in einem PR von <code>ux/zahlungen</code> nach <code>main</code>. Reihenfolge so, dass die Sprache zuerst stimmt und der Rest darauf baut.</p>
+<div class="steps">
+  <div class="step"><span class="stage">Z1</span><h3>Geld-Sprache</h3><p>money, rate, settings, Texte ohne „sats“, Tests.</p><ul><li>Alle heutigen Bildschirme zeigen Euro zuerst, ₿ darunter.</li><li>Textprüfung grün mit neuer Regel.</li></ul></div>
+  <div class="step"><span class="stage">Z2</span><h3>Startseite</h3><p>Wallet-Karte, Senden/Empfangen, Liste nach Tagen mit Spielbezug, Einstellungen.</p><ul><li>Ohne <code>get_balance</code>: Karte ohne Stand, mit Satz.</li><li>Ohne Netz: letzter Kurs mit Zeit.</li></ul></div>
+  <div class="step"><span class="stage">Z3</span><h3>Senden und Empfangen</h3><p>Empfängerwahl, Euro-Wähler, Prüfung, Code mit Euro.</p><ul><li>Kein Pfad zahlt ohne die Prüfung.</li><li>Scan bleibt an jeder Stelle erreichbar.</li></ul></div>
+  <div class="step"><span class="stage">Z4</span><h3>Spielbezug</h3><p>Einsatz in Euro, Ergebniszeile, Detail mit „Spiel“, Zeile am gespeicherten Spiel, Profilzeile.</p><ul><li>Alte Einsätze (nur ₿) lesen und anzeigen.</li><li>Kreis Spiel → Zahlung → Spiel in beiden Richtungen.</li></ul></div>
+  <div class="step"><span class="stage">Z5</span><h3>Nachweis</h3><p>Darts-Abend Schritte 18, 33, 36 angepasst, neuer Schritt „Zahlungen-Übersicht“; HIG-Matrix mit Zahlungen (de/en, hell/dunkel, SE, Querformat).</p><ul><li>Screenshots in diesem Dokument ersetzt die Mockups.</li><li>Unabhängige Prüfung vor dem PR, Lint und Typen grün.</li></ul></div>
+</div>
+<p>Umfang: etwa 12 geänderte und 9 neue Dateien im Frontend, drei neue Testdateien, keine Änderung an Speicherformat oder Protokoll (nur das optionale Feld der Einsatzvereinbarung aus E36). Nostr-Verkehr und Wallet-Verkehr bleiben gleich; neu ist allein die Kursabfrage im Takt.</p>
+
+<h2 id="leer">Leerzustände und Fehler</h2>
+<div class="tbl"><table>
+<thead><tr><th>Lage</th><th>Was die Person sieht</th></tr></thead>
+<tbody>
+<tr><td>Keine Wallet</td><td>Einführungskarte wie heute: „Verbinde deine Bitcoin-Wallet. Danach bezahlst du nach dem Spiel in Euro, deine Wallet zahlt in Bitcoin.“ Spielen braucht keine.</td></tr>
+<tr><td>Wallet meldet keinen Stand (<code>get_balance</code> fehlt)</td><td>Karte mit Name und Zeichen, statt Stand der Satz „Deinen Stand zeigt deine Wallet.“ Kein erfundener Wert.</td></tr>
+<tr><td>Kein Kurs, noch nie gehabt</td><td>Beträge nur in ₿ mit „Kurs gerade nicht verfügbar“. Alles funktioniert; der Euro-Wähler bietet dann den ₿-Wähler an.</td></tr>
+<tr><td>Kein Kurs, aber ein alter im Speicher</td><td>„≈ 5,00 € · Kurs von gestern, 22:10“. Beim nächsten frischen Kurs ohne Hinweis.</td></tr>
+<tr><td>Keine Zahlungen</td><td>Karte und Knöpfe; darunter ein Satz: „Nach dem Spiel bezahlst du den Einsatz oder gratulierst hier. Jede Zahlung steht dann mit ihrem Spiel in dieser Liste.“</td></tr>
+<tr><td>Zahlung ohne Spiel (Zahlungscode aus Zahlungen)</td><td>Zeile „Zahlungscode“ ohne Spielzeile; der Grund sagt „Gescannter Zahlungscode“.</td></tr>
+<tr><td>Spiel gelöscht, Zahlung bleibt</td><td>Die Zeile „Spiel“ sagt „Spiel nicht mehr auf diesem Gerät“, ohne Tipp.</td></tr>
+<tr><td>Status unbekannt</td><td>Wie heute oben in Liste und Profilzeile als Warnung mit Wort; „Status prüfen“ fragt die Wallet, nie wird erneut gezahlt.</td></tr>
+<tr><td>Kein Senden erlaubt / kein Empfangen erlaubt</td><td>Der Knopf ist sichtbar, aber gedämpft; ein Tipp sagt, was in der Wallet freizugeben ist, und bietet „Neu verbinden“.</td></tr>
+</tbody></table></div>
+
+<h2 id="entscheidungen">Entscheidungen für dich</h2>
+<p>E1 bis E33 sind vergeben; hier geht es mit E34 weiter. Gebaut wird jeweils der Vorschlag, wenn du nichts anderes sagst.</p>
+<div class="tbl"><table>
+<thead><tr><th>Nr.</th><th>Frage</th><th>Vorschlag</th></tr></thead>
+<tbody>
+<tr><td class="n">E34</td><td>Bitcoin-Form: ganze Einheiten mit Zeichen („7.950 ₿“, wie Cash App, Wallet of Satoshi, Alby Hub, Square seit 2025) oder Dezimalbruch („0,0000795 BTC“)?</td><td>Ganze Einheiten mit ₿. Keine Dezimalstellen, kein „sats“, kein „BTC“ im normalen Produkt; „Bitcoin“ als Wort nur in „Mehr erfahren“.</td></tr>
+<tr><td class="n">E35</td><td>Währung: fest Euro, oder aus der Region des Geräts mit Wahl in den Einstellungen (EUR, CHF, GBP, USD)?</td><td>Aus der Region, änderbar. Deutsch ohne Region bleibt Euro.</td></tr>
+<tr><td class="n">E36</td><td>Einsatz: nur ₿ speichern (wie heute) oder zusätzlich den vereinbarten Euro-Betrag, damit das Ergebnis „5 € wie vereinbart“ sagt, auch wenn der Kurs sich bewegt hat?</td><td>Zusätzlich speichern (optionales Feld, alte Spiele lesen weiter). Bezahlt wird der ₿-Betrag; die Protokollprüfung bleibt in ₿.</td></tr>
+<tr><td class="n">E37</td><td>Knopf: „An Ben zahlen“ mit dem Betrag einmal groß darüber (wie Apple Pay: Summe im Blatt, Knopf ohne Zahl) oder „5,00 € an Ben zahlen“?</td><td>„An Ben zahlen“ im Blatt; die Ergebniszeile außerhalb sagt „5,00 € an Ben zahlen“, weil dort kein Block darüber steht.</td></tr>
+<tr><td class="n">E38</td><td>Profilzeile „Zahlungen“: zuletzt bekannter Stand („48,20 € · Testwallet“) oder nur „Wallet verbunden“?</td><td>Zuletzt bekannter Stand aus dem Gerätespeicher, nie durch Wecken der Wallet. Ein Mitschauender sieht ihn; wer das nicht will, schaltet „Stand im Profil zeigen“ aus (eine Zeile mehr in den Einstellungen).</td></tr>
+<tr><td class="n">E39</td><td>Kursquelle: nostr-core (CoinGecko, Regel „nostr-core zuerst“) oder ein anderer öffentlicher Dienst mit allen Währungen in einer Antwort?</td><td>nostr-core. Abfrage nur im Zahlungsbereich, höchstens einmal pro Minute, mit Satz im Datenschutztext.</td></tr>
+<tr><td class="n">E40</td><td>Einstellung „Beträge zeigen: Euro zuerst / Bitcoin zuerst“ anbieten, oder fest Euro zuerst?</td><td>Anbieten, Standard Euro zuerst. Eine Zeile; bitcoin.design empfiehlt die Wahl.</td></tr>
+<tr><td class="n">E41</td><td>Senden: Personen (Freunde, Zuletzt gespielt mit) vor dem Scan, oder nur Scan wie heute?</td><td>Personen zuerst, Scan darunter. Nur wer eine Empfangsadresse im Profil hat, ist antippbar.</td></tr>
+<tr><td class="n">E42</td><td>Gratulieren: Vorgaben 1 · 2 · 5 € (heute 21 · 100 · 500 · 1.000 ₿)?</td><td>1 · 2 · 5 € und eigener Betrag; die „21“ als Bitcoin-Zitat entfällt, weil sie in Euro nichts bedeutet.</td></tr>
+</tbody></table></div>
+
+<h2 id="quellen">Quellen</h2>
+<ul>
+  <li>Apple, Human Interface Guidelines: <a href="https://developer.apple.com/design/human-interface-guidelines/wallet">Wallet</a> (Passes: „Keep the pass front uncluttered“; Order tracking: „make sure the price you show matches the final price the customer confirmed“), <a href="https://developer.apple.com/design/human-interface-guidelines/apple-pay">Apple Pay</a>.</li>
+  <li>Apple Support: <a href="https://support.apple.com/en-us/105009">See your Apple Cash transactions</a> (Karte, „Latest Transactions“, Einzelheiten je Transaktion).</li>
+  <li>bitcoin.design: <a href="https://bitcoin.design/guide/designing-products/units-and-symbols/">Units and symbols</a> (₿-Format, Fiat unter dem Betrag, Einheit in den Einstellungen, Liste der Wallets mit ₿-Format, Stand Januar 2026).</li>
+  <li><a href="https://bips.dev/177/">BIP 177: Redefine Bitcoin's Base Unit</a> (Entwurf, April 2025).</li>
+  <li>nostr-core <code>fiat.ts</code>: <code>getExchangeRate</code> über CoinGecko, 60 s Speicher; BlueLine <a href="../decisions/0001-kein-eigenes-backend.md">Entscheidung 0001, F4</a>; <a href="../implementation/PLAN.md">PLAN.md</a>, „Direkte Zahlungen und vereinbarte Einsätze“; <a href="../protocol/families/payment-request.md">Familie Zahlungsanfrage</a>.</li>
+  <li>Im Code: <code>components/payments/*</code>, <code>lib/payments/*</code>, <code>lib/nostr/wallet.ts</code>, <code>tests/payments-*.test.ts</code> (49 Tests, grün am 26. Oktober 2026).</li>
+</ul>
+</div>
+</body>
+</html>

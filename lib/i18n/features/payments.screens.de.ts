@@ -1,14 +1,19 @@
 // German texts of the payments area, loaded with its screens (see ../index.ts). The English file
-// must have the same shape. Normal views name no protocol (no "NWC", "Zap", "Relay"); technical
-// words appear only in `advanced`, the "Erweitert" screen (tests/payments-texts.test.ts).
+// must have the same shape. Normal views name no protocol (no "NWC", "Zap", "Relay") and no unit
+// word ("sats"): amounts come in formatted, the fiat amount first, the bitcoin amount (₿) second
+// (lib/payments/money.ts). Technical words appear only in `advanced`, the "Erweitert" screen
+// (tests/payments-texts.test.ts).
 export const paymentsScreensDe = {
-  unit: "sats",
-  euro: (amount: string, time: string) => `≈ ${amount} · Kurs von ${time} Uhr`,
-  // Choosing an amount: a few to tap, or any other typed in.
+  // Choosing an amount: a few to tap, or any other typed in, in the currency or in bitcoin.
   amount: {
     custom: "Anderer Betrag",
-    placeholder: "Betrag in sats",
+    inBitcoin: "In Bitcoin eingeben",
+    inCurrency: (currency: string) => `In ${currency} eingeben`,
     tooHigh: (max: string) => `Höchstens ${max}.`,
+  },
+  // The other side of a chosen amount ("≈ 5,00 €"); the rate's time is in the start catalog.
+  rate: {
+    approx: (amount: string) => `≈ ${amount}`,
   },
   // The Bitcoin and wallet-connection marks together, where no text next to them says it.
   signet: "Bitcoin-Wallet",
@@ -17,7 +22,8 @@ export const paymentsScreensDe = {
   // One plain sentence where money moves (nostrdesign.org, zaps), and "Mehr erfahren".
   explain: {
     screen: "Zahlungen gehen direkt von Wallet zu Wallet. BlueLine bewahrt kein Geld auf und zahlt nie ohne deine Bestätigung.",
-    pay: (name: string) => (name ? `Das Geld geht direkt aus deiner Wallet an ${name}. BlueLine bewahrt kein Geld auf.` : "Das Geld geht direkt aus deiner Wallet an die andere Person. BlueLine bewahrt kein Geld auf."),
+    pay: (name: string) => (name ? `Das Geld geht direkt aus deiner Wallet an ${name}.` : "Das Geld geht direkt aus deiner Wallet an die andere Person."),
+    pays: (amount: string) => `Bezahlt werden ${amount}.`,
     receive: "Das Geld kommt direkt in deiner Wallet an. BlueLine bewahrt kein Geld auf.",
   },
   learn: {
@@ -29,12 +35,12 @@ export const paymentsScreensDe = {
         text: "Du bezahlst aus deiner eigenen Bitcoin-Wallet, das Geld kommt in der Wallet der anderen Person an. BlueLine bewahrt kein Geld auf und bezahlt nichts ohne deine Bestätigung.",
       },
       {
-        title: "Was sind sats?",
-        text: "sats sind kleine Bitcoin-Einheiten: 100 Millionen sats sind ein Bitcoin. Verbindlich ist immer der Betrag in sats; der Euro-Betrag ist nur eine Näherung.",
+        title: "Deine Währung und Bitcoin",
+        text: "Beträge siehst du in deiner Währung und in Bitcoin (₿). Bezahlt wird immer der Bitcoin-Betrag; der Betrag in deiner Währung ist eine Näherung zum Kurs der angegebenen Zeit. 100.000.000 ₿ sind ein ganzer Bitcoin. Den Kurs fragt BlueLine bei einem öffentlichen Kursdienst ab, ohne Angaben zu dir.",
       },
       {
         title: "Öffentlich gratulieren",
-        text: "Ein öffentlicher Glückwunsch ist mit Betrag und deinem Profil für alle sichtbar, die das Profil der anderen Person ansehen. Ohne Profil, oder wenn du es ausschaltest, sieht nur die andere Person die Zahlung in ihrer Wallet.",
+        text: "Ein öffentlicher Glückwunsch ist mit Betrag und deinem Profil für alle sichtbar, die das Profil der anderen Person ansehen. Ohne Profil, oder wenn du es ausschaltest, sieht nur die andere Person die Zahlung.",
       },
       {
         title: "Wenn die Bestätigung fehlt",
@@ -42,20 +48,32 @@ export const paymentsScreensDe = {
       },
       {
         title: "Deine Wallet-Verbindung",
-        text: "Sie liegt verschlüsselt nur auf diesem Gerät. Du kannst sie hier entfernen; die Freigabe in deiner Wallet widerrufst du dort.",
+        text: "Sie liegt verschlüsselt nur auf diesem Gerät. Du kannst sie in den Einstellungen entfernen; die Freigabe in deiner Wallet widerrufst du dort.",
       },
     ],
   },
 
-  // Profil › Zahlungen
+  // Profil › Zahlungen: the row, and the home screen.
   row: {
     connected: "Wallet verbunden",
     notConnected: "Keine Wallet verbunden",
     unresolved: "Eine Zahlung ist noch nicht bestätigt",
+    balance: (amount: string, wallet: string) => `${amount} · ${wallet}`,
+  },
+  home: {
+    send: "Senden",
+    receive: "Empfangen",
+    balanceByWallet: "Deinen Stand zeigt deine Wallet.",
+    asOf: (time: string) => `Stand von ${time}`,
+    today: "Heute",
+    yesterday: "Gestern",
+    all: "Alle Zahlungen",
+    empty: "Nach dem Spiel bezahlst du den Einsatz oder gratulierst hier. Jede Zahlung steht dann mit ihrem Spiel in dieser Liste.",
+    noneYet: "Noch keine Zahlungen",
   },
   intro: {
     title: "Direkt zwischen Spielern",
-    text: "Verbinde deine Bitcoin-Wallet. Danach kannst du nach dem Spiel bezahlen und Geld empfangen.",
+    text: "Verbinde deine Bitcoin-Wallet. Danach bezahlst du nach dem Spiel in deiner Währung; deine Wallet zahlt in Bitcoin.",
     noWallet: "Ich habe noch keine Wallet",
   },
   help: {
@@ -78,21 +96,27 @@ export const paymentsScreensDe = {
     loading: "Wird geladen",
     unavailable: "Nicht abrufbar",
     limitLeft: "Vom Limit übrig",
-    // `left` is a bare number, `total` an amount: "80.000 von 100.000 sats".
     limitOf: (left: string, total: string) => `${left} von ${total}`,
     limitFooter: "Dieses Limit setzt deine Wallet für BlueLine durch.",
     noLimitFooter: "Ein Ausgabenlimit für BlueLine legst du in deiner Wallet fest.",
     cantPay: "Damit BlueLine bezahlen kann, erlaube es in deiner Wallet und verbinde sie neu.",
     cantReceive: "Damit du Geld empfangen kannst, erlaube es BlueLine in deiner Wallet und verbinde sie neu.",
-    receiveMoney: "Geld empfangen",
-    payInvoice: "Zahlungscode scannen",
-    history: "Letzte Zahlungen",
     reconnect: "Neu verbinden",
     remove: "Verbindung entfernen",
     removeTitle: "Verbindung entfernen?",
     removeText: "BlueLine vergisst die Verbindung zu deiner Wallet. Die Freigabe in deiner Wallet bleibt bestehen, bis du sie dort widerrufst.",
     removeConfirm: "Entfernen",
     privacy: "Die Verbindung liegt verschlüsselt nur auf diesem Gerät. Sie ist in keiner Sicherung und keinem Export enthalten. Auf einem anderen Gerät verbindest du deine Wallet neu.",
+  },
+  // Zahlungen › Einstellungen
+  settings: {
+    currency: "Währung",
+    order: "Beträge zeigen",
+    currencyFirst: (currency: string) => `${currency} zuerst`,
+    bitcoinFirst: "Bitcoin zuerst",
+    balanceInProfile: "Stand im Profil zeigen",
+    rateNote: "Den Kurs fragt BlueLine bei einem öffentlichen Kursdienst ab, ohne Angaben zu dir.",
+    currencies: { EUR: "Euro", USD: "US-Dollar", CHF: "Schweizer Franken", GBP: "Britisches Pfund" },
   },
 
   // "Wallet verbinden": scan, paste, or open the wallet app on this device.
@@ -137,6 +161,35 @@ export const paymentsScreensDe = {
   to: (name: string) => `An ${name}`,
   from: (name: string) => `Von ${name}`,
 
+  // What a payment in the list was for, and the detail's rows.
+  entry: {
+    stake: (game: string) => `Einsatz · ${game}`,
+    afterGame: (game: string) => `Zahlung · ${game}`,
+    receivedAfter: (game: string) => `Empfangen · ${game}`,
+    congratulateTo: (name: string) => `Glückwunsch an ${name}`,
+    congratulateFrom: (name: string) => `Glückwunsch von ${name}`,
+    code: "Zahlungscode",
+    received: "Empfangen",
+    game: (mode: string, opponent: string) => `${mode} gegen ${opponent}`,
+  },
+  detail: {
+    game: "Spiel",
+    gameGone: "Nicht mehr auf diesem Gerät",
+    reason: "Grund",
+    reasons: {
+      stake: "Einsatz, wie vereinbart",
+      pay: "Zahlung nach dem Spiel",
+      receive: "Empfangen nach dem Spiel",
+      congratulate: "Glückwunsch",
+      single: "Zahlungscode",
+    },
+    to: "An",
+    from: "Von",
+    wallet: "Wallet",
+    fees: "Gebühren",
+    time: "Zeit",
+  },
+
   // Why the wallet couldn't do it.
   problem: {
     invalid: "Das ist keine gültige Wallet-Verbindung. Kopiere sie in deiner Wallet noch einmal.",
@@ -153,8 +206,8 @@ export const paymentsScreensDe = {
   },
   // Why a scanned payment code or a receiving address can't be paid.
   invoice: {
-    invalid: "Das ist kein Zahlungscode. Lass dir den Code aus „Geld empfangen“ zeigen.",
-    amount: (amount: string) => `Dieser Zahlungscode ist nicht über ${amount}. Lass dir den richtigen zeigen.`,
+    invalid: "Das ist kein Zahlungscode. Lass dir den Code aus „Empfangen“ zeigen.",
+    amount: (amount: string) => `Dieser Zahlungscode passt nicht zu ${amount}. Lass dir den richtigen zeigen.`,
     expired: "Dieser Zahlungscode ist abgelaufen. Lass dir einen neuen zeigen.",
     description: "Die Empfangsadresse hat einen unpassenden Code geschickt. Es wurde nichts bezahlt. Scanne stattdessen einen Zahlungscode.",
     "no-amount": "Dieser Zahlungscode nennt keinen Betrag. Lass dir einen mit Betrag zeigen.",
@@ -163,13 +216,25 @@ export const paymentsScreensDe = {
     addressAmount: (address: string) => `${address} nimmt diesen Betrag nicht an. Scanne stattdessen einen Zahlungscode.`,
   },
 
+  // Senden: whom, how much, then the review.
+  send: {
+    friends: "Freunde",
+    recent: "Zuletzt gespielt mit",
+    noAddress: "Keine Empfangsadresse im Profil",
+    lastPlayed: (date: string) => `Zuletzt ${date}`,
+    scan: "Zahlungscode scannen",
+    scanHint: "Die andere Person zeigt ihn aus „Empfangen“.",
+    to: (name: string) => `An ${name} senden`,
+    amount: "Betrag",
+  },
+
   // Paying someone, from the review to the outcome.
   pay: {
     findRecipient: "Empfangsadresse wird gesucht",
     noAddress: (name: string) => `${name} hat im Profil keine Empfangsadresse.`,
     profilePartial: (name: string) => `Das Profil von ${name} war nicht vollständig erreichbar.`,
     // `name` is empty for an invoice paid from Zahlungen, whose recipient the app doesn't know.
-    scanIntro: (name: string) => (name ? `Bitte ${name}, „Geld empfangen“ zu öffnen, und scanne den Zahlungscode.` : "Scanne den Zahlungscode oder füge ihn ein."),
+    scanIntro: (name: string) => (name ? `Bitte ${name}, „Empfangen“ zu öffnen, und scanne den Zahlungscode.` : "Scanne den Zahlungscode oder füge ihn ein."),
     scanManual: "Zahlungscode einfügen",
     scanPlaceholder: "Zahlungscode",
     scanInstead: "Stattdessen Zahlungscode scannen",
@@ -177,7 +242,10 @@ export const paymentsScreensDe = {
     fromWallet: "Aus",
     fees: "Gebühren",
     feesUnknown: "Je nach Wallet",
-    confirm: (amount: string, name: string) => (name ? `${amount} an ${name} zahlen` : `${amount} zahlen`),
+    confirm: (name: string) => (name ? `An ${name} zahlen` : "Zahlen"),
+    // Said before the wallet is asked, from what it last reported: nothing fails for a few units.
+    notEnough: (balance: string) => `Dein Guthaben reicht dafür nicht. In deiner Wallet sind ${balance}.`,
+    overLimit: (left: string) => `Dein Limit für BlueLine reicht dafür nicht. Übrig sind ${left}.`,
     // Until the wallet has the payment: the code is asked for (receiving address) or the wallet opened.
     requesting: "Zahlungscode wird angefragt",
     preparing: "Zahlung wird vorbereitet",
@@ -231,7 +299,7 @@ export const paymentsScreensDe = {
 
   // Showing an invoice to be paid.
   receive: {
-    title: "Geld empfangen",
+    title: "Empfangen",
     amount: "Betrag",
     create: "Zahlungscode erstellen",
     creating: "Zahlungscode wird erstellt",
@@ -278,6 +346,8 @@ export const paymentsScreensDe = {
       unknownRow: "Nicht bestätigt",
       waitingRow: "Warte auf Zahlung",
     },
+    // The game's row in the archive ("match.rows").
+    gameRow: "Einsatz",
   },
 
   // Paying without a stake, from a result.
@@ -298,8 +368,8 @@ export const paymentsScreensDe = {
     public: "Öffentlich gratulieren",
     publicHint: (name: string) => `Das Geld geht direkt an ${name}. Dein Glückwunsch ist öffentlich: Wer das Profil von ${name} ansieht, sieht ihn mit Betrag und deinem Profil.`,
     privateHint: (name: string) => `Das Geld geht direkt an ${name}. Nur ${name} sieht die Zahlung in der eigenen Wallet. BlueLine bewahrt kein Geld auf.`,
-    send: (amount: string, name: string) => `${amount} an ${name} senden`,
-    noAddress: (name: string) => `${name} hat gerade keine Empfangsadresse. Bitte ${name}, dir den Zahlungscode aus „Geld empfangen“ zu zeigen.`,
+    send: (name: string) => `An ${name} senden`,
+    noAddress: (name: string) => `${name} hat gerade keine Empfangsadresse. Bitte ${name}, dir den Zahlungscode aus „Empfangen“ zu zeigen.`,
     notSigned: "Dein Profil hat den Glückwunsch nicht bestätigt. Es wurde nichts bezahlt. Versuche es erneut.",
   },
 

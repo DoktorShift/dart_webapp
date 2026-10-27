@@ -1,15 +1,16 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { InlineStatus } from "@/components/common/inline-status"
 import { QRCodeView } from "@/components/common/qr-code-view"
 import { ShareActions } from "@/components/common/share-actions"
 import { Button } from "@/components/ui/button"
 import { useAreaT, useT } from "@/components/i18n-provider"
+import { AmountBlock, useAutoClose } from "@/components/payments/amount-block"
 import { AmountPicker } from "@/components/payments/amount-picker"
 import { ConnectPanel } from "@/components/payments/connect"
 import { OutcomeHeader, StatusLabel } from "@/components/payments/entry-status"
-import { useFormat } from "@/components/payments/format"
+import { useMoney } from "@/components/payments/use-money"
 import { problemText } from "@/components/payments/problem"
 import { ResolveByHand, useHasExpired } from "@/components/payments/resolve-by-hand"
 import { SheetActions } from "@/components/payments/sheet-actions"
@@ -18,7 +19,7 @@ import { WalletError, type WalletClient } from "@/lib/nostr/wallet"
 import { useJournal, useWallet } from "@/lib/payments/hooks"
 import { makeIncoming } from "@/lib/payments/invoices"
 import { checkStatus, markReceived, type Counterpart, type PaymentEntry } from "@/lib/payments/journal"
-import { AMOUNT_PRESETS } from "@/lib/payments/stake"
+import { MSAT_PER_UNIT, type Amount } from "@/lib/payments/money"
 import { capabilities, openWallet, type WalletInfo } from "@/lib/payments/wallet"
 import { cn } from "@/lib/utils"
 
@@ -88,19 +89,23 @@ function useWatchIncoming(id: string, notifies: boolean, lookup: boolean) {
 
 // An invoice this device shows, and what became of it, with the buttons that end the step. `info`
 // is the wallet connected now (none after "Verbindung entfernen"). `onNew` offers a new invoice
-// once it expired.
-export function InvoiceView({ entry, info, onNew, onDone }: { entry: PaymentEntry; info: WalletInfo | null; onNew?: () => void; onDone: () => void }) {
+// once it expired. With `autoClose`, a payment that arrives while the code is shown says
+// "Erhalten" and the sheet closes by itself; a code opened after that stays. `children` are the
+// detail's rows under an outcome.
+export function InvoiceView({ entry, info, autoClose = false, onNew, onDone, children }: { entry: PaymentEntry; info: WalletInfo | null; autoClose?: boolean; onNew?: () => void; onDone: () => void; children?: ReactNode }) {
   const t = useT()
   const tx = useAreaT(PAYMENTS_TEXTS)
   const r = tx.receive
-  const format = useFormat()
+  const money = useMoney()
+  const [initialState] = useState(entry.state)
+  useAutoClose(autoClose && initialState !== "received" && entry.state === "received", onDone)
   // Only the connection that made the invoice hears of its payment or can ask about it.
   const own = info !== null && info.connection === entry.connection ? capabilities(info) : null
   const follows = !!own && (own.notifies || own.lookup)
   const waiting = entry.state === "waiting"
   const offline = useWatchIncoming(entry.id, waiting && !!own?.notifies, waiting && !!own?.lookup)
   const expired = useHasExpired(entry)
-  const amount = format.msat(entry.amountMsat)
+  const amount = money.primary(entry.amountMsat, entry.fiat)
   // "Fertig": filled where it confirms an outcome, plain where it only closes the sheet.
   const done = (primary: boolean) => (
     <Button variant={primary ? "default" : "ghost"} onClick={onDone} className={cn("h-12 w-full rounded-xl text-[1.0625rem]", primary && "font-semibold")}>
@@ -112,6 +117,7 @@ export function InvoiceView({ entry, info, onNew, onDone }: { entry: PaymentEntr
     return (
       <>
         <OutcomeHeader tone="success" title={entry.resolvedByHand ? tx.state.receivedByHand : tx.state.received} text={entry.resolvedByHand ? tx.byHand.note : r.receivedText(amount)} />
+        {children}
         <SheetActions>{done(true)}</SheetActions>
       </>
     )
@@ -120,6 +126,7 @@ export function InvoiceView({ entry, info, onNew, onDone }: { entry: PaymentEntr
     return (
       <>
         <OutcomeHeader tone="neutral" title={entry.resolvedByHand ? tx.state.notReceivedByHand : tx.state.expired} text={entry.resolvedByHand ? tx.byHand.note : r.expiredText} />
+        {children}
         <SheetActions>
           {onNew && (
             <Button onClick={onNew} className="h-12 w-full rounded-xl text-[1.0625rem] font-semibold">
@@ -149,7 +156,7 @@ export function InvoiceView({ entry, info, onNew, onDone }: { entry: PaymentEntr
           inside the card's padding (enough to scan). */}
       <div className="flex flex-col items-center xshort:grid xshort:grid-cols-[11.5rem_minmax(0,1fr)] xshort:items-start xshort:gap-x-4">
         <div className="flex flex-col items-center text-center xshort:col-start-2 xshort:items-start xshort:text-left">
-          <p className="font-display text-4xl font-semibold tabular-nums tracking-tight">{amount}</p>
+          <AmountBlock msat={entry.amountMsat} fiat={entry.fiat} className="xshort:items-start xshort:text-left" />
           <StatusLabel tone="progress" className="mt-1 text-[0.9375rem] font-medium">
             {tx.state.waiting}
           </StatusLabel>
@@ -179,15 +186,16 @@ export function InvoiceView({ entry, info, onNew, onDone }: { entry: PaymentEntr
 }
 
 // Receiving for an action (the stake of a game, or any amount): shows the invoice already out
-// for it, or makes one. Connecting a wallet first happens right here.
-export function ReceiveFlow({ action, once, counterpart, amountSats, onDone }: { action: string; once: boolean; counterpart: Counterpart; amountSats: number | null; onDone: () => void }) {
+// for it, or makes one. Connecting a wallet first happens right here. `amount` is the agreed
+// amount; null lets the person choose one.
+export function ReceiveFlow({ action, once, counterpart, amount: given, onDone }: { action: string; once: boolean; counterpart: Counterpart; amount: Amount | null; onDone: () => void }) {
   const t = useT()
   const tx = useAreaT(PAYMENTS_TEXTS)
   const r = tx.receive
-  const format = useFormat()
+  const money = useMoney()
   const wallet = useWallet()
   const journal = useJournal()
-  const [amount, setAmount] = useState<number | null>(amountSats)
+  const [amount, setAmount] = useState<Amount | null>(given)
   const [creating, setCreating] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)
   const [reconnect, setReconnect] = useState(false)
@@ -203,7 +211,8 @@ export function ReceiveFlow({ action, once, counterpart, amountSats, onDone }: {
     try {
       const client = await openWallet()
       try {
-        await makeIncoming(client, { action, once, counterpart, amountMsat: amount * 1000 })
+        const amountMsat = amount.sats * MSAT_PER_UNIT
+        await makeIncoming(client, { action, once, counterpart, amountMsat, fiat: amount.fiat ?? money.noted(amountMsat) })
         setStartOver(false)
       } finally {
         client.close()
@@ -214,11 +223,11 @@ export function ReceiveFlow({ action, once, counterpart, amountSats, onDone }: {
     } finally {
       setCreating(false)
     }
-  }, [action, amount, counterpart, once, r.offline, tx])
+  }, [action, amount, counterpart, money, once, r.offline, tx])
 
   // An agreed amount leaves nothing to decide: the invoice is made as soon as the sheet opens
   // (once the journal shows there is none yet), and again only on request.
-  const atOnce = amountSats !== null && !startOver
+  const atOnce = given !== null && !startOver
   const started = useRef(false)
   useEffect(() => {
     if (!atOnce || started.current || journal === undefined || current || !canReceive) return
@@ -227,7 +236,7 @@ export function ReceiveFlow({ action, once, counterpart, amountSats, onDone }: {
   }, [atOnce, journal, current, canReceive, create])
 
   if (wallet === undefined || journal === undefined) return null
-  if (current && !(current.state === "expired" && startOver)) return <InvoiceView entry={current} info={wallet} onNew={() => setStartOver(true)} onDone={onDone} />
+  if (current && !(current.state === "expired" && startOver)) return <InvoiceView entry={current} info={wallet} autoClose onNew={() => setStartOver(true)} onDone={onDone} />
   if (!wallet || reconnect) return <ConnectPanel titled onConnected={() => setReconnect(false)} onCancel={onDone} />
   const cancel = (
     <Button variant="ghost" onClick={onDone} className="h-12 w-full rounded-xl text-[1.0625rem]">
@@ -250,11 +259,11 @@ export function ReceiveFlow({ action, once, counterpart, amountSats, onDone }: {
 
   return (
     <>
-      {amountSats === null ? (
-        <AmountPicker label={r.amount} presets={AMOUNT_PRESETS} value={amount} onChange={setAmount} />
+      {given === null ? (
+        <AmountPicker label={r.amount} value={amount} onChange={setAmount} />
       ) : (
         <div className="flex flex-col items-center text-center">
-          <p className="font-display text-4xl font-semibold tabular-nums tracking-tight">{format.sats(amountSats)}</p>
+          <AmountBlock msat={given.sats * MSAT_PER_UNIT} fiat={given.fiat} />
           {creating && (
             <StatusLabel tone="progress" className="mt-1 text-[0.9375rem] font-medium">
               {r.creating}

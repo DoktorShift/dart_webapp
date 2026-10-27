@@ -363,6 +363,9 @@ export interface SlotListProps {
   "profile.advanced": { pubkey: string }
   "club.tournaments": { club: string; name: string; leader: boolean; compact: boolean }
   "tab.badges": { tab: TabId; id: string }
+  // A finished game from the archive (components/profile/match-screen.tsx): rows an area adds
+  // under its players, by the game's id.
+  "match.rows": { matchId: string }
 }
 export type SlotListId = keyof SlotListProps
 export interface SlotItem<K extends SlotListId> {
@@ -382,6 +385,7 @@ const slotLists: { [K in SlotListId]: Map<string, ComponentType<SlotListProps[K]
   "profile.card": new Map(),
   "profile.notices": new Map(),
   "profile.actions": new Map(),
+  "match.rows": new Map(),
   "profile.advanced": new Map(),
   "club.tournaments": new Map(),
   "tab.badges": new Map(),

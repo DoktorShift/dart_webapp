@@ -18,6 +18,7 @@
 // The journal is this device's record, like its games: it isn't part of the profile, a backup or
 // an export, and only "Alle Daten löschen" removes it.
 import { WalletError, type InvoiceStatus, type WalletClient, type WalletErrorCode } from "../nostr/wallet.ts"
+import type { FiatAmount } from "./money.ts"
 import type { CheckedInvoice } from "../nostr/ext/lnurl.ts"
 import type { NostrEvent } from "../nostr/types.ts"
 import { dbGet, dbGetAll, dbWrite, type Keyed } from "../storage/db.ts"
@@ -78,6 +79,8 @@ export interface PaymentEntry extends Keyed {
   connection?: string
   // Unknown until the wallet says; null when it didn't.
   feesMsat?: number | null
+  // The amount in the person's currency as it was shown when they confirmed (or agreed) it.
+  fiat?: FiatAmount
   problem?: PaymentProblem
   // Settled by the person from what their wallet shows, not by the wallet's answer.
   resolvedByHand?: true
@@ -161,6 +164,8 @@ export interface PaymentRequest {
   action: string
   once: boolean
   counterpart: Counterpart
+  // The currency amount shown with the payment, kept with the entry.
+  fiat?: FiatAmount
   // The checked invoice to pay. Called only when nothing for this action is open, so no new
   // invoice is ever fetched while an earlier payment's outcome is unknown. May throw.
   invoice: () => Promise<InvoiceSource>
@@ -228,6 +233,7 @@ async function send(request: PaymentRequest, { checked, via, address, zap }: Inv
       invoice: checked.invoice,
       expiresAt: checked.expiresAt,
       connection: payer.connection,
+      ...(request.fiat ? { fiat: request.fiat } : {}),
       ...(address ? { address } : {}),
       ...(zap ? { zap } : {}),
       createdAt: known?.createdAt ?? now,
@@ -343,7 +349,7 @@ export async function markReceived(id: string): Promise<void> {
 
 // "Vor Ort erledigt": the players settled a one-off action outside the app. Kept apart from a
 // payment the wallet confirmed (via "manual"). False when a payment for it is open or done.
-export async function noteSettled(note: { action: string; direction: "out" | "in"; amountMsat: number; counterpart: Counterpart }): Promise<boolean> {
+export async function noteSettled(note: { action: string; direction: "out" | "in"; amountMsat: number; counterpart: Counterpart; fiat?: FiatAmount }): Promise<boolean> {
   const done = await exclusive(note.action, async () => {
     if (blockingEntry(await loadJournal(), note.action)) return false
     const now = Date.now()
@@ -356,6 +362,7 @@ export async function noteSettled(note: { action: string; direction: "out" | "in
         state: note.direction === "out" ? "paid" : "received",
         amountMsat: note.amountMsat,
         counterpart: note.counterpart,
+        ...(note.fiat ? { fiat: note.fiat } : {}),
         via: "manual",
         invoice: null,
         expiresAt: null,

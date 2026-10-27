@@ -18,6 +18,7 @@ import { PAYMENTS_TEXTS } from "@/lib/i18n/features/payments.screens"
 import { useSession } from "@/lib/profile/session"
 import { useJournal, useWallet } from "@/lib/payments/hooks"
 import { actions, blockingEntry } from "@/lib/payments/journal"
+import type { Amount } from "@/lib/payments/money"
 import { lookupRecipient, type RecipientLookup } from "@/lib/payments/recipient"
 
 // "Gratulieren" (PLAN.md "Freiwillige Zaps"): a voluntary payment to another player. Amount and
@@ -26,7 +27,9 @@ import { lookupRecipient, type RecipientLookup } from "@/lib/payments/recipient"
 // profile); otherwise, or when the person switches it off, it is a plain payment only the
 // recipient sees, never called a public congratulation.
 
+// Offered in bitcoin; in the currency the usual few, two of them chosen to start with.
 const PRESETS = [21, 100, 500, 1000] as const
+const DEFAULT_FIAT = 2
 const MAX_MESSAGE = 140
 
 export function CongratulateFlow({ pubkey, name, action, onDone }: { pubkey: string; name: string; action: string; onDone: () => void }) {
@@ -38,7 +41,7 @@ export function CongratulateFlow({ pubkey, name, action, onDone }: { pubkey: str
   const wallet = useWallet()
   const journal = useJournal()
   const [recipient, setRecipient] = useState<RecipientLookup | null>(null)
-  const [amount, setAmount] = useState<number | null>(100)
+  const [amount, setAmount] = useState<Amount | null>(null)
   const [publicly, setPublicly] = useState(true)
   const [message, setMessage] = useState("")
   const [route, setRoute] = useState<PayRoute | null>(null)
@@ -56,7 +59,7 @@ export function CongratulateFlow({ pubkey, name, action, onDone }: { pubkey: str
   if (!wallet) return <ConnectPanel titled onConnected={() => {}} onCancel={onDone} />
   const counterpart = { name, pubkey }
   // A congratulation still open (or the one just made) is shown, not offered again.
-  if (route || blockingEntry(journal, action)) return <PayFlow action={action} once={false} counterpart={counterpart} amountSats={amount} route={route ?? undefined} onDone={onDone} />
+  if (route || blockingEntry(journal, action)) return <PayFlow action={action} once={false} counterpart={counterpart} amount={amount} route={route ?? undefined} onDone={onDone} />
   if (!recipient) return <OutcomeHeader tone="progress" working title={tx.pay.findRecipient} />
 
   const endpoint = recipient.address?.endpoint ?? null
@@ -70,7 +73,7 @@ export function CongratulateFlow({ pubkey, name, action, onDone }: { pubkey: str
           {recipient.address ? tx.invoice.addressUnreachable(recipient.address.address) : c.noAddress(name)}
         </InlineStatus>
       )}
-      <AmountPicker label={c.amount} presets={PRESETS} value={amount} onChange={setAmount} />
+      <AmountPicker label={c.amount} bitcoinPresets={PRESETS} defaultFiat={DEFAULT_FIAT} value={amount} onChange={setAmount} />
       {zapPossible && (
         <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-card">
           <SwitchRow title={c.public} checked={publicly} onCheckedChange={setPublicly} />
