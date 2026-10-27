@@ -137,14 +137,14 @@ export function InvitePersonSheet({ view, state, open, onOpenChange }: { view: C
                 })}
               </Group>
             )}
-            <Group title={tx.invites.recent}>
-              {loaded && candidates.length === 0 && <ListRow title={tx.invites.noRecent} />}
+            {loaded && candidates.length === 0 && <p className="mt-4 px-4 text-[0.8125rem] text-muted-foreground">{tx.invites.noRecent}</p>}
+            {candidates.length > 0 && <Group title={tx.invites.recent}>
               {candidates.map((p) => {
                 const pubkey = p.pubkey as string
                 const info = names(pubkey)
                 return <InviteRow key={pubkey} pubkey={pubkey} name={info.name ?? p.name} picture={info.picture} onInvite={() => void invite({ pubkey, name: info.name ?? p.name, relays: [] })} />
               })}
-            </Group>
+            </Group>}
           </>
         )}
         {problem && (

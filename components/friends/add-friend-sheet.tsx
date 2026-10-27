@@ -133,14 +133,14 @@ export function AddFriendSheet({ open, onOpenChange, onShowCode }: { open: boole
                 }}
               />
             </Group>
-            <Group title={tx.recent}>
-              {loaded && candidates.length === 0 && <ListRow title={tx.noRecent} />}
+            {loaded && candidates.length === 0 && <p className="mt-4 px-4 text-[0.8125rem] text-muted-foreground">{tx.noRecent}</p>}
+            {candidates.length > 0 && <Group title={tx.recent}>
               {candidates.map((p) => {
                 const pubkey = p.pubkey as string
                 const name = nameOf(pubkey, p.name)
                 return <PersonRow key={pubkey} pubkey={pubkey} name={name} picture={names(pubkey).picture} action={sendButton({ pubkey, relays: [] }, name, false)} />
               })}
-            </Group>
+            </Group>}
           </>
         )}
       </SheetBody>
