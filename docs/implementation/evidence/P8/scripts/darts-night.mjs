@@ -15,7 +15,7 @@
 // club and lets Carla watch it live; the result is recorded for the club and Ben confirms it on his
 // phone. Anna runs a small tournament (4 players: Anna, Ben, Carla and the guest Mia; single KO)
 // with a tablet as Board 1: check-in, draw, calls, the board reports, Anna approves, finishes and
-// the badges go out; Ben's badge shows on his profile card. Last, a stake of 500 sats: Ben wins,
+// the badges go out; Ben's badge shows on his profile card. Last, a stake of 5 €: Ben wins,
 // Anna pays it with her (simulated) wallet to the code Ben's phone shows, once, even when tapped
 // twice. Then Ben, a member, invites Carl by the spoken code (Anna confirms him), and Anna sends
 // Carla an invitation straight to her profile.
@@ -541,7 +541,7 @@ await step("Anna importiert ihren Spielverlauf aus einer Tabelle", async (expect
 })
 
 // ---- 12. A stake, paid once ---------------------------------------------------------------------
-await step("Einsatz 500 sats: Anna zahlt Ben mit der Wallet, genau einmal", async (expect) => {
+await step("Einsatz 5 €: Anna zahlt Ben mit der Wallet, genau einmal, beide Blätter schließen sich", async (expect) => {
   const payer = await startFakeWallet({ relay: RELAYS[0], balanceMsat: 50_000_000 })
   const payee = await startFakeWallet({ relay: RELAYS[0], notifications: true })
   wallets.push(payer, payee)
@@ -567,24 +567,25 @@ await step("Einsatz 500 sats: Anna zahlt Ben mit der Wallet, genau einmal", asyn
   await inputs.nth(1).fill("Ben")
   await a.getByRole("radio", { name: "301", exact: true }).first().click()
   await a.getByRole("button", { name: /^Einsatz/ }).click()
-  await a.getByRole("radio", { name: "500" }).click()
+  // The amounts to tap are in euro (the rate is stubbed in lib.mjs); "5 €" is 8.130 ₿ tonight.
+  await a.getByRole("radio", { name: /^5\s?€$/ }).click()
+  expect("the stake sheet says what is paid in bitcoin", (await a.getByRole("dialog").innerText()).includes("Bezahlt werden 8.130"), (await a.getByRole("dialog").innerText()).match(/Bezahlt werden[^\n]*/)?.[0])
   await a.getByRole("dialog").getByRole("button", { name: "Übernehmen" }).click()
+  expect("the setup row says the stake in euro", /5,00\s?€/.test(await a.getByRole("button", { name: /^Einsatz/ }).innerText()))
   await tap(a, "Spiel starten")
   await a.getByRole("button", { name: "Spieloptionen" }).waitFor({ timeout: 15_000 })
   for (const [s, m] of [[1], [1], [1], [20, 3], [20, 3], [20, 3], [1], [1], [1], [20, 3], [17, 3], [5, 2]]) await dart(a, s, m)
-  const row = await button(a, "500 sats an Ben zahlen")
+  const row = await button(a, /^5,00\s?€ an Ben zahlen$/)
   await shot(anna, "33-result-stake")
   const marks = await row.evaluate((el) => {
     const signet = el.querySelector("span.inline-flex")
-    const label = [...el.querySelectorAll("span")].find((s) => /^500 sats/.test(s.textContent ?? ""))
+    const label = [...el.querySelectorAll("span")].find((s) => /^5,00/.test(s.textContent ?? ""))
     return signet && label ? { signetRight: Math.round(Math.max(...[...signet.querySelectorAll("img")].map((i) => i.getBoundingClientRect().right))), labelLeft: Math.round(label.getBoundingClientRect().left) } : null
   })
   expect.note("the stake row's Bitcoin and NWC marks stay clear of its words", marks && marks.signetRight <= marks.labelLeft, JSON.stringify(marks))
-  // Ben's code.
-  await b.getByRole("button", { name: "Geld empfangen" }).click()
-  const amount = b.getByRole("dialog").getByRole("radio", { name: "500", exact: true })
-  if (await amount.count()) await amount.click()
-  else await b.getByRole("dialog").getByRole("textbox").first().fill("500")
+  // Ben's code: "Empfangen" on his Zahlungen screen, 5 € (the same rate, so the same 8.130 ₿).
+  await b.getByRole("button", { name: "Empfangen", exact: true }).click()
+  await b.getByRole("dialog").getByRole("radio", { name: /^5\s?€$/ }).click()
   await b.getByRole("dialog").getByRole("button", { name: "Zahlungscode erstellen" }).click()
   await seen(b, "Warte auf Zahlung", { timeout: 20_000 })
   await shot(ben, "34-receive-code")
@@ -594,36 +595,68 @@ await step("Einsatz 500 sats: Anna zahlt Ben mit der Wallet, genau einmal", asyn
   await row.click()
   const sheet = a.getByRole("dialog")
   // Anna's profile is a seat of this game: the sheet knows she pays and goes straight to it.
-  expect("the stake sheet says who pays whom", (await sheet.innerText()).includes("Anna zahlt 500 sats an Ben"))
+  expect("the stake sheet says who pays whom, in euro", /Anna zahlt 5,00\s?€ an Ben/.test(await sheet.innerText()))
   await shot(anna, "35-stake-connect")
   await sheet.getByLabel("Verbindung einfügen").fill(payer.uri)
   await sheet.getByLabel("Verbindung einfügen").press("Enter")
   await sheet.getByLabel("Zahlungscode einfügen").waitFor({ timeout: 20_000 })
   await sheet.getByLabel("Zahlungscode einfügen").fill(code)
   await sheet.getByLabel("Zahlungscode einfügen").press("Enter")
-  const pay = sheet.getByRole("button", { name: "500 sats an Ben zahlen" })
+  const pay = sheet.getByRole("button", { name: "An Ben zahlen", exact: true })
   await pay.waitFor({ timeout: 20_000 })
+  // The wallet's balance joins its row once the wallet answered.
+  await sheet.getByText(/Testwallet · /).waitFor({ timeout: 10_000 }).catch(() => {})
+  const review = await sheet.innerText()
+  expect("the review shows 5,00 € and 8.130 ₿, the wallet with its balance", /5,00\s?€/.test(review) && /8\.130\s?₿/.test(review) && /Testwallet · /.test(review), review.replace(/\s+/g, " ").slice(0, 200))
   await shot(anna, "36-pay-review")
   // A darts-night double tap.
   await pay.dblclick()
   await sheet.getByText("sind bei Ben angekommen").waitFor({ timeout: 40_000 })
   await shot(anna, "37-paid")
-  expect("'500 sats sind bei Ben angekommen'", true)
+  expect("'5,00 € sind bei Ben angekommen'", /5,00\s?€ sind bei Ben angekommen/.test(await sheet.innerText()))
   const hashes = [...payer.paid.entries()]
   expect("the wallet was asked to pay exactly once (double tap included)", payer.requests.filter((m) => m === "pay_invoice").length === 1 && hashes.length === 1 && hashes[0][1] === 1, JSON.stringify(payer.requests))
   // The money arrives in Ben's wallet: his open code says so.
   await payee.settle(hashes[0][0])
   await seen(b, "sind in deiner Wallet angekommen", { timeout: 40_000 })
   await shot(ben, "38-received")
-  expect("Ben's phone says the 500 sats arrived", true)
-  await sheet.getByRole("button", { name: "Fertig" }).click()
-  await a.waitForTimeout(800)
-  const after = await button(a, /500 sats/)
+  expect("Ben's phone says the 5,00 € arrived", true)
+  // Both sheets close by themselves once they said "Bezahlt" and "Erhalten" (no sheet left on
+  // screen; vaul keeps a closing one in the page for its animation).
+  const noSheet = async (page) => {
+    const since = Date.now()
+    while (Date.now() - since < 10_000) {
+      // Only sheets: the result screen is a dialog of its own.
+      const open = await page.evaluate(() => [...document.querySelectorAll('[role="dialog"][data-vaul-drawer]')].some((el) => {
+        const r = el.getBoundingClientRect()
+        return getComputedStyle(el).visibility !== "hidden" && r.height > 0 && r.top < innerHeight - 1
+      }))
+      if (!open) return Date.now() - since
+      await page.waitForTimeout(200)
+    }
+    return null
+  }
+  const annaClosed = await noSheet(a)
+  expect("Anna's sheet closed by itself after 'Bezahlt'", annaClosed !== null, `${annaClosed} ms after Ben's code was paid`)
+  const benClosed = await noSheet(b)
+  expect("Ben's sheet closed by itself after 'Erhalten'", benClosed !== null, `${benClosed} ms later`)
+  const after = await button(a, /5,00\s?€/)
   const rowText = await after.innerText()
   expect("the result row now says paid and offers no second payment", !/zahlen$/.test(rowText.trim()), rowText.replace(/\s+/g, " "))
   await after.click()
   await a.waitForTimeout(800)
-  expect("reopened, the sheet has no pay button", (await a.getByRole("dialog").getByRole("button", { name: "500 sats an Ben zahlen" }).count()) === 0)
+  expect("reopened, the sheet has no pay button", (await a.getByRole("dialog").getByRole("button", { name: "An Ben zahlen", exact: true }).count()) === 0)
+  await a.keyboard.press("Escape")
+  // Ben's list shows the money that came in, in euro and bitcoin.
+  const benList = await b.locator("main").innerText()
+  expect("Ben's Zahlungen list shows 5,00 € received", /Empfangen[\s\S]*Erhalten[\s\S]*5,00\s?€[\s\S]*8\.130\s?₿/.test(benList), benList.replace(/\s+/g, " ").slice(0, 160))
+  await shot(ben, "38-payments-home")
+  // Anna's list names the stake with its game.
+  await home(a)
+  await tab(a, "Profil")
+  await profilePanel(a).getByRole("button", { name: /^Zahlungen/ }).click()
+  await seen(a, "Einsatz · 301 gegen Ben", { timeout: 10_000 }).then(() => expect("Anna's Zahlungen list names the stake with its game", true), () => expect("Anna's Zahlungen list names the stake with its game", false))
+  await shot(anna, "39-payments-home")
   await a.keyboard.press("Escape")
   expect("still one payment in the wallet", payer.requests.filter((m) => m === "pay_invoice").length === 1)
 })

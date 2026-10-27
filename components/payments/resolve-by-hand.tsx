@@ -6,7 +6,7 @@ import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
 import { InlineStatus } from "@/components/common/inline-status"
 import { useAreaT } from "@/components/i18n-provider"
-import { useFormat } from "@/components/payments/format"
+import { useMoney } from "@/components/payments/use-money"
 import { PAYMENTS_TEXTS } from "@/lib/i18n/features/payments.screens"
 import { hasExpired, resolveByHand, type PaymentEntry } from "@/lib/payments/journal"
 
@@ -34,15 +34,15 @@ export function useHasExpired(entry: PaymentEntry) {
 
 export function ResolveByHand({ entry, hint }: { entry: PaymentEntry; hint?: string }) {
   const tx = useAreaT(PAYMENTS_TEXTS)
-  const format = useFormat()
+  const money = useMoney({ live: false })
   const expired = useHasExpired(entry)
   // The choice to confirm; kept while the alert closes, so its text doesn't change meanwhile.
   const [choice, setChoice] = useState<"done" | "not-done">("done")
   const [asking, setAsking] = useState(false)
   const [busy, setBusy] = useState(false)
   const texts = entry.direction === "out" ? tx.byHand.outgoing : tx.byHand.incoming
-  const amount = format.msat(entry.amountMsat)
-  const footer = [hint, !expired && entry.expiresAt !== null ? texts.notYet(format.time(entry.expiresAt * 1000)) : null].filter(Boolean).join(" ")
+  const amount = money.primary(entry.amountMsat, entry.fiat)
+  const footer = [hint, !expired && entry.expiresAt !== null ? texts.notYet(money.time(entry.expiresAt * 1000)) : null].filter(Boolean).join(" ")
 
   const ask = (outcome: "done" | "not-done") => {
     setChoice(outcome)

@@ -3,4 +3,6 @@ export const PAYMENT_SCREENS = {
   home: "payments",
   connect: "payments.connect",
   advanced: "payments.advanced",
+  settings: "payments.settings",
+  history: "payments.history",
 } as const

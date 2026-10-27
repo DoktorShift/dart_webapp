@@ -13,11 +13,11 @@ const SIZES = [SE, PHONE, SE_LANDSCAPE, TABLET, BOARD]
 const LOOKS = [
   {
     locale: "de", dark: false, tabs: { play: "Spielen", ranks: "Rangliste", clubs: "Clubs", tournaments: "Turniere", profile: "Profil" }, resume: /Weiterspielen/,
-    ranks: { device: "Hier gespielt", friends: "Freunde", clubs: "Clubs", tournaments: "Turniere" }, profile: { friends: /Freund/, addFriend: "Freund hinzufügen", stats: "Statistik", training: /^Training/, start: "Training starten", startGame: "Spiel starten", visibility: "Sichtbarkeit", history: /^Spielverlauf/, done: "Fertig", back: /^Zurück zu Profil$/, goal: /^Ziel/, goalSave: "Ziel setzen", cancel: "Abbrechen", share: "Training als Bild teilen" },
+    ranks: { device: "Hier gespielt", friends: "Freunde", clubs: "Clubs", tournaments: "Turniere" }, payments: { row: /^Zahlungen/, send: "Senden", settings: "Einstellungen", back: /^Zurück zu Zahlungen$/ }, profile: { friends: /Freund/, addFriend: "Freund hinzufügen", stats: "Statistik", training: /^Training/, start: "Training starten", startGame: "Spiel starten", visibility: "Sichtbarkeit", history: /^Spielverlauf/, done: "Fertig", back: /^Zurück zu Profil$/, goal: /^Ziel/, goalSave: "Ziel setzen", cancel: "Abbrechen", share: "Training als Bild teilen" },
   },
   {
     locale: "en", dark: true, tabs: { play: "Play", ranks: "Leaderboard", clubs: "Clubs", tournaments: "Tournaments", profile: "Profile" }, resume: /Continue|Resume/,
-    ranks: { device: "Played here", friends: "Friends", clubs: "Clubs", tournaments: "Tournaments" }, profile: { friends: /friend/i, addFriend: "Add friend", stats: "Statistics", training: /^Training/, start: "Start training", startGame: "Start game", visibility: "Visibility", history: /^Game history/, done: "Done", back: /^Back to Profile$/, goal: /^Goal/, goalSave: "Set goal", cancel: "Cancel", share: "Share training as a picture" },
+    ranks: { device: "Played here", friends: "Friends", clubs: "Clubs", tournaments: "Tournaments" }, payments: { row: /^Payments/, send: "Send", settings: "Settings", back: /^Back to Payments$/ }, profile: { friends: /friend/i, addFriend: "Add friend", stats: "Statistics", training: /^Training/, start: "Start training", startGame: "Start game", visibility: "Visibility", history: /^Game history/, done: "Done", back: /^Back to Profile$/, goal: /^Goal/, goalSave: "Set goal", cancel: "Cancel", share: "Share training as a picture" },
   },
 ]
 // Words of the protocol that never belong in normal flows (NOSTR-DESIGN-RULES.md).
@@ -33,8 +33,8 @@ const match = (id, names, throws, extras) => ({
   config: { modeId: "301", modeName: "301", type: "x01", startScore: 301, doubleOut: true, doubleIn: false, cutThroat: false, bullFinish: false, legsToWin: 1, setsToWin: 1, startRule: "alternate", players: names.map((name, i) => ({ id: `m${i}`, name })), ...(extras ? { extras } : {}) },
   throws,
 })
-// Anna 50 left with her third dart in hand (the bull wins it); 500 sats at stake.
-const nearWin = () => match(`hig-${Math.random().toString(36).slice(2)}`, ["Anna", "Ben"], [dart(20, 3), dart(20, 3), dart(20, 3), dart(1), dart(1), dart(1), dart(20, 3), dart(11)], { "payments.stake": { sats: 500 } })
+// Anna 50 left with her third dart in hand (the bull wins it); 5 € (8.130 ₿) at stake.
+const nearWin = () => match(`hig-${Math.random().toString(36).slice(2)}`, ["Anna", "Ben"], [dart(20, 3), dart(20, 3), dart(20, 3), dart(1), dart(1), dart(1), dart(20, 3), dart(11)], { "payments.stake": { sats: 8130, fiat: { amount: 5, currency: "EUR" } } })
 
 async function seed(page, current) {
   await page.evaluate((c) => localStorage.setItem("dart-scorer.current-match.v1", c), JSON.stringify(current))
@@ -146,6 +146,25 @@ export async function runMatrix({ annaState }) {
       await (await onScreen(page.getByRole("button", { name: look.profile.done, exact: true }))).click()
       await page.waitForTimeout(400)
       await back()
+      // Zahlungen: the wallet with its balance, "Senden" and "Empfangen", the stake with its game;
+      // "Senden" with the people to pay; the settings behind the gear.
+      await (await onScreen(profile.getByRole("button", { name: look.payments.row }))).click()
+      await visit("payments")
+      const send = await onScreen(page.getByRole("button", { name: look.payments.send, exact: true }), 5_000).catch(() => null)
+      if (send) {
+        await send.click()
+        await visit("payments-send")
+        await (await onScreen(page.getByRole("dialog").getByRole("button", { name: look.profile.cancel, exact: true }))).click()
+        await page.waitForTimeout(400)
+      } else note(`${tag} payments: "Senden" is offered`, false)
+      const gear = await onScreen(page.getByRole("button", { name: look.payments.settings, exact: true }), 5_000).catch(() => null)
+      if (gear) {
+        await gear.click()
+        await visit("payments-settings")
+        await (await onScreen(page.getByRole("button", { name: look.payments.back }))).click()
+        await page.waitForTimeout(500)
+      } else note(`${tag} payments: the gear leads to the settings`, false)
+      await back()
       await (await onScreen(profile.getByRole("button", { name: look.profile.training }).first())).click()
       // The goal (M18): set to 60 from its sheet, then the screen with the line through the chart,
       // and "Teilen" in the bar.
@@ -200,9 +219,9 @@ export async function runMatrix({ annaState }) {
       note(`${tag} result: one screen, no page scroll`, resultFits)
       // The stake row's two marks must not run into its words.
       const overlap = await page.evaluate(() => {
-        const row = [...document.querySelectorAll("button")].find((b) => /500 sats/.test(b.textContent ?? "") && b.getBoundingClientRect().width > 0)
+        const row = [...document.querySelectorAll("button")].find((b) => /€/.test(b.textContent ?? "") && /Ben/.test(b.textContent ?? "") && b.getBoundingClientRect().width > 0)
         const signet = row?.querySelector("span.inline-flex")
-        const label = row && [...row.querySelectorAll("span")].find((s) => /500 sats/.test(s.textContent ?? "") && s !== signet)
+        const label = row && [...row.querySelectorAll("span")].find((s) => /€/.test(s.textContent ?? "") && s !== signet)
         if (!signet || !label) return null
         const imgs = [...signet.querySelectorAll("img")].map((i) => i.getBoundingClientRect().right)
         return { signetRight: Math.round(Math.max(...imgs)), labelLeft: Math.round(label.getBoundingClientRect().left) }

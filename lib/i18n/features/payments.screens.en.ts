@@ -3,19 +3,22 @@ import type { paymentsScreensDe } from "./payments.screens.de.ts"
 
 // English texts of the payments area. Same shape as payments.screens.de.ts.
 export const paymentsScreensEn: Widen<typeof paymentsScreensDe> = {
-  unit: "sats",
-  euro: (amount: string, time: string) => `≈ ${amount} · rate from ${time}`,
   amount: {
     custom: "Other amount",
-    placeholder: "Amount in sats",
+    inBitcoin: "Enter in bitcoin",
+    inCurrency: (currency: string) => `Enter in ${currency}`,
     tooHigh: (max: string) => `At most ${max}.`,
+  },
+  rate: {
+    approx: (amount: string) => `≈ ${amount}`,
   },
   signet: "Bitcoin wallet",
   yourWallet: "Your wallet",
 
   explain: {
     screen: "Payments go straight from wallet to wallet. BlueLine never holds any money and never pays without your confirmation.",
-    pay: (name: string) => (name ? `The money goes straight from your wallet to ${name}. BlueLine never holds any money.` : "The money goes straight from your wallet to the other person. BlueLine never holds any money."),
+    pay: (name: string) => (name ? `The money goes straight from your wallet to ${name}.` : "The money goes straight from your wallet to the other person."),
+    pays: (amount: string) => `${amount} will be paid.`,
     receive: "The money arrives straight in your wallet. BlueLine never holds any money.",
   },
   learn: {
@@ -27,20 +30,20 @@ export const paymentsScreensEn: Widen<typeof paymentsScreensDe> = {
         text: "You pay from your own bitcoin wallet, and the money arrives in the other person's wallet. BlueLine never holds any money and pays nothing without your confirmation.",
       },
       {
-        title: "What are sats?",
-        text: "Sats are small units of bitcoin: 100 million sats make one bitcoin. The amount in sats is always what counts; the euro amount is only an approximation.",
+        title: "Your currency and bitcoin",
+        text: "Amounts show in your currency and in bitcoin (₿). What is paid is always the bitcoin amount; the amount in your currency is an approximation at the rate of the time shown. ₿100,000,000 make one whole bitcoin. BlueLine asks a public rate service for the rate, without any details about you.",
       },
       {
         title: "Congratulating publicly",
-        text: "A public congratulation, with its amount and your profile, can be seen by anyone who views the other person's profile. Without a profile, or when you switch it off, only the other person sees the payment in their wallet.",
+        text: "A public congratulation, with its amount and your profile, can be seen by anyone who views the other person's profile. Without a profile, or when you switch it off, only the other person sees the payment.",
       },
       {
         title: "When a confirmation is missing",
-        text: "If your wallet doesn't confirm a payment right away, BlueLine never pays a second time. “Check Status” asks your wallet whether the money arrived. If it can't tell, you look in your wallet yourself and note what it shows.",
+        text: "If your wallet doesn't confirm a payment right away, BlueLine never pays a second time. “Check Status” asks your wallet whether the money arrived. If it can't tell, you look in your wallet yourself and note it.",
       },
       {
         title: "Your wallet connection",
-        text: "It is kept encrypted on this device only. You can remove it here; you revoke the permission in your wallet itself.",
+        text: "It is kept encrypted on this device only. You can remove it in Settings; you revoke the permission in your wallet itself.",
       },
     ],
   },
@@ -49,10 +52,22 @@ export const paymentsScreensEn: Widen<typeof paymentsScreensDe> = {
     connected: "Wallet connected",
     notConnected: "No wallet connected",
     unresolved: "A payment isn't confirmed yet",
+    balance: (amount: string, wallet: string) => `${amount} · ${wallet}`,
+  },
+  home: {
+    send: "Send",
+    receive: "Receive",
+    balanceByWallet: "Your wallet shows your balance.",
+    asOf: (time: string) => `As of ${time}`,
+    today: "Today",
+    yesterday: "Yesterday",
+    all: "All Payments",
+    empty: "After a game you pay the stake or congratulate here. Every payment then stands with its game in this list.",
+    noneYet: "No payments yet",
   },
   intro: {
     title: "Straight between players",
-    text: "Connect your bitcoin wallet. Then you can pay and receive money after a game.",
+    text: "Connect your bitcoin wallet. Then you pay after a game in your currency; your wallet pays in bitcoin.",
     noWallet: "I don't have a wallet yet",
   },
   help: {
@@ -80,15 +95,21 @@ export const paymentsScreensEn: Widen<typeof paymentsScreensDe> = {
     noLimitFooter: "You can set a spending limit for BlueLine in your wallet.",
     cantPay: "To let BlueLine pay, allow it in your wallet and connect it again.",
     cantReceive: "To receive money, allow it for BlueLine in your wallet and connect it again.",
-    receiveMoney: "Receive Money",
-    payInvoice: "Scan Payment Code",
-    history: "Recent payments",
     reconnect: "Connect Again",
     remove: "Remove Connection",
     removeTitle: "Remove connection?",
     removeText: "BlueLine forgets the connection to your wallet. The permission in your wallet stays until you revoke it there.",
     removeConfirm: "Remove",
     privacy: "The connection is kept encrypted on this device only. It is in no backup and no export. On another device, you connect your wallet again.",
+  },
+  settings: {
+    currency: "Currency",
+    order: "Show amounts",
+    currencyFirst: (currency: string) => `${currency} first`,
+    bitcoinFirst: "Bitcoin first",
+    balanceInProfile: "Show balance in profile",
+    rateNote: "BlueLine asks a public rate service for the rate, without any details about you.",
+    currencies: { EUR: "Euro", USD: "US dollar", CHF: "Swiss franc", GBP: "British pound" },
   },
 
   connect: {
@@ -129,6 +150,34 @@ export const paymentsScreensEn: Widen<typeof paymentsScreensDe> = {
   to: (name: string) => `To ${name}`,
   from: (name: string) => `From ${name}`,
 
+  entry: {
+    stake: (game: string) => `Stake · ${game}`,
+    afterGame: (game: string) => `Payment · ${game}`,
+    receivedAfter: (game: string) => `Received · ${game}`,
+    congratulateTo: (name: string) => `Congratulation to ${name}`,
+    congratulateFrom: (name: string) => `Congratulation from ${name}`,
+    code: "Payment code",
+    received: "Received",
+    game: (mode: string, opponent: string) => `${mode} against ${opponent}`,
+  },
+  detail: {
+    game: "Game",
+    gameGone: "No longer on this device",
+    reason: "Reason",
+    reasons: {
+      stake: "Stake, as agreed",
+      pay: "Payment after the game",
+      receive: "Received after the game",
+      congratulate: "Congratulation",
+      single: "Payment code",
+    },
+    to: "To",
+    from: "From",
+    wallet: "Wallet",
+    fees: "Fees",
+    time: "Time",
+  },
+
   problem: {
     invalid: "That's not a valid wallet connection. Copy it from your wallet again.",
     unreachable: "Your wallet can't be reached right now. Check your internet connection.",
@@ -143,8 +192,8 @@ export const paymentsScreensEn: Widen<typeof paymentsScreensDe> = {
     expired: "The payment code expired before it was paid. Ask for a new one.",
   },
   invoice: {
-    invalid: "That's not a payment code. Ask for the code from “Receive Money”.",
-    amount: (amount: string) => `This payment code isn't for ${amount}. Ask for the right one.`,
+    invalid: "That's not a payment code. Ask for the code from “Receive”.",
+    amount: (amount: string) => `This payment code doesn't match ${amount}. Ask for the right one.`,
     expired: "This payment code has expired. Ask for a new one.",
     description: "The receiving address sent a code that doesn't fit. Nothing was paid. Scan a payment code instead.",
     "no-amount": "This payment code doesn't name an amount. Ask for one with an amount.",
@@ -153,11 +202,22 @@ export const paymentsScreensEn: Widen<typeof paymentsScreensDe> = {
     addressAmount: (address: string) => `${address} doesn't take this amount. Scan a payment code instead.`,
   },
 
+  send: {
+    friends: "Friends",
+    recent: "Recently played with",
+    noAddress: "No receiving address in their profile",
+    lastPlayed: (date: string) => `Last ${date}`,
+    scan: "Scan Payment Code",
+    scanHint: "The other person shows it from “Receive”.",
+    to: (name: string) => `Send to ${name}`,
+    amount: "Amount",
+  },
+
   pay: {
     findRecipient: "Looking for the receiving address",
     noAddress: (name: string) => `${name} has no receiving address in their profile.`,
     profilePartial: (name: string) => `${name}'s profile couldn't be loaded completely.`,
-    scanIntro: (name: string) => (name ? `Ask ${name} to open “Receive Money”, then scan the payment code.` : "Scan the payment code or paste it."),
+    scanIntro: (name: string) => (name ? `Ask ${name} to open “Receive”, then scan the payment code.` : "Scan the payment code or paste it."),
     scanManual: "Paste payment code",
     scanPlaceholder: "Payment code",
     scanInstead: "Scan a Payment Code Instead",
@@ -165,7 +225,9 @@ export const paymentsScreensEn: Widen<typeof paymentsScreensDe> = {
     fromWallet: "From",
     fees: "Fees",
     feesUnknown: "Set by wallet",
-    confirm: (amount: string, name: string) => (name ? `Pay ${amount} to ${name}` : `Pay ${amount}`),
+    confirm: (name: string) => (name ? `Pay ${name}` : "Pay"),
+    notEnough: (balance: string) => `Your balance isn't enough for this. Your wallet holds ${balance}.`,
+    overLimit: (left: string) => `Your limit for BlueLine isn't enough for this. ${left} is left.`,
     requesting: "Requesting payment code",
     preparing: "Preparing payment",
     nothingYet: "Nothing has been paid yet.",
@@ -215,7 +277,7 @@ export const paymentsScreensEn: Widen<typeof paymentsScreensDe> = {
   },
 
   receive: {
-    title: "Receive Money",
+    title: "Receive",
     amount: "Amount",
     create: "Create Payment Code",
     creating: "Creating payment code",
@@ -259,6 +321,7 @@ export const paymentsScreensEn: Widen<typeof paymentsScreensDe> = {
       unknownRow: "Not confirmed",
       waitingRow: "Awaiting payment",
     },
+    gameRow: "Stake",
   },
 
   free: {
@@ -277,8 +340,8 @@ export const paymentsScreensEn: Widen<typeof paymentsScreensDe> = {
     public: "Congratulate publicly",
     publicHint: (name: string) => `The money goes straight to ${name}. Your congratulation is public: anyone who views ${name}'s profile sees it, with the amount and your profile.`,
     privateHint: (name: string) => `The money goes straight to ${name}. Only ${name} sees the payment, in their own wallet. BlueLine never holds any money.`,
-    send: (amount: string, name: string) => `Send ${amount} to ${name}`,
-    noAddress: (name: string) => `${name} has no receiving address right now. Ask ${name} to show you the payment code from “Receive Money”.`,
+    send: (name: string) => `Send to ${name}`,
+    noAddress: (name: string) => `${name} has no receiving address right now. Ask ${name} to show you the payment code from “Receive”.`,
     notSigned: "Your profile didn't confirm the congratulation. Nothing was paid. Try again.",
   },
 

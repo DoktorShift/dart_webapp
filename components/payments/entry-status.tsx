@@ -5,9 +5,11 @@ import { useReducedMotion } from "framer-motion"
 import { CircleAlert, CircleCheck, CircleX, Clock, LoaderCircle } from "lucide-react"
 import { ListRow } from "@/components/ui/list-row"
 import { useAreaT } from "@/components/i18n-provider"
-import { useFormat } from "@/components/payments/format"
+import { useMoney } from "@/components/payments/use-money"
 import { PAYMENTS_TEXTS, type PaymentTexts } from "@/lib/i18n/features/payments.screens"
-import type { PaymentEntry } from "@/lib/payments/journal"
+import { describeAction } from "@/lib/payments/actions"
+import { isDone, type PaymentEntry } from "@/lib/payments/journal"
+import { negative } from "@/lib/payments/money"
 import { cn } from "@/lib/utils"
 
 // How a payment stands, in words and with a symbol, never by colour alone (PLAN.md "Zustände").
@@ -100,10 +102,50 @@ export function entryTitle(tx: PaymentTexts, { direction, counterpart }: Payment
   return counterpart.name ? tx.from(counterpart.name) : tx.receive.title
 }
 
-// A payment in a list: who, how it stands, how much.
-export function EntryRow({ entry, onClick }: { entry: PaymentEntry; onClick: () => void }) {
+// What a payment in a list was for: its game ("Einsatz · 301 gegen Ben", `game` as the caller
+// knows it from the archive), else who it went to or came from.
+export function entryLabel(tx: PaymentTexts, entry: PaymentEntry, game: string | null): string {
+  const { kind } = describeAction(entry.action)
+  const name = entry.counterpart.name
+  const who = entryTitle(tx, entry)
+  switch (kind) {
+    case "stake":
+      return tx.entry.stake(game ?? who)
+    case "pay":
+      return game ? tx.entry.afterGame(game) : who
+    case "receive":
+      return game ? tx.entry.receivedAfter(game) : tx.entry.received
+    case "congratulate":
+      if (!name) return tx.detail.reasons.congratulate
+      return entry.direction === "out" ? tx.entry.congratulateTo(name) : tx.entry.congratulateFrom(name)
+    default:
+      return entry.direction === "out" ? (name ? tx.to(name) : tx.entry.code) : tx.entry.received
+  }
+}
+
+// A payment in a list: what for, how it stands and when, how much on both sides. Money that
+// went out carries a minus once it is paid; nothing else is signed.
+export function EntryRow({ entry, title, onClick }: { entry: PaymentEntry; title?: string; onClick: () => void }) {
   const tx = useAreaT(PAYMENTS_TEXTS)
-  const format = useFormat()
+  const money = useMoney({ live: false })
   const { label, tone } = entryStatus(tx, entry)
-  return <ListRow title={entryTitle(tx, entry)} subtitle={<StatusLabel tone={tone}>{label}</StatusLabel>} value={format.msat(entry.amountMsat)} onClick={onClick} />
+  const sign = (text: string) => (entry.direction === "out" && isDone(entry) ? negative(text) : text)
+  const secondary = money.secondary(entry.amountMsat, entry.fiat)
+  return (
+    <ListRow
+      title={title ?? entryTitle(tx, entry)}
+      subtitle={
+        <StatusLabel tone={tone}>
+          {label} · {money.time(entry.updatedAt)}
+        </StatusLabel>
+      }
+      value={
+        <span className="flex flex-col items-end tabular-nums">
+          <span>{sign(money.primary(entry.amountMsat, entry.fiat))}</span>
+          {secondary && <span className="text-[0.8125rem] text-muted-foreground">{sign(secondary)}</span>}
+        </span>
+      }
+      onClick={onClick}
+    />
+  )
 }

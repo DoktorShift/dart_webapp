@@ -11,24 +11,25 @@ import { AmountPicker } from "@/components/payments/amount-picker"
 import { CongratulateFlow } from "@/components/payments/congratulate"
 import { RequestOriginContext } from "@/components/payments/connect"
 import { entryStatus, type Tone } from "@/components/payments/entry-status"
-import { useFormat, type Format } from "@/components/payments/format"
 import { PayFlow } from "@/components/payments/pay-flow"
 import { ReceiveFlow } from "@/components/payments/receive-flow"
 import { useLandscapePhone } from "@/components/payments/sheet-actions"
 import { PaymentSignet } from "@/components/payments/signet"
+import { useMoney, type Money } from "@/components/payments/use-money"
 import { ResultRow, type ResultRowTone } from "@/components/shell/result-row"
 import type { MatchPlayer } from "@/lib/game/types"
 import { PAYMENTS_TEXTS, type PaymentTexts } from "@/lib/i18n/features/payments.screens"
 import { useSession } from "@/lib/profile/session"
 import { useJournal, useReturnedConnection, useWallet } from "@/lib/payments/hooks"
 import { actions, isDone, isOpen, noteSettled, type PaymentEntry } from "@/lib/payments/journal"
-import { deviceSide, AMOUNT_PRESETS, resultOffer, type StakeParties } from "@/lib/payments/stake"
+import { MSAT_PER_UNIT, type Amount } from "@/lib/payments/money"
+import { deviceSide, resultOffer, type StakeParties } from "@/lib/payments/stake"
 import type { RequestOrigin } from "@/lib/payments/wallet-return"
 import type { SlotListProps } from "@/lib/shell/registry"
 import { usePlayers } from "@/lib/storage/hooks"
 
 // The result screen's payment row ("result.actions", one ResultRow with the signet). With a
-// stake: "500 sats an Mia zahlen", or how the stake stands, as the row's tone and in its words.
+// stake: "5,00 € an Mia zahlen", or how the stake stands, as the row's tone and in its words.
 // Without one, only where a wallet is connected: paying, receiving or congratulating. Loaded only
 // then (./gate.tsx), so for everyone else the result looks exactly as before. Tapping opens a
 // sheet; nothing is paid without its own confirmation.
@@ -52,9 +53,9 @@ const useBriefRow = () => useMediaQuery("(max-height: 500px), (max-width: 359px)
 
 // What the stake's row says: how it stands, or what this device can do about it. `brief` where
 // the row is narrow.
-function stakeLabel(tx: PaymentTexts, format: Format, parties: StakeParties, side: "payer" | "payee" | null, settled: PaymentEntry | undefined, brief: boolean) {
+function stakeLabel(tx: PaymentTexts, money: Money, parties: StakeParties, side: "payer" | "payee" | null, settled: PaymentEntry | undefined, brief: boolean) {
   const s = brief ? tx.stake.brief : tx.stake
-  const amount = format.sats(parties.sats)
+  const amount = money.primary(parties.sats * MSAT_PER_UNIT, parties.fiat)
   if (!settled) return side === "payee" ? s.receiveFrom(amount, parties.payer.name) : s.payTo(amount, parties.payee.name)
   if (settled.via === "manual") return s.settledRow
   if (settled.state === "paid") return s.paidRow(amount, parties.payee.name)
@@ -67,7 +68,7 @@ function stakeLabel(tx: PaymentTexts, format: Format, parties: StakeParties, sid
 function StakeAction({ match, placement, parties, entry }: SlotListProps["result.actions"] & { parties: StakeParties; entry: PaymentEntry | undefined }) {
   const t = useT()
   const tx = useAreaT(PAYMENTS_TEXTS)
-  const format = useFormat()
+  const money = useMoney({ live: false })
   const s = tx.stake
   const session = useSession()
   const linked = useLinked()
@@ -76,7 +77,8 @@ function StakeAction({ match, placement, parties, entry }: SlotListProps["result
   const [open, setOpen] = useState(false)
   const [mode, setMode] = useState<"pay" | "receive" | null>(null)
   const [confirmSettled, setConfirmSettled] = useState(false)
-  const amount = format.sats(parties.sats)
+  const amount = money.primary(parties.sats * MSAT_PER_UNIT, parties.fiat)
+  const stake: Amount = { sats: parties.sats, ...(parties.fiat ? { fiat: parties.fiat } : {}) }
   const action = actions.stake(match.id)
   const side = deviceSide(parties, linked, session?.pubkey ?? null)
   const payee = { name: parties.payee.name, pubkey: linked(parties.payee.id) }
@@ -104,7 +106,7 @@ function StakeAction({ match, placement, parties, entry }: SlotListProps["result
     <RequestOriginContext.Provider value={origin}>
       <ResultRow
         icon={PaymentSignet}
-        label={stakeLabel(tx, format, parties, side, settled, brief)}
+        label={stakeLabel(tx, money, parties, side, settled, brief)}
         tone={settled ? ROW_TONES[entryStatus(tx, settled).tone] : "neutral"}
         placement={placement}
         onClick={() => setOpen(true)}
@@ -112,8 +114,8 @@ function StakeAction({ match, placement, parties, entry }: SlotListProps["result
       />
       <Sheet open={open} onOpenChange={(next) => (next ? setOpen(true) : close())} title={t.payments.stake.title} description={landscape ? undefined : s.agreed(parties.payer.name, amount, parties.payee.name)}>
         <SheetBody>
-          {open && shown === "pay" && <PayFlow action={action} once counterpart={payee} amountSats={parties.sats} onDone={close} />}
-          {open && shown === "receive" && <ReceiveFlow action={action} once counterpart={payer} amountSats={parties.sats} onDone={close} />}
+          {open && shown === "pay" && <PayFlow action={action} once counterpart={payee} amount={stake} onDone={close} />}
+          {open && shown === "receive" && <ReceiveFlow action={action} once counterpart={payer} amount={stake} onDone={close} />}
           {open && shown === null && (
             // Which side this device is on; the two sides share a row on a phone in landscape.
             <div className="grid gap-2 xshort:grid-cols-2">
@@ -142,7 +144,7 @@ function StakeAction({ match, placement, parties, entry }: SlotListProps["result
         text={s.settledHereHint}
         confirm={tx.byHand.confirm}
         onConfirm={() => {
-          void noteSettled({ action, direction: side === "payee" ? "in" : "out", amountMsat: parties.sats * 1000, counterpart: side === "payee" ? payer : payee })
+          void noteSettled({ action, direction: side === "payee" ? "in" : "out", amountMsat: parties.sats * MSAT_PER_UNIT, counterpart: side === "payee" ? payer : payee, fiat: parties.fiat })
           close()
         }}
       />
@@ -161,7 +163,7 @@ function FreeAction({ match, placement }: SlotListProps["result.actions"]) {
   const brief = useBriefRow()
   const [open, setOpen] = useState(false)
   const [choice, setChoice] = useState<FreeChoice | null>(null)
-  const [amount, setAmount] = useState<number | null>(null)
+  const [amount, setAmount] = useState<Amount | null>(null)
   const [confirmed, setConfirmed] = useState(false)
   const me = session?.pubkey
   const others = match.players.filter((player) => !me || linked(player.id) !== me)
@@ -196,17 +198,17 @@ function FreeAction({ match, placement }: SlotListProps["result.actions"]) {
             </div>
           )}
           {open && choice?.kind === "congratulate" && <CongratulateFlow pubkey={choice.pubkey} name={choice.player.name} action={actions.congratulate(choice.pubkey, match.id)} onDone={close} />}
-          {open && choice?.kind === "receive" && <ReceiveFlow action={actions.receiveAfter(match.id)} once={false} counterpart={{ name: "" }} amountSats={null} onDone={close} />}
+          {open && choice?.kind === "receive" && <ReceiveFlow action={actions.receiveAfter(match.id)} once={false} counterpart={{ name: "" }} amount={null} onDone={close} />}
           {open && choice?.kind === "pay" && !confirmed && (
             <>
-              <AmountPicker label={tx.receive.amount} presets={AMOUNT_PRESETS} value={amount} onChange={setAmount} />
+              <AmountPicker label={tx.receive.amount} value={amount} onChange={setAmount} />
               <Button disabled={amount === null} onClick={() => setConfirmed(true)} className="mt-5 h-12 w-full rounded-xl text-[1.0625rem] font-semibold">
                 {t.common.next}
               </Button>
             </>
           )}
           {open && choice?.kind === "pay" && confirmed && (
-            <PayFlow action={actions.payPlayer(match.id, choice.player.id)} once={false} counterpart={{ name: choice.player.name, pubkey: linked(choice.player.id) }} amountSats={amount} onDone={close} />
+            <PayFlow action={actions.payPlayer(match.id, choice.player.id)} once={false} counterpart={{ name: choice.player.name, pubkey: linked(choice.player.id) }} amount={amount} onDone={close} />
           )}
         </SheetBody>
         {(!choice || (choice.kind === "pay" && !confirmed)) && (

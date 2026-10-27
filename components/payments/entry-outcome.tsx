@@ -1,11 +1,12 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 import { InlineStatus } from "@/components/common/inline-status"
 import { Button } from "@/components/ui/button"
 import { useAreaT, useT } from "@/components/i18n-provider"
+import { useAutoClose } from "@/components/payments/amount-block"
 import { OutcomeHeader, entryStatus } from "@/components/payments/entry-status"
-import { useFormat } from "@/components/payments/format"
+import { useMoney } from "@/components/payments/use-money"
 import { problemText } from "@/components/payments/problem"
 import { InvoiceView } from "@/components/payments/receive-flow"
 import { ResolveByHand } from "@/components/payments/resolve-by-hand"
@@ -21,25 +22,32 @@ import { watchReceipt } from "@/lib/payments/zap"
 // "Erneut versuchen" after a refusal (`onRetry`), the invoice again while it waits to be paid. A
 // paid zap listens for its receipt while shown; until it arrives it says "Bezahlt · Beleg wird
 // noch geladen", and nothing here pays again. `reason` says why it is shown instead of a new
-// payment (paid in another window), with `onPayAgain` to pay once more.
+// payment (paid in another window), with `onPayAgain` to pay once more. `autoClose`: the
+// outcome just arrived in this sheet, so once it says "Bezahlt" the sheet closes by itself.
+// `children` are the detail's rows, between the outcome and its buttons.
 export function EntryOutcome({
   entry,
   reason,
+  autoClose = false,
   onRetry,
   onPayAgain,
   onDone,
+  children,
 }: {
   entry: PaymentEntry
   reason?: string
+  autoClose?: boolean
   onRetry?: () => void
   onPayAgain?: () => void
   onDone: () => void
+  children?: ReactNode
 }) {
   const t = useT()
   const tx = useAreaT(PAYMENTS_TEXTS)
   const p = tx.pay
-  const format = useFormat()
+  const money = useMoney({ live: false })
   const wallet = useWallet()
+  useAutoClose(autoClose && entry.direction === "out" && entry.state === "paid", onDone)
   const [checking, setChecking] = useState(false)
   const [note, setNote] = useState<{ text: string; tone: "info" | "error" } | null>(null)
   // A check that didn't settle it: the person may look in their wallet instead.
@@ -55,9 +63,15 @@ export function EntryOutcome({
   }, [entry.id, listening])
 
   if (wallet === undefined) return null
-  if (entry.direction === "in") return <InvoiceView entry={entry} info={wallet} onDone={onDone} />
+  if (entry.direction === "in") {
+    return (
+      <InvoiceView entry={entry} info={wallet} autoClose={autoClose} onDone={onDone}>
+        {children}
+      </InvoiceView>
+    )
+  }
 
-  const amount = format.msat(entry.amountMsat)
+  const amount = money.primary(entry.amountMsat, entry.fiat)
   const name = entry.counterpart.name
   // Only the connection that paid can say what became of it; another one could at best confirm
   // it (lib/payments/journal.ts), so it isn't asked.
@@ -109,9 +123,10 @@ export function EntryOutcome({
   return (
     <>
       {header}
-      {entry.state === "paid" && typeof entry.feesMsat === "number" && <p className="mt-2 text-center text-[0.9375rem] text-muted-foreground">{p.feesPaid(format.msat(entry.feesMsat))}</p>}
+      {entry.state === "paid" && typeof entry.feesMsat === "number" && !children && <p className="mt-2 text-center text-[0.9375rem] text-muted-foreground">{p.feesPaid(money.primary(entry.feesMsat))}</p>}
       {reason && <InlineStatus className="mt-4">{reason}</InlineStatus>}
       {byHand && <ResolveByHand entry={entry} hint={hint ?? undefined} />}
+      {children}
       <SheetActions note={note && <InlineStatus tone={note.tone}>{note.text}</InlineStatus>}>
         {canCheck && (
           <Button onClick={check} disabled={checking} className="h-12 w-full rounded-xl text-[1.0625rem] font-semibold">

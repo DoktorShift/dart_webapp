@@ -89,7 +89,7 @@ export async function device(label, { viewport = PHONE, locale = "de", dark = fa
   await ctx.route(/^https?:\/\//, (route) => {
     const url = route.request().url()
     if (url.startsWith(BASE) || url.startsWith("http://127.0.0.1")) return route.continue()
-    if (url.includes("api.coingecko.com")) return route.fulfill({ json: { bitcoin: { eur: 61_500, usd: 67_000 } }, headers: { "access-control-allow-origin": "*" } })
+    if (url.includes("api.coingecko.com")) return route.fulfill({ json: { bitcoin: { eur: 61_500, usd: 67_000, gbp: 53_000, chf: 55_000 } }, headers: { "access-control-allow-origin": "*" } })
     made.foreign.push(url)
     return route.abort()
   })

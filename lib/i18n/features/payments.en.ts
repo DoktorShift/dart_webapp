@@ -6,7 +6,10 @@ export const paymentsEn: Messages["payments"] = {
   title: "Payments",
   connectTitle: "Connect Wallet",
   advancedTitle: "Advanced",
-  sats: (amount: string) => `${amount} ${amount === "1" ? "sat" : "sats"}`,
+  settingsTitle: "Settings",
+  historyTitle: "All Payments",
+  rateFrom: (time: string) => `Rate from ${time}`,
+  rateMissing: "Rate not available right now",
   stake: {
     title: "Stake",
     none: "None",
