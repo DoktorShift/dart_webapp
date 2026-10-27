@@ -7,6 +7,7 @@ import { InlineStatus } from "@/components/common/inline-status"
 import { StatsTable, allRows } from "@/components/game/result-stats"
 import { LegVisits } from "@/components/game/visit-list"
 import { useNav } from "@/components/nav/nav-context"
+import { SlotItems } from "@/components/shell/slot-items"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { PROFILE_TEXTS } from "@/lib/i18n/features/profile.screens"
 import { PROFILE_SCREENS } from "@/components/profile/screens"
@@ -67,6 +68,7 @@ export default function MatchScreen({ params }: ScreenProps) {
           />
         ))}
       </Group>
+      <SlotItems list="match.rows" props={() => ({ matchId: match.id })} />
 
       {state ? (
         <>
@@ -81,7 +83,7 @@ export default function MatchScreen({ params }: ScreenProps) {
         </>
       ) : (
         <>
-          <InlineStatus className="mt-6">{tx.games.imported}</InlineStatus>
+          <InlineStatus className="mt-6">{match.source === "imported-file" ? tx.games.importedFile : tx.games.imported}</InlineStatus>
           <Group title={tx.games.totals}>
             {match.players.map((player, i) => (
               <ListRow

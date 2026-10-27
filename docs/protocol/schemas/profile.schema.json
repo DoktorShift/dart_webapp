@@ -81,6 +81,18 @@
                       "type": "null"
                     }
                   ]
+                },
+                "checkouts": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10000000,
+                  "description": "Legs won with a known number of darts at a double"
+                },
+                "dartsAtDouble": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 100000000,
+                  "description": "Darts thrown at a double in those legs"
                 }
               },
               "required": ["games", "versus", "wins", "darts", "points", "highestFinish", "bestLeg", "visits180"],

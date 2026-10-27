@@ -139,13 +139,14 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
   },
 
   home: {
+    liveCount: (n) => (n === 1 ? "1 match live" : `${n} matches live`),
     mine: "My tournaments",
     recent: "Recently opened",
     drafts: "Drafts",
     draft: "Draft",
     untitled: "Untitled",
     create: "Create tournament",
-    openInvite: "Open invitation",
+    openInvite: "Scan code",
     free: (n) => (n === 0 ? "Full" : n === 1 ? "1 place free" : `${n} places free`),
     places: (taken, capacity) => `${taken} of ${capacity} places taken`,
     online: "Online",
@@ -272,6 +273,8 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
     nextMatch: "Your next match",
     versus: (name) => `vs ${name}`,
     onBoard: (board) => board,
+    liveStrip: "On the boards right now",
+    calledShort: "Called",
     called: "Called: go to the board.",
     playing: "In progress",
     waitingOpponent: "Your opponent isn't known yet.",
@@ -296,6 +299,7 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
     takingOver: "Taking over",
     takeOverOffline: "No connection: taking over needs the current state. Try again in a moment.",
     organize: "Organizer workspace",
+    organizeShort: "Organize",
     organizeTasks: (n) => (n === 1 ? "1 open task" : `${n} open tasks`),
     share: "Share",
     shareTitle: "Share tournament",
@@ -330,6 +334,7 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
 
   organize: {
     tabs: { participants: "Players", boards: "Boards", results: "Results", settings: "Settings" },
+    steps: { label: "Phases of the tournament", registration: "Sign-up", checkin: "Check-in", drawn: "Draw", running: "Matches", finished: "Done" },
     tasks: {
       title: "Up next",
       requests: (n) => (n === 1 ? "Confirm 1 request" : `Confirm ${n} requests`),
@@ -355,8 +360,12 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
       late: "Late entry",
       linked: "Linked to a profile",
       wantsPlace: (n) => (n === 1 ? "1 profile says: that's me" : `${n} profiles say: that's me`),
+      invite: "Invite players",
+      inviteHint: "Show the code or share the link",
       addGuests: "Add guests",
+      addGuestsHint: "Players without a profile, by name",
       guestNames: "Names, one per line",
+      recent: "Recently played with",
       add: (n) => (n === 1 ? "Add 1 guest" : `Add ${n} guests`),
       admit: "Admit",
       toWaitlist: "To the waiting list",
@@ -404,7 +413,7 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
       playing: (match) => `Playing: ${match}`,
       called: (match) => `Called: ${match}`,
       inactive: "Removed",
-      showCode: "Show code",
+      code: "Code",
       codeTitle: (name) => `Connect ${name}`,
       codeText: "Scan with the device at the board. It then shows only this board's matches.",
       codeLabel: "Code for the board",
@@ -517,6 +526,17 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
     saved: "File saved",
   },
 
+
+  leaderboard: {
+    scope: "Your placings in tournaments you played with this profile.",
+    tournaments: (n) => (n === 1 ? "tournament" : "tournaments"),
+    won: "won",
+    podium: (n) => (n === 1 ? "podium" : "podiums"),
+    players: (n) => (n === 1 ? "1 player" : `${n} players`),
+    place: (place, placeTo) => (place === placeTo ? ordinal(place) : `${ordinal(place)}–${ordinal(placeTo)}`),
+    placeLabel: (place, placeTo) => (place === placeTo ? `${ordinal(place)} place` : `${ordinal(place)} to ${ordinal(placeTo)} place`),
+    running: "Still running",
+  },
 
   club: {
     none: "No tournament yet",

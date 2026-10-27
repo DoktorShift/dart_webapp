@@ -17,6 +17,8 @@ if (featureOn("payments")) {
   registerScreen(PAYMENT_SCREENS.home, { title: (t) => t.payments.title, Component: lazyScreen(() => import("@/components/payments/payments-screen")) })
   registerScreen(PAYMENT_SCREENS.connect, { title: (t) => t.payments.connectTitle, Component: lazyScreen(() => import("@/components/payments/connect")) })
   registerScreen(PAYMENT_SCREENS.advanced, { title: (t) => t.payments.advancedTitle, Component: lazyScreen(() => import("@/components/payments/advanced-screen")) })
+  registerScreen(PAYMENT_SCREENS.settings, { title: (t) => t.payments.settingsTitle, Component: lazyScreen(() => import("@/components/payments/settings-screen")) })
+  registerScreen(PAYMENT_SCREENS.history, { title: (t) => t.payments.historyTitle, Component: lazyScreen(() => import("@/components/payments/history-screen")) })
 
   // The stake is kept with the game as config.extras["payments.stake"].
   registerSlotItem("setup.extras", STAKE_EXTRA, lazy(() => import("@/components/payments/stake-setup")))
@@ -30,8 +32,17 @@ if (featureOn("payments")) {
   )
   // Profil › Zahlungen is always there (the Profile tab is not the guest start path), so a wallet
   // can be connected calmly at home; the row says whether one is.
-  registerSlotItem("profile.rows", "payments", lazy(() => import("@/components/payments/payments-row")))
+  registerSlotItem("profile.account", "payments", lazy(() => import("@/components/payments/payments-row")))
   registerSlotItem("profile.actions", "payments.congratulate", lazy(() => import("@/components/payments/congratulate")))
+  // A game in the archive lists its payments, once there are any on this device.
+  registerSlotItem(
+    "match.rows",
+    "payments",
+    whenInUse(
+      () => import("@/components/payments/match-rows"),
+      (use) => use.payments,
+    ),
+  )
 
   // A wallet app came back with a new connection ("Wallet-App öffnen"). It counts only as the
   // answer to this device's own request (lib/payments/wallet-return.ts), and is kept only after the

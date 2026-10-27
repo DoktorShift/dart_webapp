@@ -1,5 +1,7 @@
 "use client"
 
+import type { ChipTone } from "@/components/ui/chip"
+import type { TournamentPhase } from "@/lib/protocol/tournament"
 import { useState } from "react"
 import { RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -133,6 +135,19 @@ export function SyncLine({ entry, onRefresh }: { entry: Entry; onRefresh?: () =>
       </div>
     </div>
   )
+}
+
+
+// How a phase reads on a chip (components/ui/chip.tsx): running is live (red dot), everything
+// before the start a tint, what is over or stopped quiet or amber.
+export const PHASE_TONES: Record<TournamentPhase, ChipTone> = {
+  registration: "accent",
+  checkin: "accent",
+  drawn: "accent",
+  running: "live",
+  paused: "warning",
+  finished: "neutral",
+  cancelled: "neutral",
 }
 
 // A big primary action, the one thing to do on a screen or in a sheet.

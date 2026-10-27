@@ -7,12 +7,18 @@
 //
 // Not run by itself: darts-night.mjs calls it at the end of the evening when MATRIX=1, while the
 // evening's relays are still up.
-import { BASE, OUT, PHONE, SE, SE_LANDSCAPE, TABLET, BOARD, audit, device, isOnScreen, onScreen, shot, tab } from "./lib.mjs"
+import { BASE, OUT, PHONE, SE, SE_LANDSCAPE, TABLET, BOARD, audit, dart as throwDart, device, isOnScreen, onScreen, shot, tab } from "./lib.mjs"
 
 const SIZES = [SE, PHONE, SE_LANDSCAPE, TABLET, BOARD]
 const LOOKS = [
-  { locale: "de", dark: false, tabs: { play: "Spielen", ranks: "Rangliste", clubs: "Clubs", tournaments: "Turniere", profile: "Profil" }, resume: /Weiterspielen/ },
-  { locale: "en", dark: true, tabs: { play: "Play", ranks: "Leaderboard", clubs: "Clubs", tournaments: "Tournaments", profile: "Profile" }, resume: /Continue|Resume/ },
+  {
+    locale: "de", dark: false, tabs: { play: "Spielen", ranks: "Rangliste", clubs: "Clubs", tournaments: "Turniere", profile: "Profil" }, resume: /Weiterspielen/,
+    ranks: { device: "Hier gespielt", friends: "Freunde", clubs: "Clubs", tournaments: "Turniere" }, payments: { row: /^Zahlungen/, send: "Senden", settings: "Einstellungen", back: /^Zurück zu Zahlungen$/ }, profile: { friends: /Freund/, addFriend: "Freund hinzufügen", stats: "Statistik", training: /^Training/, start: "Training starten", startGame: "Spiel starten", visibility: "Sichtbarkeit", history: /^Spielverlauf/, done: "Fertig", back: /^Zurück zu Profil$/, goal: /^Ziel/, goalSave: "Ziel setzen", cancel: "Abbrechen", share: "Training als Bild teilen" },
+  },
+  {
+    locale: "en", dark: true, tabs: { play: "Play", ranks: "Leaderboard", clubs: "Clubs", tournaments: "Tournaments", profile: "Profile" }, resume: /Continue|Resume/,
+    ranks: { device: "Played here", friends: "Friends", clubs: "Clubs", tournaments: "Tournaments" }, payments: { row: /^Payments/, send: "Send", settings: "Settings", back: /^Back to Payments$/ }, profile: { friends: /friend/i, addFriend: "Add friend", stats: "Statistics", training: /^Training/, start: "Start training", startGame: "Start game", visibility: "Visibility", history: /^Game history/, done: "Done", back: /^Back to Profile$/, goal: /^Goal/, goalSave: "Set goal", cancel: "Cancel", share: "Share training as a picture" },
+  },
 ]
 // Words of the protocol that never belong in normal flows (NOSTR-DESIGN-RULES.md).
 const PROTOCOL = /\b(relay|relays|nostr|npub|nsec|invoice|bolt11|preimage|NWC|NIP-\d+|event|zap request|Schlüssel|private key)\b/i
@@ -27,8 +33,8 @@ const match = (id, names, throws, extras) => ({
   config: { modeId: "301", modeName: "301", type: "x01", startScore: 301, doubleOut: true, doubleIn: false, cutThroat: false, bullFinish: false, legsToWin: 1, setsToWin: 1, startRule: "alternate", players: names.map((name, i) => ({ id: `m${i}`, name })), ...(extras ? { extras } : {}) },
   throws,
 })
-// Anna 50 left with her third dart in hand (the bull wins it); 500 sats at stake.
-const nearWin = () => match(`hig-${Math.random().toString(36).slice(2)}`, ["Anna", "Ben"], [dart(20, 3), dart(20, 3), dart(20, 3), dart(1), dart(1), dart(1), dart(20, 3), dart(11)], { "payments.stake": { sats: 500 } })
+// Anna 50 left with her third dart in hand (the bull wins it); 5 € (8.130 ₿) at stake.
+const nearWin = () => match(`hig-${Math.random().toString(36).slice(2)}`, ["Anna", "Ben"], [dart(20, 3), dart(20, 3), dart(20, 3), dart(1), dart(1), dart(1), dart(20, 3), dart(11)], { "payments.stake": { sats: 8130, fiat: { amount: 5, currency: "EUR" } } })
 
 async function seed(page, current) {
   await page.evaluate((c) => localStorage.setItem("dart-scorer.current-match.v1", c), JSON.stringify(current))
@@ -65,6 +71,17 @@ export async function runMatrix({ annaState }) {
         note(`${tag} ${name}: no protocol word`, word === null, word ?? "")
       }
       try {
+      // A game left with "Speichern und verlassen" waits above the tab bar on every other tab
+      // (the iOS 26 accessory), one tap from going on.
+      await page.goto(BASE)
+      await seed(page, { ...match(`hig-paused-${tag}`, NAMES.slice(0, 2), [dart(20, 3), dart(19)]), status: "paused" })
+      await tab(page, look.tabs.ranks)
+      await visit("ranks-resume")
+      // On a phone in landscape the accessory steps aside (no room above the tab bar); the game
+      // waits on the Play tab as before.
+      const resumeShown = await isOnScreen(page.getByRole("button", { name: look.resume }))
+      if (size.height > 500) note(`${tag} ranks-resume: the waiting game is one tap away above the tab bar`, resumeShown)
+      else note(`${tag} ranks-resume: in landscape the accessory steps aside`, !resumeShown)
       // The evening left the stake game's result open: start from the Play tab.
       await page.goto(BASE)
       await page.evaluate(() => localStorage.removeItem("dart-scorer.current-match.v1"))
@@ -73,6 +90,16 @@ export async function runMatrix({ annaState }) {
       await visit("play")
       await tab(page, look.tabs.ranks)
       await visit("ranks")
+      // The tab's four areas: each says what it counts.
+      const ranks = page.locator('[data-tab-panel="leaderboard"]')
+      await ranks.getByRole("radio", { name: look.ranks.friends }).click()
+      await page.waitForTimeout(1500)
+      await visit("ranks-friends")
+      await ranks.getByRole("radio", { name: look.ranks.clubs }).click()
+      await visit("ranks-clubs")
+      await ranks.getByRole("radio", { name: look.ranks.tournaments }).click()
+      await visit("ranks-tournaments")
+      await ranks.getByRole("radio", { name: look.ranks.device }).click()
       await tab(page, look.tabs.clubs)
       await visit("clubs")
       await (await onScreen(page.getByRole("button", { name: /Dartfreunde Nord/ }))).click()
@@ -87,7 +114,97 @@ export async function runMatrix({ annaState }) {
         await visit("tournament")
       } else note(`${tag}: the finished tournament is listed on the Tournaments tab`, false)
       await tab(page, look.tabs.profile)
+      const profile = page.locator('[data-tab-panel="profile"]')
+      // Anna has played only against others tonight: one training first (from the card's own
+      // button, Anna alone, a 301 in six darts), so the training screen has something to show.
+      await page.waitForTimeout(900)
+      const startTraining = await onScreen(profile.getByRole("button", { name: look.profile.start, exact: true }), 5_000).catch(() => null)
+      if (startTraining) {
+        await startTraining.click()
+        await (await onScreen(page.getByRole("button", { name: look.profile.startGame, exact: true }))).click()
+        await page.getByRole("button", { name: /Spieloptionen|Game options/ }).waitFor({ timeout: 15_000 })
+        for (const [s, m] of [[20, 3], [20, 3], [20, 3], [20, 3], [11, 3], [14, 2]]) await throwDart(page, s, m)
+        await (await onScreen(page.getByRole("button", { name: look.profile.done, exact: true }), 20_000)).click()
+        await page.waitForTimeout(800)
+        await tab(page, look.tabs.profile)
+      }
       await visit("profile")
+      // The profile's own screens: statistics with a figure and its "before", the training as
+      // growth over time, the visibility choice, and the history export sheet.
+      const back = async () => {
+        await (await onScreen(page.getByRole("button", { name: look.profile.back }))).click()
+        await page.waitForTimeout(500)
+      }
+      await (await onScreen(profile.getByRole("button", { name: look.profile.stats, exact: true }))).click()
+      await visit("profile-stats")
+      await back()
+      // Friends: the list (Ben since tonight) and the sheet that adds one.
+      await (await onScreen(profile.getByRole("button", { name: look.profile.friends }))).click()
+      await visit("profile-friends")
+      await (await onScreen(page.getByRole("button", { name: look.profile.addFriend }).first())).click()
+      await visit("profile-friends-add")
+      await (await onScreen(page.getByRole("button", { name: look.profile.done, exact: true }))).click()
+      await page.waitForTimeout(400)
+      await back()
+      // Zahlungen: the wallet with its balance, "Senden" and "Empfangen", the stake with its game;
+      // "Senden" with the people to pay; the settings behind the gear.
+      await (await onScreen(profile.getByRole("button", { name: look.payments.row }))).click()
+      await visit("payments")
+      const send = await onScreen(page.getByRole("button", { name: look.payments.send, exact: true }), 5_000).catch(() => null)
+      if (send) {
+        await send.click()
+        await visit("payments-send")
+        await (await onScreen(page.getByRole("dialog").getByRole("button", { name: look.profile.cancel, exact: true }))).click()
+        await page.waitForTimeout(400)
+      } else note(`${tag} payments: "Senden" is offered`, false)
+      const gear = await onScreen(page.getByRole("button", { name: look.payments.settings, exact: true }), 5_000).catch(() => null)
+      if (gear) {
+        await gear.click()
+        await visit("payments-settings")
+        await (await onScreen(page.getByRole("button", { name: look.payments.back }))).click()
+        await page.waitForTimeout(500)
+      } else note(`${tag} payments: the gear leads to the settings`, false)
+      await back()
+      await (await onScreen(profile.getByRole("button", { name: look.profile.training }).first())).click()
+      // The goal (M18): set to 60 from its sheet, then the screen with the line through the chart,
+      // and "Teilen" in the bar.
+      await (await onScreen(profile.getByRole("button", { name: look.profile.goal }))).click()
+      await page.getByRole("dialog").getByRole("textbox").fill("60")
+      await page.waitForTimeout(500)
+      await shot(d, `m-profile-training-goal-${tag}`)
+      await page.getByRole("button", { name: look.profile.goalSave, exact: true }).click()
+      await page.waitForTimeout(600)
+      // Back to the top: the shot is the screen as it opens, chart first.
+      await page.evaluate(() => document.querySelectorAll("[data-scroll-container]").forEach((el) => el.scrollTo(0, 0)))
+      await visit("profile-training")
+      note(`${tag} profile-training: the goal row shows 60`, (await page.getByRole("button", { name: /^(Ziel|Goal)\b.*60/ }).count()) >= 1)
+      // The chart needs a month with enough trainings; the evening's import gives October three.
+      note(`${tag} profile-training: the goal line is in the chart`, (await page.getByText(/^(Ziel|Goal) 60/).count()) >= 1)
+      note(`${tag} profile-training: Teilen in the bar`, await isOnScreen(page.getByRole("button", { name: look.profile.share, exact: true })))
+      // The picture before it goes anywhere (M17): the sheet with the drawn card, then cancel.
+      await page.getByRole("button", { name: look.profile.share, exact: true }).click()
+      await page.getByRole("dialog").locator("img").waitFor({ timeout: 15_000 })
+      await page.waitForTimeout(500)
+      await shot(d, `m-profile-share-${tag}`)
+      note(`${tag} profile-share: the picture is shown before sharing`, (await page.getByRole("dialog").locator("img").count()) === 1)
+      await (await onScreen(page.getByRole("button", { name: look.profile.cancel, exact: true }))).click()
+      await page.waitForTimeout(500)
+      await back()
+      await (await onScreen(profile.getByRole("button", { name: look.profile.visibility }))).click()
+      await visit("profile-visibility")
+      await back()
+      await (await onScreen(profile.getByRole("button", { name: look.profile.history }))).click()
+      await page.waitForTimeout(700)
+      await shot(d, `m-profile-history-${tag}`)
+      // The import's preview (M16) from the evening's table, then back without importing.
+      await page.locator('input[type="file"]').last().setInputFiles(new URL("../fixtures/spielverlauf.csv", import.meta.url).pathname)
+      await page.waitForTimeout(900)
+      await shot(d, `m-profile-import-${tag}`)
+      note(`${tag} profile-import: the preview asks which name is you`, await isOnScreen(page.getByRole("radiogroup")))
+      await (await onScreen(page.getByRole("button", { name: look.profile.cancel, exact: true }))).click()
+      await page.waitForTimeout(400)
+      await (await onScreen(page.getByRole("button", { name: look.profile.done, exact: true }))).click()
+      await page.waitForTimeout(400)
 
       // The result with several pieces: the stake, the badges, the club or offer rows.
       await tab(page, look.tabs.play)
@@ -102,9 +219,9 @@ export async function runMatrix({ annaState }) {
       note(`${tag} result: one screen, no page scroll`, resultFits)
       // The stake row's two marks must not run into its words.
       const overlap = await page.evaluate(() => {
-        const row = [...document.querySelectorAll("button")].find((b) => /500 sats/.test(b.textContent ?? "") && b.getBoundingClientRect().width > 0)
+        const row = [...document.querySelectorAll("button")].find((b) => /€/.test(b.textContent ?? "") && /Ben/.test(b.textContent ?? "") && b.getBoundingClientRect().width > 0)
         const signet = row?.querySelector("span.inline-flex")
-        const label = row && [...row.querySelectorAll("span")].find((s) => /500 sats/.test(s.textContent ?? "") && s !== signet)
+        const label = row && [...row.querySelectorAll("span")].find((s) => /€/.test(s.textContent ?? "") && s !== signet)
         if (!signet || !label) return null
         const imgs = [...signet.querySelectorAll("img")].map((i) => i.getBoundingClientRect().right)
         return { signetRight: Math.round(Math.max(...imgs)), labelLeft: Math.round(label.getBoundingClientRect().left) }

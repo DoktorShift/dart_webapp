@@ -1,11 +1,18 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Calendar, ChartColumn, ChevronRight, ListTodo, Settings, Users } from "lucide-react"
+import { Calendar, ChartColumn, Ellipsis, Link, LogOut, Settings, Share, Target, UserRoundPlus, Users } from "lucide-react"
+import { ActionRow, type Action } from "@/components/ui/action-row"
+import { Avatar } from "@/components/ui/avatar"
+import { AvatarStack } from "@/components/ui/avatar-stack"
 import { Button } from "@/components/ui/button"
+import { Chip, Chips } from "@/components/ui/chip"
 import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
+import { Menu, type MenuItem } from "@/components/ui/menu"
 import { InlineStatus } from "@/components/common/inline-status"
+import { TaskRow } from "@/components/common/task-row"
+import { NavBarItems } from "@/components/nav/nav-bar-items"
 import { useNav } from "@/components/nav/nav-context"
 import { SlotItems } from "@/components/shell/slot-items"
 import { useAreaT, useT } from "@/components/i18n-provider"
@@ -15,7 +22,8 @@ import { ClubHeader, SyncLine, membershipLine, taskLabel, useChange } from "@/co
 import { Confirm } from "@/components/ui/confirm"
 import { DateAnswer, answerCounts } from "@/components/clubs/date-answer"
 import { useInlineProfile } from "@/components/profile/inline-profile"
-import { InviteSheet } from "@/components/clubs/invite-sheet"
+import { ClubShareSheet, InviteSheet } from "@/components/clubs/invite-sheet"
+import { InvitesSheet } from "@/components/clubs/manage-sheets"
 import { CLUB_SCREENS } from "@/components/clubs/screens"
 import { StartGameSheet } from "@/components/clubs/start-game-sheet"
 import { clubAuthor, clubReader, useClub } from "@/components/clubs/use-clubs"
@@ -36,11 +44,12 @@ import { readLabels } from "@/lib/protocol/tags"
 import type { ScreenParams } from "@/lib/shell/nav"
 import { SCREENS, type ScreenProps } from "@/lib/shell/registry"
 
-// A club (PLAN.md "Gestaltung der Clubansichten"): the one thing it wants from you first, then
-// the next club night with your answer, the current season with your row, "Spiel starten", and
-// the sections Spieler, Tabelle, Termine & Turniere. Leaders get "Club verwalten"; nothing of
-// the management is mixed into the players' actions. Every state short of membership says
-// what it is and what comes next. Opening the club asks the relays once.
+// A club (PLAN.md "Gestaltung der Clubansichten"): its head (picture, who is in it, where you
+// stand), the quick actions in a row (Spiel starten, Einladen or Tabelle, Termine), the one
+// thing it wants from you, then the next club night with your answer and the current season
+// with your row. Management and leaving sit behind "Mehr" in the bar; nothing of the management
+// is mixed into the players' actions. Every state short of membership says what it is and what
+// comes next. Opening the club asks the relays once.
 export default function ClubScreen({ params }: ScreenProps) {
   const tx = useAreaT(CLUBS_TEXTS)
   const { view, loaded, missing, refresh } = useClub(params.club ?? null)
@@ -98,6 +107,7 @@ function ClubBody({ view, params, refresh }: { view: ClubView; params: ScreenPar
   // covers and freezes the tabs at once, and a sheet still sliding away would never finish.
   const [sheet, setSheet] = useState<"closed" | "open" | "left">("closed")
   const [inviting, setInviting] = useState(false)
+  const [invites, setInvites] = useState(false)
   const [verdict, setVerdict] = useState<ClubGame | null>(null)
   const [leaving, setLeaving] = useState(false)
   const [accepting, setAccepting] = useState(false)
@@ -152,52 +162,51 @@ function ClubBody({ view, params, refresh }: { view: ClubView; params: ScreenPar
       if ((await refresh())?.state?.owner !== author.pubkey) throw new ClubOutdatedError()
     })
 
+  // Leaders invite; members too where the club lets them (their link only asks); in a public
+  // club everyone else can at least share it.
+  const mayInvite = manager || (me.status === "member" && state?.info.membersInvite === true)
+  const canInvite = mayInvite || state?.info.visibility === "public"
+  const actions: Action[] = !state || me.status !== "member" ? [] : [
+    ...(archived ? [] : [{ id: "play", icon: Target, label: tx.club.actions.play, onClick: () => setSheet("open") }]),
+    ...(archived || !canInvite ? [] : [{ id: "invite", icon: mayInvite ? UserRoundPlus : Share, label: mayInvite ? tx.club.actions.invite : tx.club.actions.share, onClick: () => setInviting(true) }]),
+    { id: "dates", icon: Calendar, label: tx.club.actions.dates, onClick: () => sub(CLUB_SCREENS.dates) },
+    ...(archived || !canInvite ? [{ id: "table", icon: ChartColumn, label: tx.club.actions.table, onClick: () => sub(CLUB_SCREENS.table) }] : []),
+  ].slice(0, 3)
+  const menu: MenuItem[] = !state || me.status !== "member" ? [] : [
+    ...(leader ? [{ id: "manage", icon: Settings, label: tx.club.manage, onSelect: () => sub(CLUB_SCREENS.manage) }] : []),
+    ...(manager && !archived ? [{ id: "invites", icon: Link, label: tx.manage.invites, onSelect: () => setInvites(true) }] : []),
+    ...(me.role !== "owner" ? [{ id: "leave", icon: LogOut, label: tx.club.leave, destructive: true, onSelect: () => setLeaving(true) }] : []),
+  ]
+
   return (
     <div className="pb-4">
-      <ClubHeader view={view} subtitle={membershipLine(view, tx)} />
+      {menu.length > 0 && (
+        <NavBarItems>
+          <Menu icon={Ellipsis} label={t.shell.bar.more} items={menu} className="-mr-1" />
+        </NavBarItems>
+      )}
+      {!state || me.status !== "member" ? (
+        <ClubHeader view={view} subtitle={membershipLine(view, tx)} />
+      ) : (
+        <ClubHero view={view} state={state} onMembers={() => sub(CLUB_SCREENS.members)} />
+      )}
       {!state ? (
         <NoState view={view} />
       ) : me.status !== "member" ? (
         <Outsider view={view} state={state} busy={busy} problem={problem} run={run} />
       ) : (
         <>
+          <ActionRow actions={actions} className="mt-4" />
           {archived && (
             <InlineStatus tone="info" className="mt-4">
               {tx.club.state.archived}
             </InlineStatus>
           )}
-          {tasks[0] && (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => onTask(tasks[0])}
-              className="mt-4 flex min-h-14 w-full items-center gap-3 rounded-2xl bg-primary/10 px-4 py-3 text-left text-[1.0625rem] font-semibold text-primary transition-colors active:bg-primary/20 disabled:opacity-60"
-            >
-              <ListTodo className="h-5 w-5 shrink-0" aria-hidden="true" />
-              <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">{taskLabel(tasks[0], tx, t)}</span>
-              <ChevronRight className="h-5 w-5 shrink-0" aria-hidden="true" />
-            </button>
-          )}
+          {tasks[0] && <TaskRow label={taskLabel(tasks[0], tx, t)} disabled={busy} onClick={() => onTask(tasks[0])} className="mt-4" />}
           {problem && (
             <InlineStatus tone="error" className="mt-4">
               {problem}
             </InlineStatus>
-          )}
-          {!archived && (
-            <div className="mt-4 grid gap-2 min-[360px]:grid-cols-[minmax(0,1fr)_auto]">
-              <Button onClick={() => setSheet("open")} className="h-12 whitespace-normal rounded-xl text-[1.0625rem] font-semibold">
-                {tx.club.play}
-              </Button>
-              {manager && (
-                <Button
-                  variant="secondary"
-                  onClick={() => setInviting(true)}
-                  className="h-12 whitespace-normal rounded-xl bg-primary/10 px-5 text-[1.0625rem] font-semibold text-primary shadow-none hover:bg-primary/15 active:bg-primary/20"
-                >
-                  {tx.club.invite}
-                </Button>
-              )}
-            </div>
           )}
 
           <Group title={tx.club.nextDate}>
@@ -246,19 +255,9 @@ function ClubBody({ view, params, refresh }: { view: ClubView; params: ScreenPar
 
           <Group>
             <ListRow icon={Users} iconTone="blue" title={tx.club.members} value={Object.keys(state.members).length} onClick={() => sub(CLUB_SCREENS.members)} />
-            <ListRow icon={ChartColumn} iconTone="green" title={tx.club.table} onClick={() => sub(CLUB_SCREENS.table)} />
-            <ListRow icon={Calendar} iconTone="orange" title={tx.club.dates} onClick={() => sub(CLUB_SCREENS.dates)} />
+            {!actions.some((a) => a.id === "table") && <ListRow icon={ChartColumn} iconTone="green" title={tx.club.table} onClick={() => sub(CLUB_SCREENS.table)} />}
+            {leader && <ListRow icon={Settings} iconTone="gray" title={tx.club.manage} onClick={() => sub(CLUB_SCREENS.manage)} />}
           </Group>
-          {leader && (
-            <Group>
-              <ListRow icon={Settings} iconTone="gray" title={tx.club.manage} onClick={() => sub(CLUB_SCREENS.manage)} />
-            </Group>
-          )}
-          {me.role !== "owner" && (
-            <Group>
-              <ListRow title={tx.club.leave} destructive onClick={() => setLeaving(true)} />
-            </Group>
-          )}
 
           {sheet !== "left" && (
             <StartGameSheet
@@ -272,7 +271,8 @@ function ClubBody({ view, params, refresh }: { view: ClubView; params: ScreenPar
               }}
             />
           )}
-          <InviteSheet view={view} state={state} open={inviting} onOpenChange={setInviting} />
+          {mayInvite ? <InviteSheet view={view} state={state} open={inviting} onOpenChange={setInviting} /> : <ClubShareSheet view={view} open={inviting} onOpenChange={setInviting} />}
+          {manager && <InvitesSheet view={view} state={state} open={invites} onOpenChange={setInvites} />}
           <VerdictSheet view={view} state={state} game={verdict} open={verdict !== null} onOpenChange={(open) => !open && setVerdict(null)} />
           <Confirm
             open={leaving}
@@ -297,6 +297,32 @@ function ClubBody({ view, params, refresh }: { view: ClubView; params: ScreenPar
       )}
       <SyncLine view={view} onRefresh={refresh} />
     </div>
+  )
+}
+
+// The head of a club for its members: the picture, the people in it as faces (tap: the list),
+// and where this person stands, in chips. The name is the screen's title.
+function ClubHero({ view, state, onMembers }: { view: ClubView; state: ClubState; onMembers: () => void }) {
+  const tx = useAreaT(CLUBS_TEXTS)
+  const info = view.info
+  const pubkeys = Object.keys(state.members)
+  const names = useProfileNames(pubkeys.slice(0, 4))
+  const people = pubkeys.map((p, i) => ({ seed: p, ...(i < 4 ? { name: names(p).name, src: names(p).picture } : {}) }))
+  return (
+    <section className="mt-4">
+      <div className="flex items-center gap-4">
+        <Avatar seed={view.id} name={info?.name ?? undefined} src={info?.picture} size={72} />
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <Chips>
+            <Chip tone={isLeader(view.me.role) ? "accent" : "neutral"}>{tx.roles[view.me.role ?? "member"]}</Chip>
+            <Chip>{info?.visibility === "public" ? tx.club.visibility.public : tx.club.visibility.closed}</Chip>
+            {info?.archived && <Chip tone="warning">{tx.home.status.archived}</Chip>}
+          </Chips>
+          <AvatarStack people={people} label={tx.home.members(pubkeys.length)} onClick={onMembers} />
+        </div>
+      </div>
+      {info?.about && <p className="mt-3 text-[0.9375rem] leading-snug text-muted-foreground [overflow-wrap:anywhere]">{info.about}</p>}
+    </section>
   )
 }
 

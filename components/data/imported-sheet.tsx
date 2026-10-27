@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Sheet } from "@/components/ui/sheet"
 import { useT } from "@/components/i18n-provider"
 import { formatDate } from "@/lib/i18n"
-import type { ArchivedMatch } from "@/lib/storage/archive"
+import { isImported, type ArchivedMatch } from "@/lib/storage/archive"
 import { assignImportedName, nameKey, type PlayerRecord } from "@/lib/storage/players"
 import type { Standing } from "@/lib/storage/stats"
 
@@ -14,7 +14,7 @@ import type { Standing } from "@/lib/storage/stats"
 // ever merged automatically: two people can share a name.
 
 const importedGames = (matches: ArchivedMatch[], keys: string[]) =>
-  matches.filter((m) => m.source === "imported-v1" && m.players.some((p) => !p.unnamed && keys.includes(nameKey(p.name)))).length
+  matches.filter((m) => isImported(m) && m.players.some((p) => !p.unnamed && keys.includes(nameKey(p.name)))).length
 
 export function ImportedSheet({
   standing,
@@ -23,7 +23,7 @@ export function ImportedSheet({
   onClose,
 }: {
   // An imported row, or a player's row that counts imported games; null when closed.
-  standing: Standing | null
+  standing: Pick<Standing, "key" | "name" | "imported" | "playerId"> | null
   matches: ArchivedMatch[]
   players: PlayerRecord[]
   onClose: () => void

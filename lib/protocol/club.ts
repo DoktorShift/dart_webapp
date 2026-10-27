@@ -34,12 +34,20 @@ export const seasonRules = obj({
 })
 export type SeasonRules = Infer<typeof seasonRules>
 
+// How people get in (docs/protocol/families/club.md, "Beitrittsregeln"). Both absent means off,
+// which is what every club founded before these fields existed has.
+const joining = {
+  approval: opt(bool("New members only after an owner or admin confirms: a group link files a request instead of admitting")),
+  membersInvite: opt(bool("Every member may invite; a member's invite files a request, which an owner or admin confirms")),
+}
+
 const clubFound = obj({
   name: name(),
   about: opt(shortText(500)),
   picture: opt(httpsUrl()),
   visibility: oneOf(["closed", "public"], "closed: every record but join and leave is sealed for the members"),
   capacity: opt(int(2, MAX_CLUB_MEMBERS, "With a limit, group links admit no one directly; an owner or admin accepts")),
+  ...joining,
 })
 
 const clubUpdate = refine(
@@ -51,6 +59,7 @@ const clubUpdate = refine(
     visibility: opt(oneOf(["closed", "public"])),
     capacity: opt(nullable(int(2, MAX_CLUB_MEMBERS))),
     archived: opt(bool()),
+    ...joining,
   }),
   (v) => (Object.keys(v).length > 1 ? null : "changes nothing"),
 )
@@ -59,12 +68,37 @@ const clubUpdate = refine(
 // derived from the link's token, never the token: whoever reads the record checks join proofs
 // (invite.ts). In a public club it travels in the clear, so everyone can, and has no label; a
 // closed club seals it, with the preview for people who open the link encrypted under
-// previewKey(token). An invite ends with its maker's role as owner or admin.
+// previewKey(token). An invite ends with its maker's role: a manager's with their role as owner
+// or admin, a member's (membersInvite) with their membership or the setting. A group invite may
+// also carry a code in a tag (invite.ts codeTag); the content stays the same.
 const clubInvite = obj({
   kind: oneOf(INVITE_KINDS, "group: admits with a valid proof until expiry or revocation; personal: once, after acceptance"),
   key: pubkey("Public key of the invite key HKDF(token, 'blueline-invite-v1', 'proof'), see invite.ts"),
   expires: time(),
   label: opt(str({ max: 60, description: "Plain text; only in a closed club, where the invite is sealed, since it may name the invited person" })),
+})
+
+export const CODE_PATTERN = /^[A-HJ-NP-Z2-9]{8}$/
+
+// The secret of an invite link, sealed for the owner and admins so every leader's device shows
+// the same code (docs/protocol/families/club.md, "Geteilter Link"). Changes no state; a reader
+// trusts a token only if its invite key is the invite's (lib/clubs). Never in the clear.
+const inviteToken = obj({
+  invite: eventId("club.invite event id"),
+  token: hex(16, "The link's secret (invite.ts); whoever has it makes the link"),
+  code: opt(str({ min: 8, max: 8, pattern: CODE_PATTERN, description: "The invite's short code, if it has one" })),
+})
+
+// A personal invitation sent to one player: the link's parts, so the recipient's app opens the
+// invitation as if the link had been scanned. Only ever inside a NIP-59 gift wrap to the
+// recipient (lib/clubs); as an event it is refused (records.ts).
+const invitation = obj({
+  invite: eventId("club.invite event id"),
+  token: hex(16, "The link's secret"),
+  relays: arr(str({ max: 256, pattern: /^wss?:\/\/[^\s"<>\\]+$/, description: "Relay URL" }), { max: 4, unique: true, description: "Relays the club's records are on, beyond the usual ones" }),
+  // The club's name and how the sender is called, for the message.
+  name: name(),
+  hostName: opt(name()),
 })
 
 // Ending an admin's role (club.role to a lower role, club.remove) names the last club.update
@@ -134,6 +168,8 @@ export const CLUB_TYPES = {
   "club.found": rec(clubFound, "Founds a club; its id is the club id", { root: "self" }),
   "club.update": rec(clubUpdate, "Changes name, description, picture, visibility, capacity or archive state"),
   "club.invite": rec(clubInvite, "Creates a group link or a personal invite; in the clear in a public club, sealed in a closed one"),
+  "club.invite.token": rec(inviteToken, "Shares an invite link's secret with the owner and admins; always sealed, changes no state", { encrypted: true }),
+  "club.invitation": { kind: KIND_RECORD, root: "required" as const, encryption: "none" as const, schema: invitation, description: "A personal invitation to one player; only ever inside a NIP-59 gift wrap" },
   "club.invite.revoke": rec(obj({ invite: eventId("club.invite event id") }), "Ends an invite"),
   "club.join": rec(clubJoin, "Joins through a group link, or asks to join (personal invite or none)", { encryption: "none" }),
   "club.accept": rec(obj({ request: eventId("club.join event id"), member: pubkey() }), "Accepts a waiting join request"),

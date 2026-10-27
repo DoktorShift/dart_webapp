@@ -1,6 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { createHash, createHmac, hkdfSync } from "node:crypto"
+import { createHash, createHmac, hkdfSync, scryptSync } from "node:crypto"
 import { readFileSync } from "node:fs"
 import { decodeBolt11, getPublicKey, nip44, verifyEvent } from "nostr-core"
 import { schnorr } from "@noble/curves/secp256k1"
@@ -12,7 +12,7 @@ import { decodeHandoffLink, parseHandoffEvent } from "../lib/protocol/handoff.ts
 import { assembleChunks, chunkData } from "../lib/protocol/chunks.ts"
 import type { ClubRole } from "../lib/protocol/club.ts"
 import { clubRoleAt, reduceClub } from "../lib/protocol/club-state.ts"
-import { inviteKey, inviteProof, previewKey, readInvitePreview, verifyInviteProof } from "../lib/protocol/invite.ts"
+import { codeLookup, codeTag, inviteKey, inviteProof, openCodeTag, previewKey, readInvitePreview, verifyInviteProof } from "../lib/protocol/invite.ts"
 import { decodeLinkPayload, parseLinkFragment } from "../lib/protocol/links.ts"
 import { reduceMatch } from "../lib/protocol/match-state.ts"
 import type { PairingSession } from "../lib/protocol/pairing.ts"
@@ -201,9 +201,20 @@ test("club vectors: no invite token, label in the clear or reader's pubkey reach
   assert.ok(invites > 20)
 })
 
-test("invite vectors: invite keys, proofs and preview keys follow the documented derivations", () => {
+test("invite vectors: invite keys, proofs and preview keys follow the documented derivations", async () => {
   const cases = load("invite").cases
   for (const v of cases) {
+    // The short code: scrypt with node:crypto, the rest as documented (club.md "Kurzcode").
+    const k = scryptSync(v.code, "blueline-code-v1", 32, { N: 2 ** 15, r: 8, p: 1, maxmem: 64 * 1024 * 1024 })
+    const lookup = createHash("sha256").update(Buffer.concat([Buffer.from("blueline-code-lookup-v1"), k])).digest().subarray(0, 16).toString("hex")
+    assert.equal(v.codeLookup, lookup)
+    assert.equal(await codeLookup(v.code), lookup)
+    assert.deepEqual(v.codeTag.slice(0, 2), ["c", lookup])
+    assert.equal(await openCodeTag([v.codeTag], v.code), v.token)
+    assert.equal(await openCodeTag([v.codeTag], "ZZZZ9999"), null)
+    const fresh = await codeTag(v.code, v.token)
+    assert.equal(fresh[1], lookup)
+    assert.equal(await openCodeTag([fresh], v.code), v.token)
     // HKDF and the message hash with node:crypto, the curve with nostr-core's own primitive.
     const secret = Buffer.from(hkdfSync("sha256", Buffer.from(v.token, "hex"), "blueline-invite-v1", "proof", 32))
     assert.equal(v.inviteKey, getPublicKey(Uint8Array.from(secret)))

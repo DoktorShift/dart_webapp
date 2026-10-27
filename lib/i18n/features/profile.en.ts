@@ -27,8 +27,10 @@ export const profileEn: Messages["profile"] = {
     games: "Games",
     game: "Game",
     player: "Player",
-    preview: "How others see your profile",
+    training: "Training",
+    visibility: "Visibility",
     advanced: "Advanced",
+    friends: "Friends",
   },
 
   seatLinked: "Linked to a profile",

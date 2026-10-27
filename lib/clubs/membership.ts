@@ -2,13 +2,13 @@ import type { ClubRole } from "../protocol/club.ts"
 import type { ClubState, JoinRequest } from "../protocol/club-state.ts"
 import { clubRoleAt } from "../protocol/club-state.ts"
 import type { InvitePreview } from "../protocol/invite.ts"
-import { inviteKey, inviteProof, newInviteToken, previewKey } from "../protocol/invite.ts"
+import { codeTag, inviteKey, inviteProof, newInviteCode, newInviteToken, previewKey } from "../protocol/invite.ts"
 import { buildRecord, maxSharedKeys, type ContentOf, type RecordType } from "../protocol/records.ts"
 import { parseEnvelope, wrapsFor } from "../protocol/seal.ts"
 import { encryptionOf, readLabels, tagValue } from "../protocol/tags.ts"
 import { nowSeconds } from "../nostr/time.ts"
 import type { NostrEvent } from "../nostr/types.ts"
-import { afterState, recordTime, send, type Author, type Outgoing, type Sent } from "./send.ts"
+import { afterState, ClubSignerError, recordTime, send, type Author, type Outgoing, type Sent } from "./send.ts"
 import { updateClub } from "./store.ts"
 
 // What members and leaders do in a club (docs/protocol/families/club.md, permissions.md):
@@ -47,18 +47,27 @@ export interface FoundingInput {
   name: string
   about?: string
   visibility: "closed" | "public"
+  // New members only after a leader confirms; every member may invite (club.md, "Beitrittsregeln").
+  approval?: boolean
+  membersInvite?: boolean
 }
 
 // Founds a club; its id is the founding's event id. A closed club is sealed from the start, for
 // its only member so far.
 export async function foundClub(input: FoundingInput, author: Author): Promise<string> {
-  const content = { name: input.name.trim(), ...(input.about?.trim() ? { about: input.about.trim() } : {}), visibility: input.visibility }
+  const content = {
+    name: input.name.trim(),
+    ...(input.about?.trim() ? { about: input.about.trim() } : {}),
+    visibility: input.visibility,
+    ...(input.approval ? { approval: true } : {}),
+    ...(input.membersInvite ? { membersInvite: true } : {}),
+  }
   const template = buildRecord("club.found", content, { created_at: recordTime() })
   const sent = await send(null, [input.visibility === "closed" ? { template, seal: { readers: [author.pubkey] } } : { template }], author)
   return sent.events[0].id
 }
 
-export type InfoChange = Partial<Pick<ContentOf<"club.update">, "name" | "about" | "picture" | "visibility" | "capacity" | "archived">>
+export type InfoChange = Partial<Pick<ContentOf<"club.update">, "name" | "about" | "picture" | "visibility" | "capacity" | "archived" | "approval" | "membersInvite">>
 
 export const updateInfo = (state: ClubState, change: InfoChange, author: Author): Promise<Sent> =>
   send(state.id, [record(state, "club.update", { prev: state.heads.info, ...change })], author)
@@ -75,7 +84,19 @@ export interface InviteInput {
   next?: InvitePreview["next"]
 }
 
-export async function createInvite(state: ClubState, input: InviteInput, author: Author): Promise<{ invite: string; token: string; sent: Sent }> {
+export interface CreatedInvite {
+  invite: string
+  token: string
+  // A group invite's short code (club.md, "Kurzcode").
+  code?: string
+  sent: Sent
+}
+
+const isManagerRole = (role: ClubRole | null | undefined) => role === "owner" || role === "admin"
+const managersOf = (state: ClubState) => Object.values(state.members).filter((m) => isManagerRole(m.role)).map((m) => m.pubkey)
+
+// A group link gets a code people can say aloud; the invite carries what the code opens.
+export async function createInvite(state: ClubState, input: InviteInput, author: Author): Promise<CreatedInvite> {
   // A token whose derived key falls outside the curve (chance about 2^-128) is drawn again.
   let token = newInviteToken()
   let key: string | null = null
@@ -90,6 +111,10 @@ export async function createInvite(state: ClubState, input: InviteInput, author:
   const closed = state.info.visibility === "closed"
   const label = closed && input.label?.trim() ? { label: input.label.trim().slice(0, 60) } : {}
   const item = record(state, "club.invite", { kind: input.kind, key, expires, ...label })
+  const code = input.kind === "group" ? newInviteCode() : undefined
+  if (code) item.template = { ...item.template, tags: [...item.template.tags, await codeTag(code, token)] }
+  // Whether the link only asks: a member limit, confirmation of new members, or a member's link.
+  const asks = state.info.capacity !== undefined || state.info.approval || !isManagerRole(state.members[author.pubkey]?.role)
   if (closed && item.seal) {
     const i = state.info
     item.seal.preview = {
@@ -102,17 +127,60 @@ export async function createInvite(state: ClubState, input: InviteInput, author:
         ...(input.hostName?.trim() ? { hostName: input.hostName.trim().slice(0, 60) } : {}),
         kind: input.kind,
         expires,
-        // With a member limit a group link only asks (club-state.ts join): the preview says so
-        // before the person reads any record.
-        ...(i.capacity !== undefined ? { limited: true } : {}),
+        // Where a group link only asks (club-state.ts join), the preview says so before the
+        // person reads any record.
+        ...(asks ? { limited: true } : {}),
         ...(input.next ? { next: input.next } : {}),
       },
     }
   }
   const sent = await send(state.id, [item], author)
   const invite = sent.events[0].id
-  await updateClub(state.id, { token: { invite, token } }, author.pubkey)
-  return { invite, token, sent }
+  await updateClub(state.id, { token: { invite, token, ...(code ? { code } : {}) } }, author.pubkey)
+  // The other leaders' devices show the same link (club.md, "Geteilter Link"). A signer that
+  // can't encrypt keeps the link on this device, as before.
+  await shareTokens(state, [{ invite, readers: managersOf(state) }], { [invite]: token }, code ? { [invite]: code } : {}, author).catch((error) => {
+    if (!(error instanceof ClubSignerError)) throw error
+  })
+  return { invite, token, ...(code ? { code } : {}), sent }
+}
+
+// Open group invites whose secret this device holds, with the owner and admins who have no
+// sealed copy of it yet (a newly appointed admin, say): told from the envelopes of the token
+// records, which name their readers without opening (seal.ts wrapsFor).
+export function waitingTokens(state: ClubState, events: readonly NostrEvent[], tokens: Readonly<Record<string, string>>, now: number): { invite: string; readers: string[] }[] {
+  const managers = managersOf(state)
+  const shares = events
+    .filter((e) => readLabels(e.tags)?.type === "club.invite.token" && tagValue(e.tags, "e") === state.id && encryptionOf(e.tags).form === "seal")
+    .map((e) => ({ at: e.created_at, by: e.pubkey, envelope: envelopeOf(e) }))
+  const waiting: { invite: string; readers: string[] }[] = []
+  for (const invite of Object.values(state.invites)) {
+    if (invite.kind !== "group" || invite.ended || invite.expires <= now || !tokens[invite.id]) continue
+    // Only shares by the maker or a manager since the invite can hold its secret (club-state.ts).
+    const mine = shares.filter((s) => s.at >= invite.at && (s.by === invite.by || isManagerAt(state, s.by, s.at)))
+    const readers = managers.filter((m) => !mine.some((s) => s.envelope !== null && wrapsFor(s.envelope, m).length > 0))
+    if (readers.length > 0) waiting.push({ invite: invite.id, readers })
+  }
+  return waiting
+}
+
+// Shares the secrets (and codes) of invite links with the leaders who lack them, one sealed
+// record per invite.
+export function shareTokens(
+  state: ClubState,
+  waiting: readonly { invite: string; readers: readonly string[] }[],
+  tokens: Readonly<Record<string, string>>,
+  codes: Readonly<Record<string, string>>,
+  author: Author,
+): Promise<Sent> {
+  const items: Outgoing[] = waiting
+    .filter((w) => tokens[w.invite] && w.readers.length > 0)
+    .map((w) => ({
+      template: buildRecord("club.invite.token", { invite: w.invite, token: tokens[w.invite], ...(codes[w.invite] ? { code: codes[w.invite] } : {}) }, { created_at: afterState(state), root: state.id }),
+      seal: { readers: [...new Set([...w.readers, author.pubkey])] },
+    }))
+  if (items.length === 0) return Promise.resolve({ events: [] })
+  return send(state.id, items, author)
 }
 
 export const revokeInvite = (state: ClubState, invite: string, author: Author) =>
@@ -239,8 +307,12 @@ export const needsCapacity = (state: ClubState) =>
 // Shares the content keys of every sealed record this device can read with `readers`, in as
 // many club.keys records as the key budget per event needs (records.ts maxSharedKeys). Sealed
 // for those readers only: each wrap is one encryption by the signer.
+const UNSHARED = new Set(["club.keys", "club.invite.token"])
+
 export function shareAccess(state: ClubState, events: readonly NostrEvent[], keys: Readonly<Record<string, string>>, author: Author, readers: readonly string[]): Promise<Sent> {
-  const shareable = events.filter((e) => keys[e.id] && readLabels(e.tags)?.type !== "club.keys").map((e): [string, string] => [e.id, keys[e.id]])
+  // Never the key shares themselves, and never a link's secret (club.invite.token): that one is
+  // sealed for the leaders it names and stays with them.
+  const shareable = events.filter((e) => keys[e.id] && !UNSHARED.has(readLabels(e.tags)?.type ?? "")).map((e): [string, string] => [e.id, keys[e.id]])
   if (readers.length === 0 || shareable.length === 0) return Promise.resolve({ events: [] })
   const per = maxSharedKeys(readers.length)
   // Dated after every member's join (afterState): the share counts for them (waitingAccess).

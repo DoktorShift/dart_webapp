@@ -1,30 +1,39 @@
 // The stake of a game ("Einsatz", PLAN.md "Direkte Zahlungen und vereinbarte Einsätze"): an
-// amount in sats the loser pays the winner, noted in setup and kept with the game as
-// config.extras["payments.stake"]. Only between two players. Noting it pays nothing: after the
-// game the players decide, and every payment is confirmed on its own.
+// amount in whole bitcoin units the loser pays the winner, noted in setup and kept with the game
+// as config.extras["payments.stake"], with the currency amount it was agreed as ("5 €"), so both
+// players keep seeing the figure they agreed on. Only between two players. Noting it pays
+// nothing: after the game the players decide, and every payment is confirmed on its own.
 import type { MatchPlayer } from "../game/types.ts"
+import { readFiatAmount, type FiatAmount } from "./money.ts"
 
 export const STAKE_EXTRA = "payments.stake"
 // Every amount this app pays, asks for or notes is whole sats up to this.
 export const MAX_SATS = 1_000_000
 const isSatsAmount = (sats: number) => Number.isSafeInteger(sats) && sats >= 1 && sats <= MAX_SATS
-// Offered wherever an amount is chosen (stake, receiving, paying); any other can be typed.
+// Offered wherever an amount is chosen in bitcoin (stake, receiving, paying); any other can be
+// typed. The amounts offered in a currency are FIAT_PRESETS (./money.ts).
 export const AMOUNT_PRESETS = [100, 500, 1000, 5000] as const
 
 export interface Stake {
   sats: number
+  fiat?: FiatAmount
 }
 
-// The stake as setup stores it, or null (none, or a value this version can't read).
+// The stake as setup stores it, or null (none, or a value this version can't read). A currency
+// amount that can't be read is left off; the bitcoin amount is what counts.
 export function readStake(value: unknown): Stake | null {
-  const sats = (value as Partial<Stake> | null)?.sats
-  return typeof sats === "number" && isSatsAmount(sats) ? { sats } : null
+  const stored = value as Partial<Stake> | null
+  const sats = stored?.sats
+  if (typeof sats !== "number" || !isSatsAmount(sats)) return null
+  const fiat = readFiatAmount(stored?.fiat)
+  return fiat ? { sats, fiat } : { sats }
 }
 
 export interface StakeParties {
   payer: MatchPlayer
   payee: MatchPlayer
   sats: number
+  fiat?: FiatAmount
 }
 
 // Who pays whom after a finished game with a stake; null without one, or not two players.
@@ -33,7 +42,7 @@ export function stakeParties(match: { players: readonly MatchPlayer[]; winner: n
   if (!stake || match.players.length !== 2) return null
   const payee = match.players[match.winner]
   const payer = match.players[1 - match.winner]
-  return payee && payer ? { payer, payee, sats: stake.sats } : null
+  return payee && payer ? { payer, payee, sats: stake.sats, ...(stake.fiat ? { fiat: stake.fiat } : {}) } : null
 }
 
 // What the result of a finished game offers: its stake, or, with a wallet connected and someone

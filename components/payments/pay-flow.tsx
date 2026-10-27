@@ -7,19 +7,22 @@ import { Avatar } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { ListRow } from "@/components/ui/list-row"
 import { useAreaT, useT } from "@/components/i18n-provider"
+import { AmountBlock } from "@/components/payments/amount-block"
 import { ConnectPanel } from "@/components/payments/connect"
 import { EntryOutcome } from "@/components/payments/entry-outcome"
 import { OutcomeHeader } from "@/components/payments/entry-status"
-import { useFormat } from "@/components/payments/format"
 import { LearnMore } from "@/components/payments/learn-more"
 import { problemText } from "@/components/payments/problem"
 import { SheetActions } from "@/components/payments/sheet-actions"
+import { useMoney } from "@/components/payments/use-money"
+import { useWalletFigures } from "@/components/payments/wallet-details"
 import { PAYMENTS_TEXTS } from "@/lib/i18n/features/payments.screens"
 import type { PayEndpoint } from "@/lib/nostr/ext/lnurl"
 import { getSigner } from "@/lib/profile/session"
-import { useEuroRate, useJournal, useWallet } from "@/lib/payments/hooks"
+import { useJournal, useWallet } from "@/lib/payments/hooks"
 import { addressInvoice, InvoiceError, scanKind, scannedInvoice } from "@/lib/payments/invoices"
 import { blockingEntry, isDone, pay, type Counterpart, type InvoiceSource } from "@/lib/payments/journal"
+import { MSAT_PER_UNIT, type Amount, type FiatAmount } from "@/lib/payments/money"
 import { lookupRecipient } from "@/lib/payments/recipient"
 import { capabilities, withWallet } from "@/lib/payments/wallet"
 import { zapInvoice } from "@/lib/payments/zap"
@@ -29,8 +32,9 @@ import { zapInvoice } from "@/lib/payments/zap"
 // The invoice comes from the person's Lightning address, or is scanned from their device
 // ("Geld empfangen"); it is checked before anything is paid, and the journal
 // (lib/payments/journal.ts) makes sure an action is never paid twice. "Zahlung läuft" shows only
-// once the wallet has the payment; until then it can be cancelled and nothing is paid. Afterwards
-// the outcome stays on screen, followed in the journal.
+// once the wallet has the payment; until then it can be cancelled and nothing is paid. Before
+// the review, the wallet's balance and limit are asked once, so a payment the wallet would refuse
+// is said in words instead of failing. Paid, the sheet says so and closes by itself.
 
 export type PayRoute =
   // The other player shows an invoice; this device scans it.
@@ -42,11 +46,13 @@ export type PayRoute =
 type Step =
   | { kind: "route" }
   | { kind: "scan"; problem?: string }
-  | { kind: "review"; scanned?: string; amountMsat: number; problem?: string }
+  // `fiat`: the agreed currency amount, when there is one.
+  | { kind: "review"; scanned?: string; amountMsat: number; fiat?: FiatAmount; problem?: string }
   // Confirmed at `since` (ms): the invoice is asked for (`fetching`) and the wallet opened, then
   // the wallet pays.
   | { kind: "paying"; since: number; fetching: boolean }
-  | { kind: "outcome"; id: string }
+  // `fresh`: just paid here, not an outcome found in the journal.
+  | { kind: "outcome"; id: string; fresh: boolean }
   | { kind: "busy" }
 
 // Where the invoice comes from when the caller doesn't say: the Lightning address in the person's
@@ -76,7 +82,7 @@ export function PayFlow({
   action,
   once,
   counterpart,
-  amountSats,
+  amount,
   route: givenRoute,
   onDone,
 }: {
@@ -84,23 +90,25 @@ export function PayFlow({
   once: boolean
   counterpart: Counterpart
   // The agreed amount; null pays what a scanned invoice asks, after showing it.
-  amountSats: number | null
+  amount: Amount | null
   route?: PayRoute
   onDone: () => void
 }) {
   const t = useT()
   const tx = useAreaT(PAYMENTS_TEXTS)
   const p = tx.pay
-  const format = useFormat()
+  const money = useMoney()
   const wallet = useWallet()
   const journal = useJournal()
-  const euro = useEuroRate()
   const found = useRoute(counterpart, givenRoute)
   const [route, setRoute] = useState<PayRoute | null>(null)
   const [step, setStep] = useState<Step>({ kind: "route" })
   const [reconnect, setReconnect] = useState(false)
-  const amountMsat = amountSats === null ? null : amountSats * 1000
+  const amountMsat = amount === null ? null : amount.sats * MSAT_PER_UNIT
   const active = route ?? found?.route ?? null
+  // What the wallet holds and allows, asked once for the review: a payment it would refuse is
+  // said here in words, before anything is tried.
+  const { figures } = useWalletFigures(wallet ?? null, step.kind === "review")
 
   const reviewTop = useRef<HTMLDivElement>(null)
   // Cancels a confirmed payment until the wallet has it, also when the sheet is closed.
@@ -114,8 +122,8 @@ export function PayFlow({
   // Once the route is known: review straight away, or scan first.
   useEffect(() => {
     if (step.kind !== "route" || !active) return
-    setStep(active.kind === "scan" || amountMsat === null ? { kind: "scan" } : { kind: "review", amountMsat })
-  }, [step.kind, active, amountMsat])
+    setStep(active.kind === "scan" || amountMsat === null ? { kind: "scan" } : { kind: "review", amountMsat, fiat: amount?.fiat })
+  }, [step.kind, active, amountMsat, amount?.fiat])
 
   // The review starts at its top (who, how much), wherever the sheet was scrolled to while scanning.
   useEffect(() => {
@@ -150,7 +158,7 @@ export function PayFlow({
     const entry = journal.find((item) => item.id === step.id)
     // The entry is on its way into the journal.
     if (!entry) return <OutcomeHeader tone="progress" working title={p.sending} />
-    return <EntryOutcome entry={entry} onRetry={() => setStep({ kind: "route" })} onDone={onDone} />
+    return <EntryOutcome entry={entry} autoClose={step.fresh} onRetry={() => setStep({ kind: "route" })} onDone={onDone} />
   }
 
   // An earlier payment for this action that is open or done is shown instead of paying again.
@@ -176,7 +184,7 @@ export function PayFlow({
     )
   }
 
-  const context = { amount: amountMsat === null ? undefined : format.msat(amountMsat), address: active && active.kind !== "scan" ? active.address : undefined }
+  const context = { amount: amountMsat === null ? undefined : money.primary(amountMsat, amount?.fiat), address: active && active.kind !== "scan" ? active.address : undefined }
 
   const source = async (review: Extract<Step, { kind: "review" }>): Promise<InvoiceSource> => {
     if (review.scanned) return scannedInvoice(review.scanned, review.amountMsat)
@@ -192,8 +200,10 @@ export function PayFlow({
     cancelling.current = controller
     setStep({ kind: "paying", since: Date.now(), fetching: !review.scanned })
     try {
-      const result = await withWallet((client) => pay({ action, once, counterpart, invoice: () => source(review), signal: controller.signal }, client))
-      setStep(result === "busy" ? { kind: "busy" } : { kind: "outcome", id: result.id })
+      // The currency amount as it stood on the review goes into the journal with the payment.
+      const fiat = review.fiat ?? money.noted(review.amountMsat)
+      const result = await withWallet((client) => pay({ action, once, counterpart, fiat, invoice: () => source(review), signal: controller.signal }, client))
+      setStep(result === "busy" ? { kind: "busy" } : { kind: "outcome", id: result.id, fresh: true })
     } catch (error) {
       if (controller.signal.aborted) return
       // Nothing was paid: an expired scanned invoice means scanning a new one.
@@ -208,7 +218,7 @@ export function PayFlow({
     if (kind !== "invoice") return tx.invoice.invalid
     try {
       const { checked } = await scannedInvoice(text, amountMsat ?? undefined)
-      setStep({ kind: "review", scanned: text, amountMsat: checked.amountMsat })
+      setStep({ kind: "review", scanned: text, amountMsat: checked.amountMsat, fiat: amount?.fiat })
     } catch (error) {
       return problemText(tx, error, context)
     }
@@ -245,8 +255,11 @@ export function PayFlow({
         </>
       )
     case "review": {
-      const amount = format.msat(step.amountMsat)
       const zap = active?.kind === "zap"
+      // Said from what the wallet last reported; the wallet still has the last word.
+      const balance = figures?.balanceMsat ?? null
+      const left = figures?.budget ? Math.max(0, figures.budget.totalMsat - figures.budget.usedMsat) : null
+      const shortfall = balance !== null && step.amountMsat > balance ? p.notEnough(money.primary(balance)) : left !== null && step.amountMsat > left ? p.overLimit(money.primary(left)) : null
       return (
         <>
           {/* Who (when known) and how much; on a phone in landscape next to the wallet and fees. */}
@@ -259,14 +272,18 @@ export function PayFlow({
                 </>
               )}
               {active && active.kind !== "scan" && !step.scanned && <p className="text-[0.8125rem] text-muted-foreground [overflow-wrap:anywhere]">{p.toAddress(active.address)}</p>}
-              <p className="mt-3 font-display text-4xl font-semibold tabular-nums tracking-tight xshort:mt-1">{amount}</p>
-              {euro && <p className="mt-1 text-[0.8125rem] text-muted-foreground">{tx.euro(format.euros(step.amountMsat / 1000, euro.rate), format.time(euro.at))}</p>}
+              <AmountBlock msat={step.amountMsat} fiat={step.fiat} className="mt-3 xshort:mt-1" />
             </div>
             <div className="mt-4 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card xshort:mt-0">
-              <ListRow title={p.fromWallet} value={wallet.alias ?? tx.yourWallet} />
+              <ListRow title={p.fromWallet} value={balance === null ? (wallet.alias ?? tx.yourWallet) : `${wallet.alias ?? tx.yourWallet} · ${money.primary(balance)}`} />
               <ListRow title={p.fees} value={p.feesUnknown} />
             </div>
           </div>
+          {shortfall && (
+            <InlineStatus tone="error" className="mt-3">
+              {shortfall}
+            </InlineStatus>
+          )}
           {zap ? (
             <InlineStatus className="mt-3">{tx.congratulate.publicHint(counterpart.name)}</InlineStatus>
           ) : (
@@ -277,7 +294,7 @@ export function PayFlow({
           </div>
           <SheetActions note={step.problem && <InlineStatus tone="error">{step.problem}</InlineStatus>}>
             <Button onClick={() => void confirm(step)} className="h-auto min-h-12 w-full whitespace-normal rounded-xl py-2 text-[1.0625rem] font-semibold">
-              {zap ? tx.congratulate.send(amount, counterpart.name) : p.confirm(amount, counterpart.name)}
+              {zap ? tx.congratulate.send(counterpart.name) : p.confirm(counterpart.name)}
             </Button>
             {active?.kind === "address" && !step.scanned && (
               <Button

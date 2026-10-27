@@ -13,9 +13,12 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { schnorr } from "@noble/curves/secp256k1"
+import { xchacha20poly1305 } from "@noble/ciphers/chacha.js"
 import { hkdf } from "@noble/hashes/hkdf"
+import { scrypt } from "@noble/hashes/scrypt.js"
 import { sha256 } from "@noble/hashes/sha2"
-import { bytesToHex, hexToBytes, utf8ToBytes } from "@noble/hashes/utils"
+import { bytesToHex, concatBytes, hexToBytes, utf8ToBytes } from "@noble/hashes/utils"
+import { base64 } from "@scure/base"
 import { getEventHash, nip44 } from "nostr-core"
 import { correctDart, replay, visitBySeq } from "../../lib/game/engine.ts"
 import type { Throw } from "../../lib/game/types.ts"
@@ -83,6 +86,14 @@ const OFFER_OPEN = 86400
 // sha256("blueline-invite-v1:" + joiner), here with zero auxiliary randomness.
 const inviteSecret = (token: string) => hkdf(sha256, hexToBytes(token), utf8ToBytes("blueline-invite-v1"), utf8ToBytes("proof"), 32)
 const inviteKeyOf = (token: string) => bytesToHex(schnorr.getPublicKey(inviteSecret(token)))
+// A short code's derivations (club.md "Kurzcode"), written out here apart from lib/protocol.
+const codeKey = (code: string) => scrypt(utf8ToBytes(code), utf8ToBytes("blueline-code-v1"), { N: 2 ** 15, r: 8, p: 1, dkLen: 32 })
+const codeLookupOf = (code: string) => bytesToHex(sha256(concatBytes(utf8ToBytes("blueline-code-lookup-v1"), codeKey(code))).slice(0, 16))
+const codeTagOf = (code: string, token: string) => {
+  const nonce = fixed("code-nonce", code).slice(0, 24)
+  const wrapKey = sha256(concatBytes(utf8ToBytes("blueline-code-wrap-v1"), codeKey(code)))
+  return ["c", codeLookupOf(code), base64.encode(concatBytes(nonce, xchacha20poly1305(wrapKey, nonce, utf8ToBytes("blueline-code-v1")).encrypt(hexToBytes(token))))]
+}
 const proof = (token: string, pubkey: string) => bytesToHex(schnorr.sign(sha256(utf8ToBytes(`blueline-invite-v1:${pubkey}`)), inviteSecret(token), new Uint8Array(32)))
 const shaHex = (text: string) => bytesToHex(sha256(utf8ToBytes(text)))
 const commit = (seed: string) => shaHex(`blueline-seed-v1\n${seed}`)
@@ -108,11 +119,14 @@ interface RecordOpts {
   // Encrypt to this link key (private matches).
   link?: string
   version?: string
+  // Tags beyond the record's own (a group invite's code tag).
+  tags?: string[][]
 }
 
 function record<T extends RecordType>(author: string, type: T, content: ContentOf<T>, opts: RecordOpts): { event: SignedEvent; plaintext?: string } {
   let template: EventTemplate = buildRecord(type, content, { created_at: at(opts.at), root: opts.root, d: opts.d })
   if (opts.version) template = { ...template, tags: template.tags.map((t) => (t[0] === "v" ? ["v", opts.version as string] : t)) }
+  if (opts.tags) template = { ...template, tags: [...template.tags, ...opts.tags] }
   const plaintext = template.content
   if (opts.seal) {
     const key = fixed("content-key", author, type, opts.at, plaintext)
@@ -1070,6 +1084,132 @@ function clubCases() {
           ["accept-dave", "invite_revoked"],
         ],
         state: { members: { owner: "owner", erin: "member" }, former: { admin: "removed" }, requests: { dave: "ok" } },
+      }),
+    )
+  }
+  {
+    const c = newCase(
+      "members-invite",
+      "A club where members may invite (membersInvite): Alice, a member, makes a group link with a code and a personal invite. Her group link files requests instead of admitting; the owner accepts Bob. Alice ends her own link; Dave, who got it late, is refused. Alice may not end the owner's invite.",
+      { reader: "owner" },
+    )
+    c.put("found", "owner", "club.found", closedClub({ membersInvite: true }), { at: 0, seal: ["owner"] })
+    c.setRoot("found")
+    const root = c.root()
+    const inv = invite("group", T, 10, ["owner"], root)
+    c.put("invite", "owner", "club.invite", inv.content, inv.opts)
+    c.put("join-alice", "alice", "club.join", join("alice", c.id("invite"), T), { at: 20, root })
+    const own = invite("group", T2, 30, ["owner", "alice"], root)
+    c.put("alice-link", "alice", "club.invite", own.content, { ...own.opts, tags: [codeTagOf("ABCD2345", T2)] })
+    const personal = invite("personal", T3, 31, ["owner", "alice"], root, at(86400), "Für Carol")
+    c.put("alice-invites-carol", "alice", "club.invite", personal.content, personal.opts)
+    c.put("join-bob", "bob", "club.join", join("bob", c.id("alice-link"), T2), { at: 40, root })
+    c.put("carol-asks", "carol", "club.join", join("carol", c.id("alice-invites-carol"), T3), { at: 41, root })
+    c.put("accept-bob", "owner", "club.accept", { request: c.id("join-bob"), member: pub("bob") }, { at: 50, root, seal: ["owner", "alice", "bob"] })
+    c.put("alice-ends-owner-link", "alice", "club.invite.revoke", { invite: c.id("invite") }, { at: 60, root, seal: ["owner", "alice", "bob"] })
+    c.put("alice-ends-link", "alice", "club.invite.revoke", { invite: c.id("alice-link") }, { at: 61, root, seal: ["owner", "alice", "bob"] })
+    c.put("join-dave", "dave", "club.join", join("dave", c.id("alice-link"), T2), { at: 70, root })
+    cases.push(
+      c.done({
+        applied: ["found", "invite", "join-alice", "alice-link", "alice-invites-carol", "join-bob", "carol-asks", "accept-bob", "alice-ends-link"],
+        rejected: [
+          ["alice-ends-owner-link", "not_authorized"],
+          ["join-dave", "invite_revoked"],
+        ],
+        state: { members: { owner: "owner", alice: "member", bob: "member" }, via: { alice: "group", bob: "accepted" }, requests: { carol: "ok" }, inviteUses: { "alice-link": 1 } },
+      }),
+    )
+  }
+  {
+    const c = newCase(
+      "members-invite-ends",
+      "A member's invite ends with the membership and with the setting: Alice's link admits requests while she is a member; after she leaves, Erin's join through it is refused. Bob's link ends when the owner turns membersInvite off, for good; a member may not invite any more.",
+      { reader: "owner" },
+    )
+    c.put("found", "owner", "club.found", publicClub({ membersInvite: true }), { at: 0 })
+    c.setRoot("found")
+    const root = c.root()
+    const inv = invite("group", T, 10, null, root)
+    c.put("invite", "owner", "club.invite", inv.content, inv.opts)
+    c.put("join-alice", "alice", "club.join", join("alice", c.id("invite"), T), { at: 20, root })
+    c.put("join-bob", "bob", "club.join", join("bob", c.id("invite"), T), { at: 21, root })
+    const alice = invite("group", T2, 30, null, root)
+    c.put("alice-link", "alice", "club.invite", alice.content, alice.opts)
+    const bob = invite("group", T3, 31, null, root)
+    c.put("bob-link", "bob", "club.invite", bob.content, bob.opts)
+    c.put("carol-asks", "carol", "club.join", join("carol", c.id("alice-link"), T2), { at: 40, root })
+    c.put("alice-leaves", "alice", "club.leave", {}, { at: 50, root })
+    c.put("join-erin", "erin", "club.join", join("erin", c.id("alice-link"), T2), { at: 60, root })
+    c.put("members-off", "owner", "club.update", { prev: root, membersInvite: false }, { at: 70, root })
+    c.put("join-frank", "frank", "club.join", join("frank", c.id("bob-link"), T3), { at: 80, root })
+    const late = invite("group", hex16("token-4"), 90, null, root)
+    c.put("bob-invites-again", "bob", "club.invite", late.content, late.opts)
+    c.put("members-on", "owner", "club.update", { prev: c.id("members-off"), membersInvite: true }, { at: 100, root })
+    c.put("join-gina", "gina", "club.join", join("gina", c.id("bob-link"), T3), { at: 110, root })
+    cases.push(
+      c.done({
+        applied: ["found", "invite", "join-alice", "join-bob", "alice-link", "bob-link", "carol-asks", "alice-leaves", "members-off", "members-on"],
+        rejected: [
+          ["join-erin", "invite_revoked"],
+          ["join-frank", "invite_revoked"],
+          ["bob-invites-again", "not_authorized"],
+          ["join-gina", "invite_revoked"],
+        ],
+        state: { members: { owner: "owner", bob: "member" }, former: { alice: "left" }, requests: { carol: "ok" } },
+      }),
+    )
+  }
+  {
+    const c = newCase(
+      "approval",
+      "A club that confirms new members (approval): the owner's group link files requests, and the owner decides. Turned off again, the next join through the same link admits at once.",
+      { reader: "owner" },
+    )
+    c.put("found", "owner", "club.found", publicClub({ approval: true }), { at: 0 })
+    c.setRoot("found")
+    const root = c.root()
+    const inv = invite("group", T, 10, null, root)
+    c.put("invite", "owner", "club.invite", inv.content, inv.opts)
+    c.put("alice-asks", "alice", "club.join", join("alice", c.id("invite"), T), { at: 20, root })
+    c.put("accept-alice", "owner", "club.accept", { request: c.id("alice-asks"), member: pub("alice") }, { at: 30, root })
+    c.put("approval-off", "owner", "club.update", { prev: root, approval: false }, { at: 40, root })
+    c.put("join-bob", "bob", "club.join", join("bob", c.id("invite"), T), { at: 50, root })
+    cases.push(
+      c.done({
+        applied: ["found", "invite", "alice-asks", "accept-alice", "approval-off", "join-bob"],
+        rejected: [],
+        state: { members: { owner: "owner", alice: "member", bob: "member" }, via: { alice: "accepted", bob: "group" }, inviteUses: { invite: 2 } },
+      }),
+    )
+  }
+  {
+    const c = newCase(
+      "shared-link-secret",
+      "The maker of a link shares its secret sealed with the owner and admins (club.invite.token), also in a public club, where every other sealed record is refused. It changes no state; a member may share only the secret of their own invite, and nobody one of an invite the reader has not seen.",
+      { reader: "owner" },
+    )
+    c.put("found", "owner", "club.found", publicClub({ membersInvite: true }), { at: 0 })
+    c.setRoot("found")
+    const root = c.root()
+    const inv = invite("group", T, 10, null, root)
+    c.put("invite", "owner", "club.invite", inv.content, inv.opts)
+    c.put("join-admin", "admin", "club.join", join("admin", c.id("invite"), T), { at: 20, root })
+    c.put("join-alice", "alice", "club.join", join("alice", c.id("invite"), T), { at: 21, root })
+    c.put("make-admin", "owner", "club.role", { member: pub("admin"), role: "admin", prev: c.id("join-admin") }, { at: 30, root })
+    c.put("share", "owner", "club.invite.token", { invite: c.id("invite"), token: T, code: "ABCD2345" }, { at: 40, root, seal: ["owner", "admin"] })
+    const alice = invite("group", T2, 50, null, root)
+    c.put("alice-link", "alice", "club.invite", alice.content, alice.opts)
+    c.put("alice-shares", "alice", "club.invite.token", { invite: c.id("alice-link"), token: T2 }, { at: 60, root, seal: ["owner", "admin", "alice"] })
+    c.put("alice-shares-owner-link", "alice", "club.invite.token", { invite: c.id("invite"), token: T }, { at: 61, root, seal: ["owner", "admin", "alice"] })
+    c.put("sealed-rename", "owner", "club.update", { prev: root, name: "Dartfreunde Süd" }, { at: 70, root, seal: ["owner", "admin"] })
+    cases.push(
+      c.done({
+        applied: ["found", "invite", "join-admin", "join-alice", "make-admin", "share", "alice-link", "alice-shares"],
+        rejected: [
+          ["alice-shares-owner-link", "not_authorized"],
+          ["sealed-rename", "invalid_tags"],
+        ],
+        state: { members: { owner: "owner", admin: "admin", alice: "member" }, name: "Dartfreunde Nord" },
       }),
     )
   }
@@ -2150,7 +2290,10 @@ const inviteVectors = () =>
     [hex16("token-1"), "alice"],
     [hex16("token-1"), "bob"],
     [hex16("token-2"), "alice"],
-  ].map(([token, who]) => ({ token, inviteKey: inviteKeyOf(token), pubkey: pub(who), proof: proof(token, pub(who)), previewKey: bytesToHex(previewKey(token)) }))
+  ].map(([token, who], i) => {
+    const code = ["ABCD2345", "ABCD2345", "KLMN6789"][i]
+    return { token, inviteKey: inviteKeyOf(token), pubkey: pub(who), proof: proof(token, pub(who)), previewKey: bytesToHex(previewKey(token)), code, codeLookup: codeLookupOf(code), codeTag: codeTagOf(code, token) }
+  })
 
 // One sealed record with every intermediate value, for an independent implementation.
 function sealVectors() {
@@ -2255,7 +2398,7 @@ export function buildVectors(): Record<string, unknown> {
   }
 }
 
-const FAMILY_OF: Record<string, string> = { club: "club", tournament: "tournament", match: "match", payment: "payment-request", profile: "profile", badge: "badges" }
+const FAMILY_OF: Record<string, string> = { club: "club", tournament: "tournament", match: "match", payment: "payment-request", profile: "profile", badge: "badges", friend: "friends" }
 
 export function buildSchemas(): Record<string, JsonSchema> {
   const families: Record<string, Record<string, JsonSchema>> = {}

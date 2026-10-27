@@ -10,12 +10,13 @@ import { CLUBS_TEXTS } from "@/lib/i18n/features/clubs.screens"
 import { ClubHeader, useChange } from "@/components/clubs/common"
 import { useInlineProfile } from "@/components/profile/inline-profile"
 import { CLUB_SCREENS } from "@/components/clubs/screens"
-import { clubAuthor, readerKey, useClub } from "@/components/clubs/use-clubs"
+import { clubAuthor, clubReader, readerKey, useClub } from "@/components/clubs/use-clubs"
 import { useProfileNames } from "@/components/profile/use-profile-names"
 import { nextDate, type ClubView } from "@/lib/clubs/club"
 import { acceptInvitation, invitationState, openInvitation, type InvitationProblem } from "@/lib/clubs/invitation"
 import { readClubPayload } from "@/lib/clubs/links"
-import { forgetClub } from "@/lib/clubs/store"
+import { watchClub } from "@/lib/clubs/relays"
+import { forgetClub, updateClub } from "@/lib/clubs/store"
 import { nowSeconds } from "@/lib/nostr/time"
 import { SCREENS, runAction, type ScreenProps } from "@/lib/shell/registry"
 
@@ -106,6 +107,7 @@ function Invitation({ view }: { view: ClubView }) {
   const expires = record?.expires ?? preview?.expires
   const next = preview?.next ?? nextDate(view, now)
   const state = invitationState(view, now)
+  useWaitForDecision(view)
   const [busy, setBusy] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)
   const [joinedHere, setJoinedHere] = useState(false)
@@ -187,4 +189,24 @@ function Invitation({ view }: { view: ClubView }) {
       {guest.dialog}
     </div>
   )
+}
+
+// While the person waits for a leader (a request, or a closed club not yet opened for them), the
+// club's new records come in as they are written: the acceptance and the access share, so the
+// screen says "Du bist dabei" the moment it is true, without a reload.
+function useWaitForDecision(view: ClubView) {
+  const id = view.id
+  const waiting = view.me.status === "request" || view.me.status === "joined"
+  const relays = view.relays.join(",")
+  useEffect(() => {
+    if (!waiting) return
+    const watcher = watchClub(id, relays ? relays.split(",") : [], { matches: [], dates: [] }, (event) => {
+      void clubReader()
+        .then((reader) => updateClub(id, { events: [event] }, reader.pubkey))
+        .catch(() => {
+          // Signed out meanwhile, or the copy can't be written now: the next refresh brings it.
+        })
+    })
+    return () => watcher.close()
+  }, [id, waiting, relays])
 }

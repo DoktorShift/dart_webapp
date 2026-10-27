@@ -12,6 +12,9 @@ import { TextField } from "@/components/ui/text-field"
 import { InlineStatus } from "@/components/common/inline-status"
 import { SheetCode } from "@/components/common/sheet-code"
 import { XSHORT, useMediaQuery } from "@/components/common/use-media-query"
+import { useRecentPlayers } from "@/components/common/use-recent-players"
+import { useFriends } from "@/components/friends/use-friends"
+import { byState } from "@/lib/friends/model"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { TOURNAMENTS_TEXTS } from "@/lib/i18n/features/tournaments.screens"
 import { PRIMARY, QUIET, scoreText, SECONDARY, useActions, useRoundLabel, type Names } from "@/components/tournaments/common"
@@ -134,12 +137,40 @@ export function GuestsSheet({ entry, open, onOpenChange }: { entry: Entry; open:
   const actions = useActions(entry.read.id)
   const [text, setText] = useState("")
   const names = cleanNames(text.split("\n")).slice(0, freePlaces(state))
+  // Friends first, then "Zuletzt gespielt mit": one tap adds a name instead of typing it
+  // (lib/profile/recent-players.ts). A friend's name comes from their profile.
+  const recent = useRecentPlayers({ limit: 8 }).players
+  const { friends } = useFriends()
+  const friendKeys = friends ? byState(friends, "friend").map((f) => f.pubkey) : []
+  const friendNames = useProfileNames(friendKeys)
+  const taken = new Set([...Object.values(entry.read.names), ...names].map((n) => n.toLowerCase()))
+  const suggestions = [
+    ...friendKeys.flatMap((pubkey) => (friendNames(pubkey).name ? [{ pubkey, name: friendNames(pubkey).name as string }] : [])),
+    ...recent.filter((r) => !friendKeys.includes(r.pubkey ?? "")),
+  ].filter((r) => !taken.has(r.name.toLowerCase()))
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title={p.addGuests} description={tx.create.guestsHint}>
       <label className="sr-only" htmlFor="guest-names">
         {p.guestNames}
       </label>
-      <textarea id="guest-names" rows={5} value={text} onChange={(e) => setText(e.target.value)} placeholder={tx.create.guestsPlaceholder} className="w-full resize-y rounded-2xl border border-border bg-card px-4 py-3 text-[1.0625rem] outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+      <textarea id="guest-names" rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder={tx.create.guestsPlaceholder} className="w-full resize-y rounded-2xl border border-border bg-card px-4 py-3 text-[1.0625rem] outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+      {suggestions.length > 0 && (
+        <div className="mt-3">
+          <p className="mb-1.5 px-1 text-[0.8125rem] text-muted-foreground">{p.recent}</p>
+          <div className="flex flex-wrap gap-2">
+            {suggestions.map((r) => (
+              <button
+                key={r.pubkey ?? r.name}
+                type="button"
+                onClick={() => setText((current) => (current.trim() ? `${current.replace(/\s+$/, "")}\n${r.name}` : r.name))}
+                className="min-h-11 rounded-full border border-border bg-card px-4 text-[0.9375rem] font-medium text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:bg-primary/15 [overflow-wrap:anywhere]"
+              >
+                {r.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <Problem text={actions.problem} />
       <Button
         onClick={() => void actions.run("guests", () => names.map((alias) => guestTemplate(state, randomHex(16), alias, false))).then((ok) => ok && (setText(""), onOpenChange(false)))}

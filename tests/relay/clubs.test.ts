@@ -14,7 +14,10 @@ import { clubTasks } from "../../lib/clubs/club.ts"
 import { answerDate, cancelDate, repeatDates, saveDates } from "../../lib/clubs/dates.ts"
 import { KIND_CALENDAR_TIME } from "../../lib/protocol/kinds.ts"
 import { answerGame, confirmedCopies, correctGame, gameSeats, recordGame, recordedGame, type FinishedGame } from "../../lib/clubs/games.ts"
+import { findInviteByCode } from "../../lib/clubs/codes.ts"
 import { acceptInvitation, invitationState, openInvitation } from "../../lib/clubs/invitation.ts"
+import { sendInvitation, watchInvitations } from "../../lib/clubs/invitations.ts"
+import { startInbox, stopInbox } from "../../lib/profile/inbox.ts"
 import { clubLink, readClubPayload } from "../../lib/clubs/links.ts"
 import { acceptOwnership, acceptRequest, createInvite, foundClub, isConfirmedMember, offerOwnership, openOffer, removeMember, setRole, updateInfo } from "../../lib/clubs/membership.ts"
 import { createSeason, decideResult, DEFAULT_RULES } from "../../lib/clubs/seasons.ts"
@@ -24,6 +27,7 @@ import { seasonTable } from "../../lib/clubs/table.ts"
 import { keepCopies } from "../../lib/live/copy.ts"
 import { addProfilePlayer } from "../../lib/profile/claim.ts"
 import { getSigner, importLocalKey, signOut } from "../../lib/profile/session.ts"
+import { formatInviteCode } from "../../lib/protocol/invite.ts"
 import { parseEnvelope, wrapsFor } from "../../lib/protocol/seal.ts"
 import { readLabels } from "../../lib/protocol/tags.ts"
 import { loadArchive } from "../../lib/storage/archive.ts"
@@ -179,6 +183,119 @@ test("over capacity: a group link only asks, and a leader can't accept past the 
   assert.equal(view.state?.members[ben.pubkey]?.role, "member")
   assert.equal(view.state?.members[carl.pubkey], undefined)
   assert.equal(view.state?.log.rejected.at(-1)?.reason, "club_full")
+})
+
+test("members may invite: a member's link carries a code to say aloud, the typed code opens the same invitation, the joining waits for a leader, and the leader's device holds the link's secret too", async () => {
+  const owner = person()
+  const [ben, carl] = [person(), person()]
+  let author = await device(owner)
+  const club = await foundClub({ name: "Dartfreunde Süd", visibility: "closed", membersInvite: true }, author)
+  let view = await refreshClub(club, author)
+  assert.equal(view.state?.info.membersInvite, true)
+  const first = await createInvite(view.state!, { kind: "group", days: 7 }, author)
+  await acceptInvitation(club, (await viaLink(clubLink(SITE, { club, invite: { id: first.invite, token: first.token }, relays: [] }), ben)).author)
+  author = await device(owner)
+  view = await refreshClub(club, author)
+  assert.equal(view.state?.members[ben.pubkey]?.role, "member")
+
+  // Ben, a member, makes a group link: it comes with a code, and the record admits nobody by
+  // itself (maker "member").
+  view = await opened(club, ben)
+  const made = await createInvite(view.state!, { kind: "group", days: 7, hostName: "Ben" }, await device(ben))
+  assert.match(made.code ?? "", /^[A-HJ-NP-Z2-9]{8}$/)
+  assert.match(formatInviteCode(made.code!), /^[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/)
+  await sent()
+  view = await refreshClub(club, await device(ben))
+  assert.equal(view.state?.invites[made.invite]?.maker, "member")
+  assert.equal(view.codes[made.invite], made.code)
+
+  // The relays hold the code's lookup, never the code: the tag opens with the code alone.
+  const raw = await relayClient().query([{ ids: [made.invite] }], [a.url])
+  const tag = raw.events[0]?.tags.find((t) => t[0] === "c")
+  assert.ok(tag && tag[1].length === 32 && !JSON.stringify(raw.events[0]).includes(made.code!))
+
+  // Carl types the code (lower case, with the hyphen): the same invitation, and it only asks.
+  const found = await findInviteByCode(formatInviteCode(made.code!).toLowerCase())
+  assert.ok("address" in found, "the code finds the invitation")
+  assert.equal(found.address.club, club)
+  assert.equal(found.address.invite.id, made.invite)
+  assert.equal(found.address.invite.token, made.token)
+  assert.deepEqual(await findInviteByCode("ABCD-EFG"), { problem: "malformed" })
+  assert.deepEqual(await findInviteByCode("ZZZZ-ZZZZ"), { problem: "missing" })
+  const carlsDevice = await device(carl)
+  assert.equal(await openInvitation(found.address, carl.pubkey), null)
+  view = await refreshClub(club, carlsDevice)
+  assert.equal(view.invite?.preview?.hostName, "Ben")
+  assert.equal(invitationState(view, now()), "request")
+  await acceptInvitation(club, carlsDevice)
+  view = await refreshClub(club, carlsDevice)
+  assert.equal(view.me.status, "request")
+
+  // Ben's device never learns the owner's link (club.md: a leader's link admits at once, a
+  // member's only asks); the access grant he got carries no link secrets.
+  const bensView = await refreshClub(club, await device(ben))
+  assert.equal(bensView.tokens[first.invite], undefined)
+  assert.equal(bensView.codes[first.invite], undefined)
+
+  // The owner's device: the request names Ben's invitation, and the link's secret and code are
+  // here too, shared sealed by Ben's device (M12), so the owner can show the same code.
+  author = await device(owner)
+  view = await refreshClub(club, author)
+  assert.equal(view.state?.requests[carl.pubkey]?.invite, made.invite)
+  assert.equal(view.state?.invites[made.invite]?.by, ben.pubkey)
+  assert.equal(view.tokens[made.invite], made.token)
+  assert.equal(view.codes[made.invite], made.code)
+  await acceptRequest(view.state!, view.state!.requests[carl.pubkey], author)
+  view = await refreshClub(club, author)
+  assert.equal(view.state?.members[carl.pubkey]?.role, "member")
+
+  // Switching the rule off ends members' links; the owner's own link stays.
+  await updateInfo(view.state!, { membersInvite: false }, author)
+  view = await refreshClub(club, author)
+  assert.equal(view.state?.invites[made.invite]?.ended, "members_off")
+  assert.equal(view.state?.invites[first.invite]?.ended, null)
+  assert.deepEqual(await findInviteByCode(made.code!).then((r) => ("problem" in r ? r.problem : "found")), "found", "the record is still on the relays; the state says it ended")
+  view = await refreshClub(club, await device(ben))
+  assert.equal(view.state?.info.membersInvite, false)
+})
+
+test("an invitation sent straight to a profile arrives gift-wrapped and opens under the player's clubs by itself", async () => {
+  const owner = person()
+  const dana = person()
+  const author = await device(owner)
+  const club = await foundClub({ name: "Dartfreunde West", visibility: "closed" }, author)
+  let view = await refreshClub(club, author)
+  const made = await createInvite(view.state!, { kind: "personal", days: 7, label: "Dana", hostName: "Olaf" }, author)
+  view = await refreshClub(club, author)
+  const delivery = await sendInvitation(view.state!, { invite: made.invite, token: made.token }, { pubkey: dana.pubkey, relays: [] }, { relays: [], hostName: "Olaf" }, author)
+  assert.equal(delivery.published, true)
+  // Relays see a gift wrap for Dana: no club, no sender, no label of ours.
+  const wraps = await relayClient().query([{ kinds: [1059], "#p": [dana.pubkey] }], [a.url])
+  assert.equal(wraps.events.length, 1)
+  assert.ok(!JSON.stringify(wraps.events[0]).includes(club) && !JSON.stringify(wraps.events[0]).includes(owner.pubkey))
+
+  // Dana's device opens the app: the invitation is opened like a scanned link.
+  const danasDevice = await device(dana)
+  const arrived = await new Promise<string>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("the invitation did not arrive")), 15_000)
+    const stop = watchInvitations((opened) => {
+      clearTimeout(timer)
+      stop()
+      stopInbox()
+      resolve(opened)
+    })
+    startInbox({ pubkey: dana.pubkey, signer: danasDevice.signer })
+  })
+  assert.equal(arrived, club)
+  view = await refreshClub(club, danasDevice)
+  assert.equal(view.invite?.invite, made.invite)
+  assert.equal(view.invite?.preview?.hostName, "Olaf")
+  // A personal invitation asks a leader to confirm the person (club.md); the closed club's
+  // records are not open yet, and still the device says what the join means.
+  assert.equal(invitationState(view, now()), "request")
+  await acceptInvitation(club, danasDevice)
+  view = await refreshClub(club, danasDevice)
+  assert.equal(view.me.status, "request")
 })
 
 test("a closed club with a member limit says so in the link's preview: the group link only asks", async () => {

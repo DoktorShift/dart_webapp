@@ -74,12 +74,13 @@ Die vollständigen Inhaltsschemas stehen maschinenlesbar in [`schemas/`](schemas
 
 | Familie | Typen |
 | --- | --- |
-| Club (1180) | `club.found`, `club.update`, `club.invite`, `club.invite.revoke`, `club.join`, `club.accept`, `club.decline`, `club.leave`, `club.remove`, `club.role`, `club.owner.offer`, `club.owner.cancel`, `club.owner.accept`, `club.keys`, `club.season`, `club.season.rules`, `club.season.end`, `club.result`, `club.date`, `club.game`, `club.rsvp` |
+| Club (1180) | `club.found`, `club.update`, `club.invite`, `club.invite.token`, `club.invitation` (nur als Rumor in einem Gift Wrap), `club.invite.revoke`, `club.join`, `club.accept`, `club.decline`, `club.leave`, `club.remove`, `club.role`, `club.owner.offer`, `club.owner.cancel`, `club.owner.accept`, `club.keys`, `club.season`, `club.season.rules`, `club.season.end`, `club.result`, `club.date`, `club.game`, `club.rsvp` |
 | Turnier (1180) | `tournament.found`, `tournament.update`, `tournament.phase`, `tournament.seed`, `tournament.draw`, `tournament.register`, `tournament.withdraw`, `tournament.admit`, `tournament.waitlist`, `tournament.remove`, `tournament.guest`, `tournament.claim`, `tournament.link`, `tournament.checkin`, `tournament.board`, `tournament.board.revoke`, `tournament.assign`, `tournament.result`, `tournament.approve`, `tournament.correct`, `tournament.handover.offer`, `tournament.handover.cancel`, `tournament.handover.accept` |
 | Match (1180) | `match.session`, `match.seat`, `match.result`, `match.log`, `match.confirm` |
 | Match (31180) | `match.live` |
 | Profil (31180) | `profile.stats` |
 | Zahlung (Rumor, 1180) | `payment.request` |
+| Freunde (Rumor, 1180) | `friend.request`, `friend.accept`, `friend.remove` (nur in einem Gift Wrap an die andere Person; [families/friends.md](families/friends.md)) |
 | Handshake (21180) | Bereich `pair` oder `board` als Label; der Nachrichtentyp steht im verschlüsselten Inhalt |
 | Auszeichnung | `badge.evidence` (1180); im NIP-58-Format `badge.definition` (30009), `badge.award` (8) |
 

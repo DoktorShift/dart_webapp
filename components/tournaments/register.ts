@@ -20,6 +20,9 @@ const screen = (load: () => Promise<{ default: ComponentType<ScreenProps> }>) =>
 if (featureOn("tournaments")) {
   registerSlot("tournaments.root", lazyScreen<{ fallback: ReactNode }>(() => import("@/components/tournaments/tournaments-home")))
 
+  // The tournaments' area of the Rangliste tab: the profile's placings.
+  registerSlotItem("leaderboard.sections", "tournaments", lazyScreen<SlotListProps["leaderboard.sections"]>(() => import("@/components/tournaments/leaderboard-section")))
+
   registerScreen(SCREENS.tournamentCreate, { title: (t) => t.shell.screens.tournamentCreate, Component: screen(() => import("@/components/tournaments/create-screen")) })
   registerScreen(SCREENS.tournamentView, { title: (t, params) => params.name || t.shell.screens.tournament, Component: screen(() => import("@/components/tournaments/tournament-screen")) })
   registerScreen(TOURNAMENT_SCREENS.organize, { title: (t) => t.tournaments.titles.organize, Component: screen(() => import("@/components/tournaments/organize-screen")) })

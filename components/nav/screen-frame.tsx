@@ -2,12 +2,15 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import { useMediaQuery, XSHORT } from "@/components/common/use-media-query"
+import { NavBarSlot } from "@/components/nav/nav-bar-items"
 import { NavHeader } from "@/components/nav/nav-header"
 import { cn } from "@/lib/utils"
 
 // One screen inside a tab: its own scroll area with the navigation bar on top and, by default,
 // a large title that moves into the bar as it scrolls away (HIG: large titles on root screens and
-// where they help orientation). Content is centred at reading width on iPad and desktop.
+// where they help orientation). Content is centred at reading width on iPad and desktop. Besides
+// `trailing` (the frame's own buttons), the screen inside may put buttons into the bar with
+// <NavBarItems> (nav-bar-items.tsx): they land in the slot after `trailing`.
 export function ScreenFrame({
   title,
   largeTitle = true,
@@ -27,14 +30,15 @@ export function ScreenFrame({
   const titleRef = useRef<HTMLHeadingElement>(null)
   const [scrolled, setScrolled] = useState(false)
   const [titleAway, setTitleAway] = useState(false)
+  const [slot, setSlot] = useState<HTMLElement | null>(null)
   const isRoot = !onBack
-  // A phone in landscape has no room for a large title on a pushed screen: as on iOS in compact
-  // height, the title sits in the bar and the content starts right below it.
+  // A phone in landscape has no room for a large title: as on iOS in compact height, the title
+  // sits in the bar and the content starts right below it, on root screens too.
   const compactHeight = useMediaQuery(XSHORT)
-  const large = largeTitle && !(compactHeight && !isRoot)
-  // A root without buttons lets its bar float over the content, so the large title sits exactly
-  // where the Leaderboard has its own.
-  const overlay = isRoot && largeTitle && !trailing
+  const large = largeTitle && !compactHeight
+  // A root without buttons lets its bar float over the content, so the large title starts at
+  // the top of the screen.
+  const overlay = large && isRoot && !trailing
 
   useEffect(() => {
     const el = scrollRef.current
@@ -76,7 +80,12 @@ export function ScreenFrame({
         title={title}
         backLabel={backLabel}
         onBack={onBack}
-        trailing={trailing}
+        trailing={
+          <>
+            {trailing}
+            <div ref={setSlot} className="contents" />
+          </>
+        }
         showTitle={!large || titleAway}
         solid={overlay ? titleAway : scrolled}
         overlay={overlay}
@@ -95,7 +104,7 @@ export function ScreenFrame({
         >
           {title}
         </h1>
-        {children}
+        <NavBarSlot.Provider value={slot}>{children}</NavBarSlot.Provider>
       </div>
     </div>
   )

@@ -16,11 +16,11 @@ export interface ResultImage {
   site: string
 }
 
-const WIDTH = 1080
-const HEIGHT = 1350
-const PAD = 72
+export const WIDTH = 1080
+export const HEIGHT = 1350
+export const PAD = 72
 
-const COLORS = {
+export const COLORS = {
   background: "#050a18",
   glow: "rgba(29, 78, 216, 0.38)",
   card: "rgba(255, 255, 255, 0.05)",
@@ -43,9 +43,9 @@ const TROPHY = [
   "M18 2H6v7a6 6 0 0 0 12 0V2Z",
 ]
 
-type Font = (size: number) => string
+export type Font = (size: number) => string
 
-interface Fonts {
+export interface Fonts {
   regular: Font
   semibold: Font
   condensed: Font
@@ -60,7 +60,7 @@ interface Box {
 
 // The page's own fonts (Inter, and Barlow Condensed from the --font-display variable on
 // <body>), so the picture looks like the app.
-function pageFonts(): Fonts {
+export function pageFonts(): Fonts {
   const style = getComputedStyle(document.body)
   const body = style.fontFamily || "system-ui, sans-serif"
   const display = style.getPropertyValue("--font-display").trim() || body
@@ -71,14 +71,14 @@ function pageFonts(): Fonts {
   }
 }
 
-async function loadImage(src: string) {
+export async function loadImage(src: string) {
   const image = new Image()
   image.src = src
   await image.decode()
   return image
 }
 
-function glow(ctx: CanvasRenderingContext2D, x: number, y: number, radius: number) {
+export function glow(ctx: CanvasRenderingContext2D, x: number, y: number, radius: number) {
   const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius)
   gradient.addColorStop(0, COLORS.glow)
   gradient.addColorStop(1, "rgba(29, 78, 216, 0)")
@@ -87,7 +87,7 @@ function glow(ctx: CanvasRenderingContext2D, x: number, y: number, radius: numbe
 }
 
 // Sets the largest font up to `size` at which `text` fits `width`.
-function fit(ctx: CanvasRenderingContext2D, text: string, font: Font, size: number, width: number, min = 16) {
+export function fit(ctx: CanvasRenderingContext2D, text: string, font: Font, size: number, width: number, min = 16) {
   let current = size
   ctx.font = font(current)
   while (current > min && ctx.measureText(text).width > width) {
@@ -97,7 +97,7 @@ function fit(ctx: CanvasRenderingContext2D, text: string, font: Font, size: numb
   return current
 }
 
-function line(ctx: CanvasRenderingContext2D, x1: number, x2: number, y: number) {
+export function line(ctx: CanvasRenderingContext2D, x1: number, x2: number, y: number) {
   ctx.strokeStyle = COLORS.line
   ctx.lineWidth = 2
   ctx.beginPath()
@@ -193,24 +193,23 @@ function drawPlayerRows(ctx: CanvasRenderingContext2D, model: ResultImage, fonts
   })
 }
 
-export async function renderResultImage(model: ResultImage, iconSrc: string): Promise<Blob> {
+// A card's canvas with the app's background, the brand and the date on top: the frame every
+// picture of this app shares (the result, the figures in lib/profile/figures-image.ts).
+export async function openCard(brand: string, date: string, iconSrc: string) {
   const fonts = pageFonts()
   await Promise.all([document.fonts.load(fonts.condensed(100)), document.fonts.load(fonts.regular(32)), document.fonts.load(fonts.semibold(32))]).catch(() => {})
   const icon = await loadImage(iconSrc).catch(() => null)
-
   const canvas = document.createElement("canvas")
   canvas.width = WIDTH
   canvas.height = HEIGHT
   const ctx = canvas.getContext("2d")
   if (!ctx) throw new Error("Canvas is not available")
-  const inner = WIDTH - PAD * 2
 
   ctx.fillStyle = COLORS.background
   ctx.fillRect(0, 0, WIDTH, HEIGHT)
   glow(ctx, WIDTH * 0.9, HEIGHT * 0.04, 760)
   glow(ctx, WIDTH * 0.05, HEIGHT * 0.98, 700)
 
-  // Brand and date.
   ctx.textBaseline = "middle"
   let brandX = PAD
   if (icon) {
@@ -225,11 +224,30 @@ export async function renderResultImage(model: ResultImage, iconSrc: string): Pr
   ctx.fillStyle = COLORS.text
   ctx.textAlign = "left"
   ctx.font = fonts.condensed(54)
-  ctx.fillText(model.brand, brandX, PAD + 40)
+  ctx.fillText(brand, brandX, PAD + 40)
   ctx.fillStyle = COLORS.muted
   ctx.textAlign = "right"
   ctx.font = fonts.regular(30)
-  ctx.fillText(model.date, WIDTH - PAD, PAD + 40)
+  ctx.fillText(date, WIDTH - PAD, PAD + 40)
+  return { canvas, ctx, fonts }
+}
+
+// Where the picture came from, at its foot, then the finished PNG.
+export function closeCard(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, fonts: Fonts, footer: string, site: string): Promise<Blob> {
+  ctx.textAlign = "center"
+  ctx.textBaseline = "alphabetic"
+  ctx.fillStyle = COLORS.muted
+  ctx.font = fonts.regular(32)
+  ctx.fillText(footer, WIDTH / 2, HEIGHT - 112)
+  ctx.fillStyle = COLORS.primary
+  ctx.font = fonts.semibold(34)
+  ctx.fillText(site, WIDTH / 2, HEIGHT - 64)
+  return new Promise((resolve, reject) => canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("The picture could not be made"))), "image/png"))
+}
+
+export async function renderResultImage(model: ResultImage, iconSrc: string): Promise<Blob> {
+  const { canvas, ctx, fonts } = await openCard(model.brand, model.date, iconSrc)
+  const inner = WIDTH - PAD * 2
 
   // Who won, and how.
   drawTrophy(ctx, WIDTH / 2, 200, 120)
@@ -272,15 +290,5 @@ export async function renderResultImage(model: ResultImage, iconSrc: string): Pr
   if (model.players.length > 3) drawPlayerRows(ctx, model, fonts, box)
   else drawPlayerColumns(ctx, model, fonts, box)
 
-  // Where it came from.
-  ctx.textAlign = "center"
-  ctx.textBaseline = "alphabetic"
-  ctx.fillStyle = COLORS.muted
-  ctx.font = fonts.regular(32)
-  ctx.fillText(model.footer, WIDTH / 2, HEIGHT - 112)
-  ctx.fillStyle = COLORS.primary
-  ctx.font = fonts.semibold(34)
-  ctx.fillText(model.site, WIDTH / 2, HEIGHT - 64)
-
-  return new Promise((resolve, reject) => canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("The picture could not be made"))), "image/png"))
+  return closeCard(canvas, ctx, fonts, model.footer, model.site)
 }

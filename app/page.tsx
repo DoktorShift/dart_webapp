@@ -4,8 +4,8 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, u
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import { AppShell } from "@/components/app-shell"
 import { PlayScreen, type AgainInfo, type ResumeInfo } from "@/components/play-screen"
+import { ResumeAccessory } from "@/components/shell/resume-accessory"
 import { SetupScreen } from "@/components/setup-screen"
-import { LeaderboardScreen } from "@/components/leaderboard-screen"
 import { GameScreen } from "@/components/game/game-screen"
 import { UndoBanner } from "@/components/undo-banner"
 import { FallbackScreen } from "@/components/fallback-screen"
@@ -17,7 +17,7 @@ import { TabsLayer } from "@/components/nav/tabs-layer"
 import { replaceUrl, useHistorySync } from "@/components/nav/use-history-sync"
 import { AppSettingsProvider } from "@/components/shell/app-settings"
 import { warmOfflineScreens } from "@/components/shell/lazy"
-import { ClubsRoot, ProfileRoot, TournamentsRoot } from "@/components/shell/tab-roots"
+import { ClubsRoot, LeaderboardRoot, ProfileRoot, TournamentsRoot } from "@/components/shell/tab-roots"
 import "@/components/shell/extensions"
 import { useT } from "@/components/i18n-provider"
 import { modeName, type Messages } from "@/lib/i18n"
@@ -344,6 +344,10 @@ export default function DartScorer() {
   // and a throw, which re-renders this page, must not re-render any of them.
   const again = useMemo(() => againInfo(lastGame, t), [lastGame, t])
   const resume = useMemo(() => resumeInfo(match, t), [match, t])
+  const resumeGame = useCallback(() => {
+    setMatch((m) => (m ? { ...m, status: "playing" } : m))
+    go("game")
+  }, [go])
   const roots = useMemo<Record<TabId, StackRoot>>(
     () => ({
       play: {
@@ -355,10 +359,7 @@ export default function DartScorer() {
             onPlayAgain={() => lastGame && startGame(lastGame)}
             onChangeAgain={() => lastGame && openSetup(lastGame.type)}
             resume={resume}
-            onResume={() => {
-              setMatch((m) => (m ? { ...m, status: "playing" } : m))
-              go("game")
-            }}
+            onResume={resumeGame}
             onDiscardResume={() => {
               setEnded(matchRef.current)
               setMatch(null)
@@ -366,23 +367,22 @@ export default function DartScorer() {
           />
         ),
       },
-      // As in 1.0.0, a game started from the empty leaderboard comes back to Play.
-      leaderboard: { title: t.leaderboard.title, content: <LeaderboardScreen onPlay={() => openSetup("x01", "play")} /> },
+      leaderboard: { title: t.shell.tabs.leaderboard, content: <LeaderboardRoot /> },
       clubs: { title: t.shell.tabs.clubs, content: <ClubsRoot /> },
       tournaments: { title: t.shell.tabs.tournaments, content: <TournamentsRoot /> },
       profile: { title: t.shell.tabs.profile, content: <ProfileRoot /> },
     }),
-    [t, again, resume, lastGame, openSetup, startGame, go],
+    [t, again, resume, resumeGame, lastGame, openSetup, startGame],
   )
   const tabs = useMemo(
     () => (
-      <AppShell tab={nav.tab} onTabChange={onTabChange}>
+      <AppShell tab={nav.tab} onTabChange={onTabChange} accessory={nav.tab !== "play" && resume ? <ResumeAccessory resume={resume} onResume={resumeGame} /> : undefined}>
         {TABS.filter((id) => opened.includes(id)).map((id) => (
           <StackView key={id} tab={id} active={nav.tab === id} root={roots[id]} entries={nav.stacks[id]} onBack={navigator.pop} onUpdate={updateEntry} />
         ))}
       </AppShell>
     ),
-    [nav, opened, roots, onTabChange, navigator, updateEntry],
+    [nav, opened, roots, onTabChange, navigator, updateEntry, resume, resumeGame],
   )
 
   // Setup's back button names the screen it goes back to: the tab, or "Back" above a pushed screen.

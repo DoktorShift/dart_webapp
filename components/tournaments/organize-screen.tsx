@@ -1,14 +1,16 @@
 "use client"
 
 import { useState } from "react"
-import { Settings, UserRoundPlus } from "lucide-react"
+import { QrCode, Settings, UserRoundPlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
 import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
+import { PhaseSteps, type PhaseStep } from "@/components/ui/phase-steps"
 import { Segmented } from "@/components/ui/segmented"
 import { InlineStatus } from "@/components/common/inline-status"
 import { Waiting } from "@/components/common/waiting"
+import { NavBarItems, NavIconButton } from "@/components/nav/nav-bar-items"
 import { useNav } from "@/components/nav/nav-context"
 import { useAreaT } from "@/components/i18n-provider"
 import { TOURNAMENTS_TEXTS } from "@/lib/i18n/features/tournaments.screens"
@@ -17,9 +19,10 @@ import { MatchesList } from "@/components/tournaments/matches-list"
 import { useNextStep } from "@/components/tournaments/next-step"
 import { AddBoardSheet, BoardSheet, GuestsSheet, ParticipantSheet, ResultSheet } from "@/components/tournaments/organize-sheets"
 import { TOURNAMENT_SCREENS } from "@/components/tournaments/screens"
+import { ShareSheet } from "@/components/tournaments/share-sheet"
 import { useLiveMatches } from "@/components/tournaments/use-live-matches"
 import { useAutoAdmission, useTournament, type Entry } from "@/components/tournaments/use-tournaments"
-import { waitingList, type Participant } from "@/lib/protocol/tournament-state"
+import { waitingList, type Participant, type TournamentState } from "@/lib/protocol/tournament-state"
 import type { ScreenProps } from "@/lib/shell/registry"
 import type { MatchView } from "@/lib/tournaments/engine"
 import { shortKey } from "@/lib/nostr/pointers"
@@ -28,8 +31,16 @@ import { approveTemplate, assignTemplate } from "@/lib/tournaments/records"
 
 type Tab = "participants" | "boards" | "results"
 
-// The organizer's workspace (PLAN.md "Turnierleitung"): what is up next on top, then Teilnehmer,
-// Boards and Ergebnisse; Einstellungen behind the gear. Every change with consequences shows
+// The course of a tournament as steps: where it stands, what came before, what is still to come.
+const STEPS = ["registration", "checkin", "drawn", "running", "finished"] as const
+function phaseSteps(state: TournamentState, labels: Record<(typeof STEPS)[number], string>): PhaseStep[] {
+  const at = STEPS.indexOf(state.phase === "paused" ? "running" : (state.phase as (typeof STEPS)[number]))
+  return STEPS.map((id, i) => ({ id, label: labels[id], state: i < at ? "done" : i === at ? "now" : "next" }))
+}
+
+// The organizer's workspace (PLAN.md "Turnierleitung"): the tournament's course as steps, what
+// is up next, then Teilnehmer (with the two ways players get in first), Boards (each with its
+// code) and Ergebnisse; Einstellungen behind the gear. Every change with consequences shows
 // them first (draw, correction); nothing that has started is ever silently redone.
 export default function OrganizeScreen({ params }: ScreenProps) {
   const tx = useAreaT(TOURNAMENTS_TEXTS)
@@ -66,21 +77,14 @@ function Workspace({ entry }: { entry: Entry }) {
 
   return (
     <div className="pb-4">
-      {/* The gear sits with the tournament's name, so the segments below get the full width. */}
-      <div className="mt-2 flex items-start gap-2">
-        <div className="min-w-0 flex-1">
-          <p className="text-[1.0625rem] font-semibold leading-snug [overflow-wrap:anywhere]">{state.settings.name}</p>
-          <p className="text-[0.9375rem] text-muted-foreground">{tx.phase[state.phase]}</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => nav.push(TOURNAMENT_SCREENS.settings, { tournament: read.id })}
-          aria-label={o.tabs.settings}
-          className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:bg-primary/15"
-        >
-          <Settings className="h-6 w-6" aria-hidden="true" />
-        </button>
+      <NavBarItems>
+        <NavIconButton icon={Settings} label={o.tabs.settings} onClick={() => nav.push(TOURNAMENT_SCREENS.settings, { tournament: read.id })} className="-mr-1" />
+      </NavBarItems>
+      <div className="mt-2">
+        <p className="text-[1.0625rem] font-semibold leading-snug [overflow-wrap:anywhere]">{state.settings.name}</p>
+        <p className="text-[0.9375rem] text-muted-foreground">{tx.phase[state.phase]}</p>
       </div>
+      {state.phase !== "cancelled" && <PhaseSteps steps={phaseSteps(state, o.steps)} label={o.steps.label} className="mt-4" />}
       {next.problem && (
         <InlineStatus tone="error" className="mt-4">
           {next.problem}
@@ -122,6 +126,7 @@ function ParticipantsTab({ entry, names }: { entry: Entry; names: Names }) {
   const state = entry.read.state as NonNullable<Entry["read"]["state"]>
   const [chosen, setChosen] = useState<Participant | null>(null)
   const [adding, setAdding] = useState(false)
+  const [sharing, setSharing] = useState(false)
   const all = Object.values(state.participants)
   const beforeDraw = state.phase === "registration" || state.phase === "checkin"
   const groups: [string, Participant[]][] = [
@@ -142,6 +147,12 @@ function ParticipantsTab({ entry, names }: { entry: Entry; names: Names }) {
       .join(" · ")
   return (
     <>
+      {beforeDraw && (
+        <Group>
+          <ListRow icon={QrCode} iconTone="blue" title={p.invite} subtitle={p.inviteHint} onClick={() => setSharing(true)} />
+          <ListRow icon={UserRoundPlus} iconTone="green" title={p.addGuests} subtitle={p.addGuestsHint} onClick={() => setAdding(true)} />
+        </Group>
+      )}
       {all.length === 0 && <p className="mt-6 px-4 text-[0.9375rem] text-muted-foreground">{p.none}</p>}
       {groups.map(([title, list]) =>
         list.length === 0 ? null : (
@@ -152,14 +163,9 @@ function ParticipantsTab({ entry, names }: { entry: Entry; names: Names }) {
           </Group>
         ),
       )}
-      {beforeDraw && (
-        <Button variant="secondary" onClick={() => setAdding(true)} className={`${SECONDARY} mt-6 gap-2`}>
-          <UserRoundPlus className="h-5 w-5" aria-hidden="true" />
-          {p.addGuests}
-        </Button>
-      )}
       <ParticipantSheet entry={entry} names={names} participant={chosen} onOpenChange={(open) => !open && setChosen(null)} />
       <GuestsSheet entry={entry} open={adding} onOpenChange={setAdding} />
+      <ShareSheet open={sharing} onOpenChange={setSharing} tournament={entry.read.id} name={state.settings.name} relays={entry.read.relays} />
     </>
   )
 }
@@ -215,7 +221,23 @@ function BoardsTab({ entry, names, calls }: { entry: Entry; names: Names; calls:
       <Group title={tx.organize.tabs.boards}>
         {boards.length === 0 && <ListRow title={b.none} />}
         {boards.map((x) => (
-          <ListRow key={x.id} title={x.name} subtitle={x.active ? stateOf(x.id) : b.inactive} onClick={x.active ? () => setChosen(x.id) : undefined} disabled={!x.active} />
+          <ListRow
+            key={x.id}
+            title={x.name}
+            subtitle={x.active ? stateOf(x.id) : b.inactive}
+            onClick={x.active ? () => setChosen(x.id) : undefined}
+            disabled={!x.active}
+            chevron={false}
+            trailing={
+              // The code lives on the device that made the board: only there the row promises it.
+              x.active && entry.stored.boardKeys[x.id] ? (
+                <span className="flex h-9 shrink-0 items-center gap-1.5 rounded-xl bg-primary/10 px-3 text-[0.9375rem] font-semibold text-primary">
+                  <QrCode className="h-4 w-4" aria-hidden="true" />
+                  {b.code}
+                </span>
+              ) : undefined
+            }
+          />
         ))}
       </Group>
       <Button variant="secondary" onClick={() => setAdding(true)} className={`${SECONDARY} mt-6`}>

@@ -8,7 +8,8 @@ import { ChoiceRow, Group, SwitchRow } from "@/components/ui/group"
 import { Dartboard, GAME_HIGHLIGHTS } from "@/components/dartboard"
 import { SlotItems } from "@/components/shell/slot-items"
 import { useT } from "@/components/i18n-provider"
-import { recentPlayerNames, useMatchHistory } from "@/lib/leaderboard"
+import { useMatchHistory } from "@/lib/leaderboard"
+import { recentPlayers } from "@/lib/profile/recent-players"
 import { loadLastGame, loadRules } from "@/lib/game/storage"
 import { assignPlayers, listPlayers, MAX_SEAT_NAME, savePlayers, seatName, type PlayerRecord } from "@/lib/storage/players"
 import { LEG_OPTIONS, SET_OPTIONS, START_SCORES, configFor, modeIdFor, type GameRules } from "@/lib/game/rules"
@@ -165,8 +166,14 @@ export function SetupScreen({ type, preset, backLabel, onBack, onStart }: SetupS
 
   const nameKeys = players.map((p) => p.name.trim().toLowerCase())
   const duplicates = new Set(nameKeys.filter((k, i) => k && nameKeys.indexOf(k) !== i))
+  // The people played with lately, with their profile where the game knew it, so the seat is
+  // linked the same way a scanned one is. Someone who once played without it counts once.
   const recent = useMemo(
-    () => recentPlayerNames(matches).filter((name) => !nameKeys.includes(name.toLowerCase())),
+    () => {
+      const all = recentPlayers(matches, null)
+      const linked = new Set(all.filter((p) => p.pubkey).map((p) => p.name.toLowerCase()))
+      return all.filter((p) => !nameKeys.includes(p.name.toLowerCase()) && (p.pubkey || !linked.has(p.name.toLowerCase())))
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [matches, nameKeys.join("|")],
   )
@@ -318,15 +325,15 @@ export function SetupScreen({ type, preset, backLabel, onBack, onStart }: SetupS
             <div className="mt-4">
               <p className="mb-2 px-1 text-[0.8125rem] font-medium text-muted-foreground">{t.setup.recent}</p>
               <div className="flex flex-wrap gap-2">
-                {recent.map((name) => (
+                {recent.map((p) => (
                   <button
-                    key={name}
+                    key={p.pubkey ?? p.name}
                     type="button"
-                    onClick={() => fillSeat({ name })}
+                    onClick={() => fillSeat({ name: p.name, ...(p.pubkey ? { pubkey: p.pubkey } : {}) })}
                     className="flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-secondary/50 px-4 text-[0.9375rem] active:bg-secondary"
                   >
                     <Plus className="h-4 w-4 text-primary" aria-hidden="true" />
-                    {name}
+                    {p.name}
                   </button>
                 ))}
               </div>

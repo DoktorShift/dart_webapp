@@ -5,13 +5,14 @@ import { PAYMENTS_TEXTS } from "../lib/i18n/features/payments.screens.ts"
 
 // Payments speak plainly (PLAN.md table "Im normalen Produkt": Wallet verbinden, Bezahlen /
 // Empfangen; _coordination/NOSTR-DESIGN-RULES.md): no protocol or bitcoin jargon outside the
-// "Erweitert" screen. "Zap" and "invoice" ("Rechnung") count as jargon too; "sats" is the unit.
+// "Erweitert" screen. "Zap" and "invoice" ("Rechnung") count as jargon too, and so does the unit
+// word "sats": amounts are said in the currency and in bitcoin (₿), docs/ux/zahlungen-vorschlag.html.
 
-const PROTOCOL = /nostr|\bnip[- ]?\d*\b|relay|npub|nsec|pubkey|\bkeys?\b|\bschlüssel|bunker|nwc|lnurl|event|\bzaps?\b|lud16|bolt ?11|preimage|payment[_ ]hash|invoice|rechnung/i
+const PROTOCOL = /nostr|\bnip[- ]?\d*\b|relay|npub|nsec|pubkey|\bkeys?\b|\bschlüssel|bunker|nwc|lnurl|event|\bzaps?\b|lud16|bolt ?11|preimage|payment[_ ]hash|invoice|rechnung|\bsats?\b|satoshi|\bbtc\b/i
 
 function texts(value: unknown, path: string, out: [string, string][]) {
   if (typeof value === "string") out.push([path, value])
-  else if (typeof value === "function") out.push([path, String(value("Mia", "500 sats", "Tom"))])
+  else if (typeof value === "function") out.push([path, String(value("Mia", "5,00 €", "Tom"))])
   else if (value && typeof value === "object") for (const [key, child] of Object.entries(value)) texts(child, `${path}.${key}`, out)
   return out
 }
@@ -24,8 +25,3 @@ test("payment texts use no protocol words outside Erweitert", () => {
   }
 })
 
-test("one sat, many sats", () => {
-  assert.equal(MESSAGES.de.payments.sats("1"), "1 sat")
-  assert.equal(MESSAGES.de.payments.sats("1.000"), "1.000 sats")
-  assert.equal(MESSAGES.en.payments.sats("21"), "21 sats")
-})

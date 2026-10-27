@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { ChoiceList } from "@/components/ui/choice-list"
-import { Group } from "@/components/ui/group"
+import { Group, SwitchRow } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
 import { Sheet, SheetBody } from "@/components/ui/sheet"
 import { TextField } from "@/components/ui/text-field"
@@ -94,6 +94,8 @@ export function EditSheet({ view, state, open, onOpenChange }: { view: ClubView;
   const [about, setAbout] = useState(info.about ?? "")
   const [picture, setPicture] = useState(info.picture ?? "")
   const [visibility, setVisibility] = useState(info.visibility)
+  const [approval, setApproval] = useState(info.approval)
+  const [membersInvite, setMembersInvite] = useState(info.membersInvite)
   const [busy, setBusy] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)
   const owner = view.me.role === "owner"
@@ -103,6 +105,8 @@ export function EditSheet({ view, state, open, onOpenChange }: { view: ClubView;
     ...(about.trim() !== (info.about ?? "") ? { about: about.trim() } : {}),
     ...((safeImageUrl(picture) ?? null) !== (info.picture ?? null) ? { picture: safeImageUrl(picture) } : {}),
     ...(visibility !== info.visibility ? { visibility } : {}),
+    ...(approval !== info.approval ? { approval } : {}),
+    ...(membersInvite !== info.membersInvite ? { membersInvite } : {}),
   }
   const ready = name.trim() !== "" && !pictureProblem(picture) && Object.keys(change).length > 0
 
@@ -148,6 +152,10 @@ export function EditSheet({ view, state, open, onOpenChange }: { view: ClubView;
             <p className="mt-2 px-4 text-[0.8125rem] text-muted-foreground">{tx.manage.edit.visibilityHint}</p>
           </section>
         )}
+        <Group title={tx.manage.edit.joining}>
+          <SwitchRow title={tx.manage.edit.approval} hint={tx.manage.edit.approvalHint} checked={approval} onCheckedChange={setApproval} />
+          <SwitchRow title={tx.manage.edit.membersInvite} hint={tx.manage.edit.membersInviteHint} checked={membersInvite} onCheckedChange={setMembersInvite} />
+        </Group>
         {problem && (
           <InlineStatus tone="error" className="mt-4">
             {problem}
@@ -191,7 +199,7 @@ export function InvitesSheet({ view, state, open, onOpenChange }: { view: ClubVi
       <Sheet open={open && !showing && !creating} onOpenChange={onOpenChange} title={tx.manage.invites}>
         <SheetBody>
           <Button onClick={() => setCreating(true)} disabled={state.info.archived} className="h-12 w-full rounded-xl text-[1.0625rem] font-semibold">
-            {tx.invites.create}
+            {tx.club.actions.invite}
           </Button>
           <Group title={tx.invites.active} className="mt-6">
             {active.length === 0 && <ListRow title={tx.invites.none} />}

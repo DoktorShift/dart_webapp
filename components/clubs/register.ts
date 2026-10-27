@@ -35,6 +35,15 @@ if (featureOn("clubs")) {
     ),
   );
 
+  // The clubs' area of the Rangliste tab: the season tables.
+  registerSlotItem(
+    "leaderboard.sections",
+    "clubs",
+    lazyScreen<SlotListProps["leaderboard.sections"]>(
+      () => import("@/components/clubs/leaderboard-section"),
+    ),
+  );
+
   registerScreen(SCREENS.clubCreate, {
     title: (t) => t.shell.screens.clubCreate,
     Component: screen(() => import("@/components/clubs/create-screen")),

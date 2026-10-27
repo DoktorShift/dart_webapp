@@ -6,6 +6,7 @@ import { loadCore, type Core } from "../lib/nostr/core.ts"
 import type { NostrEvent } from "../lib/nostr/types.ts"
 import { claimPlayer, profilePlayers } from "../lib/profile/claim.ts"
 import { statsCardOf } from "../lib/profile/stats-card.ts"
+import { PROFILE_TYPES } from "../lib/protocol/profile.ts"
 import { EMPTY_STATS_CARD, sharesNothing, type StatsCard } from "../lib/protocol/profile.ts"
 import { readStatsCard, statsCardTemplate } from "../lib/protocol/stats-card.ts"
 import { archiveFinished, loadArchive, type ArchivedMatch } from "../lib/storage/archive.ts"
@@ -42,7 +43,7 @@ test("the card counts the profile's games and nothing else", async () => {
   // Worked out by hand in tests/storage-fixtures.ts: Anna won A (6 darts, 301 points, checkout
   // 121, one 180), lost B (9 darts, 201 points).
   assert.deepEqual(await cardOf(), {
-    x01: { games: 2, versus: 2, wins: 1, darts: 15, points: 502, highestFinish: 121, bestLeg: 6, visits180: 1 },
+    x01: { games: 2, versus: 2, wins: 1, darts: 15, points: 502, highestFinish: 121, bestLeg: 6, visits180: 1, checkouts: 1, dartsAtDouble: 1 },
     cricket: null,
     clock: null,
     refs: [],
@@ -90,4 +91,13 @@ test("a card with impossible figures is never written or read", () => {
   const template = statsCardTemplate(EMPTY_STATS_CARD, 1_790_000_000)
   const event = core.finalizeEvent({ ...template, content: JSON.stringify(impossible) }, secret)
   assert.equal(readStatsCard(event, core.getPublicKey(secret), 1_790_000_100), null)
+})
+
+test("stats card: optional checkout counts, both or neither, checkouts within darts at double", () => {
+  const base = { games: 2, versus: 2, wins: 1, darts: 15, points: 502, highestFinish: 121, bestLeg: 6, visits180: 1 }
+  const schema = PROFILE_TYPES["profile.stats"].schema
+  assert.doesNotThrow(() => schema.check({ x01: base, cricket: null, clock: null, refs: [] }, "card"))
+  assert.doesNotThrow(() => schema.check({ x01: { ...base, checkouts: 3, dartsAtDouble: 7 }, cricket: null, clock: null, refs: [] }, "card"))
+  assert.throws(() => schema.check({ x01: { ...base, checkouts: 3 }, cricket: null, clock: null, refs: [] }, "card"))
+  assert.throws(() => schema.check({ x01: { ...base, checkouts: 8, dartsAtDouble: 7 }, cricket: null, clock: null, refs: [] }, "card"))
 })

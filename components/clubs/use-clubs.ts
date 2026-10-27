@@ -5,6 +5,7 @@ import type { ClubView } from "@/lib/clubs/club"
 import { confirmedCopies } from "@/lib/clubs/games"
 import type { Author } from "@/lib/clubs/send"
 import { storedClubs } from "@/lib/clubs/store"
+import { watchInvitations } from "@/lib/clubs/invitations"
 import { discoverClubs, refreshClub, viewClub, type Reader } from "@/lib/clubs/sync"
 import { profileStore } from "@/components/profile/follow-profile"
 import { keepCopies } from "@/lib/live/copy"
@@ -90,6 +91,16 @@ async function refreshAll() {
   emit({ refreshing: false, online })
 }
 
+// Invitations sent straight to this profile (lib/clubs/invitations.ts) arrive through the
+// profile's inbox (lib/profile/inbox.ts) while the app is open; each opened one is refreshed
+// like a scanned link.
+let inboxFollowed = false
+function followInbox() {
+  if (inboxFollowed) return
+  inboxFollowed = true
+  watchInvitations((club) => void clubReader().then((r) => refreshOne(club, r)).then(() => emit()))
+}
+
 function watch() {
   if (watching) return
   watching = true
@@ -106,6 +117,7 @@ const store = profileStore<ClubsSnapshot>(
   async () => {
     watch()
     await readLocal()
+    followInbox()
   },
   refreshAll,
 )

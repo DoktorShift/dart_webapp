@@ -14,7 +14,9 @@ Jede Änderung wird **gegen die Rolle des Autors zu dem Zeitpunkt geprüft, an d
 | --- | --- | --- | --- | --- | --- |
 | Name, Beschreibung, Bild, Höchstzahl ändern (`club.update`) | ✓ | ✓ | – | – | – |
 | Sichtbarkeit ändern, archivieren (`club.update`) | ✓ | – | – | – | – |
-| Einladen, Einladung beenden (`club.invite`, `club.invite.revoke`; eine Einladung endet auch mit der Rolle ihres Erstellers, endgültig) | ✓ | ✓ | – | – | – |
+| Einladen, Einladung beenden (`club.invite`, `club.invite.revoke`; eine Einladung endet auch mit der Rolle ihres Erstellers, endgültig) | ✓ | ✓ | mit `membersInvite`: eigene Einladungen, die nur Anfragen stellen | ebenso | – |
+| Geheimnis eines Links mit der Leitung teilen (`club.invite.token`) | ✓ | ✓ | nur der eigenen Einladung | ebenso | – |
+| Beitrittsregeln ändern (`approval`, `membersInvite` in `club.update`) | ✓ | ✓ | – | – | – |
 | Anfrage annehmen oder ablehnen (`club.accept`, `club.decline`) | ✓ | ✓ | – | – | – |
 | Mitglied entfernen (`club.remove`) | ✓ alle außer sich (einen Admin mit `info`) | ✓ Turnierleiter und Mitglieder | – | – | – |
 | Rolle Admin vergeben oder ändern (`club.role`; Herabstufen mit `info`) | ✓ | – | – | – | – |
@@ -35,7 +37,7 @@ Jede Änderung wird **gegen die Rolle des Autors zu dem Zeitpunkt geprüft, an d
 
 Nach `club.owner.accept` ist der bisherige Eigentümer Admin. Lesen ist keine Rolle, sondern Verschlüsselung: Wer verpackt wurde, liest; wer entfernt wurde, wird für Neues nicht mehr verpackt ([club.md](families/club.md)).
 
-Einladungen eines Admins enden, sobald er nicht mehr Admin ist, und bleiben beendet, auch wenn er wieder Admin wird: Beitritte danach werden abgelehnt, Anfragen über seine persönliche Einladung nicht mehr angenommen (`invite_revoked`). Andere Verantwortliche erstellen eigene Links.
+Einladungen eines Admins enden, sobald er nicht mehr Admin ist, und bleiben beendet, auch wenn er wieder Admin wird: Beitritte danach werden abgelehnt, Anfragen über seine persönliche Einladung nicht mehr angenommen (`invite_revoked`). Einladungen eines Mitglieds enden mit seiner Mitgliedschaft und mit `membersInvite: false`. Andere Verantwortliche erstellen eigene Links oder zeigen den geteilten ([club.md](families/club.md#geteilter-link)).
 
 Eine wartende Anfrage nimmt nicht nur `club.accept` an: Eine Rollenänderung oder Entfernung, die den Beitritt als `prev` nennt, und ein Eigentumsangebot an die Person nehmen sie zuerst an, mit denselben Prüfungen (persönliche Einladung unbenutzt, Höchstzahl). So sieht auch ein Leser, der den Gruppenlink nicht öffnen kann, die Entscheidung von Eigentümer oder Admin ([club.md](families/club.md#einladungen-und-beitritt)).
 

@@ -15,9 +15,10 @@
 // club and lets Carla watch it live; the result is recorded for the club and Ben confirms it on his
 // phone. Anna runs a small tournament (4 players: Anna, Ben, Carla and the guest Mia; single KO)
 // with a tablet as Board 1: check-in, draw, calls, the board reports, Anna approves, finishes and
-// the badges go out; Ben's badge shows on his profile card. Last, a stake of 500 sats: Ben wins,
+// the badges go out; Ben's badge shows on his profile card. Last, a stake of 5 €: Ben wins,
 // Anna pays it with her (simulated) wallet to the code Ben's phone shows, once, even when tapped
-// twice.
+// twice. Then Ben, a member, invites Carl by the spoken code (Anna confirms him), and Anna sends
+// Carla an invitation straight to her profile.
 //
 // Prints one PASS/FAIL line per check and the step table with lab timings (a loaded development
 // machine, local relays: not field values). Screenshots (JPEG) at each device's size go to OUT.
@@ -25,6 +26,7 @@ import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { startFakeWallet } from "../../../../../tests/support/fake-wallet.ts"
 import {
+  onScreen,
   BASE, BOARD, OUT, PHONE, RELAYS, SE, allPassed, notes, audits, button, buttons, closeAll, isOnScreen, tap, copiedLink, dart, device, devices, firstSeatWins301, local, nakReq, onlyLocal, seen, shot, startRelays, step, table, tab, visibleCount,
 } from "./lib.mjs"
 
@@ -46,6 +48,13 @@ process.on("uncaughtException", async (error) => {
 process.on("SIGINT", () => shutdown(130))
 
 const profilePanel = (page) => page.locator('[data-tab-panel="profile"]')
+// Back to the tabs: a reload brings a finished game's result screen back (no tab bar there);
+// "Fertig" leaves it.
+const home = async (page) => {
+  await page.goto(BASE)
+  await page.waitForTimeout(600)
+  if (await isOnScreen(buttons(page, "Fertig"))) await tap(page, "Fertig")
+}
 const text = async (page) => (await page.locator("body").innerText()).replace(/\s+/g, " ")
 const panelText = async (page) => (await profilePanel(page).innerText()).replace(/\s+/g, " ")
 
@@ -105,7 +114,7 @@ await step("Ergebnisse vom Ergebnisbildschirm in ein neues Profil", async (expec
   const t = await panelText(page)
   expect("the Profile tab shows Anna with her one game", /Anna/.test(t) && /1 Spiel|Spiele\s*1|1\s*Spiele/.test(t), t.slice(0, 160))
   expect("the profile asks to be backed up", t.includes("Noch nicht gesichert"))
-  expect("only Anna's seat came along: one game, one win", /Spiele 1 Gewonnen 1/.test(t))
+  expect("only Anna's seat came along: one game, one win, on the sports card", /Siege\s*100\s*%\s*1 von 1/.test(t) && /X01 gegen andere/.test(t), t.match(/Siege[^X]*/)?.[0] ?? "")
 })
 
 // ---- 3. A second own device, by the typed code -----------------------------------------------
@@ -203,16 +212,18 @@ await step("Club gründen und Ben per Link einladen", async (expect) => {
   expect("with a profile there is no name to type again", (await nameField.count()) === 0 || !(await nameField.isVisible()))
   await shot(anna, "13-club-create")
   await tap(page, "Club gründen")
-  await seen(page, "Dein Club steht", { timeout: 30_000 })
-  await tap(page, "Mitglieder einladen")
-  await tap(page, "Einladung erstellen")
+  // The invite sheet opens by itself over "Dein Club steht", with the code already on it: no
+  // form, no second tap.
   await button(page, "Link kopieren", 30_000)
+  expect("the founded club opens its invitation by itself", await isOnScreen(page.getByText("Mitglieder einladen")))
   await shot(anna, "14-club-invite")
   clubLink = await copiedLink(page)
   expect("the invitation is a link", /#club=C1\./.test(clubLink), clubLink.slice(0, 40))
+  expect("the code is there without an invitation form (no 'Einladung erstellen')", (await page.getByRole("button", { name: "Einladung erstellen" }).count()) === 0)
   await tap(page, "Fertig")
   await button(page, "Spiel starten", 15_000)
-  expect("the club opens with 'Spiel starten' as its action", true)
+  expect("the club opens with 'Spiel starten' as its first action", true)
+  taps.clubInvite = "Club gründen → (the code is on screen) → Link kopieren (1 tap after founding)"
 })
 
 // ---- 7. Ben joins as a guest and has a profile from then on ------------------------------------
@@ -286,7 +297,7 @@ await step("Ben bestätigt das Clubergebnis auf seinem Telefon", async (expect) 
   await tab(page, "Profil")
   await page.waitForTimeout(2000)
   const own = await panelText(page)
-  expect.note("Ben's confirmed club game shows in his own profile (games, statistics)", !own.includes("Noch keine X01-Spiele"), own.slice(0, 120))
+  expect.note("Ben's confirmed club game shows in his own profile (games, statistics)", !own.includes("Noch kein Spiel gegen andere"), own.slice(0, 120))
   await tab(page, "Clubs")
 })
 
@@ -312,13 +323,15 @@ await step("Turnier anlegen: 4 Plätze, ein Gast, Board 1", async (expect) => {
   await seen(page, "Schritt 4 von 4")
   await shot(anna, "21-tournament-preview")
   await tap(page, "Turnier veröffentlichen")
-  await seen(page, "Dein Turnier ist veröffentlicht", { timeout: 40_000 })
-  await tap(page, "Teilen")
+  // The share sheet opens by itself over "Dein Turnier ist veröffentlicht", with the code.
+  await button(page, "Link kopieren", 40_000)
+  expect("the published tournament opens its code by itself", await isOnScreen(page.getByText("Turnier teilen")))
   tournamentLink = await copiedLink(page)
   expect("the tournament link", /#tournament=T1\./.test(tournamentLink))
   await tap(page, "Fertig")
   await tap(page, "Zum Turnier")
-  await seen(page, "Turnierleitung")
+  await button(page, "Leiten", 15_000)
+  expect("the organizer's way in is 'Leiten' in the bar", true)
   await tap(page, "Selbst mitspielen")
   await seen(page, "Du bist angemeldet", { timeout: 30_000 })
   expect("Anna plays along", true)
@@ -335,7 +348,7 @@ await step("Ben und Carla melden sich an", async (expect) => {
   await tap(carla.page, "Anmelden")
   await seen(carla.page, "Du bist angemeldet", { timeout: 40_000 })
   expect("both are admitted without anyone tapping on Anna's phone", true)
-  await anna.page.getByRole("button", { name: /^Turnierleitung/ }).click()
+  await tap(anna.page, "Leiten")
   await seen(anna.page, "Angemeldet (4)", { timeout: 30_000 })
   await shot(anna, "23-organize-players")
   expect("Anna's workspace lists four players: Anna, Ben, Carla and the guest Mia", true)
@@ -375,7 +388,17 @@ async function playOnBoard(expect, n) {
   if (n === 1) await shot(board, "26-board-called")
   await tap(b, "Spiel starten")
   await b.getByRole("button", { name: "Spieloptionen" }).waitFor({ timeout: 30_000 })
-  await firstSeatWins301(b)
+  if (n === 1) {
+    // Ben's phone, on the tournament page: the strip "Gerade an den Boards" shows the match as
+    // it is played, with the legs.
+    await ben.page.goto(local(tournamentLink))
+    await seen(ben.page, "Gerade an den Boards", { timeout: 30_000 })
+    for (const [s, m] of [[20, 3], [20, 3], [20, 3]]) await dart(b, s, m)
+    await ben.page.waitForTimeout(1500)
+    await shot(ben, "29-tournament-live")
+    expect("a player's phone shows what is on the boards right now", true)
+    for (const [s, m] of [[1], [1], [1], [20, 3], [11, 3], [14, 2]]) await dart(b, s, m)
+  } else await firstSeatWins301(b)
   const back = b.locator("button:visible", { hasText: "Zurück zum Board" }).first()
   await back.waitFor({ timeout: 20_000 })
   if (n === 1) {
@@ -450,11 +473,75 @@ await step("Auszeichnung erscheint auf Bens Profilkarte", async (expect) => {
   await shot(ben, "32-profile-card-badge")
   expect("the profile card shows the tournament badge", (await chip.count()) >= 1, (await chip.allTextContents()).join(", "))
   const card = await panelText(page)
-  expect.note("after three games tonight Ben's profile counts games", !card.includes("Noch keine X01-Spiele"), card.slice(0, 100))
+  expect.note("after three games tonight Ben's profile counts games", !card.includes("Noch kein Spiel gegen andere"), card.slice(0, 100))
+})
+
+// ---- 11b. The evening in the Rangliste ----------------------------------------------------------
+await step("Rangliste heute Abend: Hier gespielt, Clubs, Turniere auf Annas Telefon", async (expect) => {
+  const { page } = anna
+  await home(page)
+  await tab(page, "Rangliste")
+  const panel = page.locator('[data-tab-panel="leaderboard"]')
+  await seen(page, /Spiele gegen andere auf diesem Gerät/, { timeout: 20_000 })
+  // Two games against Ben tonight: within "Heute" that ranks both (2 games), over all time not yet.
+  await panel.getByRole("button", { name: /^Zeitraum: / }).click()
+  await page.getByRole("menuitemradio", { name: "Heute" }).click()
+  await page.waitForTimeout(600)
+  const today = await panel.innerText()
+  // seen() scrolled the sentence into view; the picture shows the list from its top.
+  await page.evaluate(() => document.querySelectorAll("*").forEach((el) => { if (el.scrollTop > 0) el.scrollTop = 0 }))
+  await shot(anna, "33-ranks-today")
+  expect("the list says what it counts: this device, today, games and players", /heute: \d+ Spiele?, \d+ Spieler\./.test(today), today.match(/auf diesem Gerät[^.]*\./)?.[0] ?? today.slice(0, 120))
+  expect("Anna and Ben stand in tonight's list, Anna marked as you", today.includes("Anna") && today.includes("Ben") && /\bDu\b/.test(today))
+  expect("a rank is a win rate with its games, not a point total", /\d+\s%/.test(today) && /\d Spiele?\s·\s\d Sieg/.test(today), today.match(/Anna.{0,60}/)?.[0] ?? "")
+  await panel.getByRole("radio", { name: "Clubs" }).click()
+  await seen(page, /Dartfreunde Nord/, { timeout: 20_000 })
+  const clubs = await panel.innerText()
+  await shot(anna, "34-ranks-clubs")
+  // The evening's club has no season yet: the card says so and offers no table into nothing.
+  expect("the Clubs area shows the club with its season state", /Dartfreunde Nord/.test(clubs) && (/Ganze Tabelle/.test(clubs) || /Keine laufende Saison/.test(clubs)), clubs.slice(0, 120))
+  await panel.getByRole("radio", { name: "Turniere" }).click()
+  await seen(page, /Pub Open/, { timeout: 20_000 })
+  const tournaments = await panel.innerText()
+  await shot(anna, "35-ranks-tournaments")
+  expect("the Turniere area lists tonight's tournament with Anna's place", /Pub Open/.test(tournaments) && /\d\. Platz|Sieg|Platz/.test(tournaments), tournaments.slice(0, 160))
+  await panel.getByRole("radio", { name: "Hier gespielt" }).click()
+})
+
+// ---- 11c. Games from a file ---------------------------------------------------------------------
+// Anna brings a table of earlier games (docs/data/spielverlauf.md): the sheet says what is in it,
+// asks which name is hers, and afterwards the games count for her, the other name stands in the
+// Rangliste as imported. Three of them are trainings this month, so the training chart has a
+// month to show (the matrix puts the goal line through it).
+await step("Anna importiert ihren Spielverlauf aus einer Tabelle", async (expect) => {
+  const { page } = anna
+  await home(page)
+  await tab(page, "Profil")
+  await profilePanel(page).getByRole("button", { name: /^Spielverlauf/ }).click()
+  await seen(page, /Spiele seit/, { timeout: 20_000 })
+  await page.locator('input[type="file"]').last().setInputFiles(new URL("../fixtures/spielverlauf.csv", import.meta.url).pathname)
+  await seen(page, /Welcher Name bist du\?/, { timeout: 20_000 })
+  const preview = await page.getByRole("dialog").innerText()
+  await shot(anna, "36-import-preview")
+  expect("the sheet says how many games of which kind, from when to when, and how many names the file holds", /6 Spiele vom 12\. Sept\. 2026 bis 17\. Okt\. 2026: 3 gegen andere, 3 Trainings\. 2 Namen\./.test(preview), preview.slice(0, 160))
+  expect("Anna's own name is chosen already", (await page.getByRole("radio", { name: /^Anna/ }).getAttribute("aria-checked")) === "true")
+  await page.getByRole("button", { name: "Importieren", exact: true }).click()
+  await seen(page, /Spiele importiert/, { timeout: 20_000 })
+  const done = await page.getByRole("dialog").innerText()
+  await shot(anna, "37-import-done")
+  expect("the games are in once and count for Anna", /6 Spiele importiert\./.test(done) && /Spiele als „Anna“ zählen zu dir\./.test(done), done.slice(0, 160))
+  expect("the sheet offers where the games went and the way back", (await page.getByRole("button", { name: "Training anzeigen", exact: true }).count()) === 1 && (await page.getByRole("button", { name: "Import rückgängig machen", exact: true }).count()) === 1)
+  await page.getByRole("button", { name: "Fertig", exact: true }).click()
+  await page.waitForTimeout(600)
+  await tab(page, "Rangliste")
+  const panel = page.locator('[data-tab-panel="leaderboard"]')
+  await seen(page, /Jonas/, { timeout: 20_000 })
+  const ranks = await panel.innerText()
+  expect("the other name from the file stands in the Rangliste, marked as imported", /Jonas/.test(ranks) && /Importiert/.test(ranks), ranks.match(/Jonas.{0,80}/s)?.[0] ?? "")
 })
 
 // ---- 12. A stake, paid once ---------------------------------------------------------------------
-await step("Einsatz 500 sats: Anna zahlt Ben mit der Wallet, genau einmal", async (expect) => {
+await step("Einsatz 5 €: Anna zahlt Ben mit der Wallet, genau einmal, beide Blätter schließen sich", async (expect) => {
   const payer = await startFakeWallet({ relay: RELAYS[0], balanceMsat: 50_000_000 })
   const payee = await startFakeWallet({ relay: RELAYS[0], notifications: true })
   wallets.push(payer, payee)
@@ -480,24 +567,25 @@ await step("Einsatz 500 sats: Anna zahlt Ben mit der Wallet, genau einmal", asyn
   await inputs.nth(1).fill("Ben")
   await a.getByRole("radio", { name: "301", exact: true }).first().click()
   await a.getByRole("button", { name: /^Einsatz/ }).click()
-  await a.getByRole("radio", { name: "500" }).click()
+  // The amounts to tap are in euro (the rate is stubbed in lib.mjs); "5 €" is 8.130 ₿ tonight.
+  await a.getByRole("radio", { name: /^5\s?€$/ }).click()
+  expect("the stake sheet says what is paid in bitcoin", (await a.getByRole("dialog").innerText()).includes("Bezahlt werden 8.130"), (await a.getByRole("dialog").innerText()).match(/Bezahlt werden[^\n]*/)?.[0])
   await a.getByRole("dialog").getByRole("button", { name: "Übernehmen" }).click()
+  expect("the setup row says the stake in euro", /5,00\s?€/.test(await a.getByRole("button", { name: /^Einsatz/ }).innerText()))
   await tap(a, "Spiel starten")
   await a.getByRole("button", { name: "Spieloptionen" }).waitFor({ timeout: 15_000 })
   for (const [s, m] of [[1], [1], [1], [20, 3], [20, 3], [20, 3], [1], [1], [1], [20, 3], [17, 3], [5, 2]]) await dart(a, s, m)
-  const row = await button(a, "500 sats an Ben zahlen")
+  const row = await button(a, /^5,00\s?€ an Ben zahlen$/)
   await shot(anna, "33-result-stake")
   const marks = await row.evaluate((el) => {
     const signet = el.querySelector("span.inline-flex")
-    const label = [...el.querySelectorAll("span")].find((s) => /^500 sats/.test(s.textContent ?? ""))
+    const label = [...el.querySelectorAll("span")].find((s) => /^5,00/.test(s.textContent ?? ""))
     return signet && label ? { signetRight: Math.round(Math.max(...[...signet.querySelectorAll("img")].map((i) => i.getBoundingClientRect().right))), labelLeft: Math.round(label.getBoundingClientRect().left) } : null
   })
   expect.note("the stake row's Bitcoin and NWC marks stay clear of its words", marks && marks.signetRight <= marks.labelLeft, JSON.stringify(marks))
-  // Ben's code.
-  await b.getByRole("button", { name: "Geld empfangen" }).click()
-  const amount = b.getByRole("dialog").getByRole("radio", { name: "500", exact: true })
-  if (await amount.count()) await amount.click()
-  else await b.getByRole("dialog").getByRole("textbox").first().fill("500")
+  // Ben's code: "Empfangen" on his Zahlungen screen, 5 € (the same rate, so the same 8.130 ₿).
+  await b.getByRole("button", { name: "Empfangen", exact: true }).click()
+  await b.getByRole("dialog").getByRole("radio", { name: /^5\s?€$/ }).click()
   await b.getByRole("dialog").getByRole("button", { name: "Zahlungscode erstellen" }).click()
   await seen(b, "Warte auf Zahlung", { timeout: 20_000 })
   await shot(ben, "34-receive-code")
@@ -507,38 +595,287 @@ await step("Einsatz 500 sats: Anna zahlt Ben mit der Wallet, genau einmal", asyn
   await row.click()
   const sheet = a.getByRole("dialog")
   // Anna's profile is a seat of this game: the sheet knows she pays and goes straight to it.
-  expect("the stake sheet says who pays whom", (await sheet.innerText()).includes("Anna zahlt 500 sats an Ben"))
+  expect("the stake sheet says who pays whom, in euro", /Anna zahlt 5,00\s?€ an Ben/.test(await sheet.innerText()))
   await shot(anna, "35-stake-connect")
   await sheet.getByLabel("Verbindung einfügen").fill(payer.uri)
   await sheet.getByLabel("Verbindung einfügen").press("Enter")
   await sheet.getByLabel("Zahlungscode einfügen").waitFor({ timeout: 20_000 })
   await sheet.getByLabel("Zahlungscode einfügen").fill(code)
   await sheet.getByLabel("Zahlungscode einfügen").press("Enter")
-  const pay = sheet.getByRole("button", { name: "500 sats an Ben zahlen" })
+  const pay = sheet.getByRole("button", { name: "An Ben zahlen", exact: true })
   await pay.waitFor({ timeout: 20_000 })
+  // The wallet's balance joins its row once the wallet answered.
+  await sheet.getByText(/Testwallet · /).waitFor({ timeout: 10_000 }).catch(() => {})
+  const review = await sheet.innerText()
+  expect("the review shows 5,00 € and 8.130 ₿, the wallet with its balance", /5,00\s?€/.test(review) && /8\.130\s?₿/.test(review) && /Testwallet · /.test(review), review.replace(/\s+/g, " ").slice(0, 200))
   await shot(anna, "36-pay-review")
   // A darts-night double tap.
   await pay.dblclick()
   await sheet.getByText("sind bei Ben angekommen").waitFor({ timeout: 40_000 })
   await shot(anna, "37-paid")
-  expect("'500 sats sind bei Ben angekommen'", true)
+  expect("'5,00 € sind bei Ben angekommen'", /5,00\s?€ sind bei Ben angekommen/.test(await sheet.innerText()))
   const hashes = [...payer.paid.entries()]
   expect("the wallet was asked to pay exactly once (double tap included)", payer.requests.filter((m) => m === "pay_invoice").length === 1 && hashes.length === 1 && hashes[0][1] === 1, JSON.stringify(payer.requests))
   // The money arrives in Ben's wallet: his open code says so.
   await payee.settle(hashes[0][0])
   await seen(b, "sind in deiner Wallet angekommen", { timeout: 40_000 })
   await shot(ben, "38-received")
-  expect("Ben's phone says the 500 sats arrived", true)
-  await sheet.getByRole("button", { name: "Fertig" }).click()
-  await a.waitForTimeout(800)
-  const after = await button(a, /500 sats/)
+  expect("Ben's phone says the 5,00 € arrived", true)
+  // Both sheets close by themselves once they said "Bezahlt" and "Erhalten" (no sheet left on
+  // screen; vaul keeps a closing one in the page for its animation).
+  const noSheet = async (page) => {
+    const since = Date.now()
+    while (Date.now() - since < 10_000) {
+      // Only sheets: the result screen is a dialog of its own.
+      const open = await page.evaluate(() => [...document.querySelectorAll('[role="dialog"][data-vaul-drawer]')].some((el) => {
+        const r = el.getBoundingClientRect()
+        return getComputedStyle(el).visibility !== "hidden" && r.height > 0 && r.top < innerHeight - 1
+      }))
+      if (!open) return Date.now() - since
+      await page.waitForTimeout(200)
+    }
+    return null
+  }
+  const annaClosed = await noSheet(a)
+  expect("Anna's sheet closed by itself after 'Bezahlt'", annaClosed !== null, `${annaClosed} ms after Ben's code was paid`)
+  const benClosed = await noSheet(b)
+  expect("Ben's sheet closed by itself after 'Erhalten'", benClosed !== null, `${benClosed} ms later`)
+  const after = await button(a, /5,00\s?€/)
   const rowText = await after.innerText()
   expect("the result row now says paid and offers no second payment", !/zahlen$/.test(rowText.trim()), rowText.replace(/\s+/g, " "))
   await after.click()
   await a.waitForTimeout(800)
-  expect("reopened, the sheet has no pay button", (await a.getByRole("dialog").getByRole("button", { name: "500 sats an Ben zahlen" }).count()) === 0)
+  expect("reopened, the sheet has no pay button", (await a.getByRole("dialog").getByRole("button", { name: "An Ben zahlen", exact: true }).count()) === 0)
+  await a.keyboard.press("Escape")
+  // Ben's list shows the money that came in, in euro and bitcoin.
+  const benList = await b.locator("main").innerText()
+  expect("Ben's Zahlungen list shows 5,00 € received", /Empfangen[\s\S]*Erhalten[\s\S]*5,00\s?€[\s\S]*8\.130\s?₿/.test(benList), benList.replace(/\s+/g, " ").slice(0, 160))
+  await shot(ben, "38-payments-home")
+  // Anna's list names the stake with its game.
+  await home(a)
+  await tab(a, "Profil")
+  await profilePanel(a).getByRole("button", { name: /^Zahlungen/ }).click()
+  await seen(a, "Einsatz · 301 gegen Ben", { timeout: 10_000 }).then(() => expect("Anna's Zahlungen list names the stake with its game", true), () => expect("Anna's Zahlungen list names the stake with its game", false))
+  await shot(anna, "39-payments-home")
   await a.keyboard.press("Escape")
   expect("still one payment in the wallet", payer.requests.filter((m) => m === "pay_invoice").length === 1)
+})
+
+// ---- 13. A member invites by the spoken code ----------------------------------------------------
+await step("Ben (Mitglied) lädt Carl per Code ein, Anna nimmt ihn auf", async (expect) => {
+  const b = ben.page
+  await home(b)
+  await tab(b, "Clubs")
+  await tap(b, /^Dartfreunde Nord/)
+  // The club lets its members invite (founded that way): Ben's tile says "Einladen", and his
+  // link carries the code to say aloud.
+  await tap(b, "Einladen", 20_000)
+  await seen(b, "Oder Code eingeben", { timeout: 30_000 })
+  const memberCode = (await text(b)).match(/\b[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}\b/)?.[0]
+  expect("a member's invitation shows a code to say aloud", !!memberCode, memberCode)
+  await seen(b, /ein Verantwortlicher bestätigt/, { timeout: 15_000 })
+  expect("the line says a leader confirms", true)
+  await shot(ben, "38-member-invite-code")
+  await tap(b, "Fertig")
+
+  // Carl has heard the code: Clubs → Code scannen → type it.
+  const carl = await device("carl-phone", { viewport: PHONE })
+  const c = carl.page
+  await c.goto(BASE)
+  await tab(c, "Clubs")
+  await tap(c, "Code scannen")
+  await c.getByLabel("Link oder Club-Code eingeben").fill(memberCode.toLowerCase().replace("-", " "))
+  await shot(carl, "39-code-typed")
+  await tap(c, "Öffnen")
+  await seen(c, "Einladung von Ben", { timeout: 30_000 })
+  expect("the typed code opens Ben's invitation", true)
+  await c.getByLabel("Dein Name").fill("Carl")
+  await tap(c, "Beitritt anfragen")
+  await seen(c, /Deine Anfrage wartet auf Bestätigung/, { timeout: 30_000 })
+  expect("a member's link only asks: Carl waits for a leader", true)
+  taps.codeJoin = "Clubs → Code scannen → Code tippen → Öffnen → Name → Beitritt anfragen"
+
+  // Anna sees the request as her club's task, with who invited him.
+  const a = anna.page
+  await home(a)
+  await tab(a, "Clubs")
+  await tap(a, /^Dartfreunde Nord/)
+  await tap(a, /Anfrage wartet/, 30_000)
+  await seen(a, "Eingeladen von Ben", { timeout: 30_000 })
+  await shot(anna, "40-request-invited-by")
+  await tap(a, "Aufnehmen")
+  await seen(c, /Du bist dabei/, { timeout: 30_000 })
+  expect("after Anna's OK Carl is in", true)
+})
+
+// ---- 14. An invitation straight to a profile ----------------------------------------------------
+await step("Anna lädt Carla direkt an ihr Profil ein", async (expect) => {
+  // Carla's profile code, as her phone would show it to Anna's camera.
+  const k = carla.page
+  await home(k)
+  await tab(k, "Profil")
+  await profilePanel(k).getByRole("button", { name: "Profil teilen" }).click()
+  const profileLink = await copiedLink(k)
+  expect("Carla's profile has a code to scan", /#p=|#profile=/.test(profileLink) || profileLink.includes("npub"), profileLink.slice(0, 40))
+  await tap(k, "Fertig")
+
+  const a = anna.page
+  await home(a)
+  await tab(a, "Clubs")
+  await tap(a, /^Dartfreunde Nord/)
+  await tap(a, "Einladen", 20_000)
+  await button(a, "Link kopieren", 30_000)
+  await tap(a, "An eine Person senden")
+  await seen(a, "Person einladen", { timeout: 15_000 })
+  await shot(anna, "41-invite-person")
+  await tap(a, "Profilcode scannen")
+  await a.getByLabel("Profilcode scannen").fill(profileLink)
+  await tap(a, "Öffnen")
+  // The scanned profile is confirmed by name before anything goes out.
+  await seen(a, "Gefundenes Profil", { timeout: 20_000 })
+  await seen(a, "Carla", { timeout: 20_000 })
+  await shot(anna, "42-person-found")
+  await tap(a, "Einladen")
+  await seen(a, /Einladung an .* gesendet/, { timeout: 30_000 })
+  expect("the invitation is sent to Carla's profile", true)
+  await shot(anna, "43-invitation-sent")
+  // "Fertig" leaves the person sheet for the invite sheet behind it; once more closes that.
+  await tap(a, "Fertig")
+  await button(a, "Link kopieren", 10_000)
+  await tap(a, "Fertig")
+  await button(a, "Spiel starten", 10_000)
+  taps.inviteToPerson = "Club → Einladen → An eine Person senden → Profilcode scannen (Code) → Einladen → 'Einladung gesendet' (4 taps after the club)"
+
+  // On Carla's phone the invitation is under Clubs, without a link or a scan.
+  await tab(k, "Clubs")
+  await seen(k, "Einladungen", { timeout: 45_000 })
+  await shot(carla, "44-invitation-arrived")
+  expect("Carla's Clubs tab shows the invitation by itself", true)
+  await tap(k, "Beitreten")
+  await seen(k, "Einladung von Anna", { timeout: 20_000 })
+  // A personal invitation asks a leader to confirm the person (club.md).
+  await tap(k, "Beitritt anfragen")
+  await seen(k, /Deine Anfrage wartet/, { timeout: 30_000 })
+  expect("Carla asks with one tap; Anna confirms", true)
+  await tap(a, /Anfrage wartet/, 30_000)
+  await tap(a, "Aufnehmen")
+  await seen(k, /Du bist dabei/, { timeout: 30_000 })
+  expect("Carla's phone says she is in as soon as Anna confirms", true)
+  await tap(a, /Zurück zu Dartfreunde Nord/)
+  await button(a, /Spieler\s*4$/, 30_000)
+  expect("Anna's club counts four players", true)
+})
+
+// ---- 15. Friends: Anna and Ben, from the games they played ---------------------------------------
+await step("Anna und Ben werden Freunde: Anfrage aus „Zuletzt gespielt mit“, Annehmen, Rangliste, Spielvorbereitung", async (expect) => {
+  const a = anna.page
+  const b = ben.page
+  const bodyText = async (page) => (await page.locator("body").innerText()).replace(/\s+/g, " ")
+  await a.goto(BASE)
+  await a.waitForTimeout(800)
+  await tab(a, "Profil")
+  await profilePanel(a).getByRole("button", { name: /Freunde hinzufügen/ }).waitFor({ timeout: 30_000 })
+  let t = await panelText(a)
+  expect("Anna's profile card carries the friends line, 'Freunde hinzufügen' while she has none", /Freunde hinzufügen/.test(t), t.slice(0, 200))
+  // The line of a profile without friends opens the list with the sheet that adds one.
+  await profilePanel(a).getByRole("button", { name: /Freund/ }).click()
+  await a.waitForTimeout(1200)
+  t = await panelText(a)
+  expect("Profil › Freunde starts empty, with the first step offered", /Noch keine Freunde/.test(t) && /Freund hinzufügen/.test(t), t.slice(0, 160))
+  expect("no 'not synced yet' notice on a synced device", !/abgeglichen hat/.test(t))
+  expect("the sheet 'Freund hinzufügen' is already open", await isOnScreen(a.getByText("Zuletzt gespielt mit")))
+  await shot(anna, "40-friends-add")
+  t = await bodyText(a)
+  expect("the sheet lists Ben under 'Zuletzt gespielt mit' with 'Hinzufügen'", /Zuletzt gespielt mit/.test(t) && /Ben/.test(t), t.slice(0, 200))
+  await a.getByRole("button", { name: "Ben hinzufügen", exact: true }).click()
+  await seen(a, "Anfrage an Ben gesendet.", { timeout: 20_000 })
+  expect("'Anfrage an Ben gesendet.' after one tap", true)
+  await tap(a, "Fertig")
+  await a.waitForTimeout(800)
+  t = await panelText(a)
+  expect("Anna's list shows Ben under Gesendet", /Gesendet/.test(t) && /Anfrage gesendet/.test(t), t.slice(0, 160))
+
+  await b.goto(BASE)
+  await b.waitForTimeout(800)
+  // The request reaches Ben on the Play tab: the Profile tab's symbol carries the count.
+  // The badge's words are the tab button's description (its id), not part of its name.
+  const badge = b.locator("#tab-badge-bar-profile")
+  await badge.waitFor({ state: "attached", timeout: 30_000 })
+  expect("the badge says '1 Anfrage' and the tab is still named Profil", (await badge.innerText()) === "1 Anfrage" && (await b.getByRole("button", { name: "Profil", exact: true }).count()) === 1)
+  expect("Ben's Profile tab symbol carries the badge '1 Anfrage' while he is on another tab", true)
+  await shot(ben, "41-friends-badge")
+  await tab(b, "Profil")
+  await profilePanel(b).getByRole("button", { name: /Freunde.*1 Anfrage/ }).waitFor({ timeout: 30_000 })
+  expect("Ben's profile card says '1 Anfrage' on its friends line without opening anything", true)
+  t = await panelText(b)
+  expect("Anna's request stands as a card under Ben's sports card, with 'Annehmen' in it", /Anna möchte mit dir befreundet sein/.test(t) && (await isOnScreen(b.getByRole("button", { name: "Anfrage von Anna annehmen" }))), t.slice(0, 200))
+  await shot(ben, "41-friends-notice")
+  await profilePanel(b).getByRole("button", { name: /Freunde.*1 Anfrage/ }).click()
+  await b.waitForTimeout(1200)
+  await shot(ben, "41-friends-request")
+  t = await panelText(b)
+  expect("Ben sees Anna under Anfragen with 'Annehmen' in the row", /Anfragen/.test(t) && /Anna/.test(t) && /Möchte mit dir befreundet sein/.test(t), t.slice(0, 200))
+  await tap(b, "Anna annehmen")
+  await seen(b, /Spiel(e)? zusammen|Freunde seit/, { timeout: 20_000 })
+  expect("Ben: Anna under Freunde after accepting", true)
+  expect("the badge on Ben's Profile tab goes once the request is answered", (await b.locator("#tab-badge-bar-profile").count()) === 0)
+  await seen(a, /Spiel(e)? zusammen/, { timeout: 30_000 })
+  expect("Anna's list moves Ben to Freunde by itself, with the games they played here", true)
+  await shot(anna, "41-friends-list")
+
+  // The profile's other devices show the same friend without anything done on them: the paired
+  // second one (dark, small) and the one restored from the backup file (English).
+  const two = annaTwo.page
+  await two.goto(BASE)
+  await two.waitForTimeout(800)
+  await tab(two, "Profil")
+  await profilePanel(two).getByRole("button", { name: /Freund/ }).click()
+  await seen(two, /Spiel(e)? zusammen|Freunde seit/, { timeout: 30_000 })
+  expect("Anna's paired second device lists Ben under Freunde", true)
+  t = await panelText(two)
+  expect("no 'not synced yet' notice on the second device", !/abgeglichen hat/.test(t), t.slice(0, 160))
+  await shot(annaTwo, "45-friends-second-device")
+  const three = annaThree.page
+  await three.goto(BASE)
+  await three.waitForTimeout(800)
+  await tab(three, "Profile")
+  await profilePanel(three).getByRole("button", { name: /friend/i }).click()
+  await seen(three, /games? together|Friends since/, { timeout: 30_000 })
+  expect("Anna's device restored from the backup lists Ben too", true)
+  await shot(annaThree, "46-friends-restored-device")
+
+  await a.getByRole("button", { name: /Ben/ }).first().click()
+  await a.waitForTimeout(2000)
+  expect("Ben's player profile says 'Befreundet'", await isOnScreen(buttons(a, "Befreundet")))
+  await shot(anna, "42-friend-profile")
+  await tab(a, "Rangliste")
+  await a.waitForTimeout(500)
+  await a.locator('[data-tab-panel="leaderboard"]').getByRole("radio", { name: "Freunde" }).click()
+  await a.waitForTimeout(2500)
+  await shot(anna, "43-ranks-friends")
+  t = (await a.locator('[data-tab-panel="leaderboard"]').innerText()).replace(/\s+/g, " ")
+  expect("Rangliste › Freunde says what it shows and lists Ben", /Du und deine Freunde mit den Zahlen/.test(t) && /Ben/.test(t), t.slice(0, 220))
+  expect("Anna's own row is there, tinted, with the way to Sichtbarkeit when she shares nothing", /Anna/.test(t) && (/Sichtbarkeit öffnen/.test(t) || !/Du zeigst keine Zahlen/.test(t)), t.match(/Anna.{0,80}/)?.[0] ?? "")
+
+  await tab(a, "Spielen")
+  await a.waitForTimeout(600)
+  await a.getByRole("button", { name: /X01/ }).first().click()
+  await a.waitForTimeout(1200)
+  // Setup remembers the stake game's seats (Anna, Ben): a seated friend is no chip, so Ben's
+  // seat goes first.
+  const seatedBen = a.getByRole("button", { name: "Ben entfernen" })
+  if (await isOnScreen(seatedBen)) await seatedBen.click()
+  // Ben played here tonight, so he is one chip under "Zuletzt gespielt" (with his profile), not a
+  // second one under "Freunde"; a friend never played with would stand there.
+  const chip = a.getByRole("button", { name: "Ben", exact: true })
+  await onScreen(chip, 10_000)
+  expect("game setup offers Ben once, as one chip", (await chip.count()) === 1)
+  await chip.click()
+  await a.waitForTimeout(600)
+  await shot(anna, "44-setup-friend-chip")
+  expect("the chip fills a seat with Ben, linked to his profile", (await a.locator('input[value="Ben"]').count()) >= 1 && (await a.getByRole("img", { name: "Mit Profil verbunden" }).count()) >= 1)
+  await a.goto(BASE)
+  await a.evaluate(() => localStorage.removeItem("dart-scorer.current-match.v1"))
 })
 
 // ---- The whole evening --------------------------------------------------------------------------

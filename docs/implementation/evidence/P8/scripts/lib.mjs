@@ -89,7 +89,7 @@ export async function device(label, { viewport = PHONE, locale = "de", dark = fa
   await ctx.route(/^https?:\/\//, (route) => {
     const url = route.request().url()
     if (url.startsWith(BASE) || url.startsWith("http://127.0.0.1")) return route.continue()
-    if (url.includes("api.coingecko.com")) return route.fulfill({ json: { bitcoin: { eur: 61_500, usd: 67_000 } }, headers: { "access-control-allow-origin": "*" } })
+    if (url.includes("api.coingecko.com")) return route.fulfill({ json: { bitcoin: { eur: 61_500, usd: 67_000, gbp: 53_000, chf: 55_000 } }, headers: { "access-control-allow-origin": "*" } })
     made.foreign.push(url)
     return route.abort()
   })
@@ -149,7 +149,7 @@ export const local = (url) => url.replace(/^https?:\/\/[^/]+/, BASE)
 
 // A dart on the keypad: Double or Triple first, then the key ("T20", "D14", "20", "Bull, 50").
 export async function dart(page, segment, multiplier = 1) {
-  if (multiplier === 3) await page.getByRole("button", { name: "Triple", exact: true }).first().click()
+  if (multiplier === 3) await page.getByRole("button", { name: /^(Triple|Treble)$/ }).first().click()
   if (multiplier === 2) await page.getByRole("button", { name: "Double", exact: true }).first().click()
   const prefix = multiplier === 3 ? "T" : multiplier === 2 ? "D" : ""
   await page.getByRole("button", { name: new RegExp(`^${prefix}\\s?${segment}$`) }).locator("visible=true").first().click()
