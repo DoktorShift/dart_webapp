@@ -122,11 +122,7 @@ export function DeviceSection() {
       ) : (
         loaded && (
           <>
-            <p className="mt-3 px-1 text-[0.8125rem] leading-snug text-muted-foreground">
-              {l.scope(l.scopePeriods[period], standings.games, rows.length, rows.some((s) => s.imported || s.includesImported))} {l.rankedBy[sort]} {l.minGames(standings.minGames)}
-              {fromElsewhere && ` ${l.otherDevices}`}
-              {standings.withEmptySeat > 0 && ` ${l.emptySeats(standings.withEmptySeat)}`}
-            </p>
+
 
             {showMyLine && mine && (
               <button
@@ -165,6 +161,11 @@ export function DeviceSection() {
               )}
             </div>
 
+            <p className="mt-3 px-1 text-[0.8125rem] leading-snug text-muted-foreground">
+              {l.scope(l.scopePeriods[period], standings.games, rows.length, rows.some((s) => s.imported || s.includesImported))} {l.rankedBy[sort]} {l.minGames(standings.minGames)}
+              {fromElsewhere && ` ${l.otherDevices}`}
+              {standings.withEmptySeat > 0 && ` ${l.emptySeats(standings.withEmptySeat)}`}
+            </p>
             {recent.length > 0 && (
               <Group title={l.recent}>
                 {recent.map((match) => (
