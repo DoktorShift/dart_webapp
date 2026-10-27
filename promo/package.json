@@ -19,5 +19,8 @@
     "kokoro-js": "^1.2.1",
     "playwright": "^1.63.0",
     "three": "^0.186.1"
+  },
+  "overrides": {
+    "sharp": "^0.35.5"
   }
 }
