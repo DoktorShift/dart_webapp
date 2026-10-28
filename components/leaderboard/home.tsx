@@ -1,9 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { Medal, Smartphone, UserRound, Users } from "lucide-react"
+import { Medal, UserRound, Users } from "lucide-react"
 import { EmptyState } from "@/components/ui/empty-state"
-import { ScopeBar, type ScopeOption } from "@/components/ui/scope-bar"
+import { Segmented } from "@/components/ui/segmented"
 import { useNav } from "@/components/nav/nav-context"
 import { useRegistryVersion } from "@/components/nav/use-registry"
 import { SlotItems } from "@/components/shell/slot-items"
@@ -18,7 +18,6 @@ import { getSlotItems } from "@/lib/shell/registry"
 // from their areas through the registry ("leaderboard.sections"). The areas are a row of pills
 // (ScopeBar): four words don't fit a segmented control on a phone without breaking one.
 type Section = "device" | "friends" | "clubs" | "tournaments"
-const ICONS: Record<Section, ScopeOption<Section>["icon"]> = { device: Smartphone, friends: UserRound, clubs: Users, tournaments: Medal }
 const SECTIONS: Section[] = (["device", "friends", "clubs", "tournaments"] as const).filter((s) => s !== "friends" || featureOn("friends"))
 
 export default function LeaderboardHome() {
@@ -30,7 +29,7 @@ export default function LeaderboardHome() {
   const provided = (id: Section) => getSlotItems("leaderboard.sections").some((item) => item.id === id)
   return (
     <>
-      <ScopeBar label={l.section} options={SECTIONS.map((s) => ({ value: s, label: l.sections[s], icon: ICONS[s] }))} value={section} onChange={setSection} className="mt-3" />
+      <div className="mt-3"><Segmented label={l.section} options={SECTIONS.map((s) => ({ value: s, label: l.sectionShort[s] }))} value={section} onChange={setSection} /></div>
       {section === "device" && <DeviceSection />}
       {section === "friends" &&
         (provided("friends") ? (

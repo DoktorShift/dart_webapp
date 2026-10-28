@@ -57,8 +57,12 @@ export function StandingRow({
         <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
           <span className="font-medium leading-snug wrap-anywhere">{standing.name}</span>
           {you && <Chip tone="accent">{t.leaderboard.you}</Chip>}
-          {standing.imported && <Chip>{t.data.importedTag}</Chip>}
-          {!standing.imported && standing.includesImported && <Chip>{t.data.withImportedTag}</Chip>}
+          {(standing.imported || standing.includesImported) && (
+            <span className="text-xs text-muted-foreground" title={standing.imported ? t.data.importedTag : t.data.withImportedTag}>
+              <span aria-hidden="true">{standing.imported ? "*" : "†"}</span>
+              <span className="sr-only">{standing.imported ? t.data.importedTag : t.data.withImportedTag}</span>
+            </span>
+          )}
         </span>
         {hint && <span className="block text-[0.8125rem] leading-snug text-muted-foreground">{hint}</span>}
         <span className="block text-[0.875rem] leading-snug tabular-nums text-muted-foreground">{t.leaderboard.gamesWins(standing.games, standing.wins)}</span>

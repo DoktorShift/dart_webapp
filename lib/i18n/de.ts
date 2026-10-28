@@ -389,6 +389,7 @@ export const de = {
     guestHere: "Gast auf diesem Gerät",
     // The three areas of the tab: this device's games, the clubs' tables, the tournaments.
     section: "Bereich",
+    sectionShort: { device: "Lokal", friends: "Freunde", clubs: "Clubs", tournaments: "Turniere" },
     sections: { device: "Hier gespielt", friends: "Freunde", clubs: "Clubs", tournaments: "Turniere" },
     filter: "Spielart",
     filters: { all: "Alle Spielarten", x01: "X01", cricket: "Cricket", clock: "Clock" },

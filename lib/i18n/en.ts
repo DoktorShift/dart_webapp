@@ -359,6 +359,7 @@ export const en: Messages = {
     withProfile: "Has a profile",
     guestHere: "Guest on this device",
     section: "Area",
+    sectionShort: { device: "Local", friends: "Friends", clubs: "Clubs", tournaments: "Events" },
     sections: { device: "Played here", friends: "Friends", clubs: "Clubs", tournaments: "Tournaments" },
     filter: "Game type",
     filters: { all: "All game types", x01: "X01", cricket: "Cricket", clock: "Clock" },

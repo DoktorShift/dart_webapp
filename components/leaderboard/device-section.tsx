@@ -1,11 +1,14 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Ellipsis } from "lucide-react"
+import { Ellipsis, SlidersHorizontal } from "lucide-react"
 import { Confirm } from "@/components/ui/confirm"
 import { EmptyState } from "@/components/ui/empty-state"
 import { Group } from "@/components/ui/group"
-import { ChipMenu, ChipMenus, Menu, type MenuItem } from "@/components/ui/menu"
+import { Button } from "@/components/ui/button"
+import { ChoiceList } from "@/components/ui/choice-list"
+import { Sheet, SheetBody, SheetActions } from "@/components/ui/sheet"
+import { Menu, type MenuItem } from "@/components/ui/menu"
 import { Dartboard } from "@/components/dartboard"
 import { NavBarItems } from "@/components/nav/nav-bar-items"
 import { useNav } from "@/components/nav/nav-context"
@@ -51,6 +54,7 @@ export function DeviceSection() {
   const [period, setPeriod] = useState<Period>("all")
   const [sortBy, setSortBy] = useState<StandingsSort>("winRate")
   const [confirmReset, setConfirmReset] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const listsRef = useRef<HTMLDivElement>(null)
 
   const ownKey = own?.key ?? null
@@ -106,10 +110,19 @@ export function DeviceSection() {
       <NavBarItems>
         <Menu icon={Ellipsis} label={l.more} items={menu} />
       </NavBarItems>
-      <ChipMenus className="mt-3">
-        <ChipMenu label={l.filter} options={FILTERS.map((f) => ({ value: f, label: l.filters[f] }))} value={filter} onChange={setFilter} />
-        <ChipMenu label={l.period} options={PERIODS.map((p) => ({ value: p, label: l.periods[p] }))} value={period} onChange={setPeriod} />
-      </ChipMenus>
+      <Button variant="secondary" onClick={() => setFiltersOpen(true)} className="mt-3 min-h-11 gap-2 rounded-xl text-primary">
+        <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+        {l.filters[filter]} · {l.periods[period]}
+      </Button>
+      <Sheet open={filtersOpen} onOpenChange={setFiltersOpen} title={l.filter}>
+        <SheetBody>
+          <p className="mb-2 text-sm text-muted-foreground">{l.filter}</p>
+          <ChoiceList label={l.filter} options={FILTERS.map((f) => ({ value: f, title: l.filters[f] }))} value={filter} onChange={setFilter} />
+          <p className="mb-2 mt-4 text-sm text-muted-foreground">{l.period}</p>
+          <ChoiceList label={l.period} options={PERIODS.map((p) => ({ value: p, title: l.periods[p] }))} value={period} onChange={setPeriod} />
+        </SheetBody>
+        <SheetActions><Button onClick={() => setFiltersOpen(false)} className="h-12 w-full">{t.common.done}</Button></SheetActions>
+      </Sheet>
 
       {loaded && rows.length === 0 ? (
         <EmptyState
@@ -161,6 +174,13 @@ export function DeviceSection() {
               )}
             </div>
 
+            {rows.some((s) => s.imported || s.includesImported) && (
+              <p className="mt-3 px-1 text-[0.8125rem] text-muted-foreground">
+                {rows.some((s) => s.imported) && `* ${t.data.importedTag}`}
+                {rows.some((s) => s.imported) && rows.some((s) => !s.imported && s.includesImported) && " · "}
+                {rows.some((s) => !s.imported && s.includesImported) && `† ${t.data.withImportedTag}`}
+              </p>
+            )}
             <p className="mt-3 px-1 text-[0.8125rem] leading-snug text-muted-foreground">
               {l.scope(l.scopePeriods[period], standings.games, rows.length, rows.some((s) => s.imported || s.includesImported))} {l.rankedBy[sort]} {l.minGames(standings.minGames)}
               {fromElsewhere && ` ${l.otherDevices}`}

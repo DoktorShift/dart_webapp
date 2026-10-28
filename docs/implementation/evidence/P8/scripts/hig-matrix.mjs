@@ -13,11 +13,11 @@ const SIZES = [SE, PHONE, SE_LANDSCAPE, TABLET, BOARD]
 const LOOKS = [
   {
     locale: "de", dark: false, tabs: { play: "Spielen", ranks: "Rangliste", clubs: "Clubs", tournaments: "Turniere", profile: "Profil" }, resume: /Weiterspielen/,
-    ranks: { device: "Hier gespielt", friends: "Freunde", clubs: "Clubs", tournaments: "Turniere" }, payments: { row: /^Zahlungen/, send: "Senden", settings: "Einstellungen", back: /^Zurück zu Zahlungen$/ }, profile: { friends: /Freund/, addFriend: "Freund hinzufügen", stats: "Statistik", training: /^Training/, start: "Training starten", startGame: "Spiel starten", visibility: "Sichtbarkeit", history: /^Spielverlauf/, done: "Fertig", back: /^Zurück zu Profil$/, goal: /^Ziel/, goalSave: "Ziel setzen", cancel: "Abbrechen", share: "Training als Bild teilen" },
+    ranks: { device: "Lokal", friends: "Freunde", clubs: "Clubs", tournaments: "Turniere" }, payments: { row: /^Zahlungen/, send: "Senden", settings: "Einstellungen", back: /^Zurück zu Zahlungen$/ }, profile: { friends: /Freund/, addFriend: "Freund hinzufügen", stats: "Statistik", training: /^Training/, start: "Training starten", startGame: "Spiel starten", visibility: "Sichtbarkeit", history: /^Spielverlauf/, done: "Fertig", back: /^Zurück zu Profil$/, goal: /^Ziel/, goalSave: "Ziel setzen", cancel: "Abbrechen", share: "Training als Bild teilen" },
   },
   {
     locale: "en", dark: true, tabs: { play: "Play", ranks: "Leaderboard", clubs: "Clubs", tournaments: "Tournaments", profile: "Profile" }, resume: /Continue|Resume/,
-    ranks: { device: "Played here", friends: "Friends", clubs: "Clubs", tournaments: "Tournaments" }, payments: { row: /^Payments/, send: "Send", settings: "Settings", back: /^Back to Payments$/ }, profile: { friends: /friend/i, addFriend: "Add friend", stats: "Statistics", training: /^Training/, start: "Start training", startGame: "Start game", visibility: "Visibility", history: /^Game history/, done: "Done", back: /^Back to Profile$/, goal: /^Goal/, goalSave: "Set goal", cancel: "Cancel", share: "Share training as a picture" },
+    ranks: { device: "Local", friends: "Friends", clubs: "Clubs", tournaments: "Events" }, payments: { row: /^Payments/, send: "Send", settings: "Settings", back: /^Back to Payments$/ }, profile: { friends: /friend/i, addFriend: "Add friend", stats: "Statistics", training: /^Training/, start: "Start training", startGame: "Start game", visibility: "Visibility", history: /^Game history/, done: "Done", back: /^Back to Profile$/, goal: /^Goal/, goalSave: "Set goal", cancel: "Cancel", share: "Share training as a picture" },
   },
 ]
 // Words of the protocol that never belong in normal flows (NOSTR-DESIGN-RULES.md).
