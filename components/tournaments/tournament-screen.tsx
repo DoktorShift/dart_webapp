@@ -11,7 +11,7 @@ import { Segmented } from "@/components/ui/segmented"
 import { TaskRow } from "@/components/common/task-row"
 import { Waiting } from "@/components/common/waiting"
 import { readPayload } from "@/components/live/link-payload"
-import { NavBarItems, NavIconButton, NavProminentButton } from "@/components/nav/nav-bar-items"
+import { NavBarItems, NavIconButton } from "@/components/nav/nav-bar-items"
 import { useNav } from "@/components/nav/nav-context"
 import { useAreaT, useT } from "@/components/i18n-provider"
 import { formatDateTime } from "@/lib/i18n"
@@ -108,7 +108,7 @@ function TournamentView({ entry, onRefresh }: { entry: Entry; onRefresh: () => v
     <div className="pb-4">
       <NavBarItems>
         <NavIconButton icon={Share} label={t.shell.bar.share} onClick={() => setSharing(true)} />
-        {read.me.organizer && <NavProminentButton label={tx.tournament.organizeShort} onClick={organize} />}
+        {read.me.organizer && <button type="button" onClick={organize} className="min-h-11 px-2 text-[1.0625rem] font-semibold text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring">{tx.tournament.organizeShort}</button>}
       </NavBarItems>
       {urgent && phaseCard}
       <header className="mt-2">

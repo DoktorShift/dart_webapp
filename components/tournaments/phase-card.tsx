@@ -176,10 +176,12 @@ export function PhaseCard({ entry, names }: { entry: Entry; names: Names }) {
     const place = mine ? view?.placements.find((p) => p.participant === mine) : null
     const champion = view?.champion ?? null
     return (
-      <Card title={x.finished} text={champion ? x.champion(names.nameOf(champion)) : undefined} tone="success">
-        {place && <p className="text-[1.0625rem] font-semibold">{x.yourPlace(place.place, place.placeTo)}</p>}
-        {place && session && featureOn("badges") && <OccasionAward pubkey={session.pubkey} issuer={state.organizer} scopeId={state.id} pending={x.badgeHint} />}
-      </Card>
+      <section className="mt-4 rounded-2xl border border-success/30 bg-success/10 px-4 py-3">
+        <h2 className="text-[1.0625rem] font-semibold">{x.finished}</h2>
+        {champion && <p className="text-[0.9375rem] text-muted-foreground">{x.champion(names.nameOf(champion))}</p>}
+        {place && <p className="mt-1 text-[0.9375rem] font-semibold">{x.yourPlace(place.place, place.placeTo)}</p>}
+        {place && session && featureOn("badges") && <div className="mt-2"><OccasionAward pubkey={session.pubkey} issuer={state.organizer} scopeId={state.id} pending={x.badgeHint} /></div>}
+      </section>
     )
   }
 
