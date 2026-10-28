@@ -71,7 +71,7 @@ export function WalletCard({ info, figures: wanted = false }: { info: WalletInfo
       </div>
       {wanted && can.balance && balance !== null && (
         <div className="mt-4">
-          <AmountBlock msat={balance} align="start" />
+          <AmountBlock msat={balance} align="start" onlyOldRate />
           {unavailable && figures && <p className="mt-0.5 text-[0.8125rem] text-muted-foreground">{tx.home.asOf(money.time(figures.at))}</p>}
         </div>
       )}
