@@ -1,7 +1,10 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Dartboard, GAME_HIGHLIGHTS } from "@/components/dartboard"
+import { useSyncExternalStore } from "react"
+import { motion, useReducedMotion } from "framer-motion"
+import { ArrowUpRight } from "lucide-react"
+import { GameModeIcon } from "@/components/game-mode-icon"
 import { HeroBoard } from "@/components/hero-board"
 import { FitText } from "@/components/fit-text"
 import { useT } from "@/components/i18n-provider"
@@ -9,6 +12,7 @@ import { SlotItems } from "@/components/shell/slot-items"
 import { GAME_TYPES } from "@/lib/game/rules"
 import type { GameType } from "@/lib/game/types"
 import { SITE } from "@/lib/site"
+import { cn } from "@/lib/utils"
 
 export interface ResumeInfo {
   title: string
@@ -29,6 +33,62 @@ interface PlayScreenProps {
   again: AgainInfo | null
   onPlayAgain: () => void
   onChangeAgain: () => void
+}
+
+const WIDE_HOME = "(min-width: 1024px), (min-width: 700px) and (min-height: 700px)"
+const subscribeWide = (callback: () => void) => {
+  const query = window.matchMedia(WIDE_HOME)
+  query.addEventListener("change", callback)
+  return () => query.removeEventListener("change", callback)
+}
+const wideSnapshot = () => window.matchMedia(WIDE_HOME).matches
+const serverSnapshot = () => false
+
+// On larger screens the opening is a stage, with immediate actions and the actual practice
+// board. Nothing waits for the motion; Reduce Motion removes the movement completely.
+function WidePlayScreen({ onSelect, resume, onResume, onDiscardResume, again, onPlayAgain, onChangeAgain }: PlayScreenProps) {
+  const t = useT()
+  const reduced = useReducedMotion()
+  const reveal = (delay = 0) => reduced ? {} : { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay, ease: [0.22, 1, 0.36, 1] as const } }
+  return (
+    <div className="oche-home h-full overflow-y-auto overscroll-contain px-6 pb-8 pt-[max(env(safe-area-inset-top),1.5rem)] md:px-10 lg:px-12">
+      <div className="mx-auto max-w-6xl">
+        <motion.header {...reveal()} className="mb-6">
+          <p className="text-[0.8125rem] font-medium text-muted-foreground">{SITE.name} <span aria-hidden="true">/</span> {t.shell.tabs.play}</p>
+          <h1 className="mt-4 font-display text-[clamp(2rem,3.5vw,3.1rem)] font-semibold leading-none tracking-tight">{t.play.welcome}</h1>
+          <p className="mt-2 text-[0.9375rem] text-muted-foreground">{t.play.welcomeDetail}</p>
+        </motion.header>
+
+        <motion.section {...reveal(0.04)} className="oche-stage relative grid min-h-[19rem] grid-cols-[minmax(0,1fr)_minmax(15rem,0.9fr)] items-center gap-4 overflow-hidden rounded-[1.75rem] border border-border p-7 tablet:p-9">
+          <div className="relative z-10 flex min-w-0 flex-col items-start gap-4">
+            <span className="rounded-full border border-foreground/15 bg-background/20 px-3 py-1.5 text-[0.6875rem] font-semibold uppercase tracking-[0.12em]">{t.play.moment}</span>
+            <h2 className="max-w-md font-display text-[clamp(2.1rem,4.1vw,4rem)] font-semibold leading-[0.98] tracking-tight">{resume ? t.play.pausedHeadline : again ? t.play.headline : t.play.firstHeadline}</h2>
+            {resume ? <p className="text-[0.9375rem] text-muted-foreground">{t.play.resumeTitle(resume.title)} · {resume.detail}</p> : again ? <p className="text-[0.9375rem] text-muted-foreground">{again.players} · {again.rules}</p> : <p className="text-[0.9375rem] text-muted-foreground">{t.play.firstDetail}</p>}
+            <div className="flex flex-wrap items-center gap-2">
+              <Button onClick={resume ? onResume : again ? onPlayAgain : () => onSelect("x01")} className="min-h-12 rounded-xl px-5 text-[1rem] font-semibold">
+                {resume ? t.common.continue : again ? t.play.again.start : t.play.startX01}<ArrowUpRight className="ml-2 h-4 w-4" aria-hidden="true" />
+              </Button>
+              {resume ? <Button variant="ghost" onClick={onDiscardResume} className="min-h-11">{t.play.discard}</Button> : again ? <Button variant="ghost" onClick={onChangeAgain} className="min-h-11">{t.play.again.change}</Button> : null}
+            </div>
+          </div>
+          <motion.div {...(reduced ? {} : { initial: { opacity: 0, scale: 0.94, y: 12 }, animate: { opacity: 1, scale: 1, y: 0 }, transition: { duration: 0.65, ease: [0.22, 1, 0.36, 1] as const } })} className="relative flex min-w-0 items-center justify-center">
+            <section aria-label={t.play.practiceBoard} className="w-full max-w-[20rem]"><HeroBoard /><p className="mt-2 text-center text-[0.75rem] text-muted-foreground">{t.play.practiceHint}</p></section>
+          </motion.div>
+        </motion.section>
+
+        <SlotItems list="play.rows" props={() => ({})} className="contents" />
+        <motion.section {...reveal(0.1)} aria-labelledby="wide-new-game" className="mt-7">
+          <h2 id="wide-new-game" className="mb-3 text-[1.0625rem] font-semibold">{t.play.pickGame}</h2>
+          <ul className="grid grid-cols-3 gap-3">
+            {GAME_TYPES.map((type, index) => <motion.li key={type} {...reveal(0.12 + index * 0.05)}><button type="button" onClick={() => onSelect(type)} className={cn("oche-mode group flex min-h-36 w-full flex-col items-start justify-between rounded-2xl border p-4 text-left transition-[transform,border-color,background-color] duration-200 hover:-translate-y-1 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98] motion-reduce:transform-none", `oche-mode-${type}`)}>
+              <span className="flex w-full items-start justify-between"><GameModeIcon type={type} className="h-12 w-12 transition-transform duration-300 group-hover:scale-110 motion-reduce:transform-none" /><ArrowUpRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 motion-reduce:transform-none" aria-hidden="true" /></span>
+              <span className="mt-3 min-w-0"><span className="block font-display text-[1.25rem] font-semibold leading-tight">{t.families[type].name}</span><span className="mt-1 block text-[0.8125rem] text-muted-foreground">{t.families[type].short}</span></span>
+            </button></motion.li>)}
+          </ul>
+        </motion.section>
+      </div>
+    </div>
+  )
 }
 
 // A game that was left open: carry on, or let it go.
@@ -87,6 +147,9 @@ function AgainCard({ again, onPlay, onChange }: { again: AgainInfo; onPlay: () =
 // kinds of game; variants (301 or 701, Cut Throat) are rules in setup.
 export function PlayScreen({ onSelect, resume, onResume, onDiscardResume, again, onPlayAgain, onChangeAgain }: PlayScreenProps) {
   const t = useT()
+  const wide = useSyncExternalStore(subscribeWide, wideSnapshot, serverSnapshot)
+
+  if (wide) return <WidePlayScreen onSelect={onSelect} resume={resume} onResume={onResume} onDiscardResume={onDiscardResume} again={again} onPlayAgain={onPlayAgain} onChangeAgain={onChangeAgain} />
 
   return (
     <div className="flex h-full flex-col overflow-hidden px-4 pb-3 pl-[max(env(safe-area-inset-left),1rem)] pr-[max(env(safe-area-inset-right),1rem)] pt-[env(safe-area-inset-top)] md:px-8">
@@ -124,7 +187,7 @@ export function PlayScreen({ onSelect, resume, onResume, onDiscardResume, again,
                     onClick={() => onSelect(type)}
                     className="flex h-full min-h-[clamp(5.25rem,12dvh,7.5rem)] w-full flex-col items-center justify-center gap-1 rounded-2xl border border-border bg-card/70 px-1.5 py-2 text-center transition-colors hover:bg-secondary/50 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring active:bg-secondary/70 xshort:min-h-14 xshort:gap-0.5 xshort:py-1 tablet:min-h-36 tablet:gap-2"
                   >
-                    <Dartboard variant="mini" highlight={GAME_HIGHLIGHTS[type]} className="h-8 w-8 shrink-0 xshort:h-6 xshort:w-6 tablet:h-11 tablet:w-11" />
+                    <GameModeIcon type={type} className="h-9 w-9 shrink-0 text-primary xshort:h-7 xshort:w-7" />
                     <span className="w-full min-w-0">
                       <FitText minScale={0.8} className="text-[0.9375rem] font-semibold leading-tight tablet:text-[1.1875rem]">
                         {t.families[type].name}

@@ -103,6 +103,16 @@ export const de = {
   },
 
   play: {
+    welcome: "Dein Spiel beginnt hier.",
+    welcomeDetail: "Ein guter Wurf ist nur einen Tipp entfernt.",
+    moment: "Dein Moment am Board",
+    headline: "Bereit für die nächste Runde?",
+    firstHeadline: "Bereit für den ersten Wurf?",
+    firstDetail: "Wähle dein Spiel und leg los.",
+    practiceHint: "Tippe auf die Scheibe zum Üben",
+    pausedHeadline: "Dein Spiel wartet.",
+    pickGame: "Wähle dein Spiel",
+    startX01: "X01 spielen",
     practiceBoard: "Übungsscheibe",
     practiceBoardLabel: "Übungsscheibe. Tippe irgendwo auf die Scheibe, um einen Dart zu werfen.",
     hit: {

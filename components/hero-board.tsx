@@ -173,7 +173,12 @@ export function HeroBoard({ className }: { className?: string }) {
 
   return (
     <div className={cn("flex flex-col items-center", className)}>
-      <div className="relative w-full">
+      <motion.div
+        className="relative w-full"
+        initial={reduceMotion ? false : { opacity: 0, scale: 0.96, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: reduceMotion ? 0 : 0.55, ease: [0.22, 1, 0.36, 1] }}
+      >
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-[-18%] rounded-full bg-[radial-gradient(closest-side,hsl(var(--primary)/0.28),hsl(var(--primary)/0.08)_60%,transparent)]"
@@ -193,7 +198,7 @@ export function HeroBoard({ className }: { className?: string }) {
             <Dart key={dart.id} dart={dart} reduceMotion={reduceMotion} />
           ))}
         </motion.div>
-      </div>
+      </motion.div>
 
       <div className="mt-4 flex items-center gap-2 xshort:mt-2" aria-hidden="true">
         {[0, 1, 2].map((i) => {

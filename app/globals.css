@@ -146,3 +146,27 @@
     display: none !important;
   }
 }
+
+/* A calm stage for the large-screen Play tab; the board remains the working practice board. */
+.oche-home {
+  background: radial-gradient(ellipse at 70% 5%, hsl(var(--primary) / 0.13), transparent 48%), hsl(var(--background));
+}
+.oche-stage {
+  background: radial-gradient(ellipse at 77% 36%, hsl(var(--primary) / 0.24), transparent 46%),
+    linear-gradient(125deg, hsl(var(--secondary) / 0.95), hsl(var(--background) / 0.95));
+  box-shadow: inset 0 1px 0 hsl(var(--foreground) / 0.06);
+}
+.oche-mode {
+  border-color: hsl(var(--border));
+  background: linear-gradient(135deg, hsl(var(--secondary) / 0.9), hsl(var(--background) / 0.7));
+}
+.oche-mode:hover { border-color: hsl(var(--primary) / 0.6); }
+.oche-mode-x01 { color: hsl(var(--primary)); }
+.oche-mode-cricket { color: hsl(var(--success)); }
+.oche-mode-clock { color: hsl(var(--warning)); }
+.oche-mode > span:last-child { color: hsl(var(--foreground)); }
+@media (max-height: 850px) {
+  .oche-stage { padding-top: 1rem; padding-bottom: 1rem; }
+  .oche-home > div > header { margin-bottom: 1rem; }
+  .oche-home section[aria-labelledby="wide-new-game"] { margin-top: 1rem; }
+}

@@ -84,6 +84,16 @@ export const en: Messages = {
   },
 
   play: {
+    welcome: "Your game starts here.",
+    welcomeDetail: "A great throw is just a tap away.",
+    moment: "Your moment at the board",
+    headline: "Ready for the next round?",
+    firstHeadline: "Ready for your first throw?",
+    firstDetail: "Choose a game and get started.",
+    practiceHint: "Tap the board to practise",
+    pausedHeadline: "Your game is waiting.",
+    pickGame: "Choose your game",
+    startX01: "Play X01",
     practiceBoard: "Practice board",
     practiceBoardLabel: "Practice board. Tap anywhere on the board to throw a dart.",
     hit: {
