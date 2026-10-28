@@ -237,16 +237,18 @@ export async function runMatrix({ annaState }) {
           await page.waitForTimeout(700)
           if (n === 2 || n === NAMES.length) await shot(d, `m-game-${n}p-${tag}`)
           const state = await page.evaluate((names) => {
-            const body = document.body.innerText
+            const scoreButtons = [...document.querySelectorAll('[data-area="scores"] button')]
+            const players = names.map((name) => scoreButtons.find((button) => (button.getAttribute("aria-label") ?? "").startsWith(`${name},`)))
+            const labels = players.map((button) => (button?.innerText ?? "").split("\n")[0].trim().toLocaleLowerCase())
             const keys = [...document.querySelectorAll("button")].filter((b) => /^(20|Bull|25|Double|Triple)$/.test((b.textContent ?? "").trim()))
             return {
               scroll: document.scrollingElement.scrollHeight > innerHeight + 1 || document.scrollingElement.scrollWidth > innerWidth + 1,
-              names: names.every((name) => body.includes(name)),
+              names: players.every((button) => !!button && button.getBoundingClientRect().height > 0) && labels.every(Boolean) && new Set(labels).size === names.length,
               keys: keys.length > 0 && keys.every((k) => { const r = k.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight + 1 && r.height >= 43.5 }),
             }
           }, NAMES.slice(0, n))
           const a = await audit(page)
-          note(`${tag} game, ${n} player${n === 1 ? "" : "s"}: one fixed screen, every name whole, keys in view and 44 pt`, !state.scroll && state.names && state.keys && a.ellipsis.length === 0 && a.dots.length === 0, JSON.stringify({ ...state, ellipsis: a.ellipsis, dots: a.dots }))
+          note(`${tag} game, ${n} player${n === 1 ? "" : "s"}: one fixed screen, distinct labels with full accessible names, keys in view and 44 pt`, !state.scroll && state.names && state.keys && a.ellipsis.length === 0 && a.dots.length === 0, JSON.stringify({ ...state, ellipsis: a.ellipsis, dots: a.dots }))
           // Leave the game for the next count.
           await page.evaluate(() => localStorage.removeItem("dart-scorer.current-match.v1"))
         }

@@ -147,6 +147,7 @@ interface BoardProps {
   state: MatchState
   // Called with a player index when a tile is tapped between visits.
   onSelectPlayer?: (player: number) => void
+  expanded?: boolean
 }
 
 // What VoiceOver reads for a player: name, score, and whether they're throwing or have left.
@@ -157,7 +158,7 @@ function playerLabel(state: MatchState, i: number, detail: string, t: Messages) 
   return parts.join(", ")
 }
 
-export function X01Scoreboard({ state, onSelectPlayer }: BoardProps) {
+export function X01Scoreboard({ state, onSelectPlayer, expanded = false }: BoardProps) {
   const t = useT()
   const players = state.config.players
   const size = sizeOf(players.length)
@@ -166,7 +167,7 @@ export function X01Scoreboard({ state, onSelectPlayer }: BoardProps) {
   const displayNames = players.length >= 5 ? compactBoardNames(players.map((player) => player.name)) : players.map((player) => player.name)
 
   return (
-    <ol className={cn("grid h-full auto-rows-fr gap-2 tablet:gap-3", GRID[size])}>
+    <ol className={cn("grid h-full auto-rows-fr gap-2 tablet:gap-3", expanded ? "grid-cols-1" : GRID[size])}>
       {players.map((player, i) => {
         const active = i === state.current && state.winner === null
         const retired = !state.active[i]
@@ -186,7 +187,7 @@ export function X01Scoreboard({ state, onSelectPlayer }: BoardProps) {
         const score = (
           <AnimatedScore
             value={state.scores[i]}
-            className={cn(SCORE[size], size === "six" && LOW_SCORE, !active && "text-foreground/75")}
+            className={cn(expanded ? "text-[2rem]" : SCORE[size], !expanded && size === "six" && LOW_SCORE, !active && "text-foreground/75")}
             wrapperClassName="shrink-0"
           />
         )
@@ -194,8 +195,8 @@ export function X01Scoreboard({ state, onSelectPlayer }: BoardProps) {
         if (size === "six") {
           return (
             <Tile key={player.id} active={active} onSelect={select} label={label} className="px-2 py-1 tablet:px-4">
-              <span className={cn("flex flex-col", LOW_ROW)}>
-                <span className={cn("flex min-w-0 items-center gap-1 text-[0.8125rem] tablet:text-lg", LOW_FILL)}>
+              <span className={cn("flex", expanded ? "flex-row items-center gap-3" : cn("flex-col", LOW_ROW))}>
+                <span className={cn("flex min-w-0 items-center gap-1 text-[0.8125rem] tablet:text-lg", expanded ? "flex-1" : LOW_FILL)}>
                   <span className="min-w-0 flex-1">{name}</span>
                   <MatchScore state={state} player={i} />
                 </span>
@@ -289,7 +290,7 @@ export function CricketScoreboard(props: BoardProps) {
   const rows = n >= 5 || (n >= 3 && width !== null && (width - 60) / n < CRICKET_COLUMN)
   return (
     <div ref={ref} className="h-full">
-      {rows ? <CricketRows {...props} /> : <CricketColumns {...props} />}
+      {props.expanded ? <CricketReadable {...props} /> : rows ? <CricketRows {...props} /> : <CricketColumns {...props} />}
     </div>
   )
 }
@@ -310,6 +311,38 @@ function marksSummary(state: MatchState, i: number, t: Messages) {
 // Closed by every player still in the game: hits there no longer count.
 const closedByAll = (state: MatchState, target: number) =>
   state.config.players.every((_, i) => !state.active[i] || state.marks[i][target] >= 3)
+
+// At enlarged text sizes, each player's marks get a line of their own instead of competing
+// with seven columns and six names for the width of a small phone.
+function CricketReadable({ state, onSelectPlayer }: BoardProps) {
+  const t = useT()
+  const players = state.config.players
+  const between = state.visitDarts.length === 0 && state.winner === null
+  return (
+    <ol className="grid h-full auto-rows-fr gap-2">
+      {players.map((player, i) => {
+        const active = i === state.current && state.winner === null
+        const select = between && !active && state.active[i] && onSelectPlayer ? () => onSelectPlayer(i) : undefined
+        return (
+          <Tile key={player.id} active={active} onSelect={select} label={playerLabel(state, i, `${t.board.points(state.points[i])}, ${marksSummary(state, i, t)}`, t)} className="px-3 py-1">
+            <span className="flex items-center justify-between gap-2 text-[0.875rem] font-semibold">
+              <span className="flex min-w-0 items-center gap-2"><span className="min-w-0 truncate">{player.name}</span><MatchScore state={state} player={i} /></span>
+              <span className="shrink-0 tabular-nums">{state.points[i]}</span>
+            </span>
+            <span className="mt-1 grid grid-cols-7 gap-1" aria-hidden="true">
+              {CRICKET_TARGETS.map((target) => (
+                <span key={target} className="flex min-w-0 flex-col items-center text-[0.625rem] leading-tight">
+                  <span>{targetName(target, t)}</span>
+                  <span className="flex h-[1.1rem] items-center justify-center"><Marks count={state.marks[i][target]} dimmed={closedByAll(state, target)} decorative /></span>
+                </span>
+              ))}
+            </span>
+          </Tile>
+        )
+      })}
+    </ol>
+  )
+}
 
 function CricketRows({ state, onSelectPlayer }: BoardProps) {
   const t = useT()
@@ -463,7 +496,7 @@ const CLOCK_GRID = {
   six: "grid-cols-3 [@container(max-aspect-ratio:17/20)]:grid-cols-2 [@container(max-width:36rem)]:grid-cols-2",
 }
 
-export function ClockScoreboard({ state, onSelectPlayer }: BoardProps) {
+export function ClockScoreboard({ state, onSelectPlayer, expanded = false }: BoardProps) {
   const t = useT()
   const players = state.config.players
   const displayNames = players.length >= 5 ? compactBoardNames(players.map((player) => player.name)) : players.map((player) => player.name)
@@ -472,7 +505,7 @@ export function ClockScoreboard({ state, onSelectPlayer }: BoardProps) {
   const target = state.clockTargets[state.progress[state.current]]
   const between = state.visitDarts.length === 0 && state.winner === null
   // The target is what everyone looks at: with few players it gets most of the space.
-  const cardShare = players.length <= 2 ? "flex-3" : players.length <= 4 ? "flex-2" : "flex-[1.4]"
+  const cardShare = expanded ? "h-[6rem] shrink-0" : players.length <= 2 ? "flex-3" : players.length <= 4 ? "flex-2" : "flex-[1.4]"
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-2 tablet:gap-3">
@@ -491,7 +524,7 @@ export function ClockScoreboard({ state, onSelectPlayer }: BoardProps) {
           </p>
         </div>
       </div>
-      <ol className={cn("grid min-h-0 flex-2 auto-rows-fr gap-2 tablet:gap-3", CLOCK_GRID[size])}>
+      <ol className={cn("grid min-h-0 flex-2 auto-rows-fr gap-2 tablet:gap-3", expanded ? "grid-cols-1" : CLOCK_GRID[size])}>
         {players.map((player, i) => {
           const active = i === state.current && state.winner === null
           const done = state.progress[i]

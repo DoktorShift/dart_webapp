@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, type ReactNode } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 import { History, MoreHorizontal, X } from "lucide-react"
 import { ClockScoreboard, CricketScoreboard, X01Scoreboard } from "@/components/game/scoreboards"
 import { VisitPanel } from "@/components/game/visit-panel"
@@ -39,7 +39,7 @@ function NavButton({ label, onClick, children }: { label: string; onClick: () =>
       type="button"
       aria-label={label}
       onClick={onClick}
-      className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring active:bg-secondary"
+      className="flex h-[44px] w-[44px] items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring active:bg-secondary"
     >
       {children}
     </button>
@@ -51,6 +51,21 @@ const ENTRY_HEIGHT = {
   x01: "h-[clamp(17.75rem,57%,38rem)]",
   cricket: "h-[clamp(9rem,30%,22.5rem)]",
   clock: "h-[clamp(8.5rem,27%,18rem)]",
+}
+
+// A fixed game board cannot fit enlarged text and all keys on a small screen. Let that case
+// scroll instead of squeezing names or hiding controls. Recheck when browser zoom changes.
+function useEnlargedText() {
+  const [enlarged, setEnlarged] = useState(false)
+  useEffect(() => {
+    const check = () => setEnlarged(Number.parseFloat(getComputedStyle(document.documentElement).fontSize) >= 20)
+    check()
+    window.addEventListener("resize", check)
+    const observer = new MutationObserver(check)
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["style", "class"] })
+    return () => { window.removeEventListener("resize", check); observer.disconnect() }
+  }, [])
+  return enlarged
 }
 
 export function GameScreen({
@@ -65,6 +80,7 @@ export function GameScreen({
   onLeaderboard,
 }: GameScreenProps) {
   const t = useT()
+  const enlargedText = useEnlargedText()
   const game = useMatchController({ match, settings, onMatchChange })
   const { state, correction } = game
   const [sheet, setSheet] = useState<"leave" | "history" | "options" | null>(null)
@@ -113,8 +129,8 @@ export function GameScreen({
   const dartsLeft = correction ? 1 : 3 - state.visitDarts.length
   const padProps = { onDart: game.onDart, onNoScore: game.onNoScore, onUndo: game.undo, canUndo, keyboard, dartsLeft }
   let pad: ReactNode
-  if (type === "cricket") pad = <CricketPad state={state} {...padProps} />
-  else if (type === "clock") pad = <ClockPad target={clockTarget} {...padProps} />
+  if (type === "cricket") pad = <CricketPad state={state} {...padProps} expanded={enlargedText} />
+  else if (type === "clock") pad = <ClockPad target={clockTarget} expanded={enlargedText} {...padProps} />
   else if (entryMode === "visit")
     pad = (
       <VisitTotalPad
@@ -129,7 +145,7 @@ export function GameScreen({
         keyboard={keyboard}
       />
     )
-  else pad = <X01DartPad {...padProps} />
+  else pad = <X01DartPad {...padProps} expanded={enlargedText} />
 
   const visitPanel = (
     <VisitPanel
@@ -149,7 +165,7 @@ export function GameScreen({
     <div className="absolute inset-0 flex touch-manipulation select-none flex-col overflow-hidden bg-background">
       <header inert={covered} className="shrink-0 pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] pt-[env(safe-area-inset-top)]">
         {/* Landscape phones get the compact 32 pt bar iOS uses there: title and subtitle on one line. */}
-        <div className="mx-auto grid h-12 max-w-6xl grid-cols-[6rem_minmax(0,1fr)_6rem] items-center px-1.5 xshort:h-8">
+        <div className={cn("mx-auto grid max-w-6xl items-center px-1.5", enlargedText ? "min-h-[44px] grid-cols-[44px_minmax(0,1fr)_88px]" : "h-12 grid-cols-[6rem_minmax(0,1fr)_6rem] xshort:h-8")}>
           <div>
             <NavButton label={t.game.leave} onClick={() => setSheet("leave")}>
               <X className="h-6 w-6" />
@@ -174,31 +190,30 @@ export function GameScreen({
         </div>
       </header>
 
-      {/* One fixed screen: nothing here scrolls. The keypad gets a fixed share of the height,
-          the scoreboard gets the rest and sizes its type from it. */}
+      {/* At larger text sizes the game scrolls so scores and controls remain readable. */}
       <main
         inert={covered}
         className={cn(
-          "mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col gap-2 overflow-hidden px-3 pb-[max(env(safe-area-inset-bottom),0.625rem)] xshort:pb-[max(env(safe-area-inset-bottom),0.375rem)] tablet:gap-4 tablet:px-6 [@media(min-width:700px)_and_(min-height:700px)_and_(orientation:portrait)]:max-w-4xl",
-          "split:grid split:max-w-6xl split:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] split:grid-rows-[minmax(0,1fr)] split:gap-4 split:pl-[max(env(safe-area-inset-left),0.75rem)] split:pr-[max(env(safe-area-inset-right),0.75rem)]",
+          "mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col gap-2 px-3 pb-[max(env(safe-area-inset-bottom),0.625rem)] xshort:pb-[max(env(safe-area-inset-bottom),0.375rem)] tablet:gap-4 tablet:px-6 [@media(min-width:700px)_and_(min-height:700px)_and_(orientation:portrait)]:max-w-4xl",
+          enlargedText ? "overflow-y-auto overscroll-contain" : "overflow-hidden split:grid split:max-w-6xl split:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] split:grid-rows-[minmax(0,1fr)] split:gap-4 split:pl-[max(env(safe-area-inset-left),0.75rem)] split:pr-[max(env(safe-area-inset-right),0.75rem)]",
         )}
       >
-        <section aria-label={t.game.scores} data-area="scores" className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden tablet:gap-4">
-          <div className="relative min-h-0 flex-1 @container-size">
-            {type === "x01" && <X01Scoreboard state={state} onSelectPlayer={correction ? undefined : setThrower} />}
-            {type === "cricket" && <CricketScoreboard state={state} onSelectPlayer={correction ? undefined : setThrower} />}
-            {type === "clock" && <ClockScoreboard state={state} onSelectPlayer={correction ? undefined : setThrower} />}
+        <section aria-label={t.game.scores} data-area="scores" className={cn("flex min-h-0 flex-col gap-2 tablet:gap-4", enlargedText ? "shrink-0" : "flex-1 overflow-hidden")}>
+          <div className={cn("relative min-h-0 @container-size", enlargedText ? (type === "clock" ? (state.config.players.length <= 2 ? "h-[14rem]" : state.config.players.length <= 4 ? "h-[22rem]" : "h-[32rem]") : type === "cricket" ? (state.config.players.length <= 2 ? "h-[10rem]" : state.config.players.length <= 4 ? "h-[18rem]" : "h-[26rem]") : (state.config.players.length <= 2 ? "h-[8rem]" : state.config.players.length <= 4 ? "h-[16rem]" : "h-[24rem]")) : "flex-1")}>
+            {type === "x01" && <X01Scoreboard state={state} expanded={enlargedText} onSelectPlayer={correction ? undefined : setThrower} />}
+            {type === "cricket" && <CricketScoreboard state={state} expanded={enlargedText} onSelectPlayer={correction ? undefined : setThrower} />}
+            {type === "clock" && <ClockScoreboard state={state} expanded={enlargedText} onSelectPlayer={correction ? undefined : setThrower} />}
             <CalloutFlash callout={game.callout} />
           </div>
-          <div className={cn("shrink-0", visitBesidePad && "split:hidden")}>{visitPanel}</div>
+          <div className={cn("shrink-0", visitBesidePad && !enlargedText && "split:hidden")}>{visitPanel}</div>
         </section>
 
         <section
           aria-label={t.game.scoreEntry}
           data-area="entry"
-          className={cn("flex shrink-0 flex-col gap-2 overflow-hidden tablet:gap-3 split:h-auto split:min-h-0", ENTRY_HEIGHT[type])}
+          className={cn("flex shrink-0 flex-col gap-2 overflow-hidden tablet:gap-3", enlargedText ? (type === "x01" ? (entryMode === "visit" ? "h-[21rem]" : "h-[34rem]") : type === "cricket" ? "h-[18rem]" : "h-[12rem]") : cn("split:h-auto split:min-h-0", ENTRY_HEIGHT[type]))}
         >
-          {visitBesidePad && <div className="hidden shrink-0 split:block">{visitPanel}</div>}
+          {visitBesidePad && !enlargedText && <div className="hidden shrink-0 split:block">{visitPanel}</div>}
           <div inert={pickingDart} className={cn("min-h-0 flex-1 transition-opacity", pickingDart && "opacity-35")}>
             {pad}
           </div>

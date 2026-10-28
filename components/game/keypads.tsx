@@ -57,7 +57,7 @@ function UndoKey({ onUndo, canUndo, narrow, className }: { onUndo: () => void; c
       disabled={!canUndo}
       tone="quiet"
       label={t.common.undoLastDart}
-      className={cn(narrow ? "flex-col gap-0.5 px-1 @container" : "gap-1.5 text-[0.9375rem]", className)}
+      className={cn(narrow ? "flex-col gap-0.5 px-1 @container" : "gap-1.5 text-[0.9375rem] @container", className)}
     >
       <Undo2 className="h-5 w-5 shrink-0" aria-hidden="true" />
       {narrow ? (
@@ -67,7 +67,7 @@ function UndoKey({ onUndo, canUndo, narrow, className }: { onUndo: () => void; c
           </FitText>
         </span>
       ) : (
-        t.common.undo
+        <span className="min-w-0 [@container(max-width:5rem)]:hidden"><FitText minScale={0.75}>{t.common.undo}</FitText></span>
       )}
     </Key>
   )
@@ -144,11 +144,13 @@ function ModifierRow({
   setMultiplier,
   onNoScore,
   dartsLeft,
+  expanded,
 }: {
   multiplier: Multiplier
   setMultiplier: (m: Multiplier) => void
   onNoScore: () => void
   dartsLeft: number
+  expanded?: boolean
 }) {
   const t = useT()
   return (
@@ -156,16 +158,16 @@ function ModifierRow({
       <Key
         tone={multiplier === 2 ? "selected" : "quiet"}
         onPress={() => setMultiplier(multiplier === 2 ? 1 : 2)}
-        className="col-span-2 text-[1.0625rem] tablet:text-xl"
+        className={cn(!expanded && "col-span-2", "text-[1.0625rem] tablet:text-xl")}
       >
-        {t.keypad.double}
+        <FitText minScale={0.8} className="w-full text-center">{t.keypad.double}</FitText>
       </Key>
       <Key
         tone={multiplier === 3 ? "selected" : "quiet"}
         onPress={() => setMultiplier(multiplier === 3 ? 1 : 3)}
-        className="col-span-2 text-[1.0625rem] tablet:text-xl"
+        className={cn(!expanded && "col-span-2", "text-[1.0625rem] tablet:text-xl")}
       >
-        {t.keypad.triple}
+        <FitText minScale={0.8} className="w-full text-center">{t.keypad.triple}</FitText>
       </Key>
       <RestMissedKey onNoScore={onNoScore} dartsLeft={dartsLeft} />
     </>
@@ -186,7 +188,7 @@ function RestMissedKey({ onNoScore, dartsLeft, wide }: { onNoScore: () => void; 
     >
       <span className={cn("tabular-nums", !wide && "text-[1.0625rem] tablet:text-xl")}>{t.keypad.restCount(dartsLeft)}</span>
       {wide ? (
-        t.common.miss
+        <span className="min-w-0"><FitText minScale={0.7}>{t.common.miss}</FitText></span>
       ) : (
         <FitText minScale={0.7} className="w-full text-center text-[0.75rem] font-medium tablet:text-[0.9375rem]">
           {t.common.miss}
@@ -202,7 +204,7 @@ function MissKey({ onPress, className }: { onPress: () => void; className?: stri
   return (
     <Key tone="quiet" onPress={onPress} label={t.keypad.missLabel} className={cn("flex-col px-0.5 leading-tight", className)}>
       {/* Words differ in length by language ("Miss", "Daneben"): the label shrinks to fit the key. */}
-      <FitText minScale={0.6} className="w-full text-center text-[1.0625rem] tablet:text-xl">
+      <FitText minScale={0.45} className="w-full text-center text-[1.0625rem] tablet:text-xl">
         {t.common.miss}
       </FitText>
       <span className="text-[0.6875rem] font-medium tablet:text-[0.8125rem]">0</span>
@@ -222,7 +224,7 @@ interface DartPadProps {
   dartsLeft: number
 }
 
-export function X01DartPad({ onDart, onNoScore, onUndo, canUndo, keyboard, dartsLeft }: DartPadProps) {
+export function X01DartPad({ onDart, onNoScore, onUndo, canUndo, keyboard, dartsLeft, expanded }: DartPadProps & { expanded?: boolean }) {
   const t = useT()
   const [multiplier, setMultiplier, multiplierRef] = useMultiplier()
   useDartKeys(keyboard, onDart, onUndo, setMultiplier, multiplierRef)
@@ -233,8 +235,8 @@ export function X01DartPad({ onDart, onNoScore, onUndo, canUndo, keyboard, darts
   }
 
   return (
-    <div className="grid h-full grid-cols-5 grid-rows-6 gap-1.5 short:gap-1 tablet:gap-2.5">
-      <ModifierRow multiplier={multiplier} setMultiplier={setMultiplier} onNoScore={onNoScore} dartsLeft={dartsLeft} />
+    <div className={cn("grid h-full gap-1.5 short:gap-1 tablet:gap-2.5", expanded ? "grid-cols-3 grid-rows-9" : "grid-cols-5 grid-rows-6")}>
+      <ModifierRow multiplier={multiplier} setMultiplier={setMultiplier} onNoScore={onNoScore} dartsLeft={dartsLeft} expanded={expanded} />
       {Array.from({ length: 20 }, (_, i) => i + 1).map((n) => (
         <Key key={n} onPress={() => hit(n)} label={`${prefix(multiplier)}${n}`} className="text-[clamp(1.1rem,3.4dvh,2.5rem)] tabular-nums">
           {multiplier > 1 && <span className="mr-px text-[0.55em] text-primary">{prefix(multiplier)}</span>}
@@ -243,12 +245,12 @@ export function X01DartPad({ onDart, onNoScore, onUndo, canUndo, keyboard, darts
       ))}
       <MissKey onPress={() => hit(0, 1)} />
       <Key onPress={() => hit(25, multiplier === 2 ? 2 : 1)} disabled={multiplier === 3} label={multiplier === 2 ? t.keypad.bullLabel : t.keypad.outerBullLabel} className="text-[1.0625rem]">
-        {multiplier === 2 ? t.common.bull : "25"}
+        <FitText minScale={0.75} className="w-full text-center">{multiplier === 2 ? t.common.bull : "25"}</FitText>
       </Key>
       <Key onPress={() => hit(25, 2)} disabled={multiplier === 3} label={t.keypad.bullLabel} className="text-[1.0625rem]">
-        {t.common.bull}
+        <FitText minScale={0.75} className="w-full text-center">{t.common.bull}</FitText>
       </Key>
-      <UndoKey onUndo={onUndo} canUndo={canUndo} className="col-span-2" />
+      <UndoKey onUndo={onUndo} canUndo={canUndo} className={cn(!expanded && "col-span-2")} />
     </div>
   )
 }
@@ -417,7 +419,7 @@ export function VisitTotalPad({
   )
 }
 
-export function CricketPad({ onDart, onNoScore, onUndo, canUndo, keyboard, dartsLeft, state }: DartPadProps & { state: MatchState }) {
+export function CricketPad({ onDart, onNoScore, onUndo, canUndo, keyboard, dartsLeft, state, expanded }: DartPadProps & { state: MatchState; expanded?: boolean }) {
   const t = useT()
   const [multiplier, setMultiplier, multiplierRef] = useMultiplier()
   useDartKeys(keyboard, onDart, onUndo, setMultiplier, multiplierRef)
@@ -444,10 +446,10 @@ export function CricketPad({ onDart, onNoScore, onUndo, canUndo, keyboard, darts
         label={`${label}${dead ? t.keypad.closedByAll : mine >= 3 ? t.keypad.closedScores : ""}`}
         className={cn("relative flex-col tabular-nums", bull ? "text-[clamp(1rem,3dvh,1.75rem)]" : "text-[clamp(1.1rem,3.6dvh,2.5rem)]")}
       >
-        <span>
+        <FitText minScale={0.75} className="w-full text-center">
           {multiplier > 1 && !bull && <span className="mr-px text-[0.55em] text-primary">{prefix(multiplier)}</span>}
           {label.replace(/^[DT]/, "")}
-        </span>
+        </FitText>
         <span className="flex h-1.5 gap-1" aria-hidden="true">
           {[0, 1, 2].map((i) => (
             <span key={i} className={cn("h-1.5 w-1.5 rounded-full", i < mine ? "bg-primary" : "bg-muted-foreground/25")} />
@@ -459,8 +461,8 @@ export function CricketPad({ onDart, onNoScore, onUndo, canUndo, keyboard, darts
 
   return (
     // Three rows: modifiers, 20 to 16, then 15, the bulls, Miss and Undo.
-    <div className="grid h-full grid-cols-5 grid-rows-3 gap-1.5 short:gap-1 tablet:gap-2.5">
-      <ModifierRow multiplier={multiplier} setMultiplier={setMultiplier} onNoScore={onNoScore} dartsLeft={dartsLeft} />
+    <div className={cn("grid h-full gap-1.5 short:gap-1 tablet:gap-2.5", expanded ? "grid-cols-3 grid-rows-5" : "grid-cols-5 grid-rows-3")}>
+      <ModifierRow multiplier={multiplier} setMultiplier={setMultiplier} onNoScore={onNoScore} dartsLeft={dartsLeft} expanded={expanded} />
       {CRICKET_TARGETS.slice(0, 5).map((target) => targetKey(target))}
       {targetKey(15)}
       {targetKey(25)}
@@ -471,7 +473,7 @@ export function CricketPad({ onDart, onNoScore, onUndo, canUndo, keyboard, darts
   )
 }
 
-export function ClockPad({ onDart, onNoScore, onUndo, canUndo, keyboard, dartsLeft, target }: DartPadProps & { target: number }) {
+export function ClockPad({ onDart, onNoScore, onUndo, canUndo, keyboard, dartsLeft, target, expanded = false }: DartPadProps & { target: number; expanded?: boolean }) {
   useEffect(() => {
     if (!keyboard) return
     const onKey = (e: KeyboardEvent) => {
@@ -489,13 +491,13 @@ export function ClockPad({ onDart, onNoScore, onUndo, canUndo, keyboard, dartsLe
   const t = useT()
   return (
     <div className="grid h-full grid-cols-2 grid-rows-[minmax(0,1fr)_minmax(2.75rem,0.28fr)] gap-2 tablet:gap-3">
-      <Key tone="quiet" onPress={() => onDart({ segment: 0, multiplier: 1 })} className="flex-col gap-1 text-3xl">
-        {t.common.miss}
-        <span className="text-[0.8125rem] font-medium">{t.keypad.missTarget(target)}</span>
+      <Key tone="quiet" onPress={() => onDart({ segment: 0, multiplier: 1 })} className={cn("flex-col gap-1", expanded ? "text-[1rem]" : "text-3xl")}>
+        <FitText minScale={0.75} className="w-full text-center">{t.common.miss}</FitText>
+        <FitText minScale={0.75} className="w-full text-center text-[0.8125rem] font-medium">{t.keypad.missTarget(target)}</FitText>
       </Key>
-      <Key tone="accent" onPress={() => onDart({ segment: target, multiplier: 1 })} className="flex-col gap-1 text-3xl">
-        {t.keypad.hit}
-        <span className="text-[0.8125rem] font-medium">{t.keypad.hitTarget(target)}</span>
+      <Key tone="accent" onPress={() => onDart({ segment: target, multiplier: 1 })} className={cn("flex-col gap-1", expanded ? "text-[1rem]" : "text-3xl")}>
+        <FitText minScale={0.75} className="w-full text-center">{t.keypad.hit}</FitText>
+        <FitText minScale={0.75} className="w-full text-center text-[0.8125rem] font-medium">{t.keypad.hitTarget(target)}</FitText>
       </Key>
       <RestMissedKey onNoScore={onNoScore} dartsLeft={dartsLeft} wide />
       <UndoKey onUndo={onUndo} canUndo={canUndo} />

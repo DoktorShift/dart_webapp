@@ -6,6 +6,7 @@ Hier stehen begründete Produkt- und Technikentscheidungen für die Erweiterung 
 | --- | --- | --- | --- |
 | [0001](0001-kein-eigenes-backend.md) | Kein eigenes Backend; Nostr und Lightning ausschließlich über nostr-core | Angenommen | 4. Oktober 2026 |
 | [0002](0002-architektur.md) | Architektur der Erweiterung: Module, Speicherung, Signer, Relays, Events, Oberfläche | Angenommen (§6 präzisiert am 5. Oktober 2026; §2 und §6 ergänzt am 6. Oktober 2026: `lib/live` darf `lib/storage` und `lib/profile/vault.ts` nutzen, Freundschaftsspiele mit Autoritätsschlüssel je Spiel) | 4. Oktober 2026 |
+| [0003](0003-spielerzuordnungen.md) | Spielerzuordnungen erhalten und synchronisieren | Angenommen; Umsetzung offen | 28. Oktober 2026 |
 
 ## Aufbau einer Entscheidung
 
