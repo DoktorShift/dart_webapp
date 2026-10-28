@@ -6,5 +6,5 @@ test("crowded board names stay short, distinguish collisions and preserve unique
   const labels = compactBoardNames(["Anna Schmidt", "Anna Schneider", "Maximilianxxxxxx", "Carla von Testhausen", "Anna Schmitz", "Fritz"])
   assert.equal(labels[3], "Carla")
   assert.equal(new Set(labels.map((label) => label.toLowerCase())).size, labels.length)
-  assert.ok(labels.every((label) => Array.from(label).length <= 10))
+  assert.ok(labels.every((label) => Array.from(label).length <= 8))
 })

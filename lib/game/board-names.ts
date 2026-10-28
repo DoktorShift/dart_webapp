@@ -7,7 +7,7 @@ export function compactBoardNames(names: readonly string[]): string[] {
     const chars = Array.from(name)
     return chars.length <= limit ? name : `${chars.slice(0, limit - 1).join("")}…`
   }
-  const labels = source.map((name) => shorten(name, 10))
+  const labels = source.map((name) => shorten(name, 8))
   const unique = labels.map((label) => labels.filter((other) => key(other) === key(label)).length === 1)
   const used = new Set(labels.filter((_, i) => unique[i]).map(key))
   return labels.map((label, i) => {
@@ -16,7 +16,7 @@ export function compactBoardNames(names: readonly string[]): string[] {
     let candidate: string
     do {
       const suffix = ` ${number++}`
-      candidate = `${shorten(source[i], 10 - suffix.length)}${suffix}`
+      candidate = `${shorten(source[i], 8 - suffix.length)}${suffix}`
     } while (used.has(key(candidate)))
     used.add(key(candidate))
     return candidate
