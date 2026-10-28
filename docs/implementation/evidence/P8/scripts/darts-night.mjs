@@ -484,8 +484,10 @@ await step("Rangliste heute Abend: Hier gespielt, Clubs, Turniere auf Annas Tele
   const panel = page.locator('[data-tab-panel="leaderboard"]')
   await seen(page, /Spiele gegen andere auf diesem Gerät/, { timeout: 20_000 })
   // Two games against Ben tonight: within "Heute" that ranks both (2 games), over all time not yet.
-  await panel.getByRole("button", { name: /^Zeitraum: / }).click()
-  await page.getByRole("menuitemradio", { name: "Heute" }).click()
+  await panel.getByRole("button", { name: /Alle Spielarten/ }).click()
+  const filters = page.getByRole("dialog")
+  await filters.getByRole("radio", { name: "Heute", exact: true }).click()
+  await filters.getByRole("button", { name: "Fertig", exact: true }).click()
   await page.waitForTimeout(600)
   const today = await panel.innerText()
   // seen() scrolled the sentence into view; the picture shows the list from its top.
@@ -505,7 +507,7 @@ await step("Rangliste heute Abend: Hier gespielt, Clubs, Turniere auf Annas Tele
   const tournaments = await panel.innerText()
   await shot(anna, "35-ranks-tournaments")
   expect("the Turniere area lists tonight's tournament with Anna's place", /Pub Open/.test(tournaments) && /\d\. Platz|Sieg|Platz/.test(tournaments), tournaments.slice(0, 160))
-  await panel.getByRole("radio", { name: "Hier gespielt" }).click()
+  await panel.getByRole("radio", { name: "Lokal" }).click()
 })
 
 // ---- 11c. Games from a file ---------------------------------------------------------------------
