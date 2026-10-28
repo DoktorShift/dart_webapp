@@ -112,6 +112,8 @@ function ClubBody({ view, params, refresh }: { view: ClubView; params: ScreenPar
   const [leaving, setLeaving] = useState(false)
   const [accepting, setAccepting] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [pulling, setPulling] = useState(false)
+  const pull = useRef<{ x: number; y: number } | null>(null)
   const [problem, setProblem] = useState<string | null>(null)
   const names = useProfileNames(state?.offer ? [state.owner] : [])
 
@@ -179,7 +181,24 @@ function ClubBody({ view, params, refresh }: { view: ClubView; params: ScreenPar
   ]
 
   return (
-    <div className="pb-4">
+    <div
+      className="pb-4"
+      onTouchStart={(event) => {
+        const scroll = event.currentTarget.closest<HTMLElement>("[data-scroll-container]")
+        const touch = event.touches[0]
+        pull.current = event.touches.length === 1 && scroll?.scrollTop === 0 && touch ? { x: touch.clientX, y: touch.clientY } : null
+      }}
+      onTouchEnd={(event) => {
+        const start = pull.current
+        pull.current = null
+        const touch = event.changedTouches[0]
+        if (!start || !touch || pulling || touch.clientY - start.y < 90 || Math.abs(touch.clientX - start.x) > 60) return
+        setPulling(true)
+        void refresh().catch(() => null).finally(() => setPulling(false))
+      }}
+      onTouchCancel={() => { pull.current = null }}
+    >
+      {pulling && <p role="status" className="mt-2 text-center text-sm text-muted-foreground">{tx.club.refreshing}</p>}
       {menu.length > 0 && (
         <NavBarItems>
           <Menu icon={Ellipsis} label={t.shell.bar.more} items={menu} className="-mr-1" />
