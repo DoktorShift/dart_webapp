@@ -334,7 +334,7 @@ export const tournamentsScreensEn: Widen<typeof tournamentsScreensDe> = {
 
   organize: {
     tabs: { participants: "Players", boards: "Boards", results: "Results", settings: "Settings" },
-    steps: { label: "Phases of the tournament", registration: "Sign-up", checkin: "Check-in", drawn: "Draw", running: "Matches", finished: "Done" },
+    steps: { progress: (current: number, total: number) => `Step ${current} of ${total}`, label: "Phases of the tournament", registration: "Sign-up", checkin: "Check-in", drawn: "Draw", running: "Matches", finished: "Done" },
     tasks: {
       title: "Up next",
       requests: (n) => (n === 1 ? "Confirm 1 request" : `Confirm ${n} requests`),

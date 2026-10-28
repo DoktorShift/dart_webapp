@@ -84,7 +84,7 @@ function Workspace({ entry }: { entry: Entry }) {
         <p className="text-[1.0625rem] font-semibold leading-snug wrap-anywhere">{state.settings.name}</p>
         <p className="text-[0.9375rem] text-muted-foreground">{tx.phase[state.phase]}</p>
       </div>
-      {state.phase !== "cancelled" && <PhaseSteps steps={phaseSteps(state, o.steps)} label={o.steps.label} className="mt-4" />}
+      {state.phase !== "cancelled" && <PhaseSteps steps={phaseSteps(state, o.steps)} label={o.steps.label} progress={o.steps.progress} className="mt-4" />}
       {next.problem && (
         <InlineStatus tone="error" className="mt-4">
           {next.problem}

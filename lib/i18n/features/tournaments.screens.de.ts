@@ -351,7 +351,7 @@ export const tournamentsScreensDe = {
   organize: {
     tabs: { participants: "Spieler", boards: "Boards", results: "Ergebnisse", settings: "Einstellungen" },
     // The course of a tournament, one word per phase, under its name in the organizer's workspace.
-    steps: { label: "Phasen des Turniers", registration: "Anmeldung", checkin: "Check-in", drawn: "Auslosung", running: "Spiele", finished: "Fertig" },
+    steps: { progress: (current: number, total: number) => `Schritt ${current} von ${total}`, label: "Phasen des Turniers", registration: "Anmeldung", checkin: "Check-in", drawn: "Auslosung", running: "Spiele", finished: "Fertig" },
     tasks: {
       title: "Jetzt dran",
       requests: (n: number) => (n === 1 ? "1 Anfrage bestätigen" : `${n} Anfragen bestätigen`),

@@ -6,26 +6,19 @@ export interface PhaseStep {
   state: "done" | "now" | "next"
 }
 
-// Where a thing with a fixed course stands (a tournament: Anmeldung, Check-in, Auslosung, Läuft,
-// Fertig): every step named, the current one emphasised, the past ones filled. Read as a list
-// with the current step marked.
-export function PhaseSteps({ steps, label, className }: { steps: readonly PhaseStep[]; label: string; className?: string }) {
+// The current phase remains legible on a narrow phone, with progress conveyed in text too.
+export function PhaseSteps({ steps, label, progress, className }: { steps: readonly PhaseStep[]; label: string; progress: (current: number, total: number) => string; className?: string }) {
+  const current = steps.findIndex((step) => step.state === "now")
+  if (current < 0) return null
   return (
-    <ol aria-label={label} className={cn("grid auto-cols-fr grid-flow-col gap-1", className)}>
-      {steps.map((step) => (
-        <li
-          key={step.id}
-          aria-current={step.state === "now" ? "step" : undefined}
-          className={cn(
-            "border-t-[3px] pt-1.5 text-center text-[0.6875rem] leading-tight wrap-anywhere",
-            step.state === "next" && "border-secondary text-muted-foreground",
-            step.state === "done" && "border-primary/60 text-primary",
-            step.state === "now" && "border-primary font-semibold text-foreground",
-          )}
-        >
-          {step.label}
-        </li>
-      ))}
-    </ol>
+    <div aria-label={label} className={cn(className)}>
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="text-[0.9375rem] font-semibold">{steps[current].label}</span>
+        <span className="text-[0.8125rem] text-muted-foreground">{progress(current + 1, steps.length)}</span>
+      </div>
+      <div aria-hidden="true" className="mt-2 h-1 overflow-hidden rounded-full bg-secondary">
+        <div className="h-full rounded-full bg-primary" style={{ width: `${((current + 1) / steps.length) * 100}%` }} />
+      </div>
+    </div>
   )
 }
