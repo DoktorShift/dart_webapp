@@ -31,7 +31,7 @@ export function SetupSheetRow({
         type="button"
         disabled={disabled}
         onClick={() => setSheet((v) => ({ open: true, opening: v.opening + 1 }))}
-        className="flex min-h-12 w-full items-center gap-3 rounded-2xl border border-border bg-card px-4 text-left text-[1.0625rem] text-primary transition-colors active:bg-secondary/60 disabled:opacity-40"
+        className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-[0.9375rem] font-medium text-primary transition-colors active:bg-secondary/60 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40"
       >
         <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
         <span className="min-w-0 flex-1 leading-snug">{label}</span>

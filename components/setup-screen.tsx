@@ -309,7 +309,7 @@ export function SetupScreen({ type, preset, backLabel, onBack, onStart }: SetupS
 
           <SlotItems
             list="setup.players"
-            className="mt-4 grid gap-2"
+            className="mt-2 grid gap-1"
             props={() => ({
               players: players.map(({ name, pubkey }) => ({ name, pubkey })),
               canAdd: players.length < MAX_PLAYERS || players.some((p) => !p.name.trim()),
