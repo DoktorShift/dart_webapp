@@ -16,7 +16,7 @@ import {
 import { announce, announceElsewhere, dbClear, dbGetAll, dbKeys, dbWrite, kvGet, STORES, type Keyed, type WriteOp } from "./db.ts"
 import { exportSections } from "./export-sections.ts"
 import { isPubkey, listPlayers, nameKey, parsePlayerRecord, type PlayerRecord } from "./players.ts"
-import { linkOpsKey, loadLinkOps, parseLinkOp, type PlayerLinkOp } from "./player-link-ops.ts"
+import { linkOpKey, linkOpsOwner, loadLinkOps, parseLinkOp, type PlayerLinkOp } from "./player-link-ops.ts"
 import { isV1Record, mergeV1Records, readAllRaw, removeAllV1Data } from "./v1.ts"
 
 // "Daten exportieren", "Daten importieren" and "Alle Daten auf diesem Gerät löschen". Loaded only
@@ -52,8 +52,8 @@ export async function buildExport(now = new Date()): Promise<ExportFile> {
       const guest = await kvGet<Record<string, string>>("leaderboard.player-links") ?? {}
       const profiles: Record<string, PlayerLinkOp[]> = {}
       for (const key of await dbKeys("kv")) {
-        const owner = key.startsWith("player-links.v2.") ? key.slice("player-links.v2.".length) : ""
-        if (isPubkey(owner)) profiles[owner] = await loadLinkOps(owner)
+        const owner = linkOpsOwner(key)
+        if (owner && !profiles[owner]) profiles[owner] = await loadLinkOps(owner)
       }
       return { guest, profiles }
     })()]),
@@ -302,7 +302,7 @@ export async function importData(text: string): Promise<ImportResult> {
           seen.add(op.id)
           return [op]
         })
-        if (fresh.length) extra.push({ store: "kv", put: { id: linkOpsKey(owner), value: [...existing, ...fresh] } as Keyed })
+        for (const op of fresh) extra.push({ store: "kv", putNew: { id: linkOpKey(owner, op.id), value: op } as Keyed })
       }
       const { added, completed, known } = await mergeMatches(incoming, extra)
       return { ok: true as const, added, completed, known, playersAdded: newPlayers.length, playersKnown: players.size - newPlayers.length, skipped }

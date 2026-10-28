@@ -5,7 +5,7 @@ import { matchA } from "./storage-fixtures.ts"
 import { archiveFinished } from "../lib/storage/archive.ts"
 import { newPlayerRecord, savePlayers } from "../lib/storage/players.ts"
 import { linkLocalPlayer, loadPlayerLinks, playerLinkAliases, unlinkLocalPlayer } from "../lib/storage/player-links.ts"
-import { parseLinkOp, resolveLinkOps } from "../lib/storage/player-link-ops.ts"
+import { appendLinkOp, loadLinkOps, parseLinkOp, resolveLinkOps } from "../lib/storage/player-link-ops.ts"
 
 const PUBKEY = "a".repeat(64)
 beforeEach(resetStorage)
@@ -69,6 +69,20 @@ test("concurrent removal wins; only a later explicit association restores it", (
   const explicitAgain = op("4", BEN, [add.id, remove.id, concurrent.id])
   assert.deepEqual(resolveLinkOps([add, remove, concurrent, explicitAgain]), { [ANNA]: BEN })
   assert.deepEqual(resolveLinkOps([explicitAgain, concurrent, remove, add]), { [ANNA]: BEN })
+})
+
+test("concurrent writes to different associations cannot overwrite each other", async () => {
+  const first = newPlayerRecord("Ben", "2026-01-01", ANNA)
+  const secondId = `pl_${"d".repeat(32)}`
+  const second = newPlayerRecord("Carla", "2026-01-01", secondId)
+  const target = { ...newPlayerRecord("Ben", "2026-01-01", BEN), pubkey: PUBKEY }
+  await Promise.all([
+    appendLinkOp(PUBKEY, ANNA, BEN, first, target),
+    appendLinkOp(PUBKEY, secondId, BEN, second, target),
+  ])
+  const ops = await loadLinkOps(PUBKEY)
+  assert.equal(ops.length, 2)
+  assert.deepEqual(resolveLinkOps(ops), { [ANNA]: BEN, [secondId]: BEN })
 })
 
 test("a device export restores guest associations and remains compatible with older files", async () => {
