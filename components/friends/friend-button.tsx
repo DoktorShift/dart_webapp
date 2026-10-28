@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { Check, Clock, UserRoundPlus } from "lucide-react"
+import { Check, Clock, Ellipsis, UserRoundPlus } from "lucide-react"
+import { Menu } from "@/components/ui/menu"
 import { Button } from "@/components/ui/button"
 import { Confirm } from "@/components/ui/confirm"
 import { InlineStatus } from "@/components/common/inline-status"
@@ -72,10 +73,12 @@ export default function FriendButton({ pubkey, name }: SlotListProps["profile.ac
         </>
       )}
       {entry?.state === "friend" && (
-        <Button variant="secondary" disabled={busy} onClick={() => setAsking("remove")} className={SECONDARY}>
-          <Check className="h-5 w-5 shrink-0" aria-hidden="true" />
-          {tx.friend}
-        </Button>
+        <div className="flex min-h-11 items-center justify-between gap-2 px-1">
+          <span className="flex items-center gap-2 text-[0.9375rem] text-muted-foreground">
+            <Check className="h-5 w-5 text-primary" aria-hidden="true" />{tx.friend}
+          </span>
+          <Menu icon={Ellipsis} label={tx.friend} items={[{ id: "remove", label: tx.removeConfirm, destructive: true, onSelect: () => setAsking("remove") }]} />
+        </div>
       )}
       {problem && <InlineStatus tone="error">{problem}</InlineStatus>}
       <Confirm

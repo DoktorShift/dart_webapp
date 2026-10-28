@@ -3,6 +3,9 @@
 import { useState } from "react"
 import { Share, UserRoundPlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { NavBarItems, NavIconButton } from "@/components/nav/nav-bar-items"
+import { useFriends } from "@/components/friends/use-friends"
+import { findFriend } from "@/lib/friends/model"
 import { InlineStatus } from "@/components/common/inline-status"
 import { SlotItems } from "@/components/shell/slot-items"
 import { useNav } from "@/components/nav/nav-context"
@@ -29,9 +32,11 @@ export default function PublicScreen({ params }: ScreenProps) {
   const address = params.pubkey ? { pubkey: params.pubkey, relays: [] } : params.payload ? readProfilePayload(params.payload) : null
   const state = usePublicProfile(address?.pubkey ?? null, address?.relays)
   const session = useSession()
+  const { friends } = useFriends()
   const [shareOpen, setShareOpen] = useState(false)
   if (!address) return <InlineStatus tone="error" className="mt-6">{tx.public.invalid}</InlineStatus>
   const own = session?.pubkey === address.pubkey
+  const incoming = !!friends && findFriend(friends, address.pubkey)?.state === "received"
 
   const addToGame = (name: string | null) => {
     offerSeat({ name: seatName(name ?? ""), pubkey: address.pubkey })
@@ -42,15 +47,13 @@ export default function PublicScreen({ params }: ScreenProps) {
     <PublicProfileView pubkey={address.pubkey} own={own} state={state}>
       {(name) => (
         <>
+          <NavBarItems>
+            <NavIconButton icon={Share} label={tx.public.share} onClick={() => setShareOpen(true)} />
+          </NavBarItems>
           <div className="mt-4 grid gap-2">
-            {/* On someone else's profile the relationship comes first (Game Center, Strava); sharing is the filled button only on one's own. */}
             {!own && <SlotItems list="profile.actions" props={() => ({ pubkey: address.pubkey, name: name ?? tx.unnamed })} />}
-            <Button variant={own ? "default" : "secondary"} onClick={() => setShareOpen(true)} className={own ? "h-12 w-full gap-2 rounded-xl text-[1.0625rem] font-semibold" : "h-12 w-full gap-2 rounded-xl bg-primary/10 text-[1.0625rem] font-semibold text-primary shadow-none hover:bg-primary/15 active:bg-primary/20"}>
-              <Share className="h-5 w-5" aria-hidden="true" />
-              {tx.public.share}
-            </Button>
             {!own && (
-              <Button variant="secondary" onClick={() => addToGame(name)} className="h-12 w-full gap-2 whitespace-normal rounded-xl bg-primary/10 text-[1.0625rem] font-semibold text-primary shadow-none hover:bg-primary/15 active:bg-primary/20">
+              <Button variant={incoming ? "secondary" : "default"} onClick={() => addToGame(name)} className="h-12 w-full gap-2 whitespace-normal rounded-xl text-[1.0625rem] font-semibold">
                 <UserRoundPlus className="h-5 w-5 shrink-0" aria-hidden="true" />
                 {tx.setup.add}
               </Button>
