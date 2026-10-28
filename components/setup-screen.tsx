@@ -253,9 +253,6 @@ export function SetupScreen({ type, preset, backLabel, onBack, onStart }: SetupS
             <p className="mt-1 text-[0.9375rem] text-muted-foreground">{texts.description}</p>
           </div>
         </div>
-        <p className="mt-4 rounded-2xl bg-secondary/50 px-4 py-3 text-[0.9375rem] leading-snug">
-          {texts.rules({ doubleIn: rules.doubleIn, doubleOut: rules.doubleOut, bullFinish: rules.bullFinish })}
-        </p>
 
         <section aria-labelledby="players-heading" className="mt-8">
           <div className="mb-2 flex items-end justify-between px-1">
@@ -342,6 +339,9 @@ export function SetupScreen({ type, preset, backLabel, onBack, onStart }: SetupS
         </section>
 
         <Group title={t.setup.rules}>
+          <p className="px-4 py-3 text-[0.9375rem] leading-snug text-muted-foreground">
+            {texts.rules({ doubleIn: rules.doubleIn, doubleOut: rules.doubleOut, bullFinish: rules.bullFinish })}
+          </p>
           {type === "x01" && (
             <>
               <ChoiceRow
