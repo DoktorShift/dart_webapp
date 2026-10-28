@@ -161,6 +161,8 @@ export function X01Scoreboard({ state, onSelectPlayer }: BoardProps) {
   const players = state.config.players
   const size = sizeOf(players.length)
   const between = state.visitDarts.length === 0 && state.winner === null
+  // Short names help players read a crowded board; keep full names when first names collide.
+  const firstNames = players.map((player) => player.name.trim().split(/\s+/)[0])
 
   return (
     <ol className={cn("grid h-full auto-rows-fr gap-2 tablet:gap-3", GRID[size])}>
@@ -176,8 +178,8 @@ export function X01Scoreboard({ state, onSelectPlayer }: BoardProps) {
         const label = playerLabel(state, i, t.board.left(state.scores[i]), t)
         const average = t.board.avg(avg === null ? "–" : formatNumber(t, avg))
         const name = (
-          <FitText minScale={0.75} className={cn("font-semibold leading-tight", !active && "text-muted-foreground", retired && "line-through")}>
-            {player.name}
+          <FitText minScale={size === "six" ? 0.85 : 0.75} className={cn("font-semibold leading-tight", !active && "text-muted-foreground", retired && "line-through")}>
+            {size === "six" && firstNames.filter((name) => name.toLocaleLowerCase() === firstNames[i].toLocaleLowerCase()).length === 1 ? firstNames[i] : player.name}
           </FitText>
         )
         const score = (
