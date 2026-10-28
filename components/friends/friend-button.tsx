@@ -6,7 +6,7 @@ import { Menu } from "@/components/ui/menu"
 import { Button } from "@/components/ui/button"
 import { Confirm } from "@/components/ui/confirm"
 import { InlineStatus } from "@/components/common/inline-status"
-import { useAreaT } from "@/components/i18n-provider"
+import { useAreaT, useT } from "@/components/i18n-provider"
 import { FRIENDS_TEXTS } from "@/lib/i18n/features/friends.screens"
 import { friendsProblem } from "@/components/friends/problems"
 import { useFriends } from "@/components/friends/use-friends"
@@ -26,6 +26,7 @@ type Asking = "remove" | "withdraw" | null
 
 export default function FriendButton({ pubkey, name }: SlotListProps["profile.actions"]) {
   const tx = useAreaT(FRIENDS_TEXTS)
+  const t = useT()
   const session = useSession()
   const { friends, loaded } = useFriends()
   const [busy, setBusy] = useState(false)
@@ -77,7 +78,7 @@ export default function FriendButton({ pubkey, name }: SlotListProps["profile.ac
           <span className="flex items-center gap-2 text-[0.9375rem] text-muted-foreground">
             <Check className="h-5 w-5 text-primary" aria-hidden="true" />{tx.friend}
           </span>
-          <Menu icon={Ellipsis} label={tx.friend} items={[{ id: "remove", label: tx.removeConfirm, destructive: true, onSelect: () => setAsking("remove") }]} />
+          <Menu icon={Ellipsis} label={t.shell.bar.more} items={[{ id: "remove", label: tx.removeConfirm, destructive: true, onSelect: () => setAsking("remove") }]} />
         </div>
       )}
       {problem && <InlineStatus tone="error">{problem}</InlineStatus>}
