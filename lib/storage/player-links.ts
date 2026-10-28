@@ -3,16 +3,21 @@ import { dbGetAll, kvGet, kvSet } from "./db.ts"
 import type { ArchivedMatch } from "./archive.ts"
 import { importedAliases, type PlayerRecord } from "./players.ts"
 import { playerKey } from "./stats.ts"
+import { getSession, loadSession } from "../profile/session.ts"
+import { appendLinkOp, loadLinkOps, resolveLinkState } from "./player-link-ops.ts"
 
 // Local, reversible associations. Archived records and public profiles are never rewritten.
 const KEY = "leaderboard.player-links"
 export type PlayerLinks = Record<string, string>
 
-export async function loadPlayerLinks(): Promise<PlayerLinks> {
+export async function loadPlayerLinkState(): Promise<{ owner: string | null; links: PlayerLinks; conflicts: Record<string, string[]>; localSuggestions: PlayerLinks }> {
+  const session = await loadSession()
   const value = await kvGet<unknown>(KEY)
-  if (!value || typeof value !== "object" || Array.isArray(value)) return {}
-  return Object.fromEntries(Object.entries(value).filter(([source, target]) => typeof target === "string" && source !== target)) as PlayerLinks
+  const local = !value || typeof value !== "object" || Array.isArray(value) ? {} : Object.fromEntries(Object.entries(value).filter(([source, target]) => typeof target === "string" && source !== target)) as PlayerLinks
+  if (session) return { owner: session.pubkey, ...resolveLinkState(await loadLinkOps(session.pubkey)), localSuggestions: local }
+  return { owner: null, links: local, conflicts: {}, localSuggestions: {} }
 }
+export const loadPlayerLinks = async (): Promise<PlayerLinks> => (await loadPlayerLinkState()).links
 
 // Collapse an explicit link onto the profile's canonical player where one is already known.
 export function playerLinkAliases(links: PlayerLinks, base?: ReadonlyMap<string, string>, matches: readonly ArchivedMatch[] = [], imported?: Map<string, string>, players?: readonly PlayerRecord[]): Map<string, string> {
@@ -40,6 +45,7 @@ export function playerLinkAliases(links: PlayerLinks, base?: ReadonlyMap<string,
 export type LinkResult = "linked" | "invalid" | "conflict"
 export function linkLocalPlayer(source: string, target: string): Promise<LinkResult> {
   return withArchive(async () => {
+    const session = await loadSession()
     const [players, matches, links] = await Promise.all([dbGetAll<PlayerRecord>("players"), dbGetAll<ArchivedMatch>("matches"), loadPlayerLinks()])
     const guest = players.find((p) => p.id === source)
     const profile = players.find((p) => p.id === target)
@@ -52,16 +58,23 @@ export function linkLocalPlayer(source: string, target: string): Promise<LinkRes
       const ids = match.players.map((p) => playerKey(match, p, imported)?.replace(/^id:/, ""))
       return ids.includes(source) && match.players.some((p, i) => p.pubkey === profile.pubkey || (ids[i] && targetIds.has(ids[i]!)))
     })) return "conflict"
-    await kvSet(KEY, { ...links, [source]: target })
+    if ((await loadSession())?.pubkey !== session?.pubkey) throw new Error("profile changed while associating players")
+    if (session) await appendLinkOp(session.pubkey, source, target, guest, profile, () => getSession()?.pubkey === session.pubkey)
+    else await kvSet(KEY, { ...links, [source]: target })
     return "linked"
   })
 }
 
 export function unlinkLocalPlayer(source: string): Promise<void> {
   return withArchive(async () => {
-    const links = await loadPlayerLinks()
-    if (!(source in links)) return
-    delete links[source]
-    await kvSet(KEY, links)
+    const session = await loadSession()
+    const { links, conflicts } = await loadPlayerLinkState()
+    if (!(source in links) && !(source in conflicts)) return
+    if ((await loadSession())?.pubkey !== session?.pubkey) throw new Error("profile changed while unlinking players")
+    if (session) await appendLinkOp(session.pubkey, source, null, undefined, undefined, () => getSession()?.pubkey === session.pubkey)
+    else {
+      delete links[source]
+      await kvSet(KEY, links)
+    }
   })
 }

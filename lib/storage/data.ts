@@ -13,9 +13,10 @@ import {
   type ArchivedPlayer,
   type V1Snapshot,
 } from "./archive.ts"
-import { announce, announceElsewhere, dbClear, dbGetAll, dbWrite, kvGet, STORES, type WriteOp } from "./db.ts"
+import { announce, announceElsewhere, dbClear, dbGetAll, dbKeys, dbWrite, kvGet, STORES, type Keyed, type WriteOp } from "./db.ts"
 import { exportSections } from "./export-sections.ts"
-import { listPlayers, nameKey, parsePlayerRecord, type PlayerRecord } from "./players.ts"
+import { isPubkey, listPlayers, nameKey, parsePlayerRecord, type PlayerRecord } from "./players.ts"
+import { linkOpsKey, loadLinkOps, parseLinkOp, type PlayerLinkOp } from "./player-link-ops.ts"
 import { isV1Record, mergeV1Records, readAllRaw, removeAllV1Data } from "./v1.ts"
 
 // "Daten exportieren", "Daten importieren" and "Alle Daten auf diesem Gerät löschen". Loaded only
@@ -41,12 +42,21 @@ export interface ExportFile {
   v1Snapshot: V1Snapshot | null
   // What other areas keep on this device (badges), by section name (export-sections.ts).
   sections: Record<string, unknown>
+  playerLinks?: { guest: Record<string, string>; profiles: Record<string, PlayerLinkOp[]> }
 }
 
 export async function buildExport(now = new Date()): Promise<ExportFile> {
   await importV1Matches().catch(() => 0)
-  const [matches, players, v1Snapshot] = await withArchive(() =>
-    Promise.all([loadArchive(), listPlayers().catch((): PlayerRecord[] => []), kvGet<V1Snapshot>(V1_SNAPSHOT_KEY).catch(() => undefined)]),
+  const [matches, players, v1Snapshot, playerLinks] = await withArchive(async () =>
+    Promise.all([loadArchive(), listPlayers().catch((): PlayerRecord[] => []), kvGet<V1Snapshot>(V1_SNAPSHOT_KEY).catch(() => undefined), (async () => {
+      const guest = await kvGet<Record<string, string>>("leaderboard.player-links") ?? {}
+      const profiles: Record<string, PlayerLinkOp[]> = {}
+      for (const key of await dbKeys("kv")) {
+        const owner = key.startsWith("player-links.v2.") ? key.slice("player-links.v2.".length) : ""
+        if (isPubkey(owner)) profiles[owner] = await loadLinkOps(owner)
+      }
+      return { guest, profiles }
+    })()]),
   )
   const sections: Record<string, unknown> = {}
   for (const [name, section] of exportSections()) sections[name] = await section.build()
@@ -59,6 +69,7 @@ export async function buildExport(now = new Date()): Promise<ExportFile> {
     v1: readAllRaw(),
     v1Snapshot: v1Snapshot ?? null,
     sections,
+    playerLinks,
   }
 }
 
@@ -269,7 +280,31 @@ export async function importData(text: string): Promise<ImportResult> {
       const directory = await listPlayers()
       const knownPlayers = new Set(directory.map((p) => p.id))
       const newPlayers = [...players.values()].filter((p) => !knownPlayers.has(p.id))
-      const { added, completed, known } = await mergeMatches(incoming, newPlayers.map((putNew) => ({ store: "players", putNew })))
+      const extra: WriteOp[] = newPlayers.map((putNew) => ({ store: "players", putNew }))
+      const links = isObject(file.playerLinks) ? file.playerLinks : {}
+      const allPlayers = new Map([...directory, ...newPlayers].map((p) => [p.id, p]))
+      if (isObject(links.guest)) {
+        const stored = await kvGet<Record<string, string>>("leaderboard.player-links") ?? {}
+        const guest = { ...stored }
+        for (const [source, target] of Object.entries(links.guest)) {
+          if (typeof target !== "string" || source in guest || allPlayers.get(source)?.pubkey || !allPlayers.has(source) || !allPlayers.get(target)?.pubkey || source === target) continue
+          guest[source] = target
+        }
+        extra.push({ store: "kv", put: { id: "leaderboard.player-links", value: guest } as Keyed })
+      }
+      if (isObject(links.profiles)) for (const [owner, raw] of Object.entries(links.profiles)) {
+        if (!isPubkey(owner) || !Array.isArray(raw)) continue
+        const existing = await loadLinkOps(owner)
+        const seen = new Set(existing.map((op) => op.id))
+        const fresh = raw.flatMap((value) => {
+          const op = parseLinkOp(value)
+          if (!op || seen.has(op.id)) return []
+          seen.add(op.id)
+          return [op]
+        })
+        if (fresh.length) extra.push({ store: "kv", put: { id: linkOpsKey(owner), value: [...existing, ...fresh] } as Keyed })
+      }
+      const { added, completed, known } = await mergeMatches(incoming, extra)
       return { ok: true as const, added, completed, known, playersAdded: newPlayers.length, playersKnown: players.size - newPlayers.length, skipped }
     })
   } catch {

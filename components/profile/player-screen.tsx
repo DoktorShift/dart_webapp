@@ -25,6 +25,7 @@ import type { ArchivedMatch } from "@/lib/storage/archive"
 import { linkLocalPlayer, unlinkLocalPlayer, playerLinkAliases } from "@/lib/storage/player-links"
 import { headToHead, matchState, playerKey as keyOf, summarizePlayer, type PlayerSummary } from "@/lib/storage/stats"
 import { cn } from "@/lib/utils"
+import { useSession } from "@/lib/profile/session"
 
 // A player as this device knows them from its games, opened from the Rangliste or a game: the
 // same card as one's own, then, signed in, the two of you against each other as pairs of bars
@@ -37,7 +38,8 @@ export default function PlayerScreen({ params }: ScreenProps) {
   const t = useT()
   const tx = useAreaT(PROFILE_TEXTS)
   const nav = useNav()
-  const { all, players, aliases, links, loaded } = useMatchHistory()
+  const { all, players, aliases, links, linkConflicts, localLinkSuggestions, loaded } = useMatchHistory()
+  const session = useSession()
   const own = useOwnProfile()
   const key = params.key ?? ""
   const me = !!own?.key && own.key === key
@@ -63,7 +65,9 @@ export default function PlayerScreen({ params }: ScreenProps) {
   const name = params.name ?? anySummary?.name ?? null
   const imported = key.startsWith("imported:") || !!anySummary?.includesImported
   const record = players?.find((p) => p.id === anySummary?.playerId)
-  const possibleProfiles = record && !record.pubkey && !links[record.id] ? (players ?? []).filter((p) => p.pubkey && p.nameKey === record.nameKey) : []
+  const conflict = record ? linkConflicts[record.id] : undefined
+  const localSuggestion = record ? localLinkSuggestions[record.id] : undefined
+  const possibleProfiles = record && !record.pubkey && !links[record.id] ? (players ?? []).filter((p) => p.pubkey && (p.nameKey === record.nameKey || conflict?.includes(p.id) || localSuggestion === p.id)) : []
   const candidates = possibleProfiles.filter((p, index) => possibleProfiles.findIndex((other) => other.pubkey === p.pubkey) === index)
   const linkedGuests = Object.entries(links).filter(([, target]) => (sameAs.get(target) ?? target) === anySummary?.playerId)
   const inactiveLink = !!record && !!links[record.id] && !sameAs.has(record.id)
@@ -142,19 +146,20 @@ export default function PlayerScreen({ params }: ScreenProps) {
         </Group>
       ) : null}
 
-      {(candidates.length > 0 || linkedGuests.length > 0 || inactiveLink) && (
-        <Group title={tx.player.linkTitle} footer={candidates.length > 0 ? tx.player.linkHint : undefined}>
+      {(candidates.length > 0 || linkedGuests.length > 0 || inactiveLink || conflict) && (
+        <Group title={tx.player.linkTitle} footer={conflict ? tx.player.linkConcurrent : localSuggestion && candidates.some((p) => p.id === localSuggestion) ? tx.player.linkLocalSuggestion : candidates.length > 0 ? tx.player.linkHint : undefined}>
           {record && candidates.map((candidate) => (
             <ListRow key={candidate.id} title={tx.player.linkTo(candidate.name, candidate.pubkey!.slice(0, 8))} onClick={() => setLinkChoice({ kind: "link", source: record.id, target: candidate.id })} />
           ))}
           {inactiveLink && record && <ListRow title={tx.player.unlink(record.name)} subtitle={tx.player.linkInactive} onClick={() => setLinkChoice({ kind: "unlink", source: record.id })} />}
+          {conflict && record && <ListRow title={tx.player.unlink(record.name)} onClick={() => setLinkChoice({ kind: "unlink", source: record.id })} />}
           {linkedGuests.map(([source]) => (
             <ListRow key={source} title={tx.player.unlink(players?.find((p) => p.id === source)?.name ?? name ?? tx.unnamed)} onClick={() => setLinkChoice({ kind: "unlink", source })} />
           ))}
         </Group>
       )}
       {linkProblem && <InlineStatus tone="error" className="mt-4">{linkProblem}</InlineStatus>}
-      <Confirm open={linkChoice !== null} onOpenChange={(open) => !open && setLinkChoice(null)} title={linkChoice?.kind === "unlink" ? tx.player.unlinkTitle : tx.player.linkTitle} text={linkChoice?.kind === "unlink" ? tx.player.unlinkText : tx.player.linkConfirmText} confirm={linkChoice?.kind === "unlink" ? tx.player.unlinkConfirm : tx.player.linkConfirm} onConfirm={() => void changeLink()} />
+      <Confirm open={linkChoice !== null} onOpenChange={(open) => !open && setLinkChoice(null)} title={linkChoice?.kind === "unlink" ? tx.player.unlinkTitle : tx.player.linkTitle} text={linkChoice?.kind === "unlink" ? (session ? tx.player.unlinkSyncedText : tx.player.unlinkText) : (session ? tx.player.linkSyncedText : tx.player.linkConfirmText)} confirm={linkChoice?.kind === "unlink" ? tx.player.unlinkConfirm : tx.player.linkConfirm} onConfirm={() => void changeLink()} />
 
       <StatsView matches={all} playerKey={key} aliases={aliases} sameAs={sameAs} />
 

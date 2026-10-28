@@ -19,6 +19,7 @@ import { DataKeyError, isDataKeyEvent, storedDataKey, unwrapDataKey } from "../l
 import { syncHistory } from "../lib/sync/engine.ts"
 import { deliverNow, outboxStatus } from "../lib/sync/outbox.ts"
 import { openRecords } from "../lib/sync/records.ts"
+import { linkLocalPlayer, loadPlayerLinks, unlinkLocalPlayer } from "../lib/storage/player-links.ts"
 
 // The private history across devices (lib/sync/engine.ts) on in-memory relays: a new device
 // finds the profile's games and nothing else, two devices that played offline end up with the
@@ -91,6 +92,108 @@ const annaBen = [
   { id: ANNA, name: "Anna" },
   { id: BEN, name: "Ben" },
 ]
+
+test("player associations and offline removals follow only their profile, without sharing unrelated games", async () => {
+  const a = newDevice(), b = newDevice()
+  const guest = newPlayerRecord("Ben", "2026-09-01", BEN)
+  const targetId = `pl_${"c".repeat(32)}`
+  const target = { ...newPlayerRecord("Ben", "2026-09-01", targetId), pubkey: "b".repeat(64) }
+  await on(a)
+  await savePlayers([profilePlayer(), guest, target])
+  await play101("unrelated", [person("Carl", 3), person("Dora", 4)], "2026-10-02T20:00:00.000Z")
+  assert.equal(await linkLocalPlayer(BEN, targetId), "linked")
+  await sync()
+  assert.ok(privateEvents(relays[0]).every((event) => !event.content.includes(BEN)))
+
+  await on(b)
+  await sync()
+  assert.deepEqual(await loadPlayerLinks(), { [BEN]: targetId })
+  assert.deepEqual(await ids(), [])
+  assert.ok((await dbGetAll<PlayerRecord>("players")).some((p) => p.id === targetId))
+  await unlinkLocalPlayer(BEN)
+  for (const relay of relays) relay.options.mode = "down"
+  await Promise.all(relays.map((relay) => relay.dropAll()))
+  assert.equal((await sync(false)).state, "unavailable")
+  assert.deepEqual(await loadPlayerLinks(), {})
+  for (const relay of relays) relay.options.mode = "up"
+  await sync()
+  await on(a)
+  await sync()
+  assert.deepEqual(await loadPlayerLinks(), {})
+  await on(b)
+  await sync()
+  assert.deepEqual(await loadPlayerLinks(), {})
+})
+
+test("associations stay with their profile on a shared device and survive a data export", async () => {
+  const a = newDevice()
+  const guest = newPlayerRecord("Ben", "2026-09-01", BEN)
+  const targetId = `pl_${"d".repeat(32)}`
+  const target = { ...newPlayerRecord("Ben", "2026-09-01", targetId), pubkey: "b".repeat(64) }
+  await on(a)
+  await savePlayers([guest, target])
+  assert.equal(await linkLocalPlayer(BEN, targetId), "linked")
+  const { buildExport, importData, wipeAllData } = await import("../lib/storage/data.ts")
+  const backup = await buildExport()
+  assert.equal(backup.playerLinks?.profiles[pubkey]?.length, 1)
+  await signOut({ keepLocalData: true })
+  assert.deepEqual(await loadPlayerLinks(), {})
+  const otherSecret = core.generateSecretKey()
+  await importLocalKey(otherSecret)
+  assert.deepEqual(await loadPlayerLinks(), {})
+  await signOut({ keepLocalData: true })
+  await importLocalKey(secret)
+  assert.deepEqual(await loadPlayerLinks(), { [BEN]: targetId })
+  await signOut({ keepLocalData: true })
+  await wipeAllData()
+  assert.equal((await importData(JSON.stringify(backup))).ok, true)
+  await importLocalKey(secret)
+  assert.deepEqual(await loadPlayerLinks(), { [BEN]: targetId })
+})
+
+test("an older device-only association requires explicit confirmation for a signed-in profile", async () => {
+  const device = newDevice()
+  await switchTo(device)
+  await signOut({ keepLocalData: true })
+  const targetId = `pl_${"e".repeat(32)}`
+  await savePlayers([newPlayerRecord("Ben", "2026-09-01", BEN), { ...newPlayerRecord("Ben", "2026-09-01", targetId), pubkey: "b".repeat(64) }])
+  assert.equal(await linkLocalPlayer(BEN, targetId), "linked")
+  await importLocalKey(secret)
+  const { loadPlayerLinkState } = await import("../lib/storage/player-links.ts")
+  const state = await loadPlayerLinkState()
+  assert.deepEqual(state.links, {})
+  assert.equal(state.localSuggestions[BEN], targetId)
+  assert.equal(await linkLocalPlayer(BEN, targetId), "linked")
+  assert.deepEqual(await loadPlayerLinks(), { [BEN]: targetId })
+})
+
+test("concurrent offline changes remain separate until explicitly resolved on both devices", async () => {
+  const a = newDevice(), b = newDevice()
+  const guest = newPlayerRecord("Ben", "2026-09-01", BEN)
+  const targetId = `pl_${"d".repeat(32)}`
+  const target = { ...newPlayerRecord("Ben", "2026-09-01", targetId), pubkey: "b".repeat(64) }
+  await on(a)
+  await savePlayers([guest, target])
+  assert.equal(await linkLocalPlayer(BEN, targetId), "linked")
+  await sync()
+  await on(b)
+  await sync()
+  await unlinkLocalPlayer(BEN)
+  assert.equal(await linkLocalPlayer(BEN, targetId), "linked")
+  await on(a)
+  await unlinkLocalPlayer(BEN)
+  await sync()
+  await on(b)
+  await sync()
+  const { loadPlayerLinkState } = await import("../lib/storage/player-links.ts")
+  assert.deepEqual(await loadPlayerLinks(), {})
+  assert.deepEqual((await loadPlayerLinkState()).conflicts[BEN], [targetId])
+  assert.equal(await linkLocalPlayer(BEN, targetId), "linked")
+  await sync()
+  await on(a)
+  await sync()
+  assert.deepEqual(await loadPlayerLinks(), { [BEN]: targetId })
+})
 
 // A won 101 (T20, 1, D20): seat 0 wins in three darts.
 async function play101(id: string, seats: { id: string; name: string }[], finishedAt: string) {

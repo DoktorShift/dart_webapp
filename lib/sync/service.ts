@@ -47,6 +47,7 @@ let generation = 0
 let lastRun = 0
 // Whether games or players changed here since the last sync that wrote.
 let changed = false
+let linkFingerprint = ""
 // A sync asked for while one runs: done right after it, for the stronger of both reasons.
 let again: Trigger | null = null
 let changeTimer: ReturnType<typeof setTimeout> | undefined
@@ -111,8 +112,21 @@ function forget() {
   pubkey = null
   again = null
   changed = false
+  linkFingerprint = ""
   clearTimeout(changeTimer)
   setSyncStatus(null)
+}
+
+// kv also contains sync bookkeeping. Only schedule a write when the association history
+// changes, otherwise the sync's own metadata writes would cause an endless loop.
+async function checkLinks(current: string, mine: number) {
+  const { loadLinkOps } = await import("../storage/player-link-ops.ts")
+  const fingerprint = (await loadLinkOps(current)).map((op) => op.id).sort().join(",")
+  if (generation !== mine || pubkey !== current || fingerprint === linkFingerprint) return
+  linkFingerprint = fingerprint
+  changed = true
+  if (getSyncStatus().running) again = stronger(again, "change")
+  else soon("change")
 }
 
 // Follows the session: a new profile starts syncing, none stops it.
@@ -156,7 +170,10 @@ export function startSyncService() {
       // This sync's own changes come back here too; one more quick sync then finds nothing.
       if (getSyncStatus().running) again = stronger(again, "change")
       else soon("change")
-    } else if (message.stores.includes("kv") && !getSyncStatus().running) void refresh(pubkey)
+    } else if (message.stores.includes("kv")) {
+      void checkLinks(pubkey, generation).catch(() => {})
+      if (!getSyncStatus().running) void refresh(pubkey)
+    }
   })
   if (typeof window !== "undefined") window.addEventListener("online", () => void run("online"))
   if (typeof document !== "undefined")

@@ -29,7 +29,7 @@ const MATCH_PREFIX = "match:"
 // Record ids allow [A-Za-z0-9_.:-] up to 80 characters (lib/protocol/private.ts).
 const PLAIN_ID = /^[A-Za-z0-9_.:-]{1,74}$/
 
-export type RecordType = "match" | "players"
+export type RecordType = "match" | "players" | "player-link"
 
 export interface HistoryRecord {
   type: RecordType

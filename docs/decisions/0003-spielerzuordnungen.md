@@ -1,10 +1,10 @@
 # 0003 Spielerzuordnungen erhalten und synchronisieren
 
-**Status:** Angenommen als Produktentscheidung; noch nicht vollständig implementiert. 28. Oktober 2026.
+**Status:** Angenommen am 28. Oktober 2026; private Synchronisierung und Geräteexport implementiert.
 
 ## Kontext
 
-Auf einem gemeinsam genutzten Gerät kann dieselbe Person als Gast und mit Profil erscheinen. Die derzeitige, ausdrücklich bestätigte und widerrufbare Zuordnung liegt ausschließlich in `leaderboard.player-links` auf dem Gerät. Weder die private Profil-Synchronisierung noch der Geräte-Datenexport übertragen sie. Nach einem Gerätewechsel kann die Rangliste deshalb wieder zwei Zeilen zeigen.
+Auf einem gemeinsam genutzten Gerät kann dieselbe Person als Gast und mit Profil erscheinen. Früher lag die ausdrücklich bestätigte und widerrufbare Zuordnung ausschließlich in `leaderboard.player-links` auf dem Gerät. Nach einem Gerätewechsel konnte die Rangliste deshalb wieder zwei Zeilen zeigen.
 
 ## Entscheidung
 
@@ -24,4 +24,6 @@ Auf einem gemeinsam genutzten Gerät kann dieselbe Person als Gast und mit Profi
 
 ## Folgen und Abnahme
 
-Diese Entscheidung ändert das laufende Verhalten noch nicht. Umsetzung braucht ein privates, profilgebundenes Datenformat mit stabilen Kennungen und Widerrufen; eine verlustfreie Konfliktstrategie statt blindem Überschreiben; Migration bestehender lokaler Daten; robusten Export/Import; und getrennte Behandlung von Gast, Signer und lokalem Profil. Zu prüfen sind zwei Geräte, offline zuordnen und lösen, gleichzeitige Änderungen, Sign-out/Profilwechsel, Konflikte durch spätere Spiele, Datenschutz fremder Spieler, Wiederherstellung sowie Rückwärtskompatibilität alter Dateien. Die bestehende Zugangssicherung darf nicht als vollständige Spielstand-Sicherung dargestellt werden.
+Jede Änderung ist ein eigener verschlüsselter privater Datensatz mit zufälliger Kennung. Eine Änderung nennt die zuvor gesehenen Änderungen dieser Zuordnung. Gleichzeitiges Lösen und Zuordnen bleibt getrennt, bis die Person erneut entscheidet; ein später ausdrücklich bestätigtes Zuordnen ist möglich. Die Historie bleibt profilgebunden lokal erhalten, auch wenn offline abgemeldet wird. Der vollständige Geräteexport enthält Gastzuordnungen und profilgebundene Änderungshistorien; ältere Dateien bleiben lesbar. Die Zugangssicherung bleibt eine Zugangssicherung, keine vollständige Spielstand-Sicherung.
+
+Frühere Gastzuordnungen bleiben als Gast erhalten. Bei Anmeldung werden sie nicht automatisch einem Profil zugeschrieben: Die Person kann dieselben Einträge im angemeldeten Profil erneut ausdrücklich zuordnen. Nur die zwei zugeordneten Spielereinträge werden für die Zuordnung privat übertragen; fremde Spiele werden dadurch nicht in die Profilhistorie aufgenommen.

@@ -7,7 +7,8 @@ import { publishTargets } from "../profile/relay-list.ts"
 import { getSession, getSigner } from "../profile/session.ts"
 import { KIND_PRIVATE } from "../protocol/kinds.ts"
 import { applySynced, deletedMatches, type ArchivedMatch } from "../storage/archive.ts"
-import { dbGetAll, kvGet, kvSet, onStorageChange } from "../storage/db.ts"
+import { dbGetAll, dbWrite, kvGet, kvSet, onStorageChange } from "../storage/db.ts"
+import { LINK_OP_PREFIX, loadLinkOps, mergeLinkOps, parseLinkOp, type PlayerLinkOp } from "../storage/player-link-ops.ts"
 import { randomHex } from "../storage/ids.ts"
 import { listPlayers, type PlayerRecord } from "../storage/players.ts"
 import { createDataKey, DataKeyError, isDataKeyEvent, keepDataKey, resignDataKey, settleDataKey, storedDataKey, unwrapDataKey, type DataKey } from "./data-key.ts"
@@ -332,8 +333,13 @@ async function settleKey(sync: Sync): Promise<SyncProblem | null> {
 
 // The profile's records on this device: its games, deletions made here, and its players.
 async function localRecords(sync: Sync) {
-  const [matches, directory, deleted] = await Promise.all([dbGetAll<ArchivedMatch>("matches"), listPlayers(), deletedMatches()])
-  return { directory, records: profileRecords(sync.pubkey, matches, directory, deleted) }
+  const [matches, directory, deleted, links] = await Promise.all([dbGetAll<ArchivedMatch>("matches"), listPlayers(), deletedMatches(), loadLinkOps(sync.pubkey)])
+  const records = profileRecords(sync.pubkey, matches, directory, deleted)
+  for (const op of links) {
+    const data = { ...op }
+    records.set(LINK_OP_PREFIX + op.id, { type: "player-link", data, hash: hashOf(data) })
+  }
+  return { directory, records }
 }
 
 // The players record: the version found on relays when it is newer than the one last synced
@@ -360,8 +366,16 @@ async function take(sync: Sync) {
   let local = here.records
   const put: ArchivedMatch[] = []
   const remove: string[] = []
+  const linkOps: PlayerLinkOp[] = []
   let count = 0
   for (const [id, version] of opened.versions) {
+    if (id.startsWith(LINK_OP_PREFIX)) {
+      const op = version.record.type === "player-link" && version.data ? parseLinkOp(version.data) : null
+      if (!op || id !== LINK_OP_PREFIX + op.id) { sync.unreadable++; continue }
+      linkOps.push(op)
+      sync.copies[id] = { rev: version.record.rev, device: version.record.device, deleted: false, hash: hashOf({ ...op }), ids: version.events.map((e) => e.id), createdAt: version.events[0].created_at }
+      continue
+    }
     if (!isMatchRecord(id)) continue
     if (++count % YIELD_EVERY === 0) await pause()
     const match = version.data ? matchFromData(version.data) : null
@@ -383,6 +397,14 @@ async function take(sync: Sync) {
   const { base, merged, changed } = mergePlayersRecord(sync.playersVersion, sync.copies[PLAYERS_RECORD], playersFromData(recordOf(local.get(PLAYERS_RECORD))?.data ?? {}), directory)
   if (base) sync.copies[PLAYERS_RECORD] = base
   sync.players = { base, merged }
+  if (linkOps.length) {
+    if (!(await store(sync, () => mergeLinkOps(sync.pubkey, linkOps, sync.alive)))) throw new SessionGone()
+    // Restore only the two directory entries needed to interpret a link; never copy unrelated games.
+    const entries = new Map<string, PlayerRecord>()
+    for (const op of linkOps) for (const player of [op.sourcePlayer, op.targetPlayer]) if (player) entries.set(player.id, player)
+    if (entries.size) await store(sync, () => dbWrite([...entries.values()].map((putNew) => ({ store: "players" as const, putNew }))))
+    ;({ records: local } = await localRecords(sync))
+  }
   if (put.length > 0 || remove.length > 0 || changed.length > 0) {
     await store(sync, () => applySynced({ put, remove, players: changed }))
     ;({ records: local } = await localRecords(sync))
@@ -412,6 +434,12 @@ async function plannedWrites(sync: Sync): Promise<Write[]> {
   const lost = (copy: Copy) => sync.full && sync.conclusive && !copy.ids.some((id) => sync.events.has(id) || waiting.has(id))
   const writes: Write[] = []
   for (const id of new Set([...local.keys(), ...Object.keys(copies)])) {
+    if (id.startsWith(LINK_OP_PREFIX)) {
+      const record = recordOf(local.get(id))
+      const copy = copies[id]
+      if (record && (!copy || copy.hash !== record.hash || lost(copy))) writes.push({ id, type: "player-link", data: record.data, hash: record.hash, rev: nextRev(id), replaces: latest(id) })
+      continue
+    }
     if (!isMatchRecord(id)) continue
     const here = local.get(id)
     const record = recordOf(here)

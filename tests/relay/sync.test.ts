@@ -27,6 +27,7 @@ import { syncHistory } from "../../lib/sync/engine.ts"
 import { deliverNow, flushDue, outboxStatus } from "../../lib/sync/outbox.ts"
 import { publishOwn } from "../../lib/sync/publish.ts"
 import { openRecords } from "../../lib/sync/records.ts"
+import { linkLocalPlayer, loadPlayerLinks, unlinkLocalPlayer } from "../../lib/storage/player-links.ts"
 
 let core: Core
 let a: NakRelay
@@ -72,6 +73,23 @@ const seats = [
   { id: ANNA, name: "Anna" },
   { id: BEN, name: "Ben" },
 ]
+
+test("a private association and its removal follow a profile between devices", async () => {
+  const first = newDevice(), second = newDevice()
+  const target = `pl_${"c".repeat(32)}`
+  await on(first)
+  await savePlayers([newPlayerRecord("Ben", "2026-09-01", BEN), { ...newPlayerRecord("Ben", "2026-09-01", target), pubkey: "b".repeat(64) }])
+  assert.equal(await linkLocalPlayer(BEN, target), "linked")
+  await sync()
+  await on(second)
+  await sync()
+  assert.deepEqual(await loadPlayerLinks(), { [BEN]: target })
+  await unlinkLocalPlayer(BEN)
+  await sync()
+  await on(first)
+  await sync()
+  assert.deepEqual(await loadPlayerLinks(), {})
+})
 
 // A won 101 (T20, 1, D20): seat 0 wins in three darts.
 async function play101(id: string, finishedAt: string) {
