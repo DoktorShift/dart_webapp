@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useMemo, useRef, useState } from "react"
 import { motion, useReducedMotion } from "framer-motion"
-import { ChartColumn, CircleEllipsis, History, RotateCcw, Share, Trophy, Undo2, Users } from "lucide-react"
+import { ChartColumn, CircleEllipsis, History, RotateCcw, Share, Trophy, Undo2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Menu } from "@/components/ui/menu"
 import { Sheet } from "@/components/ui/sheet"
@@ -217,13 +217,15 @@ export function MatchResult({ state, match, onRematch, onNewGame, onHome, onLead
           {primary.label(t)}
         </Button>
       ) : (
-        <>
-          <Button onClick={onRematch} className="h-14 w-full gap-2 rounded-2xl text-[1.0625rem] font-semibold xshort:h-12">
-            <RotateCcw className="h-5 w-5" aria-hidden="true" />
+        <div className="grid grid-cols-2 gap-2">
+          <Button onClick={onRematch} className="h-12 min-w-0 gap-1 rounded-2xl px-2 text-[0.9375rem] font-semibold">
+            <RotateCcw className="h-4 w-4 shrink-0" aria-hidden="true" />
             {t.result.rematch}
           </Button>
-
-        </>
+          <Button variant="secondary" onClick={onNewGame} className="h-12 min-w-0 rounded-2xl px-2 text-[0.9375rem] font-semibold text-primary">
+            {t.result.newGame}
+          </Button>
+        </div>
       )}
 
     </div>
@@ -241,7 +243,6 @@ export function MatchResult({ state, match, onRematch, onNewGame, onHome, onLead
           </Button>
           {xshort && <BarPieces match={finished} only={only} />}
           <Menu icon={CircleEllipsis} label={t.result.more} items={[
-            ...(!primary ? [{ id: "new", label: t.result.newGame, icon: Users, onSelect: onNewGame }] : []),
             { id: "share", label: t.result.share, icon: Share, onSelect: share },
             { id: "stats", label: t.result.allStats, icon: ChartColumn, onSelect: () => setStatsOpen(true) },
             { id: "visits", label: t.result.visits, icon: History, onSelect: onReview },
