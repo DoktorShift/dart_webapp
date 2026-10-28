@@ -21,4 +21,4 @@ Baseline: origin/main at 2a857eb. Screenshots are from Chromium against the loca
 | A compact filter sheet can hide its later controls in landscape. | Its contents have a scrolling body with a pinned Done action. | Visual check only; test actual selection in both languages. |
 | Existing evening and screenshot scripts refer to old labels and direct scan actions. | Matrix section labels were updated. | Evening flow and filter interactions need updating and running. |
 
-The suite passed 722 tests before the later club, tournament, payment, setup and copy changes. Type checking passed after those changes; a fresh full suite and full end-to-end run remain necessary. Other requested UI improvements remain open, including profile action hierarchy and safe player linking. This is not a completed red-team/blue-team review.
+The full suite passed 722 tests after the club, tournament, payment, setup and copy changes. Type checking and lint also passed. A full end-to-end run remains necessary. Other requested UI improvements remain open, including profile action hierarchy and safe player linking. This is not a completed red-team/blue-team review.
