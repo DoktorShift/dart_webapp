@@ -25,6 +25,7 @@ import { formatPercent } from "@/lib/i18n"
 import { computeStandings, STANDINGS_MIN_GAMES, useMatchHistory, type Standing, type StandingsFilter, type StandingsSort } from "@/lib/leaderboard"
 import { hasScreen } from "@/lib/shell/registry"
 import { inSelection } from "@/lib/storage/stats"
+import { playerLinkAliases } from "@/lib/storage/player-links"
 import { sameNames } from "@/lib/storage/players"
 import { cn } from "@/lib/utils"
 
@@ -48,7 +49,7 @@ export function DeviceSection() {
   const l = t.leaderboard
   const nav = useNav()
   useRegistryVersion()
-  const { matches, players, aliases, loaded, clear } = useMatchHistory()
+  const { matches, players, aliases, links, loaded, clear } = useMatchHistory()
   const own = useOwnProfile()
   const [filter, setFilter] = useState<StandingsFilter>("all")
   const [period, setPeriod] = useState<Period>("all")
@@ -58,7 +59,7 @@ export function DeviceSection() {
   const listsRef = useRef<HTMLDivElement>(null)
 
   const ownKey = own?.key ?? null
-  const sameAs = own?.sameAs
+  const sameAs = useMemo(() => playerLinkAliases(links, own?.sameAs, matches, aliases, players ?? []), [links, own?.sameAs, matches, aliases, players])
   const showAverage = filter === "all" || filter === "x01"
   // Cricket and Clock have no Ø 3 Darts: that sort isn't offered, and a chosen one falls back.
   const sorts = showAverage ? SORTS : SORTS.filter((s) => s !== "average")

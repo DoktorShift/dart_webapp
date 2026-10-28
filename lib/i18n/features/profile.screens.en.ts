@@ -223,6 +223,18 @@ export const profileScreensEn: Widen<typeof profileScreensDe> = {
     theyWin: (name, score) => (score ? `${name} wins ${score}` : `${name} wins`),
     assign: "Assign earlier games",
     assignHint: "Results from the earlier version under this name",
+    linkTitle: "Same person?",
+    linkTo: (name, key) => `Combine with ${name} · ${key}`,
+    linkHint: "Only if both entries are the same person.",
+    linkConfirmText: "Games from both entries count together on this device. You can undo this association.",
+    linkConfirm: "Combine",
+    unlink: (name) => `Unlink ${name}`,
+    unlinkTitle: "Unlink these entries?",
+    unlinkText: "The entries and their games will be shown separately on this device again.",
+    unlinkConfirm: "Unlink",
+    linkConflict: "These entries played in the same game and cannot be combined.",
+    linkInactive: "This association is not being applied. Check the players or unlink them.",
+    linkFailed: "The association couldn't be saved. Try again.",
   },
 
   share: {

@@ -1,5 +1,7 @@
 "use client"
 
+import { playerLinkAliases } from "@/lib/storage/player-links"
+
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react"
 import { useMatchHistory } from "@/lib/leaderboard"
 import type { NostrEvent } from "@/lib/nostr/types"
@@ -74,7 +76,6 @@ export interface OwnProfile {
   sameAs: Map<string, string>
 }
 
-const NOBODY = new Map<string, string>()
 
 // The signed-in profile; null for a guest, undefined while the session is read.
 export function useOwnProfile(): OwnProfile | null | undefined {
@@ -85,9 +86,10 @@ export function useOwnProfile(): OwnProfile | null | undefined {
   const history = useMatchHistory()
   const me = useMemo(() => (pubkey && history.players ? profilePlayers(pubkey, history.players, history.all) : null), [pubkey, history.players, history.all])
   const metadata = useMemo(() => readMetadata(events?.get(OWN.metadata)), [events])
+  const sameAs = useMemo(() => playerLinkAliases(history.links, me?.sameAs, history.all, history.aliases, history.players ?? []), [history.links, me?.sameAs, history.all, history.aliases, history.players])
   if (session === undefined) return undefined
   if (session === null) return null
-  return { session, events, lookup, metadata, player: me?.player ?? null, name: metadata.name ?? me?.player?.name ?? null, history, key: me?.key ?? null, sameAs: me?.sameAs ?? NOBODY }
+  return { session, events, lookup, metadata, player: me?.player ?? null, name: metadata.name ?? me?.player?.name ?? null, history, key: me?.key ?? null, sameAs }
 }
 
 // The profile's games on this device, newest first.

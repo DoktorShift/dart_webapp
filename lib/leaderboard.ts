@@ -3,8 +3,9 @@
 import { useCallback, useMemo } from "react"
 import type { GameType } from "@/lib/game/types"
 import { clearLeaderboard } from "@/lib/storage/archive"
-import { useArchive, usePlayers } from "@/lib/storage/hooks"
+import { useArchive, usePlayers, useStored } from "@/lib/storage/hooks"
 import { newObjectId } from "@/lib/storage/ids"
+import { loadPlayerLinks, type PlayerLinks } from "@/lib/storage/player-links"
 import { importedAliases } from "@/lib/storage/players"
 
 // The Rangliste, built from the match archive on this device (lib/storage). Players are told
@@ -20,13 +21,16 @@ export type ModeType = GameType
 // New games get 128 random bits; ids of older games stay as they are.
 export const newMatchId = newObjectId
 
+const readLinks = () => loadPlayerLinks().catch((): PlayerLinks => ({}))
+
 export function useMatchHistory() {
   const archive = useArchive()
   const players = usePlayers()
+  const [links] = useStored("kv", readLinks)
   const aliases = useMemo(() => importedAliases(players ?? []), [players])
   // The Rangliste counts games with two or more players. Solo games are archived too, for each
   // player's own statistics.
   const matches = useMemo(() => archive.matches.filter((m) => m.players.length >= 2), [archive.matches])
   const clear = useCallback(() => void clearLeaderboard(), [])
-  return { matches, all: archive.matches, players, aliases, loaded: archive.loaded && players !== null, clear }
+  return { matches, all: archive.matches, players, aliases, links: links ?? {}, loaded: archive.loaded && players !== null && links !== undefined, clear }
 }

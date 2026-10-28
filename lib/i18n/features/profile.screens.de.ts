@@ -245,6 +245,18 @@ export const profileScreensDe = {
     theyWin: (name: string, score: string | null) => (score ? `${name} gewinnt ${score}` : `${name} gewinnt`),
     assign: "Frühere Spiele zuordnen",
     assignHint: "Ergebnisse der früheren Version unter diesem Namen",
+    linkTitle: "Gleiche Person?",
+    linkTo: (name: string, key: string) => `Mit ${name} · ${key} zusammenführen`,
+    linkHint: "Nur wenn beide Einträge dieselbe Person sind.",
+    linkConfirmText: "Die Spiele beider Einträge werden auf diesem Gerät zusammengezählt. Du kannst die Zuordnung wieder lösen.",
+    linkConfirm: "Zusammenführen",
+    unlink: (name: string) => `Zuordnung von ${name} lösen`,
+    unlinkTitle: "Zuordnung lösen?",
+    unlinkText: "Die Einträge und ihre Spiele erscheinen auf diesem Gerät wieder getrennt.",
+    unlinkConfirm: "Zuordnung lösen",
+    linkConflict: "Diese Einträge haben im selben Spiel gegeneinander gespielt und können nicht zusammengeführt werden.",
+    linkInactive: "Diese Zuordnung wird nicht angewendet. Prüfe die Spieler oder löse sie.",
+    linkFailed: "Die Zuordnung konnte nicht gespeichert werden. Versuch es erneut.",
   },
 
   share: {

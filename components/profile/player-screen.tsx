@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react"
 import { UserRound } from "lucide-react"
+import { Confirm } from "@/components/ui/confirm"
+import { InlineStatus } from "@/components/common/inline-status"
 import { Group } from "@/components/ui/group"
 import { ListRow } from "@/components/ui/list-row"
 import { ImportedSheet } from "@/components/data/imported-sheet"
@@ -20,6 +22,7 @@ import { useMatchHistory } from "@/lib/leaderboard"
 import { readStatsCard } from "@/lib/protocol/stats-card"
 import { SCREENS, type ScreenProps } from "@/lib/shell/registry"
 import type { ArchivedMatch } from "@/lib/storage/archive"
+import { linkLocalPlayer, unlinkLocalPlayer, playerLinkAliases } from "@/lib/storage/player-links"
 import { headToHead, matchState, playerKey as keyOf, summarizePlayer, type PlayerSummary } from "@/lib/storage/stats"
 import { cn } from "@/lib/utils"
 
@@ -34,29 +37,56 @@ export default function PlayerScreen({ params }: ScreenProps) {
   const t = useT()
   const tx = useAreaT(PROFILE_TEXTS)
   const nav = useNav()
-  const { all, players, aliases, loaded } = useMatchHistory()
+  const { all, players, aliases, links, loaded } = useMatchHistory()
   const own = useOwnProfile()
   const key = params.key ?? ""
   const me = !!own?.key && own.key === key
   const [assigning, setAssigning] = useState(false)
-  const sameAs = own?.sameAs
+  const [linkChoice, setLinkChoice] = useState<{ kind: "link"; source: string; target: string } | { kind: "unlink"; source: string } | null>(null)
+  const [linkProblem, setLinkProblem] = useState<string | null>(null)
+  const sameAs = useMemo(() => playerLinkAliases(links, own?.sameAs, all, aliases, players ?? []), [links, own?.sameAs, all, aliases, players])
   const summary = useMemo(() => summarizePlayer(all, key, { type: "x01", scope: "versus", aliases, sameAs }), [all, key, aliases, sameAs])
   const anySummary = useMemo(() => summarizePlayer(all, key, { aliases, sameAs }), [all, key, aliases, sameAs])
   const shared = useMemo(
-    () => (own?.key && !me ? all.filter((m) => m.players.length >= 2 && [own.key, key].every((k) => m.players.some((p) => keyOf(m, p, aliases, own.sameAs) === k))) : []),
-    [all, own?.key, own?.sameAs, key, aliases, me],
+    () => (own?.key && !me ? all.filter((m) => m.players.length >= 2 && [own.key, key].every((k) => m.players.some((p) => keyOf(m, p, aliases, sameAs) === k))) : []),
+    [all, own?.key, key, aliases, sameAs, me],
   )
-  const together = useMemo(() => (own?.key && !me ? headToHead(all, own.key, key, { aliases, sameAs: own.sameAs }) : null), [all, key, aliases, own?.key, own?.sameAs, me])
+  const together = useMemo(() => (own?.key && !me ? headToHead(all, own.key, key, { aliases, sameAs }) : null), [all, key, aliases, own?.key, sameAs, me])
   const pair = useMemo(() => {
     if (!own?.key || shared.length === 0) return null
-    const options = { type: "x01" as const, scope: "versus" as const, aliases, sameAs: own.sameAs }
+    const options = { type: "x01" as const, scope: "versus" as const, aliases, sameAs }
     return { theirs: summarizePlayer(shared, key, options), mine: summarizePlayer(shared, own.key, options) }
-  }, [shared, key, own?.key, own?.sameAs, aliases])
+  }, [shared, key, own?.key, sameAs, aliases])
   const pubkey = players?.find((p) => p.id === (anySummary?.playerId ?? ""))?.pubkey ?? null
   const published = usePublicProfile(me ? null : pubkey)
   const card = published.profile?.card && pubkey ? readStatsCard(published.profile.card, pubkey) : null
   const name = params.name ?? anySummary?.name ?? null
   const imported = key.startsWith("imported:") || !!anySummary?.includesImported
+  const record = players?.find((p) => p.id === anySummary?.playerId)
+  const possibleProfiles = record && !record.pubkey && !links[record.id] ? (players ?? []).filter((p) => p.pubkey && p.nameKey === record.nameKey) : []
+  const candidates = possibleProfiles.filter((p, index) => possibleProfiles.findIndex((other) => other.pubkey === p.pubkey) === index)
+  const linkedGuests = Object.entries(links).filter(([, target]) => (sameAs.get(target) ?? target) === anySummary?.playerId)
+  const inactiveLink = !!record && !!links[record.id] && !sameAs.has(record.id)
+  const changeLink = async () => {
+    if (!linkChoice) return
+    setLinkProblem(null)
+    try {
+      if (linkChoice.kind === "unlink") await unlinkLocalPlayer(linkChoice.source)
+      else {
+        const result = await linkLocalPlayer(linkChoice.source, linkChoice.target)
+        if (result !== "linked") {
+          setLinkProblem(result === "conflict" ? tx.player.linkConflict : tx.player.linkFailed)
+          setLinkChoice(null)
+          return
+        }
+      }
+      setLinkChoice(null)
+      nav.pop()
+    } catch {
+      setLinkChoice(null)
+      setLinkProblem(tx.player.linkFailed)
+    }
+  }
 
   if (!loaded) return null
   return (
@@ -93,7 +123,7 @@ export default function PlayerScreen({ params }: ScreenProps) {
       {shared.length > 0 && name && own?.key && (
         <Group title={tx.player.gamesTogether}>
           {shared.slice(0, H2H_GAMES).map((match) => (
-            <ListRow key={match.id} title={gameTitle(t, tx, match, own.key!, name, aliases, own.sameAs)} subtitle={`${modeName(t, match.modeId, match.modeName)} · ${formatWhen(match.finishedAt, t)}`} onClick={() => nav.push(PROFILE_SCREENS.match, { id: match.id })} />
+            <ListRow key={match.id} title={gameTitle(t, tx, match, own.key!, name, aliases, sameAs)} subtitle={`${modeName(t, match.modeId, match.modeName)} · ${formatWhen(match.finishedAt, t)}`} onClick={() => nav.push(PROFILE_SCREENS.match, { id: match.id })} />
           ))}
         </Group>
       )}
@@ -111,6 +141,20 @@ export default function PlayerScreen({ params }: ScreenProps) {
           {imported && anySummary && <ListRow title={tx.player.assign} subtitle={tx.player.assignHint} onClick={() => setAssigning(true)} />}
         </Group>
       ) : null}
+
+      {(candidates.length > 0 || linkedGuests.length > 0 || inactiveLink) && (
+        <Group title={tx.player.linkTitle} footer={candidates.length > 0 ? tx.player.linkHint : undefined}>
+          {record && candidates.map((candidate) => (
+            <ListRow key={candidate.id} title={tx.player.linkTo(candidate.name, candidate.pubkey!.slice(0, 8))} onClick={() => setLinkChoice({ kind: "link", source: record.id, target: candidate.id })} />
+          ))}
+          {inactiveLink && record && <ListRow title={tx.player.unlink(record.name)} subtitle={tx.player.linkInactive} onClick={() => setLinkChoice({ kind: "unlink", source: record.id })} />}
+          {linkedGuests.map(([source]) => (
+            <ListRow key={source} title={tx.player.unlink(players?.find((p) => p.id === source)?.name ?? name ?? tx.unnamed)} onClick={() => setLinkChoice({ kind: "unlink", source })} />
+          ))}
+        </Group>
+      )}
+      {linkProblem && <InlineStatus tone="error" className="mt-4">{linkProblem}</InlineStatus>}
+      <Confirm open={linkChoice !== null} onOpenChange={(open) => !open && setLinkChoice(null)} title={linkChoice?.kind === "unlink" ? tx.player.unlinkTitle : tx.player.linkTitle} text={linkChoice?.kind === "unlink" ? tx.player.unlinkText : tx.player.linkConfirmText} confirm={linkChoice?.kind === "unlink" ? tx.player.unlinkConfirm : tx.player.linkConfirm} onConfirm={() => void changeLink()} />
 
       <StatsView matches={all} playerKey={key} aliases={aliases} sameAs={sameAs} />
 
