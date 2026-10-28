@@ -25,7 +25,7 @@ export const clubsScreensDe = {
     join: "Beitreten",
     members: (n: number) => (n === 1 ? "1 Spieler" : `${n} Spieler`),
     discover: "Öffentliche Clubs",
-    discoverHint: "Soweit bekannt, ohne Verzeichnis",
+    discoverHint: "Kein vollständiges Verzeichnis",
     status: {
       request: "Deine Anfrage wartet auf Bestätigung",
       joined: "Beigetreten, wartet auf Freigabe",

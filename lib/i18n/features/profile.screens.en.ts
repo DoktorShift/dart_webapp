@@ -248,7 +248,7 @@ export const profileScreensEn: Widen<typeof profileScreensDe> = {
   },
 
   visibility: {
-    intro: "What others see when they open your profile: name and picture always, your statistics only if you want. You can change this any time.",
+    intro: "Your name and picture are visible. You choose whether to show your statistics.",
     saving: "Saving",
     label: "Show statistics",
     none: "Nobody",
@@ -272,7 +272,7 @@ export const profileScreensEn: Widen<typeof profileScreensDe> = {
     csvHint: "For Numbers, Excel and other spreadsheets",
     json: "All data (JSON)",
     jsonHint: "For BlueLine on another device",
-    hint: (shareSheet) => `${shareSheet ? "You then choose where it goes: Files, Mail, AirDrop." : "The file is downloaded."} Imported games are marked on the leaderboard and in your games list.`,
+    hint: (shareSheet) => `${shareSheet ? "Choose Files, Mail or AirDrop." : "The file is downloaded."} Imported games are marked on the leaderboard and in your games list.`,
     failed: "The export didn't work. Please try again.",
     columns: ["Date", "Game type", "Player", "Opponents", "Result", "Darts", "Points", "3-dart avg", "Source"],
     won: "Won",

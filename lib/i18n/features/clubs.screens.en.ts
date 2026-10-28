@@ -26,7 +26,7 @@ export const clubsScreensEn: Widen<typeof clubsScreensDe> = {
     join: "Join",
     members: (n) => (n === 1 ? "1 player" : `${n} players`),
     discover: "Public clubs",
-    discoverHint: "As far as known, no directory",
+    discoverHint: "No complete directory",
     status: {
       request: "Your request is waiting for approval",
       joined: "Joined, waiting for access",

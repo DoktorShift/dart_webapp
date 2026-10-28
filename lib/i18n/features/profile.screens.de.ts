@@ -272,7 +272,7 @@ export const profileScreensDe = {
   // "So sehen andere dein Profil".
   // Profil › Sichtbarkeit: the one choice about the public profile, and the preview.
   visibility: {
-    intro: "Was andere sehen, wenn sie dein Profil öffnen: Name und Bild immer, deine Statistik nur, wenn du es willst. Du kannst das jederzeit ändern.",
+    intro: "Name und Bild sind sichtbar. Ob andere deine Statistik sehen, entscheidest du.",
     saving: "Wird gespeichert",
     label: "Statistik zeigen",
     none: "Niemandem",
@@ -297,7 +297,7 @@ export const profileScreensDe = {
     csvHint: "Für Numbers, Excel und andere Tabellen",
     json: "Alle Daten (JSON)",
     jsonHint: "Für BlueLine auf einem anderen Gerät",
-    hint: (shareSheet: boolean) => `${shareSheet ? "Du wählst dann, wohin: Dateien, Mail, AirDrop." : "Die Datei wird heruntergeladen."} Importierte Spiele sind in Rangliste und Spielliste gekennzeichnet.`,
+    hint: (shareSheet: boolean) => `${shareSheet ? "Wähle Dateien, Mail oder AirDrop." : "Die Datei wird heruntergeladen."} Importierte Spiele sind in Rangliste und Spielliste gekennzeichnet.`,
     failed: "Der Export hat nicht geklappt. Versuch es noch einmal.",
     columns: ["Datum", "Spielart", "Spieler", "Gegner", "Ergebnis", "Darts", "Punkte", "Ø 3 Darts", "Quelle"],
     won: "Gewonnen",
