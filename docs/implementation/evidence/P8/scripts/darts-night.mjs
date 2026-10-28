@@ -848,7 +848,11 @@ await step("Anna und Ben werden Freunde: Anfrage aus „Zuletzt gespielt mit“,
 
   await a.getByRole("button", { name: /Ben/ }).first().click()
   await a.waitForTimeout(2000)
-  expect("Ben's player profile says 'Befreundet'", await isOnScreen(buttons(a, "Befreundet")))
+  expect("Ben's player profile says 'Befreundet'", await isOnScreen(a.getByText("Befreundet", { exact: true })))
+  expect("the profile offers adding Ben to a game", await isOnScreen(buttons(a, "Zum Spiel hinzufügen")))
+  await a.getByRole("button", { name: "Mehr", exact: true }).click()
+  expect("friendship removal remains available in the menu", await isOnScreen(a.getByRole("menuitem", { name: "Entfernen", exact: true })))
+  await a.keyboard.press("Escape")
   await shot(anna, "42-friend-profile")
   await tab(a, "Rangliste")
   await a.waitForTimeout(500)
