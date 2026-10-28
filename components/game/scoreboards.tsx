@@ -5,6 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import { Dartboard } from "@/components/dartboard"
 import { FitText } from "@/components/fit-text"
 import { useT } from "@/components/i18n-provider"
+import { compactBoardNames } from "@/lib/game/board-names"
 import { CRICKET_TARGETS, playsSets, setsToWin, type MatchState } from "@/lib/game/engine"
 import { formatNumber, type Messages } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
@@ -162,7 +163,7 @@ export function X01Scoreboard({ state, onSelectPlayer }: BoardProps) {
   const size = sizeOf(players.length)
   const between = state.visitDarts.length === 0 && state.winner === null
   // Short names help players read a crowded board; keep full names when first names collide.
-  const firstNames = players.map((player) => player.name.trim().split(/\s+/)[0])
+  const displayNames = players.length >= 5 ? compactBoardNames(players.map((player) => player.name)) : players.map((player) => player.name)
 
   return (
     <ol className={cn("grid h-full auto-rows-fr gap-2 tablet:gap-3", GRID[size])}>
@@ -179,7 +180,7 @@ export function X01Scoreboard({ state, onSelectPlayer }: BoardProps) {
         const average = t.board.avg(avg === null ? "–" : formatNumber(t, avg))
         const name = (
           <FitText minScale={size === "six" ? 0.85 : 0.75} className={cn("font-semibold leading-tight", !active && "text-muted-foreground", retired && "line-through")}>
-            {size === "six" && firstNames.filter((name) => name.toLocaleLowerCase() === firstNames[i].toLocaleLowerCase()).length === 1 ? firstNames[i] : player.name}
+            {displayNames[i]}
           </FitText>
         )
         const score = (
@@ -313,6 +314,7 @@ const closedByAll = (state: MatchState, target: number) =>
 function CricketRows({ state, onSelectPlayer }: BoardProps) {
   const t = useT()
   const players = state.config.players
+  const displayNames = players.length >= 5 ? compactBoardNames(players.map((player) => player.name)) : players.map((player) => player.name)
   const between = state.visitDarts.length === 0 && state.winner === null
 
   return (
@@ -357,8 +359,8 @@ function CricketRows({ state, onSelectPlayer }: BoardProps) {
               {active && <ActiveHighlight className="rounded-xl" />}
               <span className="relative flex min-w-0 items-center gap-1.5 pl-2 pr-1 text-[0.875rem] font-semibold tablet:text-lg">
                 <span className={cn("min-w-0 flex-1", !active && "text-muted-foreground", !state.active[i] && "line-through")}>
-                  <FitText minScale={0.75} className="leading-tight">
-                    {player.name}
+                  <FitText minScale={players.length >= 5 ? 0.8 : 0.75} className="leading-tight">
+                    {displayNames[i]}
                   </FitText>
                 </span>
                 <MatchScore state={state} player={i} />
@@ -464,6 +466,7 @@ const CLOCK_GRID = {
 export function ClockScoreboard({ state, onSelectPlayer }: BoardProps) {
   const t = useT()
   const players = state.config.players
+  const displayNames = players.length >= 5 ? compactBoardNames(players.map((player) => player.name)) : players.map((player) => player.name)
   const size = sizeOf(players.length)
   const total = state.clockTargets.length
   const target = state.clockTargets[state.progress[state.current]]
@@ -499,8 +502,8 @@ export function ClockScoreboard({ state, onSelectPlayer }: BoardProps) {
             <Tile key={player.id} active={active} onSelect={select} label={playerLabel(state, i, t.board.on(nextName), t)} className="px-3 py-1 tablet:px-4">
               <span className="flex items-center gap-2">
                 <span className="min-w-0 flex-1 text-[0.875rem] tablet:text-lg">
-                  <FitText minScale={0.75} className={cn("font-semibold leading-tight", !active && "text-muted-foreground", !state.active[i] && "line-through")}>
-                    {player.name}
+                  <FitText minScale={players.length >= 5 ? 0.8 : 0.75} className={cn("font-semibold leading-tight", !active && "text-muted-foreground", !state.active[i] && "line-through")}>
+                    {displayNames[i]}
                   </FitText>
                 </span>
                 <MatchScore state={state} player={i} />
