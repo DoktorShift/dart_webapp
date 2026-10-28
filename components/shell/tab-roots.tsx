@@ -1,7 +1,7 @@
 "use client"
 
 import { Plus, ScanLine } from "lucide-react"
-import { Menu } from "@/components/ui/menu"
+import { NavIconButton } from "@/components/nav/nav-bar-items"
 import { useNav } from "@/components/nav/nav-context"
 import { ScreenFrame } from "@/components/nav/screen-frame"
 import { LazyContent } from "@/components/nav/stack-view"
@@ -18,10 +18,13 @@ function BarActions({ scan, add, addLabel }: { scan: ShellAction; add: ShellActi
   const t = useT()
   const nav = useNav()
   return (
-    <Menu icon={Plus} label={addLabel} items={[
-      { id: "add", icon: Plus, label: addLabel, onSelect: () => runAction(add, nav) },
-      { id: "scan", icon: ScanLine, label: t.shell.bar.scan, onSelect: () => runAction(scan, nav) },
-    ]} />
+    <>
+      <button type="button" onClick={() => runAction(scan, nav)} className="flex min-h-11 items-center gap-1 rounded-xl px-2 text-[0.8125rem] font-medium text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring">
+        <ScanLine className="h-4 w-4 shrink-0" aria-hidden="true" />
+        {t.shell.bar.scan}
+      </button>
+      <NavIconButton icon={Plus} label={addLabel} onClick={() => runAction(add, nav)} />
+    </>
   )
 }
 
