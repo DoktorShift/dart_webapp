@@ -2,7 +2,11 @@
 export function compactBoardNames(names: readonly string[]): string[] {
   const first = names.map((name) => name.trim().split(/\s+/)[0] || name)
   const key = (name: string) => name.normalize("NFC").toLocaleLowerCase()
-  const source = names.map((name, i) => first.filter((part) => key(part) === key(first[i])).length === 1 ? first[i] : name.trim())
+  const source = names.map((name, i) => {
+    if (first.filter((part) => key(part) === key(first[i])).length === 1) return first[i]
+    const rest = name.trim().split(/\s+/).slice(1).join(" ")
+    return rest ? `${Array.from(first[i])[0]}.${rest}` : name.trim()
+  })
   const shorten = (name: string, limit: number) => {
     const chars = Array.from(name)
     return chars.length <= limit ? name : `${chars.slice(0, limit - 1).join("")}…`
