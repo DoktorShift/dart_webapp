@@ -209,7 +209,7 @@ function ClubBody({ view, params, refresh }: { view: ClubView; params: ScreenPar
             </InlineStatus>
           )}
 
-          <Group title={tx.club.nextDate}>
+          {next && <Group title={tx.club.nextDate}>
             {next ? (
               <>
                 <ListRow
@@ -227,9 +227,9 @@ function ClubBody({ view, params, refresh }: { view: ClubView; params: ScreenPar
             ) : (
               <ListRow title={tx.club.noDate} subtitle={leader && !archived ? tx.dates.noneLeader : undefined} onClick={() => sub(CLUB_SCREENS.dates)} />
             )}
-          </Group>
+          </Group>}
 
-          <Group title={tx.club.season}>
+          {season && table && <Group title={tx.club.season}>
             {season && table ? (
               <ListRow
                 title={season.name}
@@ -249,7 +249,14 @@ function ClubBody({ view, params, refresh }: { view: ClubView; params: ScreenPar
                 onClick={() => sub(manager && !archived ? CLUB_SCREENS.season : CLUB_SCREENS.table)}
               />
             )}
-          </Group>
+          </Group>}
+
+          {(!next || !season) && (
+            <Group>
+              {!next && <ListRow title={tx.club.noDate} subtitle={leader && !archived ? tx.dates.noneLeader : undefined} onClick={() => sub(CLUB_SCREENS.dates)} />}
+              {!season && <ListRow title={tx.club.noSeason} subtitle={manager && !archived ? tx.table.noSeasonLeader : undefined} onClick={() => sub(manager && !archived ? CLUB_SCREENS.season : CLUB_SCREENS.table)} />}
+            </Group>
+          )}
 
           <SlotItems list="club.tournaments" props={() => ({ club: view.id, name, leader, compact: true })} className="mt-4 empty:hidden" />
 
