@@ -149,6 +149,7 @@
 
 /* A calm stage for the large-screen Play tab; the board remains the working practice board. */
 .oche-home {
+  container-type: inline-size;
   background: radial-gradient(ellipse at 70% 5%, hsl(var(--primary) / 0.13), transparent 48%), hsl(var(--background));
 }
 .oche-stage {
@@ -165,6 +166,10 @@
 .oche-mode-cricket { color: hsl(var(--success)); }
 .oche-mode-clock { color: hsl(var(--warning)); }
 .oche-mode > span:last-child { color: hsl(var(--foreground)); }
+/* Rem-based threshold also responds when a person increases the browser's text size. */
+@container (max-width: 35rem) {
+  .oche-stage { grid-template-columns: minmax(0, 1fr); }
+}
 @media (max-height: 850px) {
   .oche-stage { padding-top: 1rem; padding-bottom: 1rem; }
   .oche-home > div > header { margin-bottom: 1rem; }
