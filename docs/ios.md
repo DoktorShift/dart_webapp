@@ -33,8 +33,8 @@ npm run ios:assets    # redraws the app icon and launch image from lib/board-ico
 
 Blocking:
 
-- [ ] **Account deletion (5.1.1(v)).** With the profile on, people create an account. "Sign out and delete everything here" only clears the device; the app also needs to ask the relays to delete the profile's events (NIP-09) and blank its kind 0. Alternative: ship v1 with `BLUELINE_IOS_FEATURES=` (guest only, no account, no network).
-- [ ] **Privacy policy** at a public URL (e.g. `https://blueline21.netlify.app/privacy`) and linked in the app (About). It must say what a profile publishes to public Nostr relays.
+- [x] **Account deletion (5.1.1(v)):** Profile › Delete profile (`lib/profile/delete-profile.ts`). Empties the public profile, publishes NIP-09 deletion requests for every event the profile signed, then deletes everything on the device. Without a relay accepting the request nothing is deleted and the dialog says so. Checked against a local relay: all of the profile's events gone, only the request and the empty profile left.
+- [x] **Privacy policy:** `https://blueline21.netlify.app/privacy` once merged (`app/privacy`, text in `lib/privacy.ts`); inside the app under Profile › About › Privacy Policy. Have the wording checked; the contact is the GitHub link for now.
 - [ ] Signing: Apple Developer team in Xcode › Signing & Capabilities, then Product › Archive › Distribute.
 - [ ] Test on a real iPhone and iPad: a full game, sharing a result picture, export and import in Settings › Data, creating a profile, pairing a second device with the camera.
 

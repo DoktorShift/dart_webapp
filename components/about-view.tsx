@@ -4,9 +4,11 @@ import Image from "next/image"
 import Link from "next/link"
 import { ChevronLeft, ExternalLink, Gift, Users, WifiOff } from "lucide-react"
 import { InstallCard } from "@/components/install-card"
-import { useT } from "@/components/i18n-provider"
+import { useI18n } from "@/components/i18n-provider"
+import { ListRow } from "@/components/ui/list-row"
 import { DisclosureRow, Group, LinkRow } from "@/components/ui/group"
 import { isNativeApp } from "@/lib/platform"
+import { PRIVACY } from "@/lib/privacy"
 import { SITE } from "@/lib/site"
 
 const FACT_ICONS = [Gift, WifiOff, Users]
@@ -16,8 +18,9 @@ const FACT_ICONS = [Gift, WifiOff, Users]
 // place. Rendered in the current language; the server's first render is German.
 // `embedded`: shown inside the app's Profile tab, which brings its own navigation bar and scroll
 // area.
-export function AboutView({ qrSvg, embedded = false }: { qrSvg: string; embedded?: boolean }) {
-  const t = useT()
+// `onOpenPrivacy`: inside the app the privacy policy is a screen of its own; the page links to it.
+export function AboutView({ qrSvg, embedded = false, onOpenPrivacy }: { qrSvg: string; embedded?: boolean; onOpenPrivacy?: () => void }) {
+  const { t, locale } = useI18n()
   const games = [
     t.about.x01,
     ...(["cricket", "cutthroat", "clock"] as const).map((id) => ({ name: t.modes[id].name, rules: t.modes[id].rules({ bullFinish: false }) })),
@@ -74,6 +77,16 @@ export function AboutView({ qrSvg, embedded = false }: { qrSvg: string; embedded
         <LinkRow href={SITE.author.url} external>
           <span className="font-medium text-primary">{t.about.contact(SITE.author.name)}</span>
         </LinkRow>
+      </Group>
+
+      <Group>
+        {onOpenPrivacy ? (
+          <ListRow title={PRIVACY[locale === "de" ? "de" : "en"].title} onClick={onOpenPrivacy} />
+        ) : (
+          <LinkRow href="/privacy">
+            <span>{PRIVACY[locale === "de" ? "de" : "en"].title}</span>
+          </LinkRow>
+        )}
       </Group>
 
       <footer className="mt-10 flex flex-wrap items-center justify-between gap-2 px-1 text-[0.8125rem] text-muted-foreground">

@@ -28,10 +28,10 @@ import { isTraining, summarizePlayer } from "@/lib/storage/stats"
 // The signed-in Profile tab (./profile-root.tsx), shown once this device's data is read: name
 // and figures come from here, so it waits for them rather than show "no name" first. "Abmelden"
 // opens the root's dialog, which outlasts this view.
-export default function SignedInProfile({ onSignOut }: { onSignOut: () => void }) {
+export default function SignedInProfile({ onSignOut, onDelete }: { onSignOut: () => void; onDelete: () => void }) {
   const own = useOwnProfile()
   if (!own?.events || !own.history.loaded) return null
-  return <OwnProfileView own={own} onSignOut={onSignOut} />
+  return <OwnProfileView own={own} onSignOut={onSignOut} onDelete={onDelete} />
 }
 
 const RECENT = 3
@@ -40,7 +40,7 @@ const RECENT = 3
 // Siege against others with what they cover), then the form, the training, the last games,
 // statistics and badges; the account below that, in its own group, each row with its state
 // (proposal 2026-10-26, M1 and M5). "Profil teilen" sits in the bar, "Bearbeiten" in the card.
-function OwnProfileView({ own, onSignOut }: { own: OwnProfile; onSignOut: () => void }) {
+function OwnProfileView({ own, onSignOut, onDelete }: { own: OwnProfile; onSignOut: () => void; onDelete: () => void }) {
   const t = useT()
   const tx = useAreaT(PROFILE_TEXTS)
   const h = tx.home
@@ -121,6 +121,8 @@ function OwnProfileView({ own, onSignOut }: { own: OwnProfile; onSignOut: () => 
 
       <Group>
         <ListRow title={h.signOut} destructive onClick={onSignOut} />
+        {/* Deleting the profile itself, not only this device's copy (App Review 5.1.1(v)). */}
+        <ListRow title={tx.deleteProfile.row} destructive onClick={onDelete} />
       </Group>
 
       <ShareSheet open={shareOpen} onOpenChange={setShareOpen} pubkey={session.pubkey} name={name} writeRelays={own.events ? ownRelaySettings(own.events).write : []} />
