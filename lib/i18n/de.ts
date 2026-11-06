@@ -556,7 +556,7 @@ export const de = {
     faq: [
       { q: "Ist BlueLine Darts kostenlos?", a: "Ja. Kein Konto, keine Werbung und keine In-App-Käufe." },
       { q: "Funktioniert es offline?", a: "Ja. Auf dem Home-Bildschirm installiert, öffnet es und zählt auch ohne WLAN." },
-      { q: "Wie installiere ich es?", a: "iPhone und iPad: in Safari auf Teilen, dann „Zum Home-Bildschirm“. Android: im Menü „App installieren“. Computer: das Installieren-Symbol in der Adressleiste." },
+      { web: true, q: "Wie installiere ich es?", a: "iPhone und iPad: in Safari auf Teilen, dann „Zum Home-Bildschirm“. Android: im Menü „App installieren“. Computer: das Installieren-Symbol in der Adressleiste." },
       {
         q: "Wo werden meine Spiele gespeichert?",
         a: "Nur auf deinem Gerät. Das laufende Spiel wird nach jedem Dart gespeichert, ein geschlossener Tab oder ein leerer Akku verliert nichts.",

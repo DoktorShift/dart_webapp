@@ -1,0 +1,4 @@
+/* Beim ersten Zugriff auf die Kamera (QR-Codes). */
+"NSCameraUsageDescription" = "BlueLine Darts nutzt die Kamera, um BlueLine-Codes zu scannen, zum Beispiel beim Koppeln eines weiteren Geräts oder beim Hinzufügen eines Profils.";
+/* Wenn „Bild sichern“ im Teilen-Menü ein Ergebnisbild speichert. */
+"NSPhotoLibraryAddUsageDescription" = "BlueLine Darts sichert das Bild deines Ergebnisses in deinen Fotos, wenn du „Bild sichern“ wählst.";

@@ -16,7 +16,7 @@ import { ProfileArrived } from "@/components/devices/profile-arrived"
 import { formatClock } from "@/lib/i18n"
 import { DEVICES_TEXTS } from "@/lib/i18n/features/devices.screens"
 import type { NewDeviceControl, NewDevicePairing } from "@/lib/devices/pairing"
-import { buildLink } from "@/lib/shell/links"
+import { buildLink, linkOrigin } from "@/lib/shell/links"
 
 // "Von meinem anderen Gerät" (P2.03), on the device that is to get the profile: a code to scan
 // from the other device (and a code to type there, and a link to send), the check code to
@@ -58,7 +58,7 @@ export default function NewDeviceScreen() {
 
   switch (state.step) {
     case "waiting": {
-      const link = buildLink(window.location.origin, "pair", state.link)
+      const link = buildLink(linkOrigin(window.location.origin), "pair", state.link)
       // Scanning the code, or typing it, is the way; sending the link is the rare one. On a phone
       // in landscape the code stands beside the rest.
       return (

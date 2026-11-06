@@ -11,3 +11,6 @@ next-env.d.ts
 .playwright-mcp/
 .env*.local
 .DS_Store
+
+# iOS app: the web files are copied in by `npm run build:ios` (cap sync)
+ios/App/App/public/

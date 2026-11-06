@@ -1,6 +1,9 @@
 import type { MetadataRoute } from "next"
 import { absoluteUrl } from "@/lib/site"
 
+// Built once; also required for the static export of the iOS app (npm run build:ios).
+export const dynamic = "force-static"
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const lastModified = new Date()
   return [

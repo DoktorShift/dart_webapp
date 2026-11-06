@@ -6,6 +6,7 @@ import { ChevronLeft, ExternalLink, Gift, Users, WifiOff } from "lucide-react"
 import { InstallCard } from "@/components/install-card"
 import { useT } from "@/components/i18n-provider"
 import { DisclosureRow, Group, LinkRow } from "@/components/ui/group"
+import { isNativeApp } from "@/lib/platform"
 import { SITE } from "@/lib/site"
 
 const FACT_ICONS = [Gift, WifiOff, Users]
@@ -32,7 +33,8 @@ export function AboutView({ qrSvg, embedded = false }: { qrSvg: string; embedded
         <p className="mt-2 text-[1.0625rem] text-muted-foreground">{t.meta.tagline}</p>
       </div>
 
-      <InstallCard qrSvg={qrSvg} inApp={embedded} />
+      {/* The iOS app is installed already; the card is for the website. */}
+      {!isNativeApp() && <InstallCard qrSvg={qrSvg} inApp={embedded} />}
 
       <ul className="mt-6 grid grid-cols-3 gap-2 text-center">
         {t.about.facts.map((fact, i) => {
@@ -55,7 +57,8 @@ export function AboutView({ qrSvg, embedded = false }: { qrSvg: string; embedded
       </Group>
 
       <Group title={t.about.questions}>
-        {t.about.faq.map((item) => (
+        {/* "web": about installing the website, which the iOS app has no use for. */}
+        {t.about.faq.filter((item) => !("web" in item && item.web && isNativeApp())).map((item) => (
           <DisclosureRow key={item.q} title={item.q}>
             {item.a}
           </DisclosureRow>

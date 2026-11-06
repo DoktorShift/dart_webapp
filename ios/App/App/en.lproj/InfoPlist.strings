@@ -1,0 +1,4 @@
+/* Shown when the app first asks for the camera (QR codes). */
+"NSCameraUsageDescription" = "BlueLine Darts uses the camera to scan BlueLine codes, for example when you pair another device or add a profile.";
+/* Shown when "Save Image" in the share sheet saves a result picture. */
+"NSPhotoLibraryAddUsageDescription" = "BlueLine Darts saves the picture of your result to your photos when you choose Save Image.";

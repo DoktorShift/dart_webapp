@@ -24,7 +24,7 @@ import { openSeating, type Seating } from "@/lib/live/seating"
 import { shortKey } from "@/lib/nostr/pointers"
 import { nowSeconds } from "@/lib/nostr/time"
 import type { SeatHolder } from "@/lib/protocol/match-state"
-import { buildLink } from "@/lib/shell/links"
+import { buildLink, linkOrigin } from "@/lib/shell/links"
 import { sameNames } from "@/lib/storage/players"
 import { cn } from "@/lib/utils"
 
@@ -43,7 +43,7 @@ export interface SheetProps {
   start: () => Promise<unknown>
 }
 
-const linkFor = (kind: "watch" | "board" | "handoff", payload: string) => buildLink(window.location.origin, kind, payload)
+const linkFor = (kind: "watch" | "board" | "handoff", payload: string) => buildLink(linkOrigin(window.location.origin), kind, payload)
 
 // Starts the game live when the sheet opens; says so while it works and when it can't.
 function useStarted(open: boolean, start: () => Promise<unknown>) {

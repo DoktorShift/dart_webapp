@@ -2,6 +2,9 @@
 // otherwise copying it. The result tells the caller what to confirm in place; there are no toasts.
 // The browser objects are passed in, so the rules run in the Node unit tests. Files: ./share-file.ts.
 
+import { shareLinkNatively } from "../native.ts"
+import { isNativeApp } from "../platform.ts"
+
 export type ShareOutcome = "shared" | "copied" | "dismissed" | "failed"
 
 export interface ShareData {
@@ -25,7 +28,7 @@ interface ShareEnv {
 
 const browser = (): ShareEnv => (typeof window === "undefined" ? {} : { navigator, document })
 
-export const canShareNatively = (env: ShareEnv = browser()) => typeof env.navigator?.share === "function"
+export const canShareNatively = (env: ShareEnv = browser()) => isNativeApp() || typeof env.navigator?.share === "function"
 
 export async function copyText(text: string, env: ShareEnv = browser()): Promise<boolean> {
   try {
@@ -57,6 +60,11 @@ export async function copyText(text: string, env: ShareEnv = browser()): Promise
 // Opens the share sheet, or copies when there is none (or `copy` asks for it). Closing the
 // share sheet is "dismissed", not an error, and doesn't fall back to copying.
 export async function shareLink(data: ShareData, options: { copy?: boolean } = {}, env: ShareEnv = browser()): Promise<ShareOutcome> {
+  // The iOS app opens the native share sheet (the env is the browser's only).
+  if (!options.copy && isNativeApp() && env.navigator === browser().navigator) {
+    const outcome = await shareLinkNatively(data)
+    if (outcome !== "failed") return outcome
+  }
   const nav = env.navigator
   if (!options.copy && typeof nav?.share === "function" && (!nav.canShare || nav.canShare(data))) {
     try {

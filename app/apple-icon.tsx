@@ -4,6 +4,8 @@ import { boardIconSvg, svgDataUri } from "@/lib/board-icon"
 // Home-screen icon for iPhone and iPad. iOS rounds the corners itself, so the background is full-bleed.
 export const size = { width: 180, height: 180 }
 export const contentType = "image/png"
+// Rendered once at build time (also required for the iOS app's static export).
+export const dynamic = "force-static"
 
 export default function AppleIcon() {
   return new ImageResponse(
