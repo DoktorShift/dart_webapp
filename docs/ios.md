@@ -22,7 +22,7 @@ npm run ios:assets    # redraws the app icon and launch image from lib/board-ico
 
 ## What is set in the Xcode project
 
-- Bundle id `com.aurochssoftware.blueline` (`capacitor.config.ts` and the target): change both if App Store Connect uses another one.
+- Bundle id `com.pratik227` (`capacitor.config.ts` and the target): change both if App Store Connect uses another one.
 - iOS 16 minimum (CSS container queries), iPhone and iPad, all orientations.
 - Display name "BlueLine", languages German (development region) and English.
 - Camera and "add to Photos" usage texts in both languages (`App/{de,en}.lproj/InfoPlist.strings`).

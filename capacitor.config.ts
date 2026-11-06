@@ -4,7 +4,7 @@ import type { CapacitorConfig } from "@capacitor/cli"
 // shell. Setup, signing and submission: docs/ios.md.
 const config: CapacitorConfig = {
   // Must match the bundle identifier registered in App Store Connect.
-  appId: "com.aurochssoftware.blueline",
+  appId: "com.pratik227",
   appName: "BlueLine Darts",
   webDir: "out",
   ios: {
