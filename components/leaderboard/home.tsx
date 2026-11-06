@@ -18,7 +18,8 @@ import { getSlotItems } from "@/lib/shell/registry"
 // from their areas through the registry ("leaderboard.sections"). The areas are a row of pills
 // (ScopeBar): four words don't fit a segmented control on a phone without breaking one.
 type Section = "device" | "friends" | "clubs" | "tournaments"
-const SECTIONS: Section[] = (["device", "friends", "clubs", "tournaments"] as const).filter((s) => s !== "friends" || featureOn("friends"))
+// Only the areas this build has; with the device's own games alone there is nothing to choose.
+const SECTIONS: Section[] = (["device", "friends", "clubs", "tournaments"] as const).filter((s) => s === "device" || featureOn(s))
 
 export default function LeaderboardHome() {
   const t = useT()
@@ -29,7 +30,7 @@ export default function LeaderboardHome() {
   const provided = (id: Section) => getSlotItems("leaderboard.sections").some((item) => item.id === id)
   return (
     <>
-      <div className="mt-3"><Segmented label={l.section} options={SECTIONS.map((s) => ({ value: s, label: l.sectionShort[s] }))} value={section} onChange={setSection} /></div>
+      {SECTIONS.length > 1 && <div className="mt-3"><Segmented label={l.section} options={SECTIONS.map((s) => ({ value: s, label: l.sectionShort[s] }))} value={section} onChange={setSection} /></div>}
       {section === "device" && <DeviceSection />}
       {section === "friends" &&
         (provided("friends") ? (

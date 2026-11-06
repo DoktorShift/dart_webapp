@@ -71,6 +71,10 @@ Made for phones and tablets first. Needs iOS/iPadOS 16 or newer, or a current Ch
 
 Netlify builds the app from `netlify.toml` (`npm run build`, Next.js runtime, Node 22). Page metadata, the sitemap, robots.txt and llms.txt use the site address Netlify provides at build time (`URL`); set `SITE_URL` to override it.
 
+## iOS app
+
+`npm run ios` builds the App Store app (Capacitor, `ios/`) and opens it in Xcode. Setup, what the iOS build leaves out, and the submission checklist: [docs/ios.md](docs/ios.md).
+
 ## Findability and sharing
 
 | File | What it's for |

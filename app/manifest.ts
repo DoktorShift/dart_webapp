@@ -4,6 +4,9 @@ import { MESSAGES } from "@/lib/i18n"
 import { SITE } from "@/lib/site"
 
 // Lets phones and tablets install the app to the home screen and open it full screen.
+// Built once; also required for the static export of the iOS app (npm run build:ios).
+export const dynamic = "force-static"
+
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",

@@ -7,6 +7,7 @@ import { createLocalSigner } from "../nostr/signers.ts"
 import type { NostrEvent } from "../nostr/types.ts"
 import { KIND_PRIVATE } from "../protocol/kinds.ts"
 import { parseProfilePackage, type ProfilePackage } from "./package.ts"
+import { isNativeApp } from "../platform.ts"
 
 // A passkey as a backup (decision 0002 §7, research DR-04 to DR-06, DR-20): WebAuthn's PRF
 // extension gives a secret that only this passkey yields. From it, by HKDF, a locator key
@@ -37,8 +38,10 @@ export interface PasskeyEnv {
   userAgent: string
 }
 
-// The browser's passkeys, or null where there are none.
+// The browser's passkeys, or null where there are none. The iOS app has none: its pages come from
+// capacitor://localhost, and WebAuthn needs the site's https origin (the backup file still works).
 export function browserPasskeys(): PasskeyEnv | null {
+  if (isNativeApp()) return null
   if (typeof navigator === "undefined" || !navigator.credentials || typeof PublicKeyCredential === "undefined") return null
   const capabilities = (PublicKeyCredential as unknown as { getClientCapabilities?: () => Promise<Record<string, boolean>> }).getClientCapabilities
   return {
