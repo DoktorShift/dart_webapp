@@ -68,7 +68,7 @@ export function AboutView({ qrSvg, embedded = false, onOpenPrivacy }: { qrSvg: s
         ))}
       </Group>
 
-      <Group title={t.about.madeBy(SITE.author.name)}>
+      <Group title={t.about.madeBy(SITE.author.name, SITE.partner.name)}>
         <div className="space-y-2 px-4 py-3.5 text-[1.0625rem] leading-relaxed">
           {t.about.authorNote.map((line) => (
             <p key={line}>{line}</p>
@@ -91,7 +91,7 @@ export function AboutView({ qrSvg, embedded = false, onOpenPrivacy }: { qrSvg: s
 
       <footer className="mt-10 flex flex-wrap items-center justify-between gap-2 px-1 text-[0.8125rem] text-muted-foreground">
         <span>
-          © {new Date().getFullYear()} {SITE.author.name}
+          © {new Date().getFullYear()} {SITE.author.name} & {SITE.partner.name}
         </span>
         <a href={SITE.source} rel="noopener" target="_blank" className="flex min-h-11 items-center gap-1 text-primary">
           {t.about.source}

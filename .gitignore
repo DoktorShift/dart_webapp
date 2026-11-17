@@ -14,3 +14,6 @@ next-env.d.ts
 
 # iOS app: the web files are copied in by `npm run build:ios` (cap sync)
 ios/App/App/public/
+
+# IDE settings
+.idea/

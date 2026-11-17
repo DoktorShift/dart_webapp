@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   // automatic links, so the home-screen icon from app/apple-icon.tsx is named too.
   icons: { icon: HEAD_ICONS, apple: [{ url: "/apple-icon", sizes: "180x180", type: "image/png" }] },
   keywords: t.meta.keywords,
-  authors: [{ name: SITE.author.name, url: SITE.author.url }],
+  authors: [{ name: SITE.author.name, url: SITE.author.url }, { name: SITE.partner.name }],
   creator: SITE.author.name,
   publisher: SITE.author.name,
   category: "games",

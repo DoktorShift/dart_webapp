@@ -10,6 +10,8 @@ export const SITE = {
   shortName: "BlueLine",
   url,
   author: { name: "DrShift", url: "https://github.com/DoktorShift" },
+  // Made together: DrShift and Pratik Patel, who also publishes the iOS app.
+  partner: { name: "Pratik Patel" },
   source: "https://github.com/DoktorShift/dart_webapp",
 } as const
 

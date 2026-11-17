@@ -530,7 +530,7 @@ export const en: Messages = {
       },
       { q: "How many players can play?", a: "One to six. On your own it's a practice session that tracks your stats." },
     ],
-    madeBy: (name) => `Made by ${name}`,
+    madeBy: (name, partner) => `Made by ${name} and ${partner}`,
     authorNote: [
       "Hi, I'm DrShift. I designed and built BlueLine Darts.",
       "I'm available for freelance work, from small private projects to bigger ones. Got an idea for an app or a website? Get in touch.",

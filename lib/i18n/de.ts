@@ -567,7 +567,7 @@ export const de = {
       },
       { q: "Wie viele können mitspielen?", a: "Eins bis sechs. Allein ist es ein Training mit deiner Statistik." },
     ],
-    madeBy: (name: string) => `Gemacht von ${name}`,
+    madeBy: (name: string, partner: string) => `Gemacht von ${name} und ${partner}`,
     authorNote: [
       "Hi, ich bin DrShift. Ich habe BlueLine Darts entworfen und gebaut.",
       "Ich bin offen für Freelance-Aufträge, vom kleinen privaten Projekt bis zu größeren Vorhaben. Du hast eine Idee für eine App oder Website? Melde dich.",
