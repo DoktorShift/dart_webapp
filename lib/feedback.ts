@@ -1,5 +1,8 @@
 "use client"
 
+import { hapticNatively } from "./native.ts"
+import { isNativeApp } from "./platform.ts"
+
 // Sound, voice and vibration for game events. Everything here is best effort:
 // browsers that lack an API simply stay quiet.
 
@@ -65,10 +68,11 @@ export function playSound(name: SoundName) {
 }
 
 export function vibrate(pattern: number | number[]) {
+  if (isNativeApp()) return hapticNatively(pattern)
   try {
     navigator.vibrate?.(pattern)
   } catch {
-    // Not supported (iOS Safari).
+    // Not supported (iOS Safari; the iOS app uses haptics above).
   }
 }
 

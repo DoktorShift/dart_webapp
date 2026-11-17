@@ -54,7 +54,8 @@ test("backup file: round trip keeps the key, the data key and the events; the fi
   // event of the profile is refused, the slot being another one).
   const withKey = await makeBackupFile({ ...pkg, dataKey }, "pw", { nip49: quick })
   assert.equal(await code(() => openBackupFile(withKey, "pw", quick)), "damaged")
-  assert.equal(backupFileName(new Date("2026-10-16T20:00:00Z")), "blueline-sicherung-2026-10-16.json")
+  // Local noon: the file is named after the local date, whatever the time zone.
+  assert.equal(backupFileName(new Date(2026, 9, 16, 12)), "blueline-sicherung-2026-10-16.json")
 })
 
 test("backup file: the key part is a standard NIP-49 key (the official vector opens with 'nostr')", async () => {

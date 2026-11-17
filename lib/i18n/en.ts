@@ -516,6 +516,7 @@ export const en: Messages = {
       { q: "Is BlueLine Darts free?", a: "Yes. No account, no ads and no in-app purchases." },
       { q: "Does it work offline?", a: "Yes. Installed on your home screen, it opens and keeps score without Wi-Fi." },
       {
+        web: true,
         q: "How do I install it?",
         a: "iPhone and iPad: in Safari, tap Share, then Add to Home Screen. Android: Install app in the browser menu. Computer: the install icon in the address bar.",
       },

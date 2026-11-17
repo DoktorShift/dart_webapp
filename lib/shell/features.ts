@@ -38,3 +38,9 @@ export function featureOn(feature: Feature, raw: string | undefined = configured
   const named = raw === undefined || raw.split(",").map((name) => name.trim()).includes(feature)
   return named && (REQUIRES[feature] ?? []).every((required) => featureOn(required, raw))
 }
+
+// Whether a tab of the tab bar is shown: Clubs and Tournaments only in builds with their area on
+// (the iOS app's first version has neither), the others always.
+export function tabOn(tab: string, raw: string | undefined = configured()): boolean {
+  return tab === "clubs" || tab === "tournaments" ? featureOn(tab, raw) : true
+}

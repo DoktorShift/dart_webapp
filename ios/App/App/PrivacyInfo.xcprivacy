@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- No tracking, no tracking domains: games, settings and the leaderboard stay on the device. -->
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<!-- Nothing is collected by the developer. A profile's public name and picture are published to
+	     Nostr relays the person chooses; the developer runs no server and receives none of it. -->
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+	<!-- The app's own code uses none of the required-reason APIs; Capacitor and its plugins ship
+	     their own privacy manifests. -->
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array/>
+</dict>
+</plist>

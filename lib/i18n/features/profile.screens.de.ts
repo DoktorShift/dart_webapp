@@ -490,6 +490,20 @@ export const profileScreensDe = {
     confirm: "Abmelden und wechseln",
   },
 
+  deleteProfile: {
+    row: "Profil löschen",
+    title: "Profil löschen?",
+    description:
+      "Dein Name und dein Bild werden geleert, und BlueLine bittet die Server deines Profils, alles zu löschen, was dein Profil veröffentlicht hat. Danach wird alles auf diesem Gerät gelöscht: Spiele, Spieler und Einstellungen. Das lässt sich nicht rückgängig machen.",
+    note: "Server, die Löschbitten nicht folgen, und Kopien anderer Apps kann niemand zwingen. Auf anderen Geräten meldest du dich dort ab.",
+    confirm: "Profil löschen",
+    busy: "Wird gelöscht …",
+    offlineTitle: "Keine Verbindung",
+    offline: "Kein Server hat die Löschbitte angenommen. Dein Profil ist noch da; versuche es mit Internet noch einmal.",
+    signerTitle: "Nicht bestätigt",
+    signer: "Dein Zugang hat die Löschbitte nicht unterschrieben. Dein Profil ist noch da; versuche es noch einmal.",
+  },
+
   signOut: {
     title: "Abmelden?",
     localTitle: "Abmelden ohne Sicherung?",

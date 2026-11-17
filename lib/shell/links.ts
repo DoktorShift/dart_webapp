@@ -6,6 +6,9 @@
 // The payload is an opaque string here; each area defines and checks its own format. No React
 // and no browser APIs, so the rules run in the Node unit tests.
 
+import { isNativeApp } from "../platform.ts"
+import { SITE } from "../site.ts"
+
 export type LinkKind = "p" | "watch" | "club" | "tournament" | "pair" | "board" | "handoff" | "signer-return" | "wallet-return"
 
 const LINK_KINDS: readonly LinkKind[] = ["p", "watch", "club", "tournament", "pair", "board", "handoff", "signer-return", "wallet-return"]
@@ -91,6 +94,10 @@ function originOf(address: string): string | null {
 }
 
 // The address for a link, on the given site ("https://blueline21.netlify.app").
+// The address links are built on: the page's own origin on the website, the published site in
+// the iOS app, whose pages live at capacitor://localhost where no other device can open them.
+export const linkOrigin = (current: string, native = isNativeApp()): string => (native ? SITE.url : current)
+
 export function buildLink(site: string, kind: LinkKind, payload: string): string {
   if (!ANSWERS.includes(kind) && payload.length === 0) throw new Error("An app link needs a payload")
   if (payload.length > MAX_PAYLOAD_LENGTH || INVALID_PAYLOAD.test(payload)) throw new Error("Invalid app link payload")

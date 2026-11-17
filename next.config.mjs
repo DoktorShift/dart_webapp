@@ -21,29 +21,37 @@ const CONTENT_SECURITY_POLICY = [
   "form-action 'self'",
 ].join("; ")
 
+// The iOS app (npm run build:ios): the same pages exported as static files into out/, which
+// Capacitor copies into the Xcode project (capacitor.config.ts, docs/ios.md). Static files have no
+// response headers; the native shell loads nothing but its own files.
+const ios = process.env.NEXT_PUBLIC_BLUELINE_PLATFORM === "ios"
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  ...(ios ? { output: "export" } : {}),
   // Lint and type errors fail the build (ESLint config: eslint.config.mjs).
   images: { unoptimized: true },
   // nostr-core 1.0.6 has no "sideEffects" field; this lets its lazily loaded chunk shrink from
   // 55 to 22 KB gzip without touching the guest path (docs/implementation/evidence/P0.03/CORE.md).
   experimental: { optimizePackageImports: ["nostr-core"] },
-  async headers() {
-    return [
-      {
-        source: "/:path*",
-        headers: [
-          { key: "Content-Security-Policy", value: CONTENT_SECURITY_POLICY },
-          { key: "X-Content-Type-Options", value: "nosniff" },
-          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-          { key: "X-Frame-Options", value: "DENY" },
-          // The camera only for this site's own pages: the in-app QR scanner (invitations, and later
-          // pairing and wallet codes). Microphone and location stay off.
-          { key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=()" },
-        ],
-      },
-    ]
-  },
+  ...(ios ? {} : { headers }),
+}
+
+async function headers() {
+  return [
+    {
+      source: "/:path*",
+      headers: [
+        { key: "Content-Security-Policy", value: CONTENT_SECURITY_POLICY },
+        { key: "X-Content-Type-Options", value: "nosniff" },
+        { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+        { key: "X-Frame-Options", value: "DENY" },
+        // The camera only for this site's own pages: the in-app QR scanner (invitations, and later
+        // pairing and wallet codes). Microphone and location stay off.
+        { key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=()" },
+      ],
+    },
+  ]
 }
 
 export default nextConfig

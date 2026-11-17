@@ -12,16 +12,18 @@ import { useSession, type SessionKind } from "@/lib/profile/session"
 // and the dialog may still have to say that not everything was deleted.
 const SignedInProfile = lazy(() => import("@/components/profile/own-profile"))
 const SignOutDialog = lazyScreen<{ kind: SessionKind; onClose: () => void }>(() => import("@/components/profile/sign-out-dialog"))
+const DeleteProfileDialog = lazyScreen<{ onClose: () => void }>(() => import("@/components/profile/delete-profile-dialog"))
 
 export default function ProfileRoot({ fallback }: { fallback: ReactNode }) {
   const session = useSession()
   const signedIn = !!session
   // The kind of the profile being signed out while the dialog is open.
   const [signingOut, setSigningOut] = useState<SessionKind | null>(null)
+  const [deleting, setDeleting] = useState(false)
   // Once a profile is here, its screens that work from this device's data, and the sign-out
   // dialog, are fetched for offline use.
   useEffect(() => {
-    if (signedIn) void Promise.all([warmProfileScreens(), SignOutDialog.preload()]).catch(() => {})
+    if (signedIn) void Promise.all([warmProfileScreens(), SignOutDialog.preload(), DeleteProfileDialog.preload()]).catch(() => {})
   }, [signedIn])
   if (session === undefined) return null
   return (
@@ -30,12 +32,17 @@ export default function ProfileRoot({ fallback }: { fallback: ReactNode }) {
         fallback
       ) : (
         <Suspense fallback={null}>
-          <SignedInProfile onSignOut={() => setSigningOut(session.kind)} />
+          <SignedInProfile onSignOut={() => setSigningOut(session.kind)} onDelete={() => setDeleting(true)} />
         </Suspense>
       )}
       {signingOut && (
         <Suspense fallback={null}>
           <SignOutDialog kind={signingOut} onClose={() => setSigningOut(null)} />
+        </Suspense>
+      )}
+      {deleting && (
+        <Suspense fallback={null}>
+          <DeleteProfileDialog onClose={() => setDeleting(false)} />
         </Suspense>
       )}
     </>

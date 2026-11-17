@@ -9,6 +9,7 @@ import { normalizeInviteCode } from "@/lib/protocol/invite"
 import { parseAppLink, isAnswerLink } from "@/lib/shell/links"
 import { LINK_ROUTES, SCREENS, canOpenLink, dispatchLink } from "@/lib/shell/registry"
 import { SITE } from "@/lib/site"
+import { featureOn } from "@/lib/shell/features"
 
 // "Code scannen": the one scanner for every BlueLine code. Whatever the code is, an invitation
 // to a club or a tournament, a player's profile card, a game to watch or a board to score at, it
@@ -27,7 +28,8 @@ export default function ScanScreen() {
   }
 
   const onResult = async (text: string): Promise<ScanVerdict> => {
-    const code = normalizeInviteCode(text)
+    // Short codes are club invitations: only in builds with clubs.
+    const code = featureOn("clubs") ? normalizeInviteCode(text) : null
     if (code) {
       const found = await findInviteByCode(code)
       if ("problem" in found) return found.problem === "offline" ? t.shell.scan.codeOffline : t.shell.scan.codeMissing

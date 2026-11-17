@@ -15,6 +15,7 @@ export const ProfileHome = lazyScreen<object>(() => tabHomes().then((m) => ({ de
 export const LeaderboardHome = lazyScreen<object>(() => import("@/components/leaderboard/home"))
 export const SettingsEntry = lazyScreen<ScreenProps>(() => import("@/components/shell/settings-entry"))
 export const AboutScreen = lazyScreen<ScreenProps>(() => import("@/components/shell/about-screen"))
+export const PrivacyScreen = lazyScreen<ScreenProps>(() => import("@/components/shell/privacy-screen"))
 // The one scanner for every BlueLine code (scan-screen.tsx), opened from the Clubs and the
 // Tournaments tab.
 export const ScanScreen = lazyScreen<ScreenProps>(() => import("@/components/shell/scan-screen"))

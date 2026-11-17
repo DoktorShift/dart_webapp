@@ -8,19 +8,26 @@ import { SlotItems } from "@/components/shell/slot-items"
 import { useT } from "@/components/i18n-provider"
 import type { Messages } from "@/lib/i18n"
 import type { TabId } from "@/lib/shell/nav"
+import { tabOn } from "@/lib/shell/features"
 import { getSlot } from "@/lib/shell/registry"
 import { SITE } from "@/lib/site"
 import { cn } from "@/lib/utils"
 
 export type Tab = TabId
 
-const TABS: { id: Tab; label: (t: Messages) => string; icon: typeof Target }[] = [
-  { id: "play", label: (t) => t.shell.tabs.play, icon: Target },
-  { id: "leaderboard", label: (t) => t.shell.tabs.leaderboard, icon: Trophy },
-  { id: "clubs", label: (t) => t.shell.tabs.clubs, icon: Users },
-  { id: "tournaments", label: (t) => t.shell.tabs.tournaments, icon: Medal },
-  { id: "profile", label: (t) => t.shell.tabs.profile, icon: CircleUserRound },
-]
+// Only the tabs this build has (lib/shell/features.ts): the iOS app's first version has no Clubs
+// and no Tournaments.
+const TABS: { id: Tab; label: (t: Messages) => string; icon: typeof Target }[] = (
+  [
+    { id: "play", label: (t) => t.shell.tabs.play, icon: Target },
+    { id: "leaderboard", label: (t) => t.shell.tabs.leaderboard, icon: Trophy },
+    { id: "clubs", label: (t) => t.shell.tabs.clubs, icon: Users },
+    { id: "tournaments", label: (t) => t.shell.tabs.tournaments, icon: Medal },
+    { id: "profile", label: (t) => t.shell.tabs.profile, icon: CircleUserRound },
+  ] satisfies { id: Tab; label: (t: Messages) => string; icon: typeof Target }[]
+).filter(({ id }) => tabOn(id))
+// Tailwind needs the class names written out.
+const BAR_COLUMNS = ["", "grid-cols-1", "grid-cols-2", "grid-cols-3", "grid-cols-4", "grid-cols-5"][TABS.length]
 
 // The tab's symbol. The profile area can show the player's own picture there (slot
 // "profile.tabIcon"), falling back to the standard symbol. An area with something waiting for
@@ -82,7 +89,7 @@ export function AppShell({ tab, onTabChange, accessory, children }: { tab: Tab; 
         className="shrink-0 pb-[max(env(safe-area-inset-bottom),0.625rem)] pl-[max(env(safe-area-inset-left),0.75rem)] pr-[max(env(safe-area-inset-right),0.75rem)] pt-1.5 lg:hidden xshort:border-t xshort:border-border/70 xshort:bg-background/85 xshort:p-0 xshort:pb-[env(safe-area-inset-bottom)] xshort:pl-[env(safe-area-inset-left)] xshort:pr-[env(safe-area-inset-right)] xshort:backdrop-blur-xl"
       >
         {accessory}
-        <ul className="mx-auto grid h-12.25 max-w-2xl grid-cols-5 rounded-[1.625rem] border border-border/70 bg-background/80 shadow-[0_10px_30px_-14px_rgba(0,0,0,0.45)] backdrop-blur-2xl xshort:h-11 xshort:rounded-none xshort:border-0 xshort:bg-transparent xshort:shadow-none xshort:backdrop-blur-none">
+        <ul className={cn("mx-auto grid h-12.25 max-w-2xl rounded-[1.625rem] border border-border/70 bg-background/80 shadow-[0_10px_30px_-14px_rgba(0,0,0,0.45)] backdrop-blur-2xl xshort:h-11 xshort:rounded-none xshort:border-0 xshort:bg-transparent xshort:shadow-none xshort:backdrop-blur-none", BAR_COLUMNS)}>
           {TABS.map(({ id, label, icon }) => (
             <li key={id} className="min-w-0">
               <button

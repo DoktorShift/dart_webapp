@@ -14,6 +14,7 @@ import { useI18n, useT } from "@/components/i18n-provider"
 import { useMatchHistory } from "@/lib/leaderboard"
 import { useInstallApp, type InstallState } from "@/hooks/use-install-app"
 import { LOCALES, type LocalePreference } from "@/lib/i18n"
+import { isNativeApp } from "@/lib/platform"
 import type { AppSettings } from "@/lib/game/storage"
 
 // Installing to the home screen: one tap where the browser allows it, otherwise the steps.
@@ -96,10 +97,13 @@ export function SettingsScreen({
           <GamePreferences settings={settings} onSettingsChange={onSettingsChange} showAskAtDouble={settings.entryMode === "visit"} />
         </Group>
 
-        <Group title={t.settings.app} footer={install?.kind === "installed" ? t.settings.appInstalledFooter : t.settings.appFooter}>
-          <InstallRow state={install} />
-          <ListRow title={t.settings.guide} onClick={onOpenGuide} />
-        </Group>
+        {/* Installing is the website's business; the iOS app is installed already. */}
+        {!isNativeApp() && (
+          <Group title={t.settings.app} footer={install?.kind === "installed" ? t.settings.appInstalledFooter : t.settings.appFooter}>
+            <InstallRow state={install} />
+            <ListRow title={t.settings.guide} onClick={onOpenGuide} />
+          </Group>
+        )}
 
         <Group title={t.settings.language}>
           <div className="px-4 py-3">

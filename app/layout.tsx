@@ -3,7 +3,9 @@ import { Barlow_Condensed, Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { I18nProvider } from "@/components/i18n-provider"
+import { NativeShell } from "@/components/native-shell"
 import { ServiceWorker } from "@/components/service-worker"
+import { HEAD_ICONS } from "@/lib/app-icons"
 import { SPLASH_IMAGES } from "@/lib/apple-splash"
 import { MESSAGES } from "@/lib/i18n"
 import { pageMetadata } from "@/lib/metadata"
@@ -23,6 +25,9 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
   title: { default: t.meta.title, template: `%s | ${SITE.name}` },
   applicationName: SITE.name,
+  // Named here because the icons are a route (app/icon/[id]); declaring them replaces Next's
+  // automatic links, so the home-screen icon from app/apple-icon.tsx is named too.
+  icons: { icon: HEAD_ICONS, apple: [{ url: "/apple-icon", sizes: "180x180", type: "image/png" }] },
   keywords: t.meta.keywords,
   authors: [{ name: SITE.author.name, url: SITE.author.url }],
   creator: SITE.author.name,
@@ -64,6 +69,7 @@ export default function RootLayout({
       <body className={`${inter.className} ${display.variable}`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           <I18nProvider>{children}</I18nProvider>
+          <NativeShell />
         </ThemeProvider>
         <ServiceWorker />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: structuredDataJson() }} />

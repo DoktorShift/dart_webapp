@@ -175,6 +175,7 @@ export interface ScreenDefinition {
 export const SCREENS = {
   settings: "settings",
   about: "about",
+  privacy: "privacy",
   profileCreate: "profile.create",
   profileFromDevice: "profile.fromDevice",
   profileFromBackup: "profile.fromBackup",

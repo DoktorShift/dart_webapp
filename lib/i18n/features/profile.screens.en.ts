@@ -454,6 +454,20 @@ export const profileScreensEn: Widen<typeof profileScreensDe> = {
     confirm: "Sign out and switch",
   },
 
+  deleteProfile: {
+    row: "Delete profile",
+    title: "Delete your profile?",
+    description:
+      "Your name and picture are cleared, and BlueLine asks your profile's servers to delete everything your profile has published. Then everything on this device is deleted: games, players and settings. This can't be undone.",
+    note: "Nobody can force servers that ignore deletion requests, or copies kept by other apps. On your other devices, sign out there.",
+    confirm: "Delete profile",
+    busy: "Deleting …",
+    offlineTitle: "No connection",
+    offline: "No server accepted the deletion request. Your profile is still here; try again with internet.",
+    signerTitle: "Not confirmed",
+    signer: "Your sign-in didn't sign the deletion request. Your profile is still here; try again.",
+  },
+
   signOut: {
     title: "Sign out?",
     localTitle: "Sign out without a backup?",
